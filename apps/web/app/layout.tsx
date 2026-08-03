@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "@/components/auth/session-provider";
 
 export const metadata: Metadata = {
     title: "Qalcuity — All-in-One B2B Operating System",
@@ -14,7 +15,9 @@ export default function RootLayout({
 }) {
     return (
         <html lang="id">
-            <body>{children}</body>
+            <body>
+                <SessionProvider>{children}</SessionProvider>
+            </body>
         </html>
     );
 }

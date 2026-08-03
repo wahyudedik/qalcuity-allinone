@@ -1,12 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma Schema for Qalcuity
+// Using SQLite for development, can be switched to PostgreSQL for production
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -23,19 +23,19 @@ model Tenant {
   phone     String?
   email     String?
   website   String?
-  settings  Json     @default("{}")
+  settings  String   @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  contacts  Contact[]
-  products  Product[]
-  invoices  Invoice[]
-  payments  Payment[]
+  users      User[]
+  contacts   Contact[]
+  products   Product[]
+  invoices   Invoice[]
+  payments   Payment[]
   purchaseOrders PurchaseOrder[]
-  auditLogs AuditLog[]
-
-  @@map("tenants")
+  leads      Lead[]
+  deals      Deal[]
+  auditLogs  AuditLog[]
 }
 
 model User {
@@ -45,6 +45,7 @@ model User {
   passwordHash  String
   avatar        String?
   phone         String?
+  role          String    @default("USER")
   isActive      Boolean   @default(true)
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
@@ -53,85 +54,206 @@ model User {
   tenantId      String
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
 
-  roles         UserRole[]
   auditLogs     AuditLog[]
 
   @@index([tenantId])
-  @@map("users")
-}
-
-model Role {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-
-  tenantId    String
-  users       UserRole[]
-
-  @@unique([name, tenantId])
-  @@map("roles")
-}
-
-model UserRole {
-  id       String @id @default(cuid())
-  userId   String
-  roleId   String
-  user     User   @relation(fields: [userId], references: [id])
-  role     Role   @relation(fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
-  @@map("user_roles")
 }
 
 // ============================================
 // CONTACTS (Customers & Suppliers)
 // ============================================
 
-enum ContactType {
-  CUSTOMER
-  SUPPLIER
-  BOTH
-}
-
 model Contact {
-  id        String      @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  type      ContactType @default(CUSTOMER)
+  type      String   @default("CUSTOMER") // CUSTOMER, SUPPLIER, BOTH
   email     String?
   phone     String?
   address   String?
   city      String?
   province  String?
   postalCode String?
+  taxId     String?  // NPWP
   notes     String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   tenantId  String
-  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   invoices  Invoice[]
-  purchaseOrders PurchaseOrder[]
+  leads     Lead[]
+  deals     Deal[]
 
   @@index([tenantId])
   @@index([type])
-  @@map("contacts")
 }
 
 // ============================================
-// PRODUCTS
+// FINANCE
+// ============================================
+
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String
+  status        String   @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  dueDate       DateTime
+  notes         String?
+  subtotal      Float    @default(0)
+  taxRate       Float    @default(11)
+  taxAmount     Float    @default(0)
+  total         Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  contactId     String?
+  contact       Contact? @relation(fields: [contactId], references: [id])
+
+  items         InvoiceItem[]
+  payments      Payment[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([contactId])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Float   @default(1)
+  unitPrice   Float   @default(0)
+  total       Float   @default(0)
+
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  paymentNumber String
+  amount        Float
+  paymentDate   DateTime
+  method        String   @default("BANK_TRANSFER") // BANK_TRANSFER, CASH, CREDIT_CARD, E_WALLET
+  notes         String?
+  reference     String?
+  createdAt     DateTime @default(now())
+
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  invoiceId     String?
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+}
+
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  poNumber        String
+  status          String   @default("DRAFT") // DRAFT, SENT, RECEIVED, CANCELLED
+  orderDate       DateTime
+  deliveryDate    DateTime?
+  notes           String?
+  subtotal        Float    @default(0)
+  taxRate         Float    @default(11)
+  taxAmount       Float    @default(0)
+  total           Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  supplierId      String?
+
+  items           PurchaseOrderItem[]
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model PurchaseOrderItem {
+  id          String        @id @default(cuid())
+  description String
+  quantity    Float         @default(1)
+  unitPrice   Float         @default(0)
+  total       Float         @default(0)
+
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+}
+
+// ============================================
+// CRM
+// ============================================
+
+model Lead {
+  id          String   @id @default(cuid())
+  name        String
+  company     String?
+  email       String?
+  phone       String?
+  source      String?  // WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER
+  status      String   @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
+  value       Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+
+  deals       Deal[]
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  title       String
+  value       Float    @default(0)
+  stage       String   @default("PROSPECTING") // PROSPECTING, QUALIFICATION, PROPOSAL, NEGOTIATION, CLOSED_WON, CLOSED_LOST
+  probability Int      @default(0)
+  closeDate   DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+
+  @@index([tenantId])
+  @@index([stage])
+}
+
+// ============================================
+// INVENTORY
 // ============================================
 
 model Product {
   id          String   @id @default(cuid())
+  sku         String
   name        String
-  sku         String?
   description String?
-  price       Decimal  @default(0) @db.Decimal(15, 2)
-  cost        Decimal  @default(0) @db.Decimal(15, 2)
-  stock       Int      @default(0)
+  category    String?
   unit        String   @default("pcs")
+  price       Float    @default(0)
+  cost        Float    @default(0)
+  stock       Int      @default(0)
+  minStock    Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -139,142 +261,33 @@ model Product {
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
 
-  invoiceItems       InvoiceItem[]
-  purchaseOrderItems PurchaseOrderItem[]
-
   @@unique([sku, tenantId])
   @@index([tenantId])
-  @@map("products")
+  @@index([category])
 }
 
 // ============================================
-// INVOICES
+// HR (simplified)
 // ============================================
 
-enum InvoiceStatus {
-  DRAFT
-  SENT
-  PAID
-  PARTIAL
-  OVERDUE
-  CANCELLED
-}
-
-model Invoice {
-  id          String        @id @default(cuid())
-  number      String
-  status      InvoiceStatus @default(DRAFT)
-  dueDate     DateTime
-  notes       String?
-  total       Decimal       @default(0) @db.Decimal(15, 2)
-  paid        Decimal       @default(0) @db.Decimal(15, 2)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  tenantId    String
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  contactId   String
-  contact     Contact       @relation(fields: [contactId], references: [id])
-
-  items       InvoiceItem[]
-  payments    Payment[]
-
-  @@unique([number, tenantId])
-  @@index([tenantId])
-  @@index([status])
-  @@map("invoices")
-}
-
-model InvoiceItem {
+model Employee {
   id          String   @id @default(cuid())
-  description String
-  quantity    Int      @default(1)
-  price       Decimal  @db.Decimal(15, 2)
-  total       Decimal  @db.Decimal(15, 2)
-
-  invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id])
-
-  @@map("invoice_items")
-}
-
-// ============================================
-// PAYMENTS
-// ============================================
-
-enum PaymentMethod {
-  CASH
-  BANK_TRANSFER
-  E_WALLET
-  CREDIT_CARD
-  OTHER
-}
-
-model Payment {
-  id          String        @id @default(cuid())
-  amount      Decimal       @db.Decimal(15, 2)
-  method      PaymentMethod @default(BANK_TRANSFER)
-  reference   String?
-  notes       String?
-  date        DateTime      @default(now())
-  createdAt   DateTime      @default(now())
-
-  tenantId    String
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  invoiceId   String
-  invoice     Invoice       @relation(fields: [invoiceId], references: [id])
-
-  @@index([tenantId])
-  @@map("payments")
-}
-
-// ============================================
-// PURCHASE ORDERS
-// ============================================
-
-enum POStatus {
-  DRAFT
-  SENT
-  RECEIVED
-  CANCELLED
-}
-
-model PurchaseOrder {
-  id          String   @id @default(cuid())
-  number      String
-  status      POStatus @default(DRAFT)
-  total       Decimal  @default(0) @db.Decimal(15, 2)
-  notes       String?
+  employeeId  String
+  name        String
+  email       String
+  phone       String?
+  position    String
+  department  String?
+  joinDate    DateTime
+  salary      Float    @default(0)
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE, TERMINATED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  contactId   String
-  contact     Contact  @relation(fields: [contactId], references: [id])
 
-  items       PurchaseOrderItem[]
-
-  @@unique([number, tenantId])
+  @@unique([employeeId, tenantId])
   @@index([tenantId])
-  @@map("purchase_orders")
-}
-
-model PurchaseOrderItem {
-  id          String   @id @default(cuid())
-  description String
-  quantity    Int      @default(1)
-  price       Decimal  @db.Decimal(15, 2)
-  total       Decimal  @db.Decimal(15, 2)
-
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  productId       String?
-  product         Product?      @relation(fields: [productId], references: [id])
-
-  @@map("purchase_order_items")
 }
 
 // ============================================
@@ -282,21 +295,22 @@ model PurchaseOrderItem {
 // ============================================
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  action    String
-  entity    String
-  entityId  String?
-  oldData   Json?
-  newData   Json?
-  ipAddress String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  action     String
+  entity     String
+  entityId   String?
+  oldValues  String?
+  newValues  String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
 
+  @@index([userId])
   @@index([tenantId])
-  @@index([entity, entityId])
-  @@map("audit_logs")
+  @@index([entity])
 }

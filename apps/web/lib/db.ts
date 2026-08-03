@@ -13,6 +13,3 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export default prisma;
-
-// Re-export all Prisma types
-export * from "@prisma/client";

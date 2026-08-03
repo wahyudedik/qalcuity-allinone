@@ -2,8 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
+    const router = useRouter()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -15,13 +18,21 @@ export default function LoginPage() {
         setIsLoading(true)
         setError('')
 
-        // Simulate login - will be replaced with actual auth
         try {
-            // TODO: Implement actual authentication
-            await new Promise(resolve => setTimeout(1000))
-            window.location.href = '/dashboard'
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+            })
+
+            if (result?.error) {
+                setError(result.error)
+            } else {
+                router.push('/dashboard')
+                router.refresh()
+            }
         } catch (err) {
-            setError('Email atau password salah')
+            setError('Terjadi kesalahan, silakan coba lagi')
         } finally {
             setIsLoading(false)
         }

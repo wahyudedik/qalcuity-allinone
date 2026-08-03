@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 interface HeaderProps {
     title?: string;
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export function Header({ title, onMenuClick }: HeaderProps) {
     const pathname = usePathname();
+    const { data: session } = useSession();
 
     // Generate breadcrumbs from pathname
     const segments = pathname.split("/").filter(Boolean);
@@ -67,12 +69,36 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 </button>
 
                 {/* User Menu */}
-                <button className="flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-gray-100">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                        AD
+                <div className="relative group">
+                    <button className="flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-gray-100">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                            {session?.user?.name?.charAt(0) || 'U'}
+                        </div>
+                        <span className="hidden text-sm font-medium text-gray-700 sm:inline">
+                            {session?.user?.name || 'User'}
+                        </span>
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="px-4 py-2 border-b border-gray-100">
+                            <p className="text-sm font-medium text-gray-900">{session?.user?.name}</p>
+                            <p className="text-xs text-gray-500">{session?.user?.email}</p>
+                        </div>
+                        <Link
+                            href="/dashboard/settings"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                            ⚙️ Pengaturan
+                        </Link>
+                        <button
+                            onClick={() => signOut({ callbackUrl: '/login' })}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                            🚪 Keluar
+                        </button>
                     </div>
-                    <span className="hidden text-sm font-medium text-gray-700 sm:inline">Admin</span>
-                </button>
+                </div>
             </div>
         </header>
     );

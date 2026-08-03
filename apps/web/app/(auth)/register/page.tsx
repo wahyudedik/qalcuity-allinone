@@ -2,8 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 
 export default function RegisterPage() {
+    const router = useRouter()
     const [formData, setFormData] = useState({
         companyName: '',
         fullName: '',
@@ -40,9 +43,39 @@ export default function RegisterPage() {
         setIsLoading(true)
 
         try {
-            // TODO: Implement actual registration
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            window.location.href = '/dashboard'
+            // Register user
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    companyName: formData.companyName,
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    password: formData.password,
+                }),
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                setError(data.error || 'Terjadi kesalahan')
+                return
+            }
+
+            // Auto login setelah register
+            const signInResult = await signIn('credentials', {
+                email: formData.email,
+                password: formData.password,
+                redirect: false,
+            })
+
+            if (signInResult?.error) {
+                // Jika auto login gagal, redirect ke login
+                router.push('/login')
+            } else {
+                router.push('/dashboard')
+                router.refresh()
+            }
         } catch (err) {
             setError('Terjadi kesalahan. Silakan coba lagi.')
         } finally {
