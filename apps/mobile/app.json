@@ -1,0 +1,32 @@
+{
+    "expo": {
+        "name": "Qalcuity",
+        "slug": "qalcuity-mobile",
+        "version": "0.1.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#2563EB"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.qalcuity.mobile"
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#2563EB"
+            },
+            "package": "com.qalcuity.mobile"
+        },
+        "web": {
+            "favicon": "./assets/favicon.png"
+        }
+    }
+}

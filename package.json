@@ -1,0 +1,25 @@
+{
+  "name": "qalcuity-allinone",
+  "version": "0.1.0",
+  "private": true,
+  "description": "All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "db:generate": "pnpm --filter @qalcuity/db generate",
+    "db:push": "pnpm --filter @qalcuity/db push",
+    "db:seed": "pnpm --filter @qalcuity/db seed",
+    "db:studio": "pnpm --filter @qalcuity/db studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
