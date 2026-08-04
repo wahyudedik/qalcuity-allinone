@@ -20,10 +20,10 @@ async function main() {
   console.log("✅ Tenant created:", tenant.name);
 
   // Create admin user
-  const adminPasswordHash = await bcrypt.hash("admin123", 10);
+  const adminPasswordHash = await bcrypt.hash("Wahyu123456789@", 10);
   const admin = await prisma.user.create({
     data: {
-      email: "admin@qalcuity.com",
+      email: "info@qalcuity.com",
       name: "Admin Qalcuity",
       passwordHash: adminPasswordHash,
       role: "ADMIN",
