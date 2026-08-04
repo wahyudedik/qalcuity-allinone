@@ -1,32 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatCurrency } from '@/lib/utils'
 
 type StockItem = {
     id: string
     sku: string
     name: string
-    currentStock: number
+    stock: number
     minStock: number
-    maxStock: number
     unit: string
-    lastRestock: string
-    location: string
-    status: 'ok' | 'low' | 'out'
+    unitPrice: number
+    category: string
+    status: string
 }
 
-const MOCK_STOCK: StockItem[] = [
-    { id: '1', sku: 'SKU-001', name: 'Widget A', currentStock: 15, minStock: 50, maxStock: 200, unit: 'pcs', lastRestock: '2026-08-03', location: 'Gudang A-01', status: 'low' },
-    { id: '2', sku: 'SKU-023', name: 'Component B', currentStock: 8, minStock: 30, maxStock: 150, unit: 'pcs', lastRestock: '2026-07-28', location: 'Gudang A-02', status: 'low' },
-    { id: '3', sku: 'SKU-045', name: 'Part C', currentStock: 200, minStock: 100, maxStock: 500, unit: 'pcs', lastRestock: '2026-08-02', location: 'Gudang B-01', status: 'ok' },
-    { id: '4', sku: 'SKU-067', name: 'Module D', currentStock: 30, minStock: 40, maxStock: 100, unit: 'pcs', lastRestock: '2026-07-25', location: 'Gudang A-03', status: 'low' },
-    { id: '5', sku: 'SKU-089', name: 'Kit E', currentStock: 45, minStock: 50, maxStock: 100, unit: 'set', lastRestock: '2026-08-01', location: 'Gudang B-02', status: 'low' },
-    { id: '6', sku: 'SKU-101', name: 'Raw Material F', currentStock: 500, minStock: 200, maxStock: 1000, unit: 'kg', lastRestock: '2026-08-02', location: 'Gudang C-01', status: 'ok' },
-    { id: '7', sku: 'SKU-145', name: 'Packaging H', currentStock: 0, minStock: 100, maxStock: 500, unit: 'pcs', lastRestock: '2026-07-20', location: 'Gudang D-01', status: 'out' },
-]
-
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
+type Product = {
+    id: string
+    sku: string
+    name: string
+    category: string
+    unitPrice: number
+    stock: number
+    minStock: number
+    unit: string
+    status: string
+}
 
 const statusStyles: Record<string, string> = {
     ok: 'bg-green-100 text-green-800',
@@ -41,15 +40,92 @@ const statusLabels: Record<string, string> = {
 }
 
 export default function StockPage() {
-    const [stock] = useState<StockItem[]>(MOCK_STOCK)
+    const [stock, setStock] = useState<StockItem[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
 
+    useEffect(() => {
+        fetchStock()
+    }, [])
+
+    const fetchStock = async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/inventory/products')
+            const data = await response.json()
+            if (data.success) {
+                // Map products to stock items
+                const stockItems: StockItem[] = data.data.map((product: Product) => ({
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    stock: product.stock,
+                    minStock: product.minStock,
+                    unit: product.unit,
+                    unitPrice: product.unitPrice,
+                    category: product.category,
+                    status: product.stock === 0 ? 'out' : product.stock <= product.minStock ? 'low' : 'ok',
+                }))
+                setStock(stockItems)
+            } else {
+                setError('Gagal memuat data stok')
+            }
+        } catch {
+            setError('Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const filtered = stock.filter((s) => {
         const matchStatus = filterStatus === 'all' || s.status === filterStatus
-        const matchSearch = searchQuery === '' || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.sku.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchSearch = searchQuery === '' ||
+            s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.sku.toLowerCase().includes(searchQuery.toLowerCase())
         return matchStatus && matchSearch
     })
+
+    const stats = {
+        total: stock.length,
+        ok: stock.filter(s => s.status === 'ok').length,
+        low: stock.filter(s => s.status === 'low').length,
+        out: stock.filter(s => s.status === 'out').length,
+        totalValue: stock.reduce((sum, s) => sum + (s.unitPrice * s.stock), 0),
+    }
+
+    if (loading) {
+        return (
+            <div className="space-y-6 p-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+                        ))}
+                    </div>
+                    <div className="h-96 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="p-6">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <p className="text-red-600">{error}</p>
+                    <button
+                        onClick={fetchStock}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        Coba Lagi
+                    </button>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -61,15 +137,48 @@ export default function StockPage() {
                 <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">＋ Adjust Stok</button>
             </div>
 
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Total Item</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Aman</p>
+                    <p className="mt-1 text-2xl font-bold text-green-600">{stats.ok}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Menipis</p>
+                    <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.low}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Habis</p>
+                    <p className="mt-1 text-2xl font-bold text-red-600">{stats.out}</p>
+                </div>
+            </div>
+
             {/* Filters */}
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
-                    <input type="text" placeholder="Cari stok..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <input
+                        type="text"
+                        placeholder="Cari SKU atau nama produk..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {['all', 'ok', 'low', 'out'].map((s) => (
-                        <button key={s} onClick={() => setFilterStatus(s)} className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                            {s === 'all' ? 'Semua' : statusLabels[s]}
+                        <button
+                            key={s}
+                            onClick={() => setFilterStatus(s)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filterStatus === s
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                        >
+                            {s === 'all' ? 'Semua' : statusLabels[s] || s}
                         </button>
                     ))}
                 </div>
@@ -82,48 +191,47 @@ export default function StockPage() {
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-4 py-3 font-medium text-gray-600">SKU</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Produk</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">Nama Produk</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">Kategori</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-600">Stok Saat Ini</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-600">Min Stok</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Max Stok</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Level</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Lokasi</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Terakhir Restock</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Aksi</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">Nilai Stok</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-600">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filtered.map((item) => {
-                                const stockPercent = item.maxStock > 0 ? Math.round((item.currentStock / item.maxStock) * 100) : 0
-                                return (
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                                        Tidak ada data stok ditemukan
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map((item) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-semibold text-gray-900">{item.sku}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{item.sku}</td>
                                         <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
-                                        <td className="px-4 py-3 text-right font-semibold text-gray-900">{item.currentStock} {item.unit}</td>
-                                        <td className="px-4 py-3 text-right text-gray-500">{item.minStock}</td>
-                                        <td className="px-4 py-3 text-right text-gray-500">{item.maxStock}</td>
                                         <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-2 w-20 rounded-full bg-gray-200">
-                                                    <div className={`h-2 rounded-full ${item.status === 'ok' ? 'bg-green-500' : item.status === 'low' ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${Math.min(stockPercent, 100)}%` }} />
-                                                </div>
-                                                <span className="text-xs text-gray-500">{stockPercent}%</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-500">{item.location}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-gray-500">{item.lastRestock}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[item.status]}`}>
-                                                {statusLabels[item.status]}
+                                            <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                                                {item.category}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <button className="text-sm text-blue-600 hover:underline">Adjust</button>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                                            <span className={`font-bold ${item.status === 'out' ? 'text-red-600' : item.status === 'low' ? 'text-yellow-600' : 'text-gray-900'}`}>
+                                                {item.stock}
+                                            </span>
+                                            <span className="text-gray-500 ml-1">{item.unit}</span>
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right text-gray-500">{item.minStock} {item.unit}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(item.unitPrice * item.stock)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-center">
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                                                {statusLabels[item.status] || item.status}
+                                            </span>
                                         </td>
                                     </tr>
-                                )
-                            })}
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

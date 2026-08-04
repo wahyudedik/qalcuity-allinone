@@ -1,15 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatCurrency } from '@/lib/utils'
 
 type Deal = {
     id: string
     name: string
     company: string
     value: number
-    owner: string
-    daysInStage: number
-    winProb: number
+    stage: string
+    probability: number
+    assignedTo: string
+    expectedCloseDate: string
+    createdAt: string
 }
 
 type Stage = {
@@ -20,203 +23,248 @@ type Stage = {
     deals: Deal[]
 }
 
-const INITIAL_STAGES: Stage[] = [
-    {
-        id: 'discovery',
-        name: 'Discovery',
-        color: 'bg-blue-500',
-        bgColor: 'bg-blue-50',
-        deals: [
-            { id: 'd1', name: 'PT Sejahtera', company: 'PT Sejahtera Corp', value: 200000000, owner: 'Budi', daysInStage: 5, winProb: 30 },
-            { id: 'd2', name: 'CV Berkah Mandiri', company: 'CV Berkah Mandiri', value: 45000000, owner: 'Sari', daysInStage: 3, winProb: 25 },
-            { id: 'd3', name: 'PT Nusantara Tech', company: 'PT Nusantara Technology', value: 75000000, owner: 'Andi', daysInStage: 7, winProb: 20 },
-            { id: 'd4', name: 'PT Global Solutions', company: 'PT Global Solutions', value: 120000000, owner: 'Budi', daysInStage: 2, winProb: 35 },
-        ],
-    },
-    {
-        id: 'proposal',
-        name: 'Proposal',
-        color: 'bg-yellow-500',
-        bgColor: 'bg-yellow-50',
-        deals: [
-            { id: 'd5', name: 'CV Maju Bersama', company: 'CV Maju Bersama', value: 85000000, owner: 'Sari', daysInStage: 4, winProb: 55 },
-            { id: 'd6', name: 'PT Abadi Sentosa', company: 'PT Abadi Sentosa', value: 120000000, owner: 'Budi', daysInStage: 6, winProb: 45 },
-            { id: 'd7', name: 'CV Jaya Abadi', company: 'CV Jaya Abadi', value: 35000000, owner: 'Andi', daysInStage: 3, winProb: 40 },
-        ],
-    },
-    {
-        id: 'negosiasi',
-        name: 'Negosiasi',
-        color: 'bg-orange-500',
-        bgColor: 'bg-orange-50',
-        deals: [
-            { id: 'd8', name: 'PT ABC Corp', company: 'PT ABC Corporation', value: 150000000, owner: 'Budi', daysInStage: 3, winProb: 75 },
-            { id: 'd9', name: 'PT Maju Jaya', company: 'PT Maju Jaya', value: 65000000, owner: 'Sari', daysInStage: 5, winProb: 60 },
-        ],
-    },
-    {
-        id: 'closing',
-        name: 'Closing',
-        color: 'bg-green-500',
-        bgColor: 'bg-green-50',
-        deals: [
-            { id: 'd10', name: 'CV Berkah Jaya', company: 'CV Berkah Jaya', value: 45000000, owner: 'Andi', daysInStage: 2, winProb: 90 },
-            { id: 'd11', name: 'PT Sukses Makmur', company: 'PT Sukses Makmur', value: 20000000, owner: 'Budi', daysInStage: 1, winProb: 85 },
-        ],
-    },
+const stageConfig = [
+    { id: 'Discovery', name: 'Discovery', color: 'bg-blue-500', bgColor: 'bg-blue-50' },
+    { id: 'Proposal', name: 'Proposal', color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
+    { id: 'Negosiasi', name: 'Negosiasi', color: 'bg-orange-500', bgColor: 'bg-orange-50' },
+    { id: 'Closing', name: 'Closing', color: 'bg-green-500', bgColor: 'bg-green-50' },
 ]
 
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
-
 export default function PipelinePage() {
-    const [stages] = useState<Stage[]>(INITIAL_STAGES)
+    const [deals, setDeals] = useState<Deal[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
 
-    const totalValue = stages.reduce((sum, stage) => sum + stage.deals.reduce((s, d) => s + d.value, 0), 0)
-    const totalDeals = stages.reduce((sum, stage) => sum + stage.deals.length, 0)
+    useEffect(() => {
+        fetchDeals()
+    }, [])
+
+    const fetchDeals = async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/crm/deals')
+            const data = await response.json()
+            if (data.success) {
+                setDeals(data.data)
+            } else {
+                setError('Gagal memuat data pipeline')
+            }
+        } catch {
+            setError('Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Organize deals by stage
+    const stages: Stage[] = stageConfig.map(config => ({
+        ...config,
+        deals: deals.filter(d => d.stage === config.id),
+    }))
+
+    const totalValue = deals.reduce((sum, d) => sum + d.value, 0)
+    const totalDeals = deals.length
+    const weightedValue = deals.reduce((sum, d) => sum + (d.value * d.probability / 100), 0)
+
+    if (loading) {
+        return (
+            <div className="space-y-6 p-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-96 bg-gray-200 rounded-xl"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="p-6">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <p className="text-red-600">{error}</p>
+                    <button
+                        onClick={fetchDeals}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        Coba Lagi
+                    </button>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Sales Pipeline</h1>
-                    <p className="text-gray-500">
-                        {totalDeals} deals · Total value {formatCurrency(totalValue)}
-                    </p>
+                    <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
+                    <p className="text-gray-500">{totalDeals} deals · Total {formatCurrency(totalValue)}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    {/* View Toggle */}
-                    <div className="flex rounded-lg border border-gray-300 bg-white">
+                <div className="flex gap-2">
+                    <div className="flex gap-1 rounded-lg border border-gray-200 p-1">
                         <button
                             onClick={() => setViewMode('board')}
-                            className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'board' ? 'bg-blue-600 text-white' : 'text-gray-700'}`}
+                            className={`rounded px-3 py-1.5 text-xs font-medium ${viewMode === 'board' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                         >
                             Board
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`px-3 py-1.5 text-sm font-medium ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-700'}`}
+                            className={`rounded px-3 py-1.5 text-xs font-medium ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                         >
                             List
                         </button>
                     </div>
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        ＋ Deal Baru
-                    </button>
                 </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {stages.map((stage) => {
+                    const stageValue = stage.deals.reduce((sum, d) => sum + d.value, 0)
+                    const stageWeighted = stage.deals.reduce((sum, d) => sum + (d.value * d.probability / 100), 0)
+                    return (
+                        <div key={stage.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex items-center gap-2">
+                                <div className={`h-3 w-3 rounded-full ${stage.color}`} />
+                                <p className="text-sm font-medium text-gray-700">{stage.name}</p>
+                            </div>
+                            <p className="mt-2 text-xl font-bold text-gray-900">{stage.deals.length} deals</p>
+                            <p className="text-sm text-gray-500">{formatCurrency(stageValue)}</p>
+                            <p className="text-xs text-blue-600 mt-1">Weighted: {formatCurrency(stageWeighted)}</p>
+                        </div>
+                    )
+                })}
             </div>
 
             {/* Board View */}
             {viewMode === 'board' && (
-                <div className="flex gap-4 overflow-x-auto pb-4">
-                    {stages.map((stage) => {
-                        const stageValue = stage.deals.reduce((s, d) => s + d.value, 0)
-                        return (
-                            <div key={stage.id} className="min-w-[280px] flex-1">
-                                {/* Stage Header */}
-                                <div className={`rounded-t-lg ${stage.bgColor} px-4 py-3`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`h-2.5 w-2.5 rounded-full ${stage.color}`} />
-                                            <h3 className="font-semibold text-gray-900">{stage.name}</h3>
-                                            <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                {stage.deals.length}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <p className="mt-1 text-sm text-gray-600">{formatCurrency(stageValue)}</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {stages.map((stage) => (
+                        <div key={stage.id} className={`rounded-xl border border-gray-200 ${stage.bgColor} p-4`}>
+                            <div className="mb-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className={`h-3 w-3 rounded-full ${stage.color}`} />
+                                    <h3 className="font-semibold text-gray-900">{stage.name}</h3>
                                 </div>
-
-                                {/* Deal Cards */}
-                                <div className={`space-y-2 rounded-b-lg ${stage.bgColor} p-2`}>
-                                    {stage.deals.map((deal) => (
+                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                    {stage.deals.length}
+                                </span>
+                            </div>
+                            <div className="space-y-3">
+                                {stage.deals.length === 0 ? (
+                                    <p className="rounded-lg bg-white/50 p-4 text-center text-sm text-gray-500">
+                                        Tidak ada deal
+                                    </p>
+                                ) : (
+                                    stage.deals.map((deal) => (
                                         <div
                                             key={deal.id}
-                                            className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+                                            className="rounded-lg bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
                                         >
-                                            <div className="flex items-start justify-between">
-                                                <div>
-                                                    <p className="font-medium text-gray-900">{deal.name}</p>
-                                                    <p className="text-xs text-gray-500">{deal.company}</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-3 flex items-center justify-between">
-                                                <span className="text-sm font-semibold text-gray-900">{formatCurrency(deal.value)}</span>
-                                                <span className="text-xs text-gray-500">{deal.daysInStage}h</span>
-                                            </div>
+                                            <p className="font-medium text-gray-900">{deal.name}</p>
+                                            <p className="text-xs text-gray-500">{deal.company}</p>
                                             <div className="mt-2 flex items-center justify-between">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className="h-5 w-5 rounded-full bg-gray-300" />
-                                                    <span className="text-xs text-gray-500">{deal.owner}</span>
+                                                <span className="text-sm font-bold text-green-600">
+                                                    {formatCurrency(deal.value)}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    {deal.probability}%
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <div className="h-1.5 flex-1 rounded-full bg-gray-200">
+                                                    <div
+                                                        className="h-full rounded-full bg-blue-500"
+                                                        style={{ width: `${deal.probability}%` }}
+                                                    />
                                                 </div>
-                                                <div className="flex items-center gap-1">
-                                                    <div className="h-1.5 w-12 rounded-full bg-gray-200">
-                                                        <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${deal.winProb}%` }} />
-                                                    </div>
-                                                    <span className="text-xs text-gray-500">{deal.winProb}%</span>
-                                                </div>
+                                            </div>
+                                            <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                                                <span>{deal.assignedTo}</span>
+                                                <span>Weighted: {formatCurrency(deal.value * deal.probability / 100)}</span>
                                             </div>
                                         </div>
-                                    ))}
-
-                                    {/* Add Deal Button */}
-                                    <button className="w-full rounded-lg border-2 border-dashed border-gray-300 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700">
-                                        + Tambah Deal
-                                    </button>
-                                </div>
+                                    ))
+                                )}
                             </div>
-                        )
-                    })}
+                        </div>
+                    ))}
                 </div>
             )}
 
             {/* List View */}
             {viewMode === 'list' && (
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                    <table className="w-full text-left text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-600">Deal</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Perusahaan</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Stage</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Nilai</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Win Prob</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Owner</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Hari di Stage</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {stages.map((stage) =>
-                                stage.deals.map((deal) => (
-                                    <tr key={deal.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-medium text-gray-900">{deal.name}</td>
-                                        <td className="px-4 py-3 text-gray-500">{deal.company}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${stage.bgColor} text-gray-800`}>
-                                                <span className={`h-1.5 w-1.5 rounded-full ${stage.color}`} />
-                                                {stage.name}
-                                            </span>
-                                        </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(deal.value)}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-1.5 w-16 rounded-full bg-gray-200">
-                                                    <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${deal.winProb}%` }} />
-                                                </div>
-                                                <span className="text-xs text-gray-500">{deal.winProb}%</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-500">{deal.owner}</td>
-                                        <td className="px-4 py-3 text-gray-500">{deal.daysInStage} hari</td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                <div className="rounded-xl border border-gray-200 bg-white">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50">
+                                    <th className="px-4 py-3 font-medium text-gray-500">Deal</th>
+                                    <th className="px-4 py-3 font-medium text-gray-500">Perusahaan</th>
+                                    <th className="px-4 py-3 text-right font-medium text-gray-500">Nilai</th>
+                                    <th className="px-4 py-3 text-center font-medium text-gray-500">Stage</th>
+                                    <th className="px-4 py-3 text-center font-medium text-gray-500">Win %</th>
+                                    <th className="px-4 py-3 text-center font-medium text-gray-500">Weighted</th>
+                                    <th className="px-4 py-3 font-medium text-gray-500">Owner</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {stages.map((stage) =>
+                                    stage.deals.map((deal) => (
+                                        <tr key={deal.id} className="hover:bg-gray-50">
+                                            <td className="whitespace-nowrap px-4 py-3 font-medium">{deal.name}</td>
+                                            <td className="px-4 py-3">{deal.company}</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(deal.value)}</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-center">
+                                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stage.bgColor} ${stage.color.replace('bg-', 'text-')}`}>
+                                                    {stage.name}
+                                                </span>
+                                            </td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-center">{deal.probability}%</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
+                                                {formatCurrency(deal.value * deal.probability / 100)}
+                                            </td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-gray-500">{deal.assignedTo}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
+
+            {/* Summary */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-gray-500">Total Pipeline Value</p>
+                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue)}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500">Weighted Pipeline</p>
+                        <p className="text-2xl font-bold text-blue-600">{formatCurrency(weightedValue)}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500">Avg Deal Size</p>
+                        <p className="text-2xl font-bold text-green-600">
+                            {formatCurrency(totalDeals > 0 ? totalValue / totalDeals : 0)}
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

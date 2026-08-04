@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 
 interface LeaveRequest {
     id: string
@@ -14,67 +15,6 @@ interface LeaveRequest {
     appliedDate: string
     approvedBy?: string
 }
-
-const leaveRequests: LeaveRequest[] = [
-    {
-        id: 'LV-001',
-        employeeName: 'Budi Santoso',
-        type: 'annual',
-        startDate: '2026-08-03',
-        endDate: '2026-08-07',
-        days: 5,
-        reason: 'Liburan keluarga ke Bali',
-        status: 'approved',
-        appliedDate: '2026-07-25',
-        approvedBy: 'Dewi Lestari',
-    },
-    {
-        id: 'LV-002',
-        employeeName: 'Ahmad Rizky',
-        type: 'sick',
-        startDate: '2026-08-04',
-        endDate: '2026-08-04',
-        days: 1,
-        reason: 'Sakit demam',
-        status: 'pending',
-        appliedDate: '2026-08-03',
-    },
-    {
-        id: 'LV-003',
-        employeeName: 'Hana Permata',
-        type: 'personal',
-        startDate: '2026-08-10',
-        endDate: '2026-08-11',
-        days: 2,
-        reason: 'Urusan keluarga',
-        status: 'pending',
-        appliedDate: '2026-08-02',
-    },
-    {
-        id: 'LV-004',
-        employeeName: 'Fitri Handayani',
-        type: 'annual',
-        startDate: '2026-07-28',
-        endDate: '2026-07-30',
-        days: 3,
-        reason: 'Wedding anniversary',
-        status: 'approved',
-        appliedDate: '2026-07-20',
-        approvedBy: 'Siti Nurhaliza',
-    },
-    {
-        id: 'LV-005',
-        employeeName: 'Eko Prasetyo',
-        type: 'unpaid',
-        startDate: '2026-08-15',
-        endDate: '2026-08-16',
-        days: 2,
-        reason: 'Keperluan pribadi',
-        status: 'rejected',
-        appliedDate: '2026-08-01',
-        approvedBy: 'Dewi Lestari',
-    },
-]
 
 const leaveTypes = {
     annual: { label: 'Cuti Tahunan', color: 'bg-blue-100 text-blue-700', icon: '🏖️' },
@@ -91,10 +31,38 @@ const statusConfig = {
 }
 
 export default function LeavesPage() {
+    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'requests' | 'balance' | 'calendar'>('requests')
     const [filterStatus, setFilterStatus] = useState('all')
     const [filterType, setFilterType] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
+
+    const fetchLeaves = async () => {
+        try {
+            setLoading(true)
+            const params = new URLSearchParams()
+            if (searchQuery) params.set('search', searchQuery)
+            if (filterStatus !== 'all') params.set('status', filterStatus)
+            if (filterType !== 'all') params.set('type', filterType)
+
+            const res = await fetch(`/api/hr/leaves?${params.toString()}`)
+            const data = await res.json()
+
+            if (data.success) {
+                setLeaveRequests(data.data)
+            }
+        } catch {
+            setError('Gagal memuat data cuti')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchLeaves()
+    }, [searchQuery, filterStatus, filterType])
 
     const filteredRequests = leaveRequests.filter(req => {
         const matchesSearch = req.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -112,6 +80,31 @@ export default function LeavesPage() {
         { type: 'sick', total: 12, used: 2, remaining: 10 },
         { type: 'personal', total: 3, used: 1, remaining: 2 },
     ]
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <LoadingSkeleton lines={2} />
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {[1, 2, 3, 4].map(i => <LoadingSkeleton key={i} lines={1} />)}
+                </div>
+                <LoadingSkeleton lines={1} />
+                <LoadingSkeleton lines={5} />
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12">
+                <span className="text-4xl">⚠️</span>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
+                <button onClick={fetchLeaves} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    Coba Lagi
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -369,11 +362,11 @@ export default function LeavesPage() {
                         {Array.from({ length: 35 }, (_, i) => {
                             const day = i - 0 + 1 // August 2026 starts on Saturday
                             const isCurrentMonth = day >= 1 && day <= 31
-                            const isToday = day === 3
+                            const isToday = day === 4
 
                             // Sample leave days
                             const hasLeave = [3, 4, 5, 6, 7, 10, 11, 15, 16].includes(day)
-                            const leaveNames = {
+                            const leaveNames: Record<number, string> = {
                                 3: 'Budi',
                                 4: 'Budi',
                                 5: 'Budi',
@@ -396,7 +389,7 @@ export default function LeavesPage() {
                                     </div>
                                     {isCurrentMonth && hasLeave && (
                                         <div className="rounded bg-blue-100 px-1 py-0.5 text-[10px] text-blue-700 truncate">
-                                            {leaveNames[day as keyof typeof leaveNames]}
+                                            {leaveNames[day]}
                                         </div>
                                     )}
                                 </div>

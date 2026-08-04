@@ -158,7 +158,7 @@ export default function AuditPage() {
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -248,8 +248,8 @@ export default function AuditPage() {
                                 key={value}
                                 onClick={() => setDateRange(value)}
                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === value
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 {label}

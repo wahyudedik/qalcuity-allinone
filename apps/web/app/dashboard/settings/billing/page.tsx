@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { formatCurrency } from '@/lib/utils'
 
 const plans = [
     {
@@ -60,14 +61,6 @@ const plans = [
 export default function BillingSettingsPage() {
     const [currentPlan] = useState('growth')
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-        }).format(amount)
-    }
-
     return (
         <div className="space-y-6">
             {/* Current Plan */}
@@ -119,10 +112,10 @@ export default function BillingSettingsPage() {
                         <div
                             key={plan.id}
                             className={`bg-white rounded-xl border-2 p-6 ${plan.highlighted
-                                    ? 'border-blue-500 shadow-lg'
-                                    : currentPlan === plan.id
-                                        ? 'border-green-500'
-                                        : 'border-gray-200'
+                                ? 'border-blue-500 shadow-lg'
+                                : currentPlan === plan.id
+                                    ? 'border-green-500'
+                                    : 'border-gray-200'
                                 }`}
                         >
                             {plan.highlighted && (
@@ -155,10 +148,10 @@ export default function BillingSettingsPage() {
 
                             <button
                                 className={`w-full mt-6 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${currentPlan === plan.id
-                                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                                        : plan.highlighted
-                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                            : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                                    : plan.highlighted
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                                     }`}
                                 disabled={currentPlan === plan.id}
                             >

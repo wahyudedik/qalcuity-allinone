@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatCurrency } from '@/lib/utils'
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 
 interface PayrollRecord {
     id: string
@@ -13,33 +15,70 @@ interface PayrollRecord {
     status: 'pending' | 'processed' | 'paid'
 }
 
-const payrollData: PayrollRecord[] = [
-    { id: 'PAY-001', employeeName: 'Ahmad Rizky', period: 'Agustus 2026', baseSalary: 15000000, allowances: 2000000, deductions: 1500000, netSalary: 15500000, status: 'processed' },
-    { id: 'PAY-002', employeeName: 'Siti Nurhaliza', period: 'Agustus 2026', baseSalary: 18000000, allowances: 2500000, deductions: 1800000, netSalary: 18700000, status: 'processed' },
-    { id: 'PAY-003', employeeName: 'Budi Santoso', period: 'Agustus 2026', baseSalary: 12000000, allowances: 1500000, deductions: 1200000, netSalary: 12300000, status: 'paid' },
-    { id: 'PAY-004', employeeName: 'Dewi Lestari', period: 'Agustus 2026', baseSalary: 16000000, allowances: 2200000, deductions: 1600000, netSalary: 16600000, status: 'paid' },
-    { id: 'PAY-005', employeeName: 'Eko Prasetyo', period: 'Agustus 2026', baseSalary: 14000000, allowances: 1800000, deductions: 1400000, netSalary: 14400000, status: 'pending' },
-    { id: 'PAY-006', employeeName: 'Fitri Handayani', period: 'Agustus 2026', baseSalary: 13000000, allowances: 1600000, deductions: 1300000, netSalary: 13300000, status: 'pending' },
-    { id: 'PAY-007', employeeName: 'Hana Permata', period: 'Agustus 2026', baseSalary: 11000000, allowances: 1400000, deductions: 1100000, netSalary: 11300000, status: 'pending' },
-]
+const statusConfig = {
+    pending: { label: 'Belum Diproses', color: 'bg-yellow-100 text-yellow-700' },
+    processed: { label: 'Sudah Diproses', color: 'bg-blue-100 text-blue-700' },
+    paid: { label: 'Sudah Dibayar', color: 'bg-green-100 text-green-700' },
+}
 
 export default function PayrollPage() {
+    const [payrollData, setPayrollData] = useState<PayrollRecord[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState('all')
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
+    const fetchPayroll = async () => {
+        try {
+            setLoading(true)
+            const params = new URLSearchParams()
+            if (filterStatus !== 'all') params.set('status', filterStatus)
+
+            const res = await fetch(`/api/hr/payroll?${params.toString()}`)
+            const data = await res.json()
+
+            if (data.success) {
+                setPayrollData(data.data)
+            }
+        } catch {
+            setError('Gagal memuat data payroll')
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const statusConfig = {
-        pending: { label: 'Belum Diproses', color: 'bg-yellow-100 text-yellow-700' },
-        processed: { label: 'Sudah Diproses', color: 'bg-blue-100 text-blue-700' },
-        paid: { label: 'Sudah Dibayar', color: 'bg-green-100 text-green-700' },
-    }
+    useEffect(() => {
+        fetchPayroll()
+    }, [filterStatus])
 
     const filteredData = payrollData.filter(p => filterStatus === 'all' || p.status === filterStatus)
     const totalNetSalary = payrollData.reduce((sum, p) => sum + p.netSalary, 0)
     const totalProcessed = payrollData.filter(p => p.status === 'processed' || p.status === 'paid').reduce((sum, p) => sum + p.netSalary, 0)
     const totalPending = payrollData.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.netSalary, 0)
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <LoadingSkeleton lines={2} />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    {[1, 2, 3, 4].map(i => <LoadingSkeleton key={i} lines={1} />)}
+                </div>
+                <LoadingSkeleton lines={1} />
+                <LoadingSkeleton lines={5} />
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12">
+                <span className="text-4xl">⚠️</span>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
+                <button onClick={fetchPayroll} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    Coba Lagi
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">

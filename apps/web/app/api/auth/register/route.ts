@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-
-// Mock users database - akan diganti dengan Prisma di Phase 4
-const users: Array<{
-    id: string;
-    email: string;
-    name: string;
-    password: string;
-    role: string;
-    companyId: string;
-}> = [];
+import prisma from "@/lib/db";
 
 export async function POST(request: Request) {
     try {
@@ -31,8 +22,20 @@ export async function POST(request: Request) {
             );
         }
 
+        // Validasi email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json(
+                { error: "Format email tidak valid" },
+                { status: 400 }
+            );
+        }
+
         // Cek apakah email sudah terdaftar
-        const existingUser = users.find((u) => u.email === email);
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
+        });
+
         if (existingUser) {
             return NextResponse.json(
                 { error: "Email sudah terdaftar" },
@@ -43,20 +46,38 @@ export async function POST(request: Request) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Buat user baru
-        const newUser = {
-            id: String(users.length + 1),
-            email,
-            name: fullName,
-            password: hashedPassword,
-            role: "ADMIN",
-            companyId: String(users.length + 1),
-        };
+        // Buat tenant baru untuk perusahaan
+        const slug = companyName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
 
-        users.push(newUser);
+        // Gunakan transaction untuk memastikan atomicitas
+        const result = await prisma.$transaction(async (tx) => {
+            // Buat tenant
+            const tenant = await tx.tenant.create({
+                data: {
+                    name: companyName,
+                    slug: `${slug}-${Date.now()}`,
+                },
+            });
+
+            // Buat user admin untuk tenant
+            const user = await tx.user.create({
+                data: {
+                    email,
+                    name: fullName,
+                    passwordHash: hashedPassword,
+                    role: "ADMIN",
+                    tenantId: tenant.id,
+                },
+            });
+
+            return { tenant, user };
+        });
 
         // Return success tanpa password
-        const { password: _, ...userWithoutPassword } = newUser;
+        const { passwordHash: _, ...userWithoutPassword } = result.user;
 
         return NextResponse.json(
             {

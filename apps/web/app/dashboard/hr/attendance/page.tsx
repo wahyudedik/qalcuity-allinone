@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 
 interface AttendanceRecord {
     id: string
@@ -12,32 +13,13 @@ interface AttendanceRecord {
     workHours: number
 }
 
-const attendanceData: AttendanceRecord[] = [
-    { id: '1', employeeName: 'Ahmad Rizky', date: '2026-08-03', clockIn: '08:55', clockOut: null, status: 'present', workHours: 0 },
-    { id: '2', employeeName: 'Siti Nurhaliza', date: '2026-08-03', clockIn: '08:30', clockOut: null, status: 'present', workHours: 0 },
-    { id: '3', employeeName: 'Budi Santoso', date: '2026-08-03', clockIn: null, clockOut: null, status: 'leave', workHours: 0 },
-    { id: '4', employeeName: 'Dewi Lestari', date: '2026-08-03', clockIn: '09:15', clockOut: null, status: 'late', workHours: 0 },
-    { id: '5', employeeName: 'Eko Prasetyo', date: '2026-08-03', clockIn: '08:00', clockOut: '17:00', status: 'present', workHours: 9 },
-    { id: '6', employeeName: 'Fitri Handayani', date: '2026-08-03', clockIn: '07:55', clockOut: null, status: 'wfH', workHours: 0 },
-    { id: '7', employeeName: 'Hana Permata', date: '2026-08-03', clockIn: null, clockOut: null, status: 'absent', workHours: 0 },
-]
-
-const historicalData: AttendanceRecord[] = [
-    { id: 'h1', employeeName: 'Ahmad Rizky', date: '2026-08-02', clockIn: '08:58', clockOut: '17:05', status: 'present', workHours: 8.12 },
-    { id: 'h2', employeeName: 'Siti Nurhaliza', date: '2026-08-02', clockIn: '08:25', clockOut: '17:30', status: 'present', workHours: 9.08 },
-    { id: 'h3', employeeName: 'Budi Santoso', date: '2026-08-02', clockIn: '09:30', clockOut: '17:00', status: 'late', workHours: 7.5 },
-    { id: 'h4', employeeName: 'Dewi Lestari', date: '2026-08-02', clockIn: '08:00', clockOut: '17:15', status: 'present', workHours: 9.25 },
-    { id: 'h5', employeeName: 'Eko Prasetyo', date: '2026-08-02', clockIn: '08:05', clockOut: '18:00', status: 'present', workHours: 9.92 },
-    { id: 'h6', employeeName: 'Fitri Handayani', date: '2026-08-02', clockIn: '08:00', clockOut: '17:00', status: 'present', workHours: 9 },
-    { id: 'h7', employeeName: 'Hana Permata', date: '2026-08-02', clockIn: '08:45', clockOut: '17:10', status: 'present', workHours: 8.42 },
-    { id: 'h8', employeeName: 'Ahmad Rizky', date: '2026-08-01', clockIn: '09:20', clockOut: '17:00', status: 'late', workHours: 7.67 },
-    { id: 'h9', employeeName: 'Siti Nurhaliza', date: '2026-08-01', clockIn: '08:30', clockOut: '17:30', status: 'present', workHours: 9 },
-    { id: 'h10', employeeName: 'Budi Santoso', date: '2026-08-01', clockIn: '08:00', clockOut: '17:00', status: 'present', workHours: 9 },
-]
-
 export default function AttendancePage() {
+    const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
+    const [historicalData, setHistoricalData] = useState<AttendanceRecord[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'today' | 'history'>('today')
-    const [selectedDate, setSelectedDate] = useState('2026-08-03')
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [searchQuery, setSearchQuery] = useState('')
 
     const statusConfig = {
@@ -48,6 +30,40 @@ export default function AttendancePage() {
         'wfH': { label: 'WFH', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
     }
 
+    const fetchAttendance = async () => {
+        try {
+            setLoading(true)
+
+            // Fetch today's attendance
+            const todayParams = new URLSearchParams({ type: 'today', date: selectedDate })
+            if (searchQuery) todayParams.set('search', searchQuery)
+            const todayRes = await fetch(`/api/hr/attendance?${todayParams.toString()}`)
+            const todayData = await todayRes.json()
+
+            if (todayData.success) {
+                setAttendanceData(todayData.data)
+            }
+
+            // Fetch history
+            const historyParams = new URLSearchParams({ type: 'history' })
+            if (searchQuery) historyParams.set('search', searchQuery)
+            const historyRes = await fetch(`/api/hr/attendance?${historyParams.toString()}`)
+            const historyDataResult = await historyRes.json()
+
+            if (historyDataResult.success) {
+                setHistoricalData(historyDataResult.data)
+            }
+        } catch {
+            setError('Gagal memuat data absensi')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchAttendance()
+    }, [selectedDate, searchQuery])
+
     const presentCount = attendanceData.filter(a => a.status === 'present' || a.status === 'wfH').length
     const lateCount = attendanceData.filter(a => a.status === 'late').length
     const absentCount = attendanceData.filter(a => a.status === 'absent').length
@@ -57,9 +73,34 @@ export default function AttendancePage() {
         a.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const historyData = historicalData.filter(a =>
+    const historyDataFiltered = historicalData.filter(a =>
         a.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
     )
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <LoadingSkeleton lines={2} />
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+                    {[1, 2, 3, 4, 5].map(i => <LoadingSkeleton key={i} lines={1} />)}
+                </div>
+                <LoadingSkeleton lines={1} />
+                <LoadingSkeleton lines={5} />
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12">
+                <span className="text-4xl">⚠️</span>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
+                <button onClick={fetchAttendance} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    Coba Lagi
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -206,7 +247,7 @@ export default function AttendancePage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {historyData.map((record) => (
+                                {historyDataFiltered.map((record) => (
                                     <tr key={record.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 text-sm text-gray-600">
                                             {new Date(record.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}

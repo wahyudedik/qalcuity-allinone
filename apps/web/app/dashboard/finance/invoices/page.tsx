@@ -1,74 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { InvoiceForm } from '@/components/finance/invoice-form'
 
-const invoices = [
-    {
-        id: 'INV-2026-0092',
-        customer: 'PT Maju Bersama',
-        amount: 15500000,
-        status: 'sent',
-        dueDate: '2026-08-18',
-        createdAt: '2026-08-03',
-    },
-    {
-        id: 'INV-2026-0091',
-        customer: 'CV Berkah Jaya',
-        amount: 8250000,
-        status: 'paid',
-        dueDate: '2026-08-01',
-        createdAt: '2026-08-01',
-    },
-    {
-        id: 'INV-2026-0090',
-        customer: 'PT Sejahtera Abadi',
-        amount: 23000000,
-        status: 'overdue',
-        dueDate: '2026-07-15',
-        createdAt: '2026-07-01',
-    },
-    {
-        id: 'INV-2026-0089',
-        customer: 'PT Digital Nusantara',
-        amount: 5750000,
-        status: 'draft',
-        dueDate: '2026-08-20',
-        createdAt: '2026-08-02',
-    },
-    {
-        id: 'INV-2026-0088',
-        customer: 'UD Makmur Sentosa',
-        amount: 12000000,
-        status: 'paid',
-        dueDate: '2026-07-28',
-        createdAt: '2026-07-15',
-    },
-    {
-        id: 'INV-2026-0087',
-        customer: 'PT ABC Corporation',
-        amount: 45000000,
-        status: 'partially_paid',
-        dueDate: '2026-08-10',
-        createdAt: '2026-07-25',
-    },
-    {
-        id: 'INV-2026-0086',
-        customer: 'CV Maju Jaya',
-        amount: 3250000,
-        status: 'paid',
-        dueDate: '2026-07-20',
-        createdAt: '2026-07-10',
-    },
-    {
-        id: 'INV-2026-0085',
-        customer: 'PT Teknologi Maju',
-        amount: 18750000,
-        status: 'overdue',
-        dueDate: '2026-07-10',
-        createdAt: '2026-06-25',
-    },
-]
+type Invoice = {
+    id: string
+    invoiceNumber: string
+    customerName: string
+    subtotal: number
+    tax: number
+    total: number
+    currency: string
+    status: string
+    dueDate: string
+    createdAt: string
+}
 
 const statusConfig: Record<string, { label: string; color: string }> = {
     draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
@@ -79,191 +27,235 @@ const statusConfig: Record<string, { label: string; color: string }> = {
     cancelled: { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-500' },
 }
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(amount)
-}
-
 export default function InvoicesPage() {
+    const [invoices, setInvoices] = useState<Invoice[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [statusFilter, setStatusFilter] = useState('all')
     const [search, setSearch] = useState('')
+    const [showCreateModal, setShowCreateModal] = useState(false)
+
+    useEffect(() => {
+        fetchInvoices()
+    }, [])
+
+    const fetchInvoices = async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/finance/invoices')
+            const data = await response.json()
+            if (data.success) {
+                setInvoices(data.data)
+            } else {
+                setError('Gagal memuat data invoice')
+            }
+        } catch (err) {
+            setError('Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const filteredInvoices = invoices.filter(invoice => {
         const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter
         const matchesSearch = search === '' ||
-            invoice.id.toLowerCase().includes(search.toLowerCase()) ||
-            invoice.customer.toLowerCase().includes(search.toLowerCase())
+            invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+            invoice.customerName.toLowerCase().includes(search.toLowerCase())
         return matchesStatus && matchesSearch
     })
 
     const stats = {
-        total: invoices.reduce((sum, inv) => sum + inv.amount, 0),
-        paid: invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0),
-        outstanding: invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').reduce((sum, inv) => sum + inv.amount, 0),
-        overdue: invoices.filter(i => i.status === 'overdue').reduce((sum, inv) => sum + inv.amount, 0),
+        total: invoices.reduce((sum, inv) => sum + inv.total, 0),
+        paid: invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + inv.total, 0),
+        outstanding: invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').reduce((sum, inv) => sum + inv.total, 0),
+        draft: invoices.filter(i => i.status === 'draft').length,
+    }
+
+    const handleCreateInvoice = async (data: unknown) => {
+        try {
+            const response = await fetch('/api/finance/invoices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            })
+            const result = await response.json()
+            if (result.success) {
+                setShowCreateModal(false)
+                fetchInvoices() // Refresh data
+            } else {
+                alert('Gagal membuat invoice: ' + result.error)
+            }
+        } catch {
+            alert('Terjadi kesalahan saat membuat invoice')
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="space-y-6 p-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+                        ))}
+                    </div>
+                    <div className="h-96 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="p-6">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <p className="text-red-600">{error}</p>
+                    <button
+                        onClick={fetchInvoices}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        Coba Lagi
+                    </button>
+                </div>
+            </div>
+        )
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Invoice</h1>
-                    <p className="text-gray-600 mt-1">Kelola invoice dan tagihan Anda</p>
+                    <p className="text-gray-500">Kelola invoice dan tagihan Anda</p>
                 </div>
-                <Link
-                    href="/dashboard/finance/invoices/new"
-                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Buat Invoice
-                </Link>
+                </button>
             </div>
 
-            {/* Stats */}
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Total Invoice</div>
-                    <div className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(stats.total)}</div>
-                    <div className="text-xs text-gray-500 mt-1">{invoices.length} invoice</div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Total Invoice</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
+                    <p className="text-xs text-gray-400 mt-1">{invoices.length} invoice</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Lunas</div>
-                    <div className="text-xl font-bold text-green-600 mt-1">{formatCurrency(stats.paid)}</div>
-                    <div className="text-xs text-gray-500 mt-1">{invoices.filter(i => i.status === 'paid').length} invoice</div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Sudah Dibayar</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</p>
+                    <p className="text-xs text-gray-400 mt-1">{invoices.filter(i => i.status === 'paid').length} invoice</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Outstanding</div>
-                    <div className="text-xl font-bold text-yellow-600 mt-1">{formatCurrency(stats.outstanding)}</div>
-                    <div className="text-xs text-gray-500 mt-1">{invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').length} invoice</div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Belum Dibayar</p>
+                    <p className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.outstanding)}</p>
+                    <p className="text-xs text-gray-400 mt-1">{invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').length} invoice</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Overdue</div>
-                    <div className="text-xl font-bold text-red-600 mt-1">{formatCurrency(stats.overdue)}</div>
-                    <div className="text-xs text-gray-500 mt-1">{invoices.filter(i => i.status === 'overdue').length} invoice</div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Draft</p>
+                    <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
+                    <p className="text-xs text-gray-400 mt-1">Belum dikirim</p>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                    <div className="relative">
+                        <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                             type="text"
-                            placeholder="Cari invoice atau customer..."
+                            placeholder="Cari invoice..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
                         />
                     </div>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
-                    >
-                        <option value="all">Semua Status</option>
-                        <option value="draft">Draft</option>
-                        <option value="sent">Terkirim</option>
-                        <option value="paid">Lunas</option>
-                        <option value="overdue">Overdue</option>
-                        <option value="partially_paid">Bayar Sebagian</option>
-                    </select>
-                    <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Export
-                    </button>
                 </div>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                    <option value="all">Semua Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="sent">Terkirim</option>
+                    <option value="paid">Lunas</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="partially_paid">Bayar Sebagian</option>
+                    <option value="cancelled">Dibatalkan</option>
+                </select>
             </div>
 
-            {/* Invoice Table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {/* Table */}
+            <div className="rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">
-                                    <input type="checkbox" className="rounded border-gray-300" />
-                                </th>
-                                <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Invoice</th>
-                                <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Customer</th>
-                                <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Jumlah</th>
-                                <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Status</th>
-                                <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Jatuh Tempo</th>
-                                <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Aksi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nomor</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Customer</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tanggal</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Jatuh Tempo</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Jumlah</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredInvoices.map((invoice) => (
-                                <tr key={invoice.id} className="hover:bg-gray-50">
-                                    <td className="py-4 px-6">
-                                        <input type="checkbox" className="rounded border-gray-300" />
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <Link href={`/dashboard/finance/invoices/${invoice.id}`} className="font-medium text-blue-600 hover:text-blue-700">
-                                            {invoice.id}
-                                        </Link>
-                                        <div className="text-xs text-gray-500 mt-0.5">{invoice.createdAt}</div>
-                                    </td>
-                                    <td className="py-4 px-6 text-sm text-gray-900">{invoice.customer}</td>
-                                    <td className="py-4 px-6 text-sm text-gray-900 text-right font-medium">
-                                        {formatCurrency(invoice.amount)}
-                                    </td>
-                                    <td className="py-4 px-6">
-                                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[invoice.status].color}`}>
-                                            {statusConfig[invoice.status].label}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6 text-sm text-gray-600">{invoice.dueDate}</td>
-                                    <td className="py-4 px-6">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Link
-                                                href={`/dashboard/finance/invoices/${invoice.id}`}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </Link>
-                                            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                            {filteredInvoices.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                                        Tidak ada invoice ditemukan
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredInvoices.map((invoice) => (
+                                    <tr key={invoice.id} className="hover:bg-gray-50">
+                                        <td className="whitespace-nowrap px-6 py-4">
+                                            <Link href={`/dashboard/finance/invoices/${invoice.id}`} className="font-medium text-blue-600 hover:underline">
+                                                {invoice.invoiceNumber}
+                                            </Link>
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-900">{invoice.customerName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(invoice.createdAt)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(invoice.dueDate)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right font-medium">{formatCurrency(invoice.total)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-center">
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[invoice.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                                {statusConfig[invoice.status]?.label || invoice.status}
+                                            </span>
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right">
+                                            <Link href={`/dashboard/finance/invoices/${invoice.id}`} className="text-blue-600 hover:text-blue-800">
+                                                <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
-
-                {/* Pagination */}
-                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                        Menampilkan {filteredInvoices.length} dari {invoices.length} invoice
-                    </div>
-                    <div className="flex gap-2">
-                        <button className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" disabled>
-                            Sebelumnya
-                        </button>
-                        <button className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium">1</button>
-                        <button className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">
-                            Selanjutnya
-                        </button>
-                    </div>
-                </div>
             </div>
+
+            {/* Create Modal */}
+            <InvoiceForm
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSubmit={handleCreateInvoice}
+            />
         </div>
     )
 }

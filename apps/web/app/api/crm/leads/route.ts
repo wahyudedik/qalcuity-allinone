@@ -97,3 +97,58 @@ export async function POST(request: Request) {
         );
     }
 }
+
+export async function PUT(request: Request) {
+    try {
+        const body = await request.json();
+        const { id, ...updateData } = body;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const index = mockLeads.findIndex((l) => l.id === id);
+        if (index === -1) {
+            return NextResponse.json(
+                { success: false, error: 'Lead not found' },
+                { status: 404 }
+            );
+        }
+
+        mockLeads[index] = { ...mockLeads[index], ...updateData, updatedAt: new Date().toISOString() };
+
+        return NextResponse.json({ success: true, data: mockLeads[index] });
+    } catch {
+        return NextResponse.json(
+            { success: false, error: 'Invalid request body' },
+            { status: 400 }
+        );
+    }
+}
+
+export async function DELETE(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+        return NextResponse.json(
+            { success: false, error: 'ID is required' },
+            { status: 400 }
+        );
+    }
+
+    const index = mockLeads.findIndex((l) => l.id === id);
+    if (index === -1) {
+        return NextResponse.json(
+            { success: false, error: 'Lead not found' },
+            { status: 404 }
+        );
+    }
+
+    mockLeads.splice(index, 1);
+
+    return NextResponse.json({ success: true, data: null });
+}

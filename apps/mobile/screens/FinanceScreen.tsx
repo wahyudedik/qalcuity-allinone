@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -6,120 +6,175 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
+    RefreshControl,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../App';
+import { fetchInvoices, fetchPayments, formatCurrency, formatDate, InvoiceData, PaymentData } from '../lib/api';
+import LoadingView from '../components/LoadingView';
+import ErrorView from '../components/ErrorView';
+import EmptyView from '../components/EmptyView';
 
 type Tab = 'overview' | 'invoices' | 'payments';
+type FinanceScreenProp = NativeStackNavigationProp<RootStackParamList, 'Finance'>;
 
-const invoices = [
-    { id: 'INV-001', customer: 'PT Maju Jaya', amount: 'Rp 15.500.000', status: 'paid', date: '15 Jul 2026' },
-    { id: 'INV-002', customer: 'CV Berkah', amount: 'Rp 8.250.000', status: 'pending', date: '18 Jul 2026' },
-    { id: 'INV-003', customer: 'PT Sejahtera', amount: 'Rp 23.000.000', status: 'overdue', date: '01 Jul 2026' },
-    { id: 'INV-004', customer: 'PT Abadi', amount: 'Rp 5.750.000', status: 'paid', date: '20 Jul 2026' },
-    { id: 'INV-005', customer: 'CV Sentosa', amount: 'Rp 12.000.000', status: 'pending', date: '22 Jul 2026' },
-];
+interface Props {
+    navigation: FinanceScreenProp;
+}
 
-const payments = [
-    { id: 'PAY-001', from: 'PT Maju Jaya', amount: 'Rp 15.500.000', date: '16 Jul 2026', method: 'Transfer' },
-    { id: 'PAY-002', customer: 'PT Abadi', amount: 'Rp 5.750.000', date: '21 Jul 2026', method: 'QRIS' },
-    { id: 'PAY-003', from: 'CV Berkah', amount: 'Rp 4.000.000', date: '25 Jul 2026', method: 'Transfer' },
-];
-
-export default function FinanceScreen() {
+export default function FinanceScreen({ navigation }: Props) {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
+    const [invoices, setInvoices] = useState<InvoiceData[]>([]);
+    const [payments, setPayments] = useState<PaymentData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const loadData = async () => {
+        try {
+            setError(null);
+            const [invoicesData, paymentsData] = await Promise.all([
+                fetchInvoices().catch(() => []),
+                fetchPayments().catch(() => []),
+            ]);
+            setInvoices(invoicesData);
+            setPayments(paymentsData);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal memuat data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await loadData();
+        setRefreshing(false);
+    }, []);
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'paid': return '#059669';
             case 'pending': return '#D97706';
             case 'overdue': return '#DC2626';
+            case 'sent': return '#2563EB';
             default: return '#6B7280';
         }
     };
+
+    // Calculate summary from real data
+    const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    const paidAmount = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    const pendingAmount = invoices.filter(i => i.status === 'pending').reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    const overdueAmount = invoices.filter(i => i.status === 'overdue').reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+    const summaryCards = [
+        { label: 'Total Revenue', value: formatCurrency(totalRevenue), color: '#2563EB', subtitle: `${invoices.length} invoice` },
+        { label: 'Paid', value: formatCurrency(paidAmount), color: '#059669', subtitle: `${invoices.filter(i => i.status === 'paid').length} invoice` },
+        { label: 'Pending', value: formatCurrency(pendingAmount), color: '#D97706', subtitle: `${invoices.filter(i => i.status === 'pending').length} invoice` },
+        { label: 'Overdue', value: formatCurrency(overdueAmount), color: '#DC2626', subtitle: `${invoices.filter(i => i.status === 'overdue').length} invoice` },
+    ];
+
+    if (loading) return <LoadingView message="Memuat data keuangan..." />;
+    if (error) return <ErrorView message={error} onRetry={loadData} />;
 
     const renderOverview = () => (
         <>
             {/* Summary Cards */}
             <View style={styles.summaryGrid}>
-                <View style={[styles.summaryCard, { borderLeftColor: '#2563EB' }]}>
-                    <Text style={styles.summaryLabel}>Total Revenue</Text>
-                    <Text style={styles.summaryValue}>Rp 125.5 Jt</Text>
-                    <Text style={[styles.summaryChange, { color: '#059669' }]}>↑ 12.5%</Text>
-                </View>
-                <View style={[styles.summaryCard, { borderLeftColor: '#059669' }]}>
-                    <Text style={styles.summaryLabel}>Paid</Text>
-                    <Text style={styles.summaryValue}>Rp 85.2 Jt</Text>
-                    <Text style={styles.summaryChange}>68% dari total</Text>
-                </View>
-                <View style={[styles.summaryCard, { borderLeftColor: '#D97706' }]}>
-                    <Text style={styles.summaryLabel}>Pending</Text>
-                    <Text style={styles.summaryValue}>Rp 25.7 Jt</Text>
-                    <Text style={styles.summaryChange}>20% dari total</Text>
-                </View>
-                <View style={[styles.summaryCard, { borderLeftColor: '#DC2626' }]}>
-                    <Text style={styles.summaryLabel}>Overdue</Text>
-                    <Text style={styles.summaryValue}>Rp 14.6 Jt</Text>
-                    <Text style={styles.summaryChange}>12% dari total</Text>
-                </View>
+                {summaryCards.map((card, idx) => (
+                    <View key={idx} style={[styles.summaryCard, { borderLeftColor: card.color }]}>
+                        <Text style={styles.summaryLabel}>{card.label}</Text>
+                        <Text style={styles.summaryValue}>{card.value}</Text>
+                        <Text style={styles.summaryChange}>{card.subtitle}</Text>
+                    </View>
+                ))}
             </View>
 
             {/* Recent Invoices */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Invoice Terbaru</Text>
-                {invoices.slice(0, 3).map((invoice) => (
-                    <View key={invoice.id} style={styles.listItem}>
-                        <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{invoice.customer}</Text>
-                            <Text style={styles.listItemSubtitle}>{invoice.id} • {invoice.date}</Text>
-                        </View>
-                        <View style={styles.listItemRight}>
-                            <Text style={styles.listItemAmount}>{invoice.amount}</Text>
-                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invoice.status) + '20' }]}>
-                                <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
-                                    {invoice.status.toUpperCase()}
-                                </Text>
+                {invoices.length === 0 ? (
+                    <EmptyView icon="📄" title="Belum ada invoice" message="Invoice akan muncul di sini" />
+                ) : (
+                    invoices.slice(0, 3).map((invoice) => (
+                        <TouchableOpacity
+                            key={invoice.id}
+                            style={styles.listItem}
+                            onPress={() => navigation.navigate('InvoiceDetail', { id: invoice.id })}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.listItemContent}>
+                                <Text style={styles.listItemTitle}>{invoice.customerName}</Text>
+                                <Text style={styles.listItemSubtitle}>{invoice.invoiceNumber} • {formatDate(invoice.createdAt)}</Text>
                             </View>
-                        </View>
-                    </View>
-                ))}
+                            <View style={styles.listItemRight}>
+                                <Text style={styles.listItemAmount}>{formatCurrency(invoice.amount)}</Text>
+                                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invoice.status) + '20' }]}>
+                                    <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
+                                        {invoice.status.toUpperCase()}
+                                    </Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    ))
+                )}
             </View>
         </>
     );
 
     const renderInvoices = () => (
         <View style={styles.section}>
-            {invoices.map((invoice) => (
-                <View key={invoice.id} style={styles.listItem}>
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{invoice.customer}</Text>
-                        <Text style={styles.listItemSubtitle}>{invoice.id} • {invoice.date}</Text>
-                    </View>
-                    <View style={styles.listItemRight}>
-                        <Text style={styles.listItemAmount}>{invoice.amount}</Text>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invoice.status) + '20' }]}>
-                            <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
-                                {invoice.status.toUpperCase()}
-                            </Text>
+            {invoices.length === 0 ? (
+                <EmptyView icon="📄" title="Belum ada invoice" message="Invoice akan muncul di sini" />
+            ) : (
+                invoices.map((invoice) => (
+                    <TouchableOpacity
+                        key={invoice.id}
+                        style={styles.listItem}
+                        onPress={() => navigation.navigate('InvoiceDetail', { id: invoice.id })}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{invoice.customerName}</Text>
+                            <Text style={styles.listItemSubtitle}>{invoice.invoiceNumber} • {formatDate(invoice.createdAt)}</Text>
                         </View>
-                    </View>
-                </View>
-            ))}
+                        <View style={styles.listItemRight}>
+                            <Text style={styles.listItemAmount}>{formatCurrency(invoice.amount)}</Text>
+                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invoice.status) + '20' }]}>
+                                <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
+                                    {invoice.status.toUpperCase()}
+                                </Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                ))
+            )}
         </View>
     );
 
     const renderPayments = () => (
         <View style={styles.section}>
-            {payments.map((payment) => (
-                <View key={payment.id} style={styles.listItem}>
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{payment.from}</Text>
-                        <Text style={styles.listItemSubtitle}>{payment.id} • {payment.date}</Text>
+            {payments.length === 0 ? (
+                <EmptyView icon="💳" title="Belum ada pembayaran" message="Pembayaran akan muncul di sini" />
+            ) : (
+                payments.map((payment) => (
+                    <View key={payment.id} style={styles.listItem}>
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{payment.customerName}</Text>
+                            <Text style={styles.listItemSubtitle}>{payment.invoiceNumber} • {formatDate(payment.paymentDate)}</Text>
+                        </View>
+                        <View style={styles.listItemRight}>
+                            <Text style={[styles.listItemAmount, { color: '#059669' }]}>+{formatCurrency(payment.amount)}</Text>
+                            <Text style={styles.paymentMethod}>{payment.method}</Text>
+                        </View>
                     </View>
-                    <View style={styles.listItemRight}>
-                        <Text style={[styles.listItemAmount, { color: '#059669' }]}>+{payment.amount}</Text>
-                        <Text style={styles.paymentMethod}>{payment.method}</Text>
-                    </View>
-                </View>
-            ))}
+                ))
+            )}
         </View>
     );
 
@@ -140,7 +195,10 @@ export default function FinanceScreen() {
                 ))}
             </View>
 
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={styles.scrollView}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+            >
                 {activeTab === 'overview' && renderOverview()}
                 {activeTab === 'invoices' && renderInvoices()}
                 {activeTab === 'payments' && renderPayments()}
@@ -201,7 +259,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     summaryLabel: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#6B7280',
     },
     summaryValue: {
@@ -212,11 +270,12 @@ const styles = StyleSheet.create({
     },
     summaryChange: {
         fontSize: 11,
+        color: '#9CA3AF',
         marginTop: 2,
     },
     section: {
         paddingHorizontal: 16,
-        marginBottom: 16,
+        paddingTop: 16,
     },
     sectionTitle: {
         fontSize: 16,
@@ -230,7 +289,6 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 8,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -271,7 +329,7 @@ const styles = StyleSheet.create({
     },
     paymentMethod: {
         fontSize: 11,
-        color: '#6B7280',
-        marginTop: 4,
+        color: '#9CA3AF',
+        marginTop: 2,
     },
 });

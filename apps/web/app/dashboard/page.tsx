@@ -1,4 +1,100 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { formatCurrency, formatDateTime } from '@/lib/utils'
+
+interface DashboardStats {
+    revenue: { current: number; previous: number; change: number; currency: string }
+    orders: { current: number; previous: number; change: number }
+    customers: { current: number; previous: number; change: number }
+    products: { current: number; previous: number; change: number }
+    recentActivities: Array<{
+        id: string
+        icon: string
+        title: string
+        description: string
+        amount: string
+        timestamp: string
+        moduleId: string
+    }>
+    alerts: Array<{
+        id: string
+        type: string
+        title: string
+        message: string
+        moduleId: string
+    }>
+}
+
 export default function DashboardPage() {
+    const [stats, setStats] = useState<DashboardStats | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                setLoading(true)
+                const response = await fetch('/api/dashboard/stats')
+                const data = await response.json()
+                if (data.success) {
+                    setStats(data.data)
+                } else {
+                    setError('Gagal memuat data dashboard')
+                }
+            } catch {
+                setError('Gagal memuat data dashboard')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchStats()
+    }, [])
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+                    <div className="mt-2 h-4 w-72 animate-pulse rounded bg-gray-100" />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="rounded-xl border border-gray-200 bg-white p-6">
+                            <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+                            <div className="mt-3 h-8 w-32 animate-pulse rounded bg-gray-200" />
+                            <div className="mt-2 h-3 w-20 animate-pulse rounded bg-gray-100" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    if (error || !stats) {
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <div className="text-center">
+                    <p className="text-lg text-gray-600">{error || 'Data tidak tersedia'}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                    >
+                        Muat Ulang
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    const moduleLinks: Record<string, string> = {
+        finance: '/dashboard/finance',
+        crm: '/dashboard/crm',
+        inventory: '/dashboard/inventory',
+        hr: '/dashboard/hr',
+    }
+
     return (
         <div className="space-y-6">
             {/* Page Title */}
@@ -13,33 +109,69 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     title="Total Revenue"
-                    value="Rp 45.750.000"
-                    change="+12.5%"
-                    changeType="positive"
+                    value={formatCurrency(stats.revenue.current)}
+                    change={`${stats.revenue.change >= 0 ? '+' : ''}${stats.revenue.change}%`}
+                    changeType={stats.revenue.change >= 0 ? 'positive' : 'negative'}
                     icon="💰"
                 />
                 <StatCard
-                    title="Outstanding Invoice"
-                    value="Rp 15.500.000"
-                    change="12 invoice"
-                    changeType="neutral"
-                    icon="📄"
-                />
-                <StatCard
-                    title="Active Deals"
-                    value="28"
-                    change="+3 minggu ini"
-                    changeType="positive"
-                    icon="📈"
-                />
-                <StatCard
-                    title="Stock Items"
-                    value="156"
-                    change="5 low stock"
-                    changeType="warning"
+                    title="Total Orders"
+                    value={stats.orders.current.toString()}
+                    change={`${stats.orders.change >= 0 ? '+' : ''}${stats.orders.change}%`}
+                    changeType={stats.orders.change >= 0 ? 'positive' : 'negative'}
                     icon="📦"
                 />
+                <StatCard
+                    title="Customers"
+                    value={stats.customers.current.toString()}
+                    change={`${stats.customers.change >= 0 ? '+' : ''}${stats.customers.change}%`}
+                    changeType={stats.customers.change >= 0 ? 'positive' : 'negative'}
+                    icon="👥"
+                />
+                <StatCard
+                    title="Products"
+                    value={stats.products.current.toString()}
+                    change={`${stats.products.change >= 0 ? '+' : ''}${stats.products.change}%`}
+                    changeType={stats.products.change >= 0 ? 'positive' : 'negative'}
+                    icon="📋"
+                />
             </div>
+
+            {/* Alerts */}
+            {stats.alerts.length > 0 && (
+                <div className="rounded-xl border border-gray-200 bg-white p-6">
+                    <h3 className="text-lg font-semibold text-gray-900">⚠️ Alerts</h3>
+                    <div className="mt-4 space-y-3">
+                        {stats.alerts.map((alert) => (
+                            <div
+                                key={alert.id}
+                                className={`flex items-start gap-3 rounded-lg border p-4 ${alert.type === 'danger'
+                                        ? 'border-red-200 bg-red-50'
+                                        : alert.type === 'warning'
+                                            ? 'border-yellow-200 bg-yellow-50'
+                                            : 'border-blue-200 bg-blue-50'
+                                    }`}
+                            >
+                                <span className="text-lg">
+                                    {alert.type === 'danger' ? '🔴' : alert.type === 'warning' ? '🟡' : '🔵'}
+                                </span>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900">{alert.title}</p>
+                                    <p className="text-sm text-gray-600">{alert.message}</p>
+                                </div>
+                                {moduleLinks[alert.moduleId] && (
+                                    <Link
+                                        href={moduleLinks[alert.moduleId]}
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                    >
+                                        Lihat →
+                                    </Link>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -67,31 +199,32 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
                     <p className="text-sm text-gray-500">Aktivitas terbaru</p>
                     <div className="mt-4 space-y-4">
-                        <ActivityItem
-                            icon="📄"
-                            text="Invoice #INV-001 dikirim ke PT Maju Jaya"
-                            time="2 jam lalu"
-                        />
-                        <ActivityItem
-                            icon="💰"
-                            text="Pembayaran diterima dari CV Berkah - Rp 5.250.000"
-                            time="4 jam lalu"
-                        />
-                        <ActivityItem
-                            icon="📦"
-                            text="Stock Widget A menipis (15 unit tersisa)"
-                            time="6 jam lalu"
-                        />
-                        <ActivityItem
-                            icon="👤"
-                            text="Lead baru: PT Sejahtera dari website"
-                            time="8 jam lalu"
-                        />
-                        <ActivityItem
-                            icon="✅"
-                            text="Deal PT ABC ditutup - Rp 50.000.000"
-                            time="1 hari lalu"
-                        />
+                        {stats.recentActivities.length > 0 ? (
+                            stats.recentActivities.map((activity) => (
+                                <div key={activity.id} className="flex items-start gap-3">
+                                    <span className="mt-0.5 text-lg">{activity.icon}</span>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                                        <p className="text-sm text-gray-600">{activity.description}</p>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <span className="text-xs text-gray-400">
+                                                {formatDateTime(activity.timestamp)}
+                                            </span>
+                                            {moduleLinks[activity.moduleId] && (
+                                                <Link
+                                                    href={moduleLinks[activity.moduleId]}
+                                                    className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                                                >
+                                                    {activity.moduleId}
+                                                </Link>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-sm text-gray-500">Belum ada aktivitas terbaru</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -107,7 +240,7 @@ export default function DashboardPage() {
                 </div>
             </div>
         </div>
-    );
+    )
 }
 
 function StatCard({
@@ -117,18 +250,18 @@ function StatCard({
     changeType,
     icon,
 }: {
-    title: string;
-    value: string;
-    change: string;
-    changeType: "positive" | "negative" | "warning" | "neutral";
-    icon: string;
+    title: string
+    value: string
+    change: string
+    changeType: 'positive' | 'negative' | 'warning' | 'neutral'
+    icon: string
 }) {
     const changeColors = {
-        positive: "text-green-600",
-        negative: "text-red-600",
-        warning: "text-yellow-600",
-        neutral: "text-gray-600",
-    };
+        positive: 'text-green-600',
+        negative: 'text-red-600',
+        warning: 'text-yellow-600',
+        neutral: 'text-gray-600',
+    }
 
     return (
         <div className="rounded-xl border border-gray-200 bg-white p-6 transition hover:shadow-md">
@@ -141,27 +274,7 @@ function StatCard({
                 <p className={`mt-1 text-sm ${changeColors[changeType]}`}>{change}</p>
             </div>
         </div>
-    );
-}
-
-function ActivityItem({
-    icon,
-    text,
-    time,
-}: {
-    icon: string;
-    text: string;
-    time: string;
-}) {
-    return (
-        <div className="flex items-start gap-3">
-            <span className="mt-0.5 text-lg">{icon}</span>
-            <div className="flex-1">
-                <p className="text-sm text-gray-700">{text}</p>
-                <p className="text-xs text-gray-400">{time}</p>
-            </div>
-        </div>
-    );
+    )
 }
 
 function QuickAction({
@@ -169,9 +282,9 @@ function QuickAction({
     icon,
     label,
 }: {
-    href: string;
-    icon: string;
-    label: string;
+    href: string
+    icon: string
+    label: string
 }) {
     return (
         <a
@@ -181,5 +294,5 @@ function QuickAction({
             <span className="text-2xl">{icon}</span>
             <span className="text-sm font-medium text-gray-700">{label}</span>
         </a>
-    );
+    )
 }

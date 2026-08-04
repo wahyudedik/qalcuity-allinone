@@ -13,6 +13,16 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     const pathname = usePathname();
     const { data: session } = useSession();
 
+    // Helper untuk mendapatkan inisial nama
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
     // Generate breadcrumbs from pathname
     const segments = pathname.split("/").filter(Boolean);
     const breadcrumbs = segments.map((segment, index) => {
@@ -72,13 +82,13 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 <div className="relative group">
                     <button className="flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-gray-100">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                            {session?.user?.name?.charAt(0) || 'U'}
+                            {session?.user?.name ? getInitials(session.user.name) : 'U'}
                         </div>
                         <span className="hidden text-sm font-medium text-gray-700 sm:inline">
                             {session?.user?.name || 'User'}
                         </span>
                     </button>
-                    
+
                     {/* Dropdown Menu */}
                     <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         <div className="px-4 py-2 border-b border-gray-100">

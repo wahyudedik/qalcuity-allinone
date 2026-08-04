@@ -1,55 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { QuotationForm } from '@/components/finance/quotation-form'
 
-const quotations = [
-    {
-        id: 'QUO-2026-0045',
-        customer: 'PT Maju Bersama',
-        amount: 25000000,
-        status: 'sent',
-        validUntil: '2026-08-31',
-        createdAt: '2026-08-01',
-        items: 5,
-    },
-    {
-        id: 'QUO-2026-0044',
-        customer: 'CV Berkah Jaya',
-        amount: 12500000,
-        status: 'accepted',
-        validUntil: '2026-08-20',
-        createdAt: '2026-07-28',
-        items: 3,
-    },
-    {
-        id: 'QUO-2026-0043',
-        customer: 'PT Digital Nusantara',
-        amount: 45000000,
-        status: 'draft',
-        validUntil: '2026-09-15',
-        createdAt: '2026-08-02',
-        items: 8,
-    },
-    {
-        id: 'QUO-2026-0042',
-        customer: 'PT Sejahtera Abadi',
-        amount: 8750000,
-        status: 'rejected',
-        validUntil: '2026-07-30',
-        createdAt: '2026-07-15',
-        items: 2,
-    },
-    {
-        id: 'QUO-2026-0041',
-        customer: 'UD Makmur Sentosa',
-        amount: 18000000,
-        status: 'accepted',
-        validUntil: '2026-08-25',
-        createdAt: '2026-07-20',
-        items: 4,
-    },
-]
+type Quotation = {
+    id: string
+    quotationNumber: string
+    customerName: string
+    subtotal: number
+    tax: number
+    total: number
+    currency: string
+    status: string
+    validUntil: string
+    items?: Array<{ description: string; quantity: number; unitPrice: number; total: number }>
+    createdAt: string
+}
 
 const statusConfig: Record<string, { label: string; color: string }> = {
     draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
@@ -59,129 +27,234 @@ const statusConfig: Record<string, { label: string; color: string }> = {
     expired: { label: 'Kedaluwarsa', color: 'bg-gray-100 text-gray-500' },
 }
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(amount)
-}
-
 export default function QuotationsPage() {
+    const [quotations, setQuotations] = useState<Quotation[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [statusFilter, setStatusFilter] = useState('all')
     const [search, setSearch] = useState('')
+    const [showCreateModal, setShowCreateModal] = useState(false)
+
+    useEffect(() => {
+        fetchQuotations()
+    }, [])
+
+    const fetchQuotations = async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/finance/quotations')
+            const data = await response.json()
+            if (data.success) {
+                setQuotations(data.data)
+            } else {
+                setError('Gagal memuat data quotation')
+            }
+        } catch {
+            setError('Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const filteredQuotations = quotations.filter(q => {
         const matchesStatus = statusFilter === 'all' || q.status === statusFilter
         const matchesSearch = search === '' ||
-            q.id.toLowerCase().includes(search.toLowerCase()) ||
-            q.customer.toLowerCase().includes(search.toLowerCase())
+            q.quotationNumber.toLowerCase().includes(search.toLowerCase()) ||
+            q.customerName.toLowerCase().includes(search.toLowerCase())
         return matchesStatus && matchesSearch
     })
 
+    const stats = {
+        total: quotations.reduce((sum, q) => sum + q.total, 0),
+        draft: quotations.filter(q => q.status === 'draft').length,
+        sent: quotations.filter(q => q.status === 'sent').length,
+        accepted: quotations.filter(q => q.status === 'accepted').length,
+    }
+
+    const handleCreateQuotation = async (data: unknown) => {
+        try {
+            const response = await fetch('/api/finance/quotations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            })
+            const result = await response.json()
+            if (result.success) {
+                setShowCreateModal(false)
+                fetchQuotations()
+            } else {
+                alert('Gagal membuat quotation: ' + result.error)
+            }
+        } catch {
+            alert('Terjadi kesalahan saat membuat quotation')
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="space-y-6 p-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+                        ))}
+                    </div>
+                    <div className="h-96 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="p-6">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <p className="text-red-600">{error}</p>
+                    <button
+                        onClick={fetchQuotations}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        Coba Lagi
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Penawaran (Quotation)</h1>
-                    <p className="text-gray-600 mt-1">Kelola penawaran harga untuk customer</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Quotation</h1>
+                    <p className="text-gray-500">Kelola penawaran dan proposal</p>
                 </div>
-                <Link
-                    href="/dashboard/finance/quotations/new"
-                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Buat Penawaran
-                </Link>
+                    Buat Quotation
+                </button>
             </div>
 
-            {/* Stats */}
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Total Penawaran</div>
-                    <div className="text-2xl font-bold text-gray-900 mt-1">{quotations.length}</div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Total Nilai</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
+                    <p className="text-xs text-gray-400 mt-1">{quotations.length} quotation</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Menunggu Respon</div>
-                    <div className="text-2xl font-bold text-blue-600 mt-1">
-                        {quotations.filter(q => q.status === 'sent').length}
-                    </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Draft</p>
+                    <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
+                    <p className="text-xs text-gray-400 mt-1">Belum dikirim</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Diterima</div>
-                    <div className="text-2xl font-bold text-green-600 mt-1">
-                        {quotations.filter(q => q.status === 'accepted').length}
-                    </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Terkirim</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats.sent}</p>
+                    <p className="text-xs text-gray-400 mt-1">Menunggu respons</p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Nilai Pipeline</div>
-                    <div className="text-xl font-bold text-gray-900 mt-1">
-                        {formatCurrency(quotations.filter(q => q.status !== 'rejected' && q.status !== 'accepted').reduce((sum, q) => sum + q.amount, 0))}
-                    </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-sm text-gray-500">Diterima</p>
+                    <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
+                    <p className="text-xs text-gray-400 mt-1">Konversi ke deal</p>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                    <div className="relative">
+                        <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                             type="text"
-                            placeholder="Cari penawaran atau customer..."
+                            placeholder="Cari quotation..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
                         />
                     </div>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
-                    >
-                        <option value="all">Semua Status</option>
-                        <option value="draft">Draft</option>
-                        <option value="sent">Terkirim</option>
-                        <option value="accepted">Diterima</option>
-                        <option value="rejected">Ditolak</option>
-                    </select>
+                </div>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                    <option value="all">Semua Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="sent">Terkirim</option>
+                    <option value="accepted">Diterima</option>
+                    <option value="rejected">Ditolak</option>
+                    <option value="expired">Kedaluwarsa</option>
+                </select>
+            </div>
+
+            {/* Table */}
+            <div className="rounded-xl border border-gray-200 bg-white">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-gray-200 bg-gray-50">
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nomor</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Customer</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Items</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Berlaku Hingga</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Jumlah</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filteredQuotations.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                                        Tidak ada quotation ditemukan
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredQuotations.map((quotation) => (
+                                    <tr key={quotation.id} className="hover:bg-gray-50">
+                                        <td className="whitespace-nowrap px-6 py-4">
+                                            <Link href={`/dashboard/finance/quotations/${quotation.id}`} className="font-medium text-blue-600 hover:underline">
+                                                {quotation.quotationNumber}
+                                            </Link>
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-900">{quotation.customerName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-500">{quotation.items?.length || 0} item</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(quotation.validUntil)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right font-medium">{formatCurrency(quotation.total)}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-center">
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[quotation.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                                {statusConfig[quotation.status]?.label || quotation.status}
+                                            </span>
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right">
+                                            <Link href={`/dashboard/finance/quotations/${quotation.id}`} className="text-blue-600 hover:text-blue-800">
+                                                <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            {/* Quotation Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredQuotations.map((quotation) => (
-                    <Link
-                        key={quotation.id}
-                        href={`/dashboard/finance/quotations/${quotation.id}`}
-                        className="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-md transition-all"
-                    >
-                        <div className="flex items-start justify-between mb-3">
-                            <div>
-                                <div className="font-medium text-blue-600">{quotation.id}</div>
-                                <div className="text-sm text-gray-900 mt-1">{quotation.customer}</div>
-                            </div>
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[quotation.status].color}`}>
-                                {statusConfig[quotation.status].label}
-                            </span>
-                        </div>
-
-                        <div className="text-2xl font-bold text-gray-900 mb-3">
-                            {formatCurrency(quotation.amount)}
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
-                            <span>{quotation.items} item</span>
-                            <span>Berlaku hingga {quotation.validUntil}</span>
-                        </div>
-                    </Link>
-                ))}
-            </div>
+            {/* Create Modal */}
+            <QuotationForm
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSubmit={handleCreateQuotation}
+            />
         </div>
     )
 }

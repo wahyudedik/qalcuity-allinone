@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 
 interface Employee {
     id: string
@@ -15,96 +16,49 @@ interface Employee {
     avatar?: string
 }
 
-const employees: Employee[] = [
-    {
-        id: 'EMP-001',
-        name: 'Ahmad Rizky',
-        position: 'Software Engineer',
-        department: 'Engineering',
-        email: 'ahmad@qalcuity.com',
-        phone: '+62 812-3456-7890',
-        status: 'active',
-        joinDate: '2023-03-15',
-    },
-    {
-        id: 'EMP-002',
-        name: 'Siti Nurhaliza',
-        position: 'Marketing Manager',
-        department: 'Marketing',
-        email: 'siti@qalcuity.com',
-        phone: '+62 813-4567-8901',
-        status: 'active',
-        joinDate: '2022-08-20',
-    },
-    {
-        id: 'EMP-003',
-        name: 'Budi Santoso',
-        position: 'Finance Analyst',
-        department: 'Finance',
-        email: 'budi@qalcuity.com',
-        phone: '+62 815-6789-0123',
-        status: 'on-leave',
-        joinDate: '2023-01-10',
-    },
-    {
-        id: 'EMP-004',
-        name: 'Dewi Lestari',
-        position: 'HR Specialist',
-        department: 'Human Resources',
-        email: 'dewi@qalcuity.com',
-        phone: '+62 816-7890-1234',
-        status: 'active',
-        joinDate: '2022-11-05',
-    },
-    {
-        id: 'EMP-005',
-        name: 'Eko Prasetyo',
-        position: 'Sales Executive',
-        department: 'Sales',
-        email: 'eko@qalcuity.com',
-        phone: '+62 817-8901-2345',
-        status: 'active',
-        joinDate: '2023-06-01',
-    },
-    {
-        id: 'EMP-006',
-        name: 'Fitri Handayani',
-        position: 'UI/UX Designer',
-        department: 'Product',
-        email: 'fitri@qalcuity.com',
-        phone: '+62 818-9012-3456',
-        status: 'active',
-        joinDate: '2023-04-20',
-    },
-    {
-        id: 'EMP-007',
-        name: 'Gunawan Wibowo',
-        position: 'DevOps Engineer',
-        department: 'Engineering',
-        email: 'gunawan@qalcuity.com',
-        phone: '+62 819-0123-4567',
-        status: 'inactive',
-        joinDate: '2022-05-15',
-    },
-    {
-        id: 'EMP-008',
-        name: 'Hana Permata',
-        position: 'Content Writer',
-        department: 'Marketing',
-        email: 'hana@qalcuity.com',
-        phone: '+62 821-1234-5678',
-        status: 'active',
-        joinDate: '2023-09-01',
-    },
-]
-
-const departments = ['All', 'Engineering', 'Marketing', 'Finance', 'Human Resources', 'Sales', 'Product']
-
 export default function EmployeesPage() {
+    const [employees, setEmployees] = useState<Employee[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedDepartment, setSelectedDepartment] = useState('All')
     const [selectedStatus, setSelectedStatus] = useState('All')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+    const fetchEmployees = async () => {
+        try {
+            setLoading(true)
+            const params = new URLSearchParams()
+            if (searchQuery) params.set('search', searchQuery)
+            if (selectedDepartment !== 'All') params.set('department', selectedDepartment)
+            if (selectedStatus !== 'All') params.set('status', selectedStatus === 'on-leave' ? 'on_leave' : selectedStatus)
+
+            const res = await fetch(`/api/hr/employees?${params.toString()}`)
+            const data = await res.json()
+
+            if (data.success) {
+                const mapped = data.data.map((emp: Record<string, unknown>) => ({
+                    id: emp.id as string,
+                    name: `${emp.firstName} ${emp.lastName}`,
+                    position: emp.position as string,
+                    department: emp.department as string,
+                    email: emp.email as string,
+                    phone: emp.phone as string,
+                    status: emp.status === 'on_leave' ? 'on-leave' : emp.status as 'active' | 'inactive',
+                    joinDate: emp.startDate as string,
+                }))
+                setEmployees(mapped)
+            }
+        } catch {
+            setError('Gagal memuat data karyawan')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchEmployees()
+    }, [searchQuery, selectedDepartment, selectedStatus])
 
     const filteredEmployees = employees.filter((emp) => {
         const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,6 +95,35 @@ export default function EmployeesPage() {
         'bg-teal-500',
         'bg-red-500',
     ]
+
+    const departments = ['All', 'Engineering', 'Marketing', 'Finance', 'Human Resources', 'Sales', 'Product']
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <LoadingSkeleton lines={2} />
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {[1, 2, 3, 4].map(i => <LoadingSkeleton key={i} lines={1} />)}
+                </div>
+                <LoadingSkeleton lines={1} />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3, 4, 5, 6].map(i => <LoadingSkeleton key={i} lines={3} />)}
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12">
+                <span className="text-4xl">⚠️</span>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
+                <button onClick={fetchEmployees} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    Coba Lagi
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">

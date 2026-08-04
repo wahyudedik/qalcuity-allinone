@@ -1,37 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/utils'
 
-const invoiceData = {
-    id: 'INV-2026-0092',
-    status: 'sent',
-    customer: {
-        name: 'PT Maju Bersama',
-        email: 'finance@majubersama.com',
-        phone: '+62 21-5555-1234',
-        address: 'Jl. Gatot Subroto No. 45, Jakarta Selatan',
-    },
-    items: [
-        { description: 'Widget Pro x50', qty: 50, price: 100000, total: 5000000 },
-        { description: 'Component B x20', qty: 20, price: 250000, total: 5000000 },
-        { description: 'Service Installasi', qty: 1, price: 5500000, total: 5500000 },
-    ],
-    subtotal: 15500000,
-    tax: 0,
-    total: 15500000,
-    dueDate: '2026-08-18',
-    createdAt: '2026-08-03',
-    notes: 'Pembayaran dapat ditransfer ke rekening BCA 1234567890 a.n PT Qalcuity',
-    terms: 'Pembayaran jatuh tempo dalam 15 hari.',
-}
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(amount)
+interface InvoiceDetail {
+    id: string
+    invoiceNumber: string
+    customerName: string
+    customerAddress: string
+    customerEmail: string
+    customerPhone: string
+    items: Array<{ name: string; description: string; quantity: number; unitPrice: number; total: number }>
+    subtotal: number
+    tax: number
+    total: number
+    currency: string
+    status: string
+    dueDate: string
+    createdAt: string
+    notes: string
 }
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -43,10 +31,52 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
     const [showSendModal, setShowSendModal] = useState(false)
-    const invoice = invoiceData
+    const [invoice, setInvoice] = useState<InvoiceDetail | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchInvoice = async () => {
+            try {
+                setLoading(true)
+                const res = await fetch(`/api/finance/invoices/${params.id}`)
+                const data = await res.json()
+                if (data.success) {
+                    setInvoice(data.data)
+                } else {
+                    setError('Invoice tidak ditemukan')
+                }
+            } catch {
+                setError('Gagal memuat data invoice')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchInvoice()
+    }, [params.id])
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+                <div className="h-64 animate-pulse rounded-xl bg-gray-200" />
+            </div>
+        )
+    }
+
+    if (error || !invoice) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12">
+                <p className="text-gray-500">{error || 'Invoice tidak ditemukan'}</p>
+                <Link href="/dashboard/finance/invoices" className="mt-4 text-blue-600 hover:underline">
+                    Kembali ke Invoices
+                </Link>
+            </div>
+        )
+    }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -118,10 +148,10 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
                         <h3 className="text-sm font-medium text-gray-500 mb-2">Tagih Ke:</h3>
                         <div className="text-gray-900">
-                            <p className="font-semibold">{invoice.customer.name}</p>
-                            <p className="text-sm text-gray-600">{invoice.customer.email}</p>
-                            <p className="text-sm text-gray-600">{invoice.customer.phone}</p>
-                            <p className="text-sm text-gray-600">{invoice.customer.address}</p>
+                            <p className="font-semibold">{invoice.customerName}</p>
+                            <p className="text-sm text-gray-600">{invoice.customerEmail}</p>
+                            <p className="text-sm text-gray-600">{invoice.customerPhone}</p>
+                            <p className="text-sm text-gray-600">{invoice.customerAddress}</p>
                         </div>
                     </div>
 
@@ -139,9 +169,9 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                             <tbody className="divide-y divide-gray-100">
                                 {invoice.items.map((item, idx) => (
                                     <tr key={idx}>
-                                        <td className="py-4 px-6 text-sm text-gray-900">{item.description}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-600 text-center">{item.qty}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-600 text-right">{formatCurrency(item.price)}</td>
+                                        <td className="py-4 px-6 text-sm text-gray-900">{item.name} - {item.description}</td>
+                                        <td className="py-4 px-6 text-sm text-gray-600 text-center">{item.quantity}</td>
+                                        <td className="py-4 px-6 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice)}</td>
                                         <td className="py-4 px-6 text-sm text-gray-900 text-right font-medium">{formatCurrency(item.total)}</td>
                                     </tr>
                                 ))}
@@ -176,8 +206,9 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                             <p className="text-sm text-gray-600">{invoice.notes}</p>
                         </div>
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="font-medium text-gray-900 mb-2">Syarat & Ketentuan</h3>
-                            <p className="text-sm text-gray-600">{invoice.terms}</p>
+                            <h3 className="font-medium text-gray-900 mb-2">Informasi Tambahan</h3>
+                            <p className="text-sm text-gray-600">Invoice Number: {invoice.invoiceNumber}</p>
+                            <p className="text-sm text-gray-600">Currency: {invoice.currency}</p>
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const menuItems = [
     {
@@ -55,6 +56,7 @@ const menuItems = [
             { label: "Employees", href: "/dashboard/hr/employees" },
             { label: "Attendance", href: "/dashboard/hr/attendance" },
             { label: "Leaves", href: "/dashboard/hr/leaves" },
+            { label: "Payroll", href: "/dashboard/hr/payroll" },
         ],
     },
     {
@@ -76,6 +78,24 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const pathname = usePathname();
+    const { data: session } = useSession();
+
+    // Helper untuk mengecek apakah section harus di-expand
+    const isSectionActive = (item: typeof menuItems[0]) => {
+        if (!item.children) return false;
+        // Expand jika pathname cocok dengan href parent ATAU salah satu child
+        return pathname === item.href || pathname.startsWith(item.href + "/");
+    };
+
+    // Helper untuk mendapatkan inisial nama
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+    };
 
     return (
         <>
@@ -113,6 +133,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                         {menuItems.map((item) => {
                             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                             const hasChildren = item.children && item.children.length > 0;
+                            const shouldExpand = isSectionActive(item);
 
                             return (
                                 <li key={item.href}>
@@ -120,16 +141,27 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                         href={item.href}
                                         onClick={onClose}
                                         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${isActive
-                                            ? "bg-blue-50 text-blue-700"
-                                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                                ? "bg-blue-50 text-blue-700"
+                                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                                             }`}
                                     >
                                         <span className="text-lg">{item.icon}</span>
                                         <span>{item.label}</span>
+                                        {hasChildren && (
+                                            <svg
+                                                className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${shouldExpand ? "rotate-90" : ""
+                                                    }`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        )}
                                     </Link>
 
-                                    {/* Sub-menu */}
-                                    {hasChildren && isActive && (
+                                    {/* Sub-menu — auto-expand jika section aktif */}
+                                    {hasChildren && shouldExpand && (
                                         <ul className="ml-8 mt-1 space-y-1">
                                             {item.children!.map((child) => {
                                                 const isChildActive = pathname === child.href;
@@ -139,8 +171,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                                             href={child.href}
                                                             onClick={onClose}
                                                             className={`block rounded-lg px-3 py-1.5 text-sm transition ${isChildActive
-                                                                ? "bg-blue-50 text-blue-700 font-medium"
-                                                                : "text-gray-500 hover:text-gray-700"
+                                                                    ? "bg-blue-50 text-blue-700 font-medium"
+                                                                    : "text-gray-500 hover:text-gray-700"
                                                                 }`}
                                                         >
                                                             {child.label}
@@ -156,15 +188,19 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     </ul>
                 </nav>
 
-                {/* Footer */}
+                {/* Footer — gunakan session data */}
                 <div className="border-t border-gray-200 p-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                            AD
+                            {session?.user?.name ? getInitials(session.user.name) : "U"}
                         </div>
                         <div className="flex-1 truncate">
-                            <p className="text-sm font-medium text-gray-900">Admin</p>
-                            <p className="truncate text-xs text-gray-500">admin@qalcuity.com</p>
+                            <p className="text-sm font-medium text-gray-900">
+                                {session?.user?.name || "User"}
+                            </p>
+                            <p className="truncate text-xs text-gray-500">
+                                {session?.user?.email || "user@qalcuity.com"}
+                            </p>
                         </div>
                     </div>
                 </div>

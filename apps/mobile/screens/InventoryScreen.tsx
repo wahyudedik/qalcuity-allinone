@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -6,34 +6,55 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
+    RefreshControl,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../App';
+import { fetchProducts, fetchSuppliers, formatCurrency, ProductData, SupplierData } from '../lib/api';
+import LoadingView from '../components/LoadingView';
+import ErrorView from '../components/ErrorView';
+import EmptyView from '../components/EmptyView';
 
 type Tab = 'products' | 'stock' | 'suppliers';
+type InventoryScreenProp = NativeStackNavigationProp<RootStackParamList, 'Inventory'>;
 
-const products = [
-    { id: 'SKU-001', name: 'Widget A', category: 'Electronics', price: 'Rp 100.000', stock: 150, status: 'in_stock' },
-    { id: 'SKU-002', name: 'Component B', category: 'Parts', price: 'Rp 250.000', stock: 8, status: 'low_stock' },
-    { id: 'SKU-003', name: 'Service C', category: 'Services', price: 'Rp 5.000.000', stock: 999, status: 'in_stock' },
-    { id: 'SKU-004', name: 'Kit D', category: 'Bundles', price: 'Rp 750.000', stock: 0, status: 'out_of_stock' },
-    { id: 'SKU-005', name: 'Module E', category: 'Software', price: 'Rp 2.500.000', stock: 45, status: 'in_stock' },
-];
+interface Props {
+    navigation: InventoryScreenProp;
+}
 
-const stockAlerts = [
-    { id: 'SKU-002', name: 'Component B', current: 8, minimum: 20, status: 'critical' },
-    { id: 'SKU-004', name: 'Kit D', current: 0, minimum: 10, status: 'critical' },
-    { id: 'SKU-007', name: 'Part G', current: 12, minimum: 15, status: 'warning' },
-    { id: 'SKU-009', name: 'Widget I', current: 5, minimum: 25, status: 'critical' },
-];
-
-const suppliers = [
-    { id: 'SUP-001', name: 'PT ABC Manufacturing', products: 45, leadTime: '3-5 hari', rating: 4.5 },
-    { id: 'SUP-002', name: 'CV XYZ Supplies', products: 32, leadTime: '2-3 hari', rating: 4.2 },
-    { id: 'SUP-003', name: 'PT Global Tech', products: 28, leadTime: '5-7 hari', rating: 4.8 },
-    { id: 'SUP-004', name: 'PT Nusantara Parts', products: 18, leadTime: '1-2 hari', rating: 4.0 },
-];
-
-export default function InventoryScreen() {
+export default function InventoryScreen({ navigation }: Props) {
     const [activeTab, setActiveTab] = useState<Tab>('products');
+    const [products, setProducts] = useState<ProductData[]>([]);
+    const [suppliers, setSuppliers] = useState<SupplierData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const loadData = async () => {
+        try {
+            setError(null);
+            const [productsData, suppliersData] = await Promise.all([
+                fetchProducts().catch(() => []),
+                fetchSuppliers().catch(() => []),
+            ]);
+            setProducts(productsData);
+            setSuppliers(suppliersData);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal memuat data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await loadData();
+        setRefreshing(false);
+    }, []);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -42,6 +63,8 @@ export default function InventoryScreen() {
             case 'out_of_stock': return '#DC2626';
             case 'critical': return '#DC2626';
             case 'warning': return '#D97706';
+            case 'active': return '#059669';
+            case 'inactive': return '#6B7280';
             default: return '#6B7280';
         }
     };
@@ -51,33 +74,46 @@ export default function InventoryScreen() {
             case 'in_stock': return 'IN STOCK';
             case 'low_stock': return 'LOW STOCK';
             case 'out_of_stock': return 'OUT OF STOCK';
-            case 'critical': return 'CRITICAL';
-            case 'warning': return 'WARNING';
             default: return status.toUpperCase();
         }
     };
 
+    // Compute stock alerts from real products
+    const stockAlerts = products.filter(p => p.stock <= p.minStock);
+
+    if (loading) return <LoadingView message="Memuat data inventory..." />;
+    if (error) return <ErrorView message={error} onRetry={loadData} />;
+
     const renderProducts = () => (
         <View style={styles.section}>
-            {products.map((product) => (
-                <View key={product.id} style={styles.listItem}>
-                    <View style={styles.listItemContent}>
-                        <View style={styles.listItemHeader}>
-                            <Text style={styles.listItemTitle}>{product.name}</Text>
-                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(product.status) + '20' }]}>
-                                <Text style={[styles.statusText, { color: getStatusColor(product.status) }]}>
-                                    {getStatusLabel(product.status)}
-                                </Text>
+            {products.length === 0 ? (
+                <EmptyView icon="📦" title="Belum ada produk" message="Produk akan muncul di sini" />
+            ) : (
+                products.map((product) => (
+                    <TouchableOpacity
+                        key={product.id}
+                        style={styles.listItem}
+                        onPress={() => navigation.navigate('ProductDetail', { id: product.id })}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.listItemContent}>
+                            <View style={styles.listItemHeader}>
+                                <Text style={styles.listItemTitle}>{product.name}</Text>
+                                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(product.status || (product.stock > 0 ? 'in_stock' : 'out_of_stock')) + '20' }]}>
+                                    <Text style={[styles.statusText, { color: getStatusColor(product.status || (product.stock > 0 ? 'in_stock' : 'out_of_stock')) }]}>
+                                        {getStatusLabel(product.status || (product.stock > 0 ? 'in_stock' : 'out_of_stock'))}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text style={styles.listItemSubtitle}>{product.sku} • {product.category}</Text>
+                            <View style={styles.listItemFooter}>
+                                <Text style={styles.listItemPrice}>{formatCurrency(product.price)}</Text>
+                                <Text style={styles.listItemStock}>Stock: {product.stock}</Text>
                             </View>
                         </View>
-                        <Text style={styles.listItemSubtitle}>{product.id} • {product.category}</Text>
-                        <View style={styles.listItemFooter}>
-                            <Text style={styles.listItemPrice}>{product.price}</Text>
-                            <Text style={styles.listItemStock}>Stock: {product.stock}</Text>
-                        </View>
-                    </View>
-                </View>
-            ))}
+                    </TouchableOpacity>
+                ))
+            )}
         </View>
     );
 
@@ -87,49 +123,57 @@ export default function InventoryScreen() {
                 <Text style={styles.alertTitle}>⚠️ Stock Alerts</Text>
                 <Text style={styles.alertSubtitle}>{stockAlerts.length} produk perlu perhatian</Text>
             </View>
-            {stockAlerts.map((item) => (
-                <View key={item.id} style={styles.listItem}>
-                    <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{item.name}</Text>
-                        <Text style={styles.listItemSubtitle}>
-                            Stock: {item.current} / Minimum: {item.minimum}
-                        </Text>
-                        <View style={styles.progressBar}>
-                            <View
-                                style={[
-                                    styles.progressFill,
-                                    {
-                                        width: `${Math.min((item.current / item.minimum) * 100, 100)}%`,
-                                        backgroundColor: getStatusColor(item.status),
-                                    },
-                                ]}
-                            />
+            {stockAlerts.length === 0 ? (
+                <EmptyView icon="✅" title="Stok aman" message="Tidak ada produk yang perlu perhatian" />
+            ) : (
+                stockAlerts.map((item) => (
+                    <View key={item.id} style={styles.listItem}>
+                        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.stock === 0 ? 'out_of_stock' : 'low_stock') }]} />
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{item.name}</Text>
+                            <Text style={styles.listItemSubtitle}>
+                                Stock: {item.stock} / Minimum: {item.minStock}
+                            </Text>
+                            <View style={styles.progressBar}>
+                                <View
+                                    style={[
+                                        styles.progressFill,
+                                        {
+                                            width: `${Math.min((item.stock / Math.max(item.minStock, 1)) * 100, 100)}%`,
+                                            backgroundColor: getStatusColor(item.stock === 0 ? 'out_of_stock' : 'low_stock'),
+                                        },
+                                    ]}
+                                />
+                            </View>
                         </View>
                     </View>
-                </View>
-            ))}
+                ))
+            )}
         </View>
     );
 
     const renderSuppliers = () => (
         <View style={styles.section}>
-            {suppliers.map((supplier) => (
-                <View key={supplier.id} style={styles.listItem}>
-                    <View style={styles.supplierAvatar}>
-                        <Text style={styles.supplierAvatarText}>{supplier.name.charAt(0)}</Text>
-                    </View>
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{supplier.name}</Text>
-                        <Text style={styles.listItemSubtitle}>
-                            {supplier.products} produk • Lead time: {supplier.leadTime}
-                        </Text>
-                        <View style={styles.ratingContainer}>
-                            <Text style={styles.ratingText}>⭐ {supplier.rating}</Text>
+            {suppliers.length === 0 ? (
+                <EmptyView icon="🏭" title="Belum ada supplier" message="Supplier akan muncul di sini" />
+            ) : (
+                suppliers.map((supplier) => (
+                    <View key={supplier.id} style={styles.listItem}>
+                        <View style={styles.supplierAvatar}>
+                            <Text style={styles.supplierAvatarText}>{supplier.name.charAt(0)}</Text>
+                        </View>
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{supplier.name}</Text>
+                            <Text style={styles.listItemSubtitle}>
+                                {supplier.products} produk • Rating: {supplier.rating}
+                            </Text>
+                            <View style={styles.ratingContainer}>
+                                <Text style={styles.ratingText}>⭐ {supplier.rating}</Text>
+                            </View>
                         </View>
                     </View>
-                </View>
-            ))}
+                ))
+            )}
         </View>
     );
 
@@ -150,7 +194,10 @@ export default function InventoryScreen() {
                 ))}
             </View>
 
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={styles.scrollView}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+            >
                 {activeTab === 'products' && renderProducts()}
                 {activeTab === 'stock' && renderStock()}
                 {activeTab === 'suppliers' && renderSuppliers()}
@@ -210,7 +257,6 @@ const styles = StyleSheet.create({
     },
     listItemContent: {
         flex: 1,
-        marginLeft: 12,
     },
     listItemHeader: {
         flexDirection: 'row',
@@ -221,6 +267,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#111827',
+        flex: 1,
     },
     listItemSubtitle: {
         fontSize: 12,
@@ -251,12 +298,24 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     statusIndicator: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: 4,
+        height: '100%',
+        borderRadius: 2,
+        marginRight: 12,
+    },
+    progressBar: {
+        height: 6,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 3,
+        marginTop: 8,
+        overflow: 'hidden',
+    },
+    progressFill: {
+        height: '100%',
+        borderRadius: 3,
     },
     alertHeader: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     alertTitle: {
         fontSize: 16,
@@ -265,32 +324,21 @@ const styles = StyleSheet.create({
     },
     alertSubtitle: {
         fontSize: 12,
-        color: '#6B7280',
+        color: '#9CA3AF',
         marginTop: 2,
-    },
-    progressBar: {
-        height: 4,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 2,
-        marginTop: 8,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: 2,
     },
     supplierAvatar: {
         width: 40,
         height: 40,
-        borderRadius: 8,
-        backgroundColor: '#7C3AED',
+        borderRadius: 20,
+        backgroundColor: '#E0E7FF',
         justifyContent: 'center',
         alignItems: 'center',
     },
     supplierAvatarText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
+        color: '#4F46E5',
     },
     ratingContainer: {
         marginTop: 4,

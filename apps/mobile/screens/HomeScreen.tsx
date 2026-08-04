@@ -63,7 +63,7 @@ const menuItems = [
 export default function HomeScreen({ navigation }: Props) {
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light" backgroundColor="#2563EB" />
+            <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
             <ScrollView style={styles.scrollView}>
                 {/* Header */}
                 <View style={styles.header}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -6,96 +6,150 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
+    RefreshControl,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../App';
+import { fetchLeads, fetchDeals, fetchContacts, formatCurrency, LeadData, DealData, ContactData } from '../lib/api';
+import LoadingView from '../components/LoadingView';
+import ErrorView from '../components/ErrorView';
+import EmptyView from '../components/EmptyView';
 
 type Tab = 'leads' | 'deals' | 'contacts';
+type CRMScreenProp = NativeStackNavigationProp<RootStackParamList, 'CRM'>;
 
-const leads = [
-    { id: '1', name: 'PT ABC Technology', source: 'Website', status: 'new', value: 'Rp 50.000.000' },
-    { id: '2', name: 'CV Maju Bersama', source: 'Referral', status: 'qualified', value: 'Rp 25.000.000' },
-    { id: '3', name: 'PT Digital Nusantara', source: 'LinkedIn', status: 'proposal', value: 'Rp 100.000.000' },
-    { id: '4', name: 'PT Sejahtera Abadi', source: 'Cold Call', status: 'negotiation', value: 'Rp 75.000.000' },
-    { id: '5', name: 'CV Berkah Jaya', source: 'Event', status: 'new', value: 'Rp 15.000.000' },
-];
+interface Props {
+    navigation: CRMScreenProp;
+}
 
-const deals = [
-    { id: '1', name: 'Enterprise License PT ABC', value: 'Rp 50.000.000', stage: 'Negotiation', probability: '65%' },
-    { id: '2', name: 'Implementation CV Maju', value: 'Rp 25.000.000', stage: 'Proposal', probability: '40%' },
-    { id: '3', name: 'Custom Dev PT Digital', value: 'Rp 100.000.000', stage: 'Discovery', probability: '30%' },
-    { id: '4', name: 'Support Contract PT Sejahtera', value: 'Rp 75.000.000', stage: 'Negotiation', probability: '70%' },
-];
-
-const contacts = [
-    { id: '1', name: 'Budi Santoso', company: 'PT ABC Technology', role: 'CTO', email: 'budi@abc.com' },
-    { id: '2', name: 'Siti Rahayu', company: 'CV Maju Bersama', role: 'Director', email: 'siti@maju.com' },
-    { id: '3', name: 'Ahmad Hidayat', company: 'PT Digital Nusantara', role: 'VP Engineering', email: 'ahmad@digital.com' },
-    { id: '4', name: 'Dewi Lestari', company: 'PT Sejahtera Abadi', role: 'Procurement', email: 'dewi@sejahtera.com' },
-];
-
-export default function CRMScreen() {
+export default function CRMScreen({ navigation }: Props) {
     const [activeTab, setActiveTab] = useState<Tab>('leads');
+    const [leads, setLeads] = useState<LeadData[]>([]);
+    const [deals, setDeals] = useState<DealData[]>([]);
+    const [contacts, setContacts] = useState<ContactData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const loadData = async () => {
+        try {
+            setError(null);
+            const [leadsData, dealsData, contactsData] = await Promise.all([
+                fetchLeads().catch(() => []),
+                fetchDeals().catch(() => []),
+                fetchContacts().catch(() => []),
+            ]);
+            setLeads(leadsData);
+            setDeals(dealsData);
+            setContacts(contactsData);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal memuat data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await loadData();
+        setRefreshing(false);
+    }, []);
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'new': return '#2563EB';
-            case 'qualified': return '#059669';
-            case 'proposal': return '#D97706';
-            case 'negotiation': return '#7C3AED';
-            case 'won': return '#059669';
+            case 'qualified': case 'Discovery': return '#059669';
+            case 'proposal': case 'Proposal': return '#D97706';
+            case 'negotiation': case 'Negosiasi': case 'Negotiation': return '#7C3AED';
+            case 'won': case 'Closing': return '#059669';
             case 'lost': return '#DC2626';
             default: return '#6B7280';
         }
     };
 
+    if (loading) return <LoadingView message="Memuat data CRM..." />;
+    if (error) return <ErrorView message={error} onRetry={loadData} />;
+
     const renderLeads = () => (
         <View style={styles.section}>
-            {leads.map((lead) => (
-                <View key={lead.id} style={styles.listItem}>
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{lead.name}</Text>
-                        <Text style={styles.listItemSubtitle}>{lead.source} • {lead.value}</Text>
-                    </View>
-                    <View style={styles.listItemRight}>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(lead.status) + '20' }]}>
-                            <Text style={[styles.statusText, { color: getStatusColor(lead.status) }]}>
-                                {lead.status.toUpperCase()}
-                            </Text>
+            {leads.length === 0 ? (
+                <EmptyView icon="🎯" title="Belum ada leads" message="Leads akan muncul di sini" />
+            ) : (
+                leads.map((lead) => (
+                    <TouchableOpacity
+                        key={lead.id}
+                        style={styles.listItem}
+                        onPress={() => navigation.navigate('LeadDetail', { id: lead.id })}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{lead.name}</Text>
+                            <Text style={styles.listItemSubtitle}>{lead.source} • {formatCurrency(lead.value)}</Text>
                         </View>
-                    </View>
-                </View>
-            ))}
+                        <View style={styles.listItemRight}>
+                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(lead.status) + '20' }]}>
+                                <Text style={[styles.statusText, { color: getStatusColor(lead.status) }]}>
+                                    {lead.status.toUpperCase()}
+                                </Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                ))
+            )}
         </View>
     );
 
     const renderDeals = () => (
         <View style={styles.section}>
-            {deals.map((deal) => (
-                <View key={deal.id} style={styles.listItem}>
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{deal.name}</Text>
-                        <Text style={styles.listItemSubtitle}>{deal.stage} • Win Rate: {deal.probability}</Text>
-                    </View>
-                    <View style={styles.listItemRight}>
-                        <Text style={styles.listItemAmount}>{deal.value}</Text>
-                    </View>
-                </View>
-            ))}
+            {deals.length === 0 ? (
+                <EmptyView icon="🤝" title="Belum ada deals" message="Deals akan muncul di sini" />
+            ) : (
+                deals.map((deal) => (
+                    <TouchableOpacity
+                        key={deal.id}
+                        style={styles.listItem}
+                        onPress={() => navigation.navigate('DealDetail', { id: deal.id })}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{deal.name}</Text>
+                            <Text style={styles.listItemSubtitle}>{deal.stage} • Win Rate: {deal.probability}%</Text>
+                        </View>
+                        <View style={styles.listItemRight}>
+                            <Text style={styles.listItemAmount}>{formatCurrency(deal.value)}</Text>
+                        </View>
+                    </TouchableOpacity>
+                ))
+            )}
         </View>
     );
 
     const renderContacts = () => (
         <View style={styles.section}>
-            {contacts.map((contact) => (
-                <View key={contact.id} style={styles.listItem}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{contact.name.charAt(0)}</Text>
-                    </View>
-                    <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{contact.name}</Text>
-                        <Text style={styles.listItemSubtitle}>{contact.role} • {contact.company}</Text>
-                    </View>
-                </View>
-            ))}
+            {contacts.length === 0 ? (
+                <EmptyView icon="👤" title="Belum ada kontak" message="Kontak akan muncul di sini" />
+            ) : (
+                contacts.map((contact) => (
+                    <TouchableOpacity
+                        key={contact.id}
+                        style={styles.listItem}
+                        onPress={() => navigation.navigate('ContactDetail', { id: contact.id })}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>{contact.name.charAt(0)}</Text>
+                        </View>
+                        <View style={styles.listItemContent}>
+                            <Text style={styles.listItemTitle}>{contact.name}</Text>
+                            <Text style={styles.listItemSubtitle}>{contact.position || contact.type} • {contact.company}</Text>
+                        </View>
+                    </TouchableOpacity>
+                ))
+            )}
         </View>
     );
 
@@ -116,7 +170,10 @@ export default function CRMScreen() {
                 ))}
             </View>
 
-            <ScrollView style={styles.scrollView}>
+            <ScrollView
+                style={styles.scrollView}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+            >
                 {activeTab === 'leads' && renderLeads()}
                 {activeTab === 'deals' && renderDeals()}
                 {activeTab === 'contacts' && renderContacts()}
@@ -209,13 +266,13 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#2563EB',
+        backgroundColor: '#DBEAFE',
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
+        color: '#2563EB',
     },
 });

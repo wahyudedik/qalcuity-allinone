@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { formatCurrency } from '@/lib/utils'
 
 type Category = {
     id: string
@@ -20,9 +21,6 @@ const MOCK_CATEGORIES: Category[] = [
     { id: '7', name: 'Accessories', description: 'Aksesoris pelengkap', productCount: 35, totalValue: 28000000 },
     { id: '8', name: 'Consumables', description: 'Barang habis pakai', productCount: 22, totalValue: 18000000 },
 ]
-
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
 
 export default function CategoriesPage() {
     const [categories] = useState<Category[]>(MOCK_CATEGORIES)

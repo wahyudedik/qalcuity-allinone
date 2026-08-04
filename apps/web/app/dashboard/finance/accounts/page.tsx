@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { formatCurrency } from '@/lib/utils'
 
 type Account = {
     id: string
@@ -46,9 +47,6 @@ const MOCK_ACCOUNTS: Account[] = [
     { id: '26', code: '5402', name: 'Biaya Bunga', type: 'expense', subtype: 'Beban Lain', balance: 5000000, isActive: true },
     { id: '27', code: '5403', name: 'Biaya Admin Bank', type: 'expense', subtype: 'Beban Lain', balance: 1200000, isActive: true },
 ]
-
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
 
 const typeLabels: Record<string, string> = {
     asset: 'Aset',

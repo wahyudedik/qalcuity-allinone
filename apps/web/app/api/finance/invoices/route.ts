@@ -113,3 +113,72 @@ export async function POST(request: Request) {
         );
     }
 }
+
+export async function PUT(request: Request) {
+    try {
+        const body = await request.json();
+        const { id, ...updateData } = body;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const index = mockInvoices.findIndex((inv) => inv.id === id);
+        if (index === -1) {
+            return NextResponse.json(
+                { success: false, error: 'Invoice not found' },
+                { status: 404 }
+            );
+        }
+
+        // Recalculate totals if items changed
+        if (updateData.items && updateData.items.length > 0) {
+            const subtotal = updateData.items.reduce(
+                (sum: number, item: { quantity: number; unitPrice: number }) =>
+                    sum + item.quantity * item.unitPrice,
+                0
+            );
+            const tax = subtotal * 0.1; // PPN 11%
+            const total = subtotal + tax;
+            updateData.subtotal = subtotal;
+            updateData.tax = tax;
+            updateData.total = total;
+        }
+
+        mockInvoices[index] = { ...mockInvoices[index], ...updateData, updatedAt: new Date().toISOString() };
+
+        return NextResponse.json({ success: true, data: mockInvoices[index] });
+    } catch {
+        return NextResponse.json(
+            { success: false, error: 'Invalid request body' },
+            { status: 400 }
+        );
+    }
+}
+
+export async function DELETE(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+        return NextResponse.json(
+            { success: false, error: 'ID is required' },
+            { status: 400 }
+        );
+    }
+
+    const index = mockInvoices.findIndex((inv) => inv.id === id);
+    if (index === -1) {
+        return NextResponse.json(
+            { success: false, error: 'Invoice not found' },
+            { status: 404 }
+        );
+    }
+
+    mockInvoices.splice(index, 1);
+
+    return NextResponse.json({ success: true, data: null });
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/utils'
 
 const summaryCards = [
     {
@@ -58,9 +59,6 @@ const quickActions = [
     { label: 'Catat Pembayaran', icon: '💸', href: '/dashboard/finance/payments', color: 'bg-purple-50 text-purple-700 hover:bg-purple-100' },
     { label: 'Buat PO', icon: '📦', href: '/dashboard/finance/purchase-orders', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100' },
 ]
-
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
 
 const statusStyles: Record<string, string> = {
     paid: 'bg-green-100 text-green-800',
