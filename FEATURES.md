@@ -60,12 +60,13 @@ Foundation yang menjadi tulang punggung seluruh modul.
 
 | Fitur | Deskripsi | Status |
 |-------|-----------|--------|
-| **Unified Dashboard** | Satu tampilan real-time untuk Finance, Sales, Operations, HR, Inventory | MVP |
+| **Unified Dashboard** | Satu tampilan real-time untuk Finance, Sales, Operations, HR, Inventory | ✅ MVP Done |
 | **Multi-platform** | Web (core utama), Desktop, Mobile (iOS + Android) | MVP |
 | **Multi-entity & Multi-currency** | Support cabang, anak perusahaan, multi-negara dengan base currency | Phase 3 |
-| **Role-based Access + Approval Workflow** | Custom approval chain multi-level, delegation, conditional routing | MVP |
-| **Audit Trail Lengkap** | Semua aksi tercatat dengan timestamp, user, IP, dan perubahan data | MVP |
-| **Dark Mode** | Tema gelap untuk kenyamanan penggunaan malam hari | Phase 2 |
+| **Role-based Access + Approval Workflow** | Custom approval chain multi-level, delegation, conditional routing | ✅ MVP Done |
+| **Audit Trail Lengkap** | Semua aksi tercatat dengan timestamp, user, IP, dan perubahan data | ✅ MVP Done |
+| **Dark Mode** | Tema gelap untuk kenyamanan penggunaan malam hari | ✅ MVP Done |
+| **Global Search** | Pencarian lintas modul dengan Ctrl+K shortcut | ✅ MVP Done |
 
 ### Key Highlights:
 - **3 Platform** — Web (core utama), Desktop (Electron), Mobile (iOS & Android)

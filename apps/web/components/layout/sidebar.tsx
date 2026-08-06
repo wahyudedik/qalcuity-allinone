@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { getInitials } from "@/lib/utils";
 
 const menuItems = [
     {
@@ -87,16 +88,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         return pathname === item.href || pathname.startsWith(item.href + "/");
     };
 
-    // Helper untuk mendapatkan inisial nama
-    const getInitials = (name: string) => {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    };
-
     return (
         <>
             {/* Mobile Overlay */}
@@ -109,19 +100,19 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-0 z-50 h-screen w-64 border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed left-0 top-0 z-50 h-screen w-64 border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0 dark:border-gray-700 dark:bg-gray-900 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 {/* Logo */}
-                <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6">
+                <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6 dark:border-gray-700">
                     <Link href="/dashboard" className="flex items-center gap-2">
                         <span className="text-2xl">⚡</span>
-                        <span className="text-xl font-bold text-gray-900">Qalcuity</span>
+                        <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Qalcuity</span>
                     </Link>
                     {/* Close button for mobile */}
                     <button
                         onClick={onClose}
-                        className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden"
+                        className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 lg:hidden"
                     >
                         <span className="text-xl">✕</span>
                     </button>
@@ -141,15 +132,15 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                         href={item.href}
                                         onClick={onClose}
                                         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${isActive
-                                                ? "bg-blue-50 text-blue-700"
-                                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
                                             }`}
                                     >
                                         <span className="text-lg">{item.icon}</span>
                                         <span>{item.label}</span>
                                         {hasChildren && (
                                             <svg
-                                                className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${shouldExpand ? "rotate-90" : ""
+                                                className={`ml-auto h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform ${shouldExpand ? "rotate-90" : ""
                                                     }`}
                                                 fill="none"
                                                 stroke="currentColor"
@@ -171,8 +162,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                                             href={child.href}
                                                             onClick={onClose}
                                                             className={`block rounded-lg px-3 py-1.5 text-sm transition ${isChildActive
-                                                                    ? "bg-blue-50 text-blue-700 font-medium"
-                                                                    : "text-gray-500 hover:text-gray-700"
+                                                                ? "bg-blue-50 text-blue-700 font-medium dark:bg-blue-900/30 dark:text-blue-400"
+                                                                : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                                                                 }`}
                                                         >
                                                             {child.label}
@@ -189,16 +180,16 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 </nav>
 
                 {/* Footer — gunakan session data */}
-                <div className="border-t border-gray-200 p-4">
+                <div className="border-t border-gray-200 p-4 dark:border-gray-700">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                             {session?.user?.name ? getInitials(session.user.name) : "U"}
                         </div>
                         <div className="flex-1 truncate">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {session?.user?.name || "User"}
                             </p>
-                            <p className="truncate text-xs text-gray-500">
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
                                 {session?.user?.email || "user@qalcuity.com"}
                             </p>
                         </div>

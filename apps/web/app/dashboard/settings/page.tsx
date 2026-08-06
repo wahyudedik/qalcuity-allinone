@@ -1,15 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { getInitials } from '@/lib/utils'
 
 export default function ProfileSettingsPage() {
+    const { update: updateSession } = useSession()
     const [isSaving, setIsSaving] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
     const [formData, setFormData] = useState({
-        name: 'Budi Santoso',
-        email: 'budi@majubersama.com',
-        phone: '+62 812-3456-7890',
-        avatar: null as string | null,
+        name: '',
+        email: '',
+        phone: '',
     })
+
+    const fetchProfile = useCallback(async () => {
+        try {
+            setLoading(true)
+            const response = await fetch('/api/settings/profile')
+            const data = await response.json()
+            if (data.success) {
+                setFormData({
+                    name: data.data.name || '',
+                    email: data.data.email || '',
+                    phone: data.data.company?.phone || '',
+                })
+            }
+        } catch {
+            // Fallback: use session data
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchProfile()
+    }, [fetchProfile])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({
@@ -21,19 +48,68 @@ export default function ProfileSettingsPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSaving(true)
-        // TODO: Implement save
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setIsSaving(false)
+        setSaveMessage(null)
+
+        try {
+            const response = await fetch('/api/settings/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                }),
+            })
+
+            const data = await response.json()
+
+            if (data.success) {
+                setSaveMessage({ type: 'success', text: 'Profil berhasil disimpan!' })
+                // Update session with new name/email
+                await updateSession({ name: formData.name, email: formData.email })
+            } else {
+                setSaveMessage({ type: 'error', text: data.error || 'Gagal menyimpan profil' })
+            }
+        } catch {
+            setSaveMessage({ type: 'error', text: 'Terjadi kesalahan saat menyimpan' })
+        } finally {
+            setIsSaving(false)
+            // Clear message after 3 seconds
+            setTimeout(() => setSaveMessage(null), 3000)
+        }
+    }
+
+    // Get initials from name for avatar
+    const initials = formData.name ? getInitials(formData.name) : 'U'
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="animate-pulse">
+                    <div className="h-40 bg-gray-200 rounded-xl mb-4"></div>
+                    <div className="h-64 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        )
     }
 
     return (
         <div className="space-y-6">
+            {/* Save Message */}
+            {saveMessage && (
+                <div className={`rounded-lg px-4 py-3 text-sm font-medium ${saveMessage.type === 'success'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                    {saveMessage.type === 'success' ? '✓ ' : '✕ '}{saveMessage.text}
+                </div>
+            )}
+
             {/* Profile Picture */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Foto Profil</h2>
                 <div className="flex items-center gap-6">
                     <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                        BS
+                        {initials}
                     </div>
                     <div>
                         <button
@@ -91,9 +167,10 @@ export default function ProfileSettingsPage() {
                             name="phone"
                             type="tel"
                             value={formData.phone}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900"
+                            readOnly
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
+                        <p className="text-xs text-gray-400 mt-1">Telepon diatur di pengaturan perusahaan</p>
                     </div>
 
                     <div>
@@ -131,6 +208,7 @@ export default function ProfileSettingsPage() {
                 <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
                     <button
                         type="button"
+                        onClick={fetchProfile}
                         className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                         Batal

@@ -105,46 +105,57 @@
 | Week | Task | Owner | Status |
 |------|------|-------|--------|
 | 1 | Setup CI/CD pipeline | DevOps | ⬜ |
-| 1 | Database schema design | Backend | ⬜ |
-| 1-2 | Authentication & authorization | Backend | ⬜ |
-| 2-3 | Core UI components (design system) | Frontend | ⬜ |
-| 3-4 | Dashboard layout | Frontend | ⬜ |
-| 3-4 | Web App (core utama) | Frontend | ⬜ |
-| 4 | Multi-role access control | Backend | ⬜ |
-| 4 | Integration Hub (dashboard) | Full-stack | ⬜ |
+| 1 | Database schema design | Backend | ✅ |
+| 1-2 | Authentication & authorization | Backend | ✅ |
+| 2-3 | Core UI components (design system) | Frontend | ✅ |
+| 3-4 | Dashboard layout | Frontend | ✅ |
+| 3-4 | Web App (core utama) | Frontend | ✅ |
+| 4 | Multi-role access control | Backend | ✅ |
+| 4 | Integration Hub (dashboard) | Full-stack | 🔶 Partial |
 
 ### Week 5-8: Finance Module (Basic)
 
 | Week | Task | Owner | Status |
 |------|------|-------|--------|
-| 5-6 | Chart of Account setup | Backend | ⬜ |
-| 5-6 | Invoice creation & management | Full-stack | ⬜ |
-| 6-7 | Quotation management | Full-stack | ⬜ |
-| 7-8 | Payment recording | Backend | ⬜ |
-| 7-8 | Basic financial reports | Full-stack | ⬜ |
+| 5-6 | Chart of Account setup | Backend | 🔶 Partial |
+| 5-6 | Invoice creation & management | Full-stack | ✅ |
+| 6-7 | Quotation management | Full-stack | ✅ |
+| 7-8 | Payment recording | Backend | ✅ |
+| 7-8 | Basic financial reports | Full-stack | 🔶 Partial |
 | 8 | Bank reconciliation (manual) | Backend | ⬜ |
 
 ### Week 9-12: Sales CRM (Basic) + Mobile + AI
 
 | Week | Task | Owner | Status |
 |------|------|-------|--------|
-| 9-10 | Lead management | Full-stack | ⬜ |
-| 9-10 | Pipeline (Kanban view) | Frontend | ⬜ |
-| 10-11 | Deal management | Full-stack | ⬜ |
-| 11 | Quote → Invoice flow | Full-stack | ⬜ |
-| 11-12 | Mobile app (iOS & Android) | Mobile | ⬜ |
-| 11-12 | Basic AI insights | AI/ML | ⬜ |
-| 12 | Integration Hub v1 | Full-stack | ⬜ |
+| 9-10 | Lead management | Full-stack | ✅ |
+| 9-10 | Pipeline (Kanban view) | Frontend | ✅ |
+| 10-11 | Deal management | Full-stack | ✅ |
+| 11 | Quote → Invoice flow | Full-stack | 🔶 Partial |
+| 11-12 | Mobile app (iOS & Android) | Mobile | 🔶 Partial |
+| 11-12 | Basic AI insights | AI/ML | 🔶 Partial |
+| 12 | Integration Hub v1 | Full-stack | 🔶 Partial |
 
 ### MVP Deliverables
 
-- [ ] Web App (core utama) — auth, dashboard, audit trail
-- [ ] Finance module (invoice, quotation, payment)
-- [ ] Sales CRM (leads, pipeline, deals)
-- [ ] Mobile App (iOS & Android) — basic features
-- [ ] Integration Hub — dashboard untuk user-managed integrations
-- [ ] AI basic — insights cards di dashboard
+- [x] Web App (core utama) — auth, dashboard, audit trail, dark mode, global search
+- [x] Finance module (invoice, quotation, payment, purchase orders)
+- [x] Sales CRM (leads, contacts, pipeline, deals)
+- [x] HR module (employees, attendance, leaves, payroll) — basic UI ready
+- [x] Inventory module (products, suppliers, categories, stock) — basic UI ready
+- [ ] Mobile App (iOS & Android) — basic screens ready, needs polish
+- [ ] Integration Hub — settings page exists, needs full integration
+- [ ] AI basic — dashboard stats connected to real DB, needs AI insights
 - [ ] Landing page & documentation
+
+#### Recently Completed (Aug 2026):
+- ✅ Pipeline stage fix (DB enum alignment: DISCOVERY, PROPOSAL, NEGOTIATION, CLOSING, CLOSED_WON, CLOSED_LOST)
+- ✅ Dashboard stats connected to real database queries
+- ✅ Audit trail page connected to real AuditLog API
+- ✅ Settings profile page connected to real user data
+- ✅ Global search (Ctrl+K) across all modules
+- ✅ Dark mode (Tailwind class strategy with CSS variables)
+- ✅ Code cleanup (deduplicated getInitials, Link instead of `<a>`)
 
 ### MVP Success Criteria
 

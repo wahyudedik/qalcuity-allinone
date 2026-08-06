@@ -20,12 +20,16 @@ type Deal = {
     createdAt: string
 }
 
-const stageStyles: Record<string, string> = {
-    Discovery: 'bg-blue-100 text-blue-800',
-    Proposal: 'bg-yellow-100 text-yellow-800',
-    Negosiasi: 'bg-orange-100 text-orange-800',
-    Closing: 'bg-green-100 text-green-800',
+const stageConfig: Record<string, { label: string; style: string }> = {
+    DISCOVERY: { label: 'Discovery', style: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+    PROPOSAL: { label: 'Proposal', style: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+    NEGOTIATION: { label: 'Negosiasi', style: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+    CLOSING: { label: 'Closing', style: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+    CLOSED_WON: { label: 'Won', style: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    CLOSED_LOST: { label: 'Lost', style: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
 }
+
+const filterStages = ['all', 'DISCOVERY', 'PROPOSAL', 'NEGOTIATION', 'CLOSING']
 
 export default function DealsPage() {
     const [deals, setDeals] = useState<Deal[]>([])
@@ -144,16 +148,16 @@ export default function DealsPage() {
                     />
                 </div>
                 <div className="flex gap-2">
-                    {['all', 'Discovery', 'Proposal', 'Negosiasi', 'Closing'].map((stage) => (
+                    {filterStages.map((stage) => (
                         <button
                             key={stage}
                             onClick={() => setFilterStage(stage)}
                             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filterStage === stage
                                     ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            {stage === 'all' ? 'Semua' : stage}
+                            {stage === 'all' ? 'Semua' : stageConfig[stage]?.label || stage}
                         </button>
                     ))}
                 </div>
@@ -192,8 +196,8 @@ export default function DealsPage() {
                                         <td className="px-4 py-3">{deal.company}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(deal.value)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
-                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stageStyles[deal.stage] || 'bg-gray-100 text-gray-700'}`}>
-                                                {deal.stage}
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stageConfig[deal.stage]?.style || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                                {stageConfig[deal.stage]?.label || deal.stage}
                                             </span>
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">

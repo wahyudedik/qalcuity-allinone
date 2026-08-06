@@ -63,6 +63,7 @@ export function getInitials(name: string): string {
         .substring(0, 2);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function classNames(...classes: (string | boolean | undefined | null)[]) {
     return classes.filter(Boolean).join(" ");
 }

@@ -42,15 +42,19 @@ export async function GET(request: Request) {
         const data = deals.map((deal) => ({
             id: deal.id,
             title: deal.title,
+            name: deal.title,
             value: deal.value,
-            stage: deal.stage.charAt(0) + deal.stage.slice(1).toLowerCase().replace(/_/g, ' '),
+            stage: deal.stage,
             probability: deal.probability,
             closeDate: deal.closeDate?.toISOString() || null,
+            expectedCloseDate: deal.closeDate?.toISOString() || null,
             notes: deal.notes,
             contactId: deal.contactId,
             contactName: deal.contact?.name || null,
+            company: deal.lead?.company || deal.contact?.name || null,
             leadId: deal.leadId,
             leadCompany: deal.lead?.company || null,
+            assignedTo: null,
             createdAt: deal.createdAt.toISOString(),
         }));
 

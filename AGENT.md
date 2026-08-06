@@ -858,5 +858,15 @@ Data Collection → Preprocessing → Training → Validation → Deployment →
 
 ---
 
-**Last Updated:** August 3, 2026
+**Last Updated:** August 6, 2026
 **Maintainer:** Qalcuity AI Team
+
+### Changelog
+
+| Date | Change | Impact |
+|------|--------|--------|
+| 2026-08-06 | Dashboard stats API connected to real DB queries | AI agents can now access real-time business data |
+| 2026-08-06 | Audit trail connected to real AuditLog model | Anomaly detection has real audit data |
+| 2026-08-06 | Global search (Ctrl+K) across all modules | AI agents can leverage search context |
+| 2026-08-06 | Dark mode support added | Better UX for extended AI agent usage |
+| 2026-08-06 | Pipeline stages aligned with DB enum | Sales AI agent can accurately track deal stages |
