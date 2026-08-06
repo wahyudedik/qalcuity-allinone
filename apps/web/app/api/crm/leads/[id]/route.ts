@@ -1,80 +1,38 @@
 import { NextResponse } from 'next/server';
-
-const mockLeadDetails: Record<string, {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    company: string;
-    source: string;
-    status: string;
-    score: number;
-    notes: string;
-    createdAt: string;
-    activities: Array<{ date: string; type: string; description: string }>;
-}> = {
-    'LEAD-001': {
-        id: 'LEAD-001',
-        name: 'Ahmad Fauzi',
-        email: 'ahmad@startupxyz.com',
-        phone: '+62 812 1111 2222',
-        company: 'StartupXYZ',
-        source: 'Website',
-        status: 'new',
-        score: 75,
-        notes: 'Tertarik dengan produk widget premium.',
-        createdAt: '2026-07-25T10:00:00Z',
-        activities: [
-            { date: '2026-07-25', type: 'form', description: 'Submit form di website' },
-        ],
-    },
-    'LEAD-002': {
-        id: 'LEAD-002',
-        name: 'Rina Susanti',
-        email: 'rina@mediacorp.co.id',
-        phone: '+62 856 3333 4444',
-        company: 'MediaCorp',
-        source: 'Referral',
-        status: 'contacted',
-        score: 60,
-        notes: 'Direkomendasikan oleh PT Maju Jaya.',
-        createdAt: '2026-07-20T10:00:00Z',
-        activities: [
-            { date: '2026-07-22', type: 'call', description: 'Telepon perkenalan' },
-            { date: '2026-07-20', type: 'form', description: 'Submit form di website' },
-        ],
-    },
-    'LEAD-003': {
-        id: 'LEAD-003',
-        name: 'Dedi Kurniawan',
-        email: 'dedi@manufacturing.co.id',
-        phone: '+62 878 5555 6666',
-        company: 'Manufacturing Inc',
-        source: 'LinkedIn',
-        status: 'qualified',
-        score: 85,
-        notes: 'Budget sudah tersedia, butuh demo produk.',
-        createdAt: '2026-07-15T10:00:00Z',
-        activities: [
-            { date: '2026-07-28', type: 'meeting', description: 'Demo produk via Zoom' },
-            { date: '2026-07-22', type: 'email', description: 'Kirim brosur produk' },
-            { date: '2026-07-15', type: 'form', description: 'Submit via LinkedIn' },
-        ],
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const lead = mockLeadDetails[id];
+    try {
+        const auth = await requireAuth();
+        const { id } = params;
 
-    if (!lead) {
-        return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
+        const lead = await prisma.lead.findFirst({
+            where: { id, tenantId: auth.tenantId },
+            include: {
+                contact: { select: { id: true, name: true, email: true, phone: true } },
+                deals: {
+                    select: { id: true, title: true, value: true, stage: true, probability: true, createdAt: true },
+                    orderBy: { createdAt: 'desc' },
+                },
+            },
+        });
+
+        if (!lead) {
+            return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, data: lead });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, data: lead });
 }
 
 export async function PUT(
@@ -82,18 +40,40 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const auth = await requireAuth();
         const { id } = params;
         const body = await request.json();
 
-        if (!mockLeadDetails[id]) {
+        const existing = await prisma.lead.findFirst({
+            where: { id, tenantId: auth.tenantId },
+        });
+
+        if (!existing) {
             return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
         }
 
-        mockLeadDetails[id] = { ...mockLeadDetails[id], ...body };
+        const lead = await prisma.lead.update({
+            where: { id },
+            data: {
+                ...(typeof body.name === 'string' && { name: body.name }),
+                ...(typeof body.email === 'string' && { email: body.email }),
+                ...(typeof body.phone === 'string' && { phone: body.phone }),
+                ...(typeof body.company === 'string' && { company: body.company }),
+                ...(typeof body.source === 'string' && { source: body.source }),
+                ...(typeof body.status === 'string' && { status: body.status.toUpperCase() }),
+                ...(typeof body.value === 'number' && { value: body.value }),
+                ...(typeof body.notes === 'string' && { notes: body.notes }),
+                ...(typeof body.contactId === 'string' && { contactId: body.contactId }),
+            },
+        });
 
-        return NextResponse.json({ success: true, data: mockLeadDetails[id] });
-    } catch {
-        return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+        return NextResponse.json({ success: true, data: lead });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid request body';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
@@ -101,13 +81,26 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const auth = await requireAuth();
+        const { id } = params;
 
-    if (!mockLeadDetails[id]) {
-        return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
+        const existing = await prisma.lead.findFirst({
+            where: { id, tenantId: auth.tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
+        }
+
+        await prisma.lead.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockLeadDetails[id];
-
-    return NextResponse.json({ success: true, data: null });
 }

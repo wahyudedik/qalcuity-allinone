@@ -27,15 +27,23 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users      User[]
-  contacts   Contact[]
-  products   Product[]
-  invoices   Invoice[]
-  payments   Payment[]
+  users          User[]
+  contacts       Contact[]
+  products       Product[]
+  categories     Category[]
+  suppliers      Supplier[]
+  stockMovements StockMovement[]
+  invoices       Invoice[]
+  payments       Payment[]
   purchaseOrders PurchaseOrder[]
-  leads      Lead[]
-  deals      Deal[]
-  auditLogs  AuditLog[]
+  quotations     Quotation[]
+  leads          Lead[]
+  deals          Deal[]
+  employees      Employee[]
+  attendanceRecords AttendanceRecord[]
+  leaveRequests  LeaveRequest[]
+  payrollRecords PayrollRecord[]
+  auditLogs      AuditLog[]
 }
 
 model User {
@@ -82,9 +90,10 @@ model Contact {
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
-  invoices  Invoice[]
-  leads     Lead[]
-  deals     Deal[]
+  invoices    Invoice[]
+  leads       Lead[]
+  deals       Deal[]
+  quotations  Quotation[]
 
   @@index([tenantId])
   @@index([type])
@@ -139,8 +148,10 @@ model Payment {
   amount        Float
   paymentDate   DateTime
   method        String   @default("BANK_TRANSFER") // BANK_TRANSFER, CASH, CREDIT_CARD, E_WALLET
+  status        String   @default("COMPLETED") // COMPLETED, PENDING, FAILED
   notes         String?
   reference     String?
+  type          String   @default("INCOME") // INCOME, EXPENSE
   createdAt     DateTime @default(now())
 
   tenantId      String
@@ -169,11 +180,13 @@ model PurchaseOrder {
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
   supplierId      String?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
 
   items           PurchaseOrderItem[]
 
   @@index([tenantId])
   @@index([status])
+  @@index([supplierId])
 }
 
 model PurchaseOrderItem {
@@ -187,6 +200,46 @@ model PurchaseOrderItem {
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@index([purchaseOrderId])
+}
+
+model Quotation {
+  id              String   @id @default(cuid())
+  quotationNumber String
+  status          String   @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED
+  validUntil      DateTime
+  notes           String?
+  terms           String?
+  subtotal        Float    @default(0)
+  taxRate         Float    @default(11)
+  taxAmount       Float    @default(0)
+  discount        Float    @default(0)
+  total           Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  contactId       String?
+  contact         Contact? @relation(fields: [contactId], references: [id])
+
+  items           QuotationItem[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([contactId])
+}
+
+model QuotationItem {
+  id          String     @id @default(cuid())
+  description String
+  quantity    Float      @default(1)
+  unitPrice   Float      @default(0)
+  total       Float      @default(0)
+
+  quotationId String
+  quotation   Quotation  @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
 }
 
 // ============================================
@@ -221,7 +274,7 @@ model Deal {
   id          String   @id @default(cuid())
   title       String
   value       Float    @default(0)
-  stage       String   @default("PROSPECTING") // PROSPECTING, QUALIFICATION, PROPOSAL, NEGOTIATION, CLOSED_WON, CLOSED_LOST
+  stage       String   @default("DISCOVERY") // DISCOVERY, PROPOSAL, NEGOTIATION, CLOSING, CLOSED_WON, CLOSED_LOST
   probability Int      @default(0)
   closeDate   DateTime?
   notes       String?
@@ -243,12 +296,50 @@ model Deal {
 // INVENTORY
 // ============================================
 
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  products    Product[]
+
+  @@unique([name, tenantId])
+  @@index([tenantId])
+}
+
+model Supplier {
+  id              String   @id @default(cuid())
+  name            String
+  contactPerson   String?
+  email           String?
+  phone           String?
+  address         String?
+  city            String?
+  rating          Float    @default(0)
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  purchaseOrders  PurchaseOrder[]
+
+  @@index([tenantId])
+}
+
 model Product {
   id          String   @id @default(cuid())
   sku         String
   name        String
   description String?
-  category    String?
   unit        String   @default("pcs")
   price       Float    @default(0)
   cost        Float    @default(0)
@@ -260,14 +351,36 @@ model Product {
 
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  stockMovements StockMovement[]
 
   @@unique([sku, tenantId])
   @@index([tenantId])
-  @@index([category])
+  @@index([categoryId])
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  type        String   // IN, OUT, ADJUSTMENT
+  quantity    Int
+  reference   String?  // PO number, Invoice number, etc.
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([type])
 }
 
 // ============================================
-// HR (simplified)
+// HR
 // ============================================
 
 model Employee {
@@ -285,9 +398,84 @@ model Employee {
   updatedAt   DateTime @updatedAt
 
   tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  attendanceRecords AttendanceRecord[]
+  leaveRequests  LeaveRequest[]
+  payrollRecords PayrollRecord[]
 
   @@unique([employeeId, tenantId])
   @@index([tenantId])
+}
+
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  date        DateTime
+  clockIn     DateTime?
+  clockOut    DateTime?
+  status      String   @default("PRESENT") // PRESENT, LATE, ABSENT, LEAVE, WFH
+  workHours   Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date, tenantId])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id          String   @id @default(cuid())
+  type        String   @default("ANNUAL") // ANNUAL, SICK, PERSONAL, MATERNITY, UNPAID
+  startDate   DateTime
+  endDate     DateTime
+  days        Int
+  reason      String?
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  appliedDate DateTime @default(now())
+  approvedBy  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+model PayrollRecord {
+  id            String   @id @default(cuid())
+  period        String   // e.g. "2026-08"
+  baseSalary    Float
+  allowances    Float    @default(0)
+  deductions    Float    @default(0)
+  bonus         Float    @default(0)
+  netSalary     Float
+  status        String   @default("PENDING") // PENDING, PROCESSED, PAID
+  paidAt        DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, period, tenantId])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([period])
 }
 
 // ============================================

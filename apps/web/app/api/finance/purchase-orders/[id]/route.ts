@@ -1,72 +1,63 @@
 import { NextResponse } from 'next/server';
-
-const mockPODetails: Record<string, {
-    id: string;
-    poNumber: string;
-    supplierName: string;
-    supplierAddress: string;
-    supplierEmail: string;
-    items: Array<{ name: string; description: string; quantity: number; unitPrice: number; total: number }>;
-    subtotal: number;
-    tax: number;
-    total: number;
-    currency: string;
-    status: string;
-    expectedDelivery: string;
-    createdAt: string;
-    notes: string;
-}> = {
-    'PO-001': {
-        id: 'PO-001',
-        poNumber: 'PO-2026-001',
-        supplierName: 'PT Supplier ABC',
-        supplierAddress: 'Jl. Industri No. 10, Tangerang',
-        supplierEmail: 'sales@supplierabc.co.id',
-        items: [
-            { name: 'Raw Material A', description: 'Bahan baku kualitas tinggi', quantity: 500, unitPrice: 25000, total: 12500000 },
-            { name: 'Raw Material B', description: 'Bahan baku pendukung', quantity: 200, unitPrice: 50000, total: 10000000 },
-        ],
-        subtotal: 22500000,
-        tax: 2250000,
-        total: 24750000,
-        currency: 'IDR',
-        status: 'confirmed',
-        expectedDelivery: '2026-08-15',
-        createdAt: '2026-07-20T10:00:00Z',
-        notes: 'Pengiriman ke gudang utama.',
-    },
-    'PO-002': {
-        id: 'PO-002',
-        poNumber: 'PO-2026-002',
-        supplierName: 'CV Supplier XYZ',
-        supplierAddress: 'Jl. Raya No. 50, Bandung',
-        supplierEmail: 'order@supplierxyz.co.id',
-        items: [
-            { name: 'Component X', description: 'Komponen elektronik', quantity: 1000, unitPrice: 15000, total: 15000000 },
-        ],
-        subtotal: 15000000,
-        tax: 1500000,
-        total: 16500000,
-        currency: 'IDR',
-        status: 'sent',
-        expectedDelivery: '2026-08-20',
-        createdAt: '2026-07-25T10:00:00Z',
-        notes: '',
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const po = mockPODetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!po) {
-        return NextResponse.json({ success: false, error: 'Purchase Order not found' }, { status: 404 });
+        const po = await prisma.purchaseOrder.findFirst({
+            where: { id, tenantId },
+            include: {
+                supplier: true,
+                items: true,
+            },
+        });
+
+        if (!po) {
+            return NextResponse.json(
+                { success: false, error: 'Purchase Order not found' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: po.id,
+            poNumber: po.poNumber,
+            supplierName: po.supplier?.name || '-',
+            supplierAddress: po.supplier?.address || '',
+            supplierEmail: po.supplier?.email || '',
+            supplierId: po.supplierId,
+            items: po.items.map((item) => ({
+                id: item.id,
+                name: item.description,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+            })),
+            subtotal: po.subtotal,
+            tax: po.taxAmount,
+            total: po.total,
+            currency: 'IDR',
+            status: po.status.toLowerCase(),
+            expectedDelivery: po.deliveryDate?.toISOString().split('T')[0] || null,
+            createdAt: po.createdAt.toISOString(),
+            notes: po.notes || '',
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, data: po });
 }
 
 export async function PUT(
@@ -74,18 +65,67 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const { tenantId } = await requireAuth();
         const { id } = params;
         const body = await request.json();
 
-        if (!mockPODetails[id]) {
-            return NextResponse.json({ success: false, error: 'Purchase Order not found' }, { status: 404 });
+        const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Purchase Order not found' },
+                { status: 404 }
+            );
         }
 
-        mockPODetails[id] = { ...mockPODetails[id], ...body };
+        const updateData: Record<string, unknown> = { ...body };
+        delete updateData.id;
+        delete updateData.items;
 
-        return NextResponse.json({ success: true, data: mockPODetails[id] });
-    } catch {
-        return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+        if (updateData.status) {
+            updateData.status = updateData.status.toUpperCase();
+        }
+        if (updateData.expectedDelivery) {
+            updateData.deliveryDate = new Date(updateData.expectedDelivery);
+            delete updateData.expectedDelivery;
+        }
+
+        if (body.items && body.items.length > 0) {
+            await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
+            await prisma.purchaseOrderItem.createMany({
+                data: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                    purchaseOrderId: id,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    total: item.total || item.quantity * item.unitPrice,
+                })),
+            });
+
+            const subtotal = body.items.reduce(
+                (sum: number, item: { quantity: number; unitPrice: number }) =>
+                    sum + item.quantity * item.unitPrice,
+                0
+            );
+            const taxRate = body.taxRate || existing.taxRate;
+            const taxAmount = subtotal * (taxRate / 100);
+            updateData.subtotal = subtotal;
+            updateData.taxAmount = taxAmount;
+            updateData.total = subtotal + taxAmount;
+        }
+
+        const po = await prisma.purchaseOrder.update({
+            where: { id },
+            data: updateData,
+            include: { items: true, supplier: true },
+        });
+
+        return NextResponse.json({ success: true, data: po });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
@@ -93,13 +133,26 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!mockPODetails[id]) {
-        return NextResponse.json({ success: false, error: 'Purchase Order not found' }, { status: 404 });
+        const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Purchase Order not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.purchaseOrder.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockPODetails[id];
-
-    return NextResponse.json({ success: true, data: null });
 }

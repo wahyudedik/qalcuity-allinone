@@ -1,165 +1,130 @@
 import { NextResponse } from 'next/server';
-
-const mockProducts = [
-    {
-        id: 'SKU-001',
-        sku: 'SKU-001',
-        name: 'Widget A',
-        description: 'High-quality widget untuk berbagai kebutuhan',
-        category: 'Electronics',
-        unitPrice: 100000,
-        costPrice: 65000,
-        currency: 'IDR',
-        stock: 150,
-        minStock: 20,
-        unit: 'pcs',
-        status: 'active',
-        createdAt: '2026-06-01T10:00:00Z',
-    },
-    {
-        id: 'SKU-002',
-        sku: 'SKU-002',
-        name: 'Component B',
-        description: 'Komponen pendukung untuk assembly',
-        category: 'Parts',
-        unitPrice: 250000,
-        costPrice: 150000,
-        currency: 'IDR',
-        stock: 8,
-        minStock: 20,
-        unit: 'pcs',
-        status: 'active',
-        createdAt: '2026-06-05T10:00:00Z',
-    },
-    {
-        id: 'SKU-003',
-        sku: 'SKU-003',
-        name: 'Service C',
-        description: 'Layanan konsultasi dan implementasi',
-        category: 'Services',
-        unitPrice: 5000000,
-        costPrice: 2000000,
-        currency: 'IDR',
-        stock: 999,
-        minStock: 0,
-        unit: 'lot',
-        status: 'active',
-        createdAt: '2026-06-10T10:00:00Z',
-    },
-    {
-        id: 'SKU-004',
-        sku: 'SKU-004',
-        name: 'Kit D',
-        description: 'Bundle paket lengkap untuk pemula',
-        category: 'Bundles',
-        unitPrice: 750000,
-        costPrice: 500000,
-        currency: 'IDR',
-        stock: 0,
-        minStock: 10,
-        unit: 'set',
-        status: 'active',
-        createdAt: '2026-06-15T10:00:00Z',
-    },
-    {
-        id: 'SKU-005',
-        sku: 'SKU-005',
-        name: 'Module E',
-        description: 'Software module untuk integrasi sistem',
-        category: 'Software',
-        unitPrice: 2500000,
-        costPrice: 500000,
-        currency: 'IDR',
-        stock: 45,
-        minStock: 10,
-        unit: 'license',
-        status: 'active',
-        createdAt: '2026-06-20T10:00:00Z',
-    },
-];
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    const lowStock = searchParams.get('lowStock');
+    try {
+        const auth = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const category = searchParams.get('category');
+        const lowStock = searchParams.get('lowStock');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-    let filtered = [...mockProducts];
+        const where: Record<string, unknown> = { tenantId: auth.tenantId };
 
-    if (status) {
-        filtered = filtered.filter((p) => p.status === status);
+        if (search) {
+            where.OR = [
+                { name: { contains: search } },
+                { sku: { contains: search } },
+                { description: { contains: search } },
+            ];
+        }
+
+        if (category) {
+            where.categoryId = category;
+        }
+
+        if (lowStock === 'true') {
+            where.stock = { lte: prisma.product.fields.minStock };
+        }
+
+        const [products, total] = await Promise.all([
+            prisma.product.findMany({
+                where,
+                include: {
+                    category: { select: { id: true, name: true } },
+                    _count: { select: { stockMovements: true } },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.product.count({ where }),
+        ]);
+
+        const data = products.map((p) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            description: p.description,
+            unit: p.unit,
+            price: p.price,
+            cost: p.cost,
+            stock: p.stock,
+            minStock: p.minStock,
+            isActive: p.isActive,
+            categoryId: p.categoryId,
+            categoryName: p.category?.name || null,
+            isLowStock: p.stock <= p.minStock,
+            createdAt: p.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    if (category) {
-        filtered = filtered.filter((p) => p.category.toLowerCase() === category.toLowerCase());
-    }
-
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        filtered = filtered.filter(
-            (p) =>
-                p.name.toLowerCase().includes(lowerSearch) ||
-                p.sku.toLowerCase().includes(lowerSearch) ||
-                p.description.toLowerCase().includes(lowerSearch)
-        );
-    }
-
-    if (lowStock === 'true') {
-        filtered = filtered.filter((p) => p.stock <= p.minStock);
-    }
-
-    return NextResponse.json({
-        success: true,
-        data: filtered,
-        total: filtered.length,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-    });
 }
 
 export async function POST(request: Request) {
     try {
+        const auth = await requireAuth();
         const body = await request.json();
 
         if (!body.name || !body.sku) {
             return NextResponse.json(
-                { success: false, error: 'Product name and SKU are required' },
+                { success: false, error: 'Name and SKU are required' },
                 { status: 400 }
             );
         }
 
-        // Check duplicate SKU
-        if (mockProducts.some((p) => p.sku === body.sku)) {
+        const product = await prisma.product.create({
+            data: {
+                tenantId: auth.tenantId,
+                sku: body.sku,
+                name: body.name,
+                description: body.description || null,
+                unit: body.unit || 'pcs',
+                price: body.price || 0,
+                cost: body.cost || 0,
+                stock: body.stock || 0,
+                minStock: body.minStock || 0,
+                categoryId: body.categoryId || null,
+            },
+        });
+
+        return NextResponse.json({ success: true, data: product }, { status: 201 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid request body';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        if (message.includes('Unique constraint')) {
             return NextResponse.json(
                 { success: false, error: 'SKU already exists' },
                 { status: 409 }
             );
         }
-
-        const newProduct = {
-            id: body.sku,
-            ...body,
-            stock: body.stock || 0,
-            minStock: body.minStock || 0,
-            status: 'active',
-            createdAt: new Date().toISOString(),
-        };
-
-        mockProducts.push(newProduct);
-
-        return NextResponse.json({ success: true, data: newProduct }, { status: 201 });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
+        const auth = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -170,45 +135,75 @@ export async function PUT(request: Request) {
             );
         }
 
-        const index = mockProducts.findIndex((p) => p.id === id);
-        if (index === -1) {
+        const existing = await prisma.product.findFirst({
+            where: { id, tenantId: auth.tenantId },
+        });
+
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Product not found' },
                 { status: 404 }
             );
         }
 
-        mockProducts[index] = { ...mockProducts[index], ...updateData, updatedAt: new Date().toISOString() };
+        const product = await prisma.product.update({
+            where: { id },
+            data: {
+                ...(typeof updateData.sku === 'string' && { sku: updateData.sku }),
+                ...(typeof updateData.name === 'string' && { name: updateData.name }),
+                ...(typeof updateData.description === 'string' && { description: updateData.description }),
+                ...(typeof updateData.unit === 'string' && { unit: updateData.unit }),
+                ...(typeof updateData.price === 'number' && { price: updateData.price }),
+                ...(typeof updateData.cost === 'number' && { cost: updateData.cost }),
+                ...(typeof updateData.stock === 'number' && { stock: updateData.stock }),
+                ...(typeof updateData.minStock === 'number' && { minStock: updateData.minStock }),
+                ...(typeof updateData.categoryId === 'string' && { categoryId: updateData.categoryId }),
+                ...(typeof updateData.isActive === 'boolean' && { isActive: updateData.isActive }),
+            },
+        });
 
-        return NextResponse.json({ success: true, data: mockProducts[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: product });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid request body';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    try {
+        const auth = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-    if (!id) {
-        return NextResponse.json(
-            { success: false, error: 'ID is required' },
-            { status: 400 }
-        );
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.product.findFirst({
+            where: { id, tenantId: auth.tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Product not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.product.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const index = mockProducts.findIndex((p) => p.id === id);
-    if (index === -1) {
-        return NextResponse.json(
-            { success: false, error: 'Product not found' },
-            { status: 404 }
-        );
-    }
-
-    mockProducts.splice(index, 1);
-
-    return NextResponse.json({ success: true, data: null });
 }

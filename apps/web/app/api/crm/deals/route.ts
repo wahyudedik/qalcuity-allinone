@@ -1,152 +1,118 @@
 import { NextResponse } from 'next/server';
-
-const mockDeals = [
-    {
-        id: 'DEAL-001',
-        name: 'PT Maju Jaya - Annual Supply',
-        company: 'PT Maju Jaya',
-        contactId: 'CON-001',
-        contactName: 'Budi Hartono',
-        value: 50000000,
-        stage: 'Negosiasi',
-        probability: 75,
-        assignedTo: 'Sales Team',
-        expectedCloseDate: '2026-08-30',
-        source: 'Referral',
-        notes: 'Deal tahunan untuk supply widget',
-        competitors: ['PT Kompetitor A', 'CV Kompetitor B'],
-        activities: [
-            { type: 'meeting', date: '2026-07-20', description: 'Presentasi produk' },
-            { type: 'call', date: '2026-07-25', description: 'Follow up harga' },
-        ],
-        createdAt: '2026-06-15T10:00:00Z',
-    },
-    {
-        id: 'DEAL-002',
-        name: 'CV Berkah - Service Contract',
-        company: 'CV Berkah',
-        contactId: 'CON-002',
-        contactName: 'Sari Dewi',
-        value: 25000000,
-        stage: 'Proposal',
-        probability: 50,
-        assignedTo: 'Sales Team',
-        expectedCloseDate: '2026-09-15',
-        source: 'Website',
-        notes: 'Service contract 1 tahun',
-        competitors: [],
-        activities: [
-            { type: 'email', date: '2026-07-18', description: 'Kirim proposal' },
-        ],
-        createdAt: '2026-07-10T10:00:00Z',
-    },
-    {
-        id: 'DEAL-003',
-        name: 'PT Digital Nusantara - Digital Transformation',
-        company: 'PT Digital Nusantara',
-        contactId: 'CON-004',
-        contactName: 'Rina Susanti',
-        value: 100000000,
-        stage: 'Discovery',
-        probability: 25,
-        assignedTo: 'Sales Team',
-        expectedCloseDate: '2026-12-31',
-        source: 'LinkedIn',
-        notes: 'Project besar digital transformation',
-        competitors: ['PT Tech Solutions', 'CV Digital Corp', 'PT Inovasi Teknologi'],
-        activities: [
-            { type: 'meeting', date: '2026-07-15', description: 'Kick-off meeting' },
-            { type: 'call', date: '2026-07-22', description: 'Technical discussion' },
-        ],
-        createdAt: '2026-07-01T10:00:00Z',
-    },
-    {
-        id: 'DEAL-004',
-        name: 'PT ABC Technology - Pilot Project',
-        company: 'PT ABC Technology',
-        contactId: 'CON-005',
-        contactName: 'Dedi Kurniawan',
-        value: 5000000,
-        stage: 'Closing',
-        probability: 90,
-        assignedTo: 'Sales Team',
-        expectedCloseDate: '2026-08-10',
-        source: 'Website',
-        notes: 'Pilot project untuk evaluasi',
-        competitors: [],
-        activities: [
-            { type: 'meeting', date: '2026-07-20', description: 'Demo produk' },
-            { type: 'email', date: '2026-07-28', description: 'Kirim kontrak' },
-            { type: 'call', date: '2026-08-01', description: 'Final negotiation' },
-        ],
-        createdAt: '2026-07-05T10:00:00Z',
-    },
-];
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const stage = searchParams.get('stage');
-    const search = searchParams.get('search');
+    try {
+        const auth = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const stage = searchParams.get('stage');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-    let filtered = [...mockDeals];
+        const where: Record<string, unknown> = { tenantId: auth.tenantId };
 
-    if (stage) {
-        filtered = filtered.filter((d) => d.stage === stage);
+        if (stage) {
+            where.stage = stage.toUpperCase().replace(' ', '_');
+        }
+
+        if (search) {
+            where.OR = [
+                { title: { contains: search } },
+                { contact: { name: { contains: search } } },
+            ];
+        }
+
+        const [deals, total] = await Promise.all([
+            prisma.deal.findMany({
+                where,
+                include: {
+                    contact: { select: { id: true, name: true, email: true } },
+                    lead: { select: { id: true, name: true, company: true } },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.deal.count({ where }),
+        ]);
+
+        const data = deals.map((deal) => ({
+            id: deal.id,
+            title: deal.title,
+            value: deal.value,
+            stage: deal.stage.charAt(0) + deal.stage.slice(1).toLowerCase().replace(/_/g, ' '),
+            probability: deal.probability,
+            closeDate: deal.closeDate?.toISOString() || null,
+            notes: deal.notes,
+            contactId: deal.contactId,
+            contactName: deal.contact?.name || null,
+            leadId: deal.leadId,
+            leadCompany: deal.lead?.company || null,
+            createdAt: deal.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        filtered = filtered.filter(
-            (d) =>
-                d.name.toLowerCase().includes(lowerSearch) ||
-                d.company.toLowerCase().includes(lowerSearch)
-        );
-    }
-
-    return NextResponse.json({
-        success: true,
-        data: filtered,
-        total: filtered.length,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-    });
 }
 
 export async function POST(request: Request) {
     try {
+        const auth = await requireAuth();
         const body = await request.json();
 
-        if (!body.name || !body.company || !body.value) {
+        if (!body.title) {
             return NextResponse.json(
-                { success: false, error: 'Name, company, and value are required' },
+                { success: false, error: 'Deal title is required' },
                 { status: 400 }
             );
         }
 
-        const newDeal = {
-            id: `DEAL-${Date.now()}`,
-            ...body,
-            stage: body.stage || 'Discovery',
-            probability: body.probability || 10,
-            competitors: body.competitors || [],
-            activities: body.activities || [],
-            createdAt: new Date().toISOString(),
-        };
+        const deal = await prisma.deal.create({
+            data: {
+                tenantId: auth.tenantId,
+                title: body.title,
+                value: body.value || 0,
+                stage: (body.stage || 'DISCOVERY').toUpperCase().replace(' ', '_'),
+                probability: body.probability || 0,
+                closeDate: body.closeDate ? new Date(body.closeDate) : null,
+                notes: body.notes || null,
+                contactId: body.contactId || null,
+                leadId: body.leadId || null,
+            },
+            include: {
+                contact: { select: { id: true, name: true } },
+            },
+        });
 
-        mockDeals.push(newDeal);
-
-        return NextResponse.json({ success: true, data: newDeal }, { status: 201 });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: deal }, { status: 201 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid request body';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
+        const auth = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -157,45 +123,73 @@ export async function PUT(request: Request) {
             );
         }
 
-        const index = mockDeals.findIndex((d) => d.id === id);
-        if (index === -1) {
+        const existing = await prisma.deal.findFirst({
+            where: { id, tenantId: auth.tenantId },
+        });
+
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Deal not found' },
                 { status: 404 }
             );
         }
 
-        mockDeals[index] = { ...mockDeals[index], ...updateData, updatedAt: new Date().toISOString() };
+        const deal = await prisma.deal.update({
+            where: { id },
+            data: {
+                ...(typeof updateData.title === 'string' && { title: updateData.title }),
+                ...(typeof updateData.value === 'number' && { value: updateData.value }),
+                ...(typeof updateData.stage === 'string' && { stage: updateData.stage.toUpperCase().replace(' ', '_') }),
+                ...(typeof updateData.probability === 'number' && { probability: updateData.probability }),
+                ...(updateData.closeDate && { closeDate: new Date(updateData.closeDate) }),
+                ...(typeof updateData.notes === 'string' && { notes: updateData.notes }),
+                ...(typeof updateData.contactId === 'string' && { contactId: updateData.contactId }),
+                ...(typeof updateData.leadId === 'string' && { leadId: updateData.leadId }),
+            },
+        });
 
-        return NextResponse.json({ success: true, data: mockDeals[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: deal });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid request body';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    try {
+        const auth = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-    if (!id) {
-        return NextResponse.json(
-            { success: false, error: 'ID is required' },
-            { status: 400 }
-        );
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.deal.findFirst({
+            where: { id, tenantId: auth.tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Deal not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.deal.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const index = mockDeals.findIndex((d) => d.id === id);
-    if (index === -1) {
-        return NextResponse.json(
-            { success: false, error: 'Deal not found' },
-            { status: 404 }
-        );
-    }
-
-    mockDeals.splice(index, 1);
-
-    return NextResponse.json({ success: true, data: null });
 }

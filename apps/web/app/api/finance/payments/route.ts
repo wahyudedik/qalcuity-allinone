@@ -1,146 +1,142 @@
 import { NextResponse } from 'next/server';
-
-const mockPayments = [
-    {
-        id: 'PAY-001',
-        paymentNumber: 'PAY-2026-001',
-        invoiceId: 'INV-001',
-        invoiceNumber: 'INV-2026-001',
-        customerName: 'PT Maju Jaya',
-        amount: 16500000,
-        method: 'bank_transfer',
-        status: 'completed',
-        date: '2026-07-25',
-        reference: 'TRF-20260725-001',
-        notes: 'Pembayaran lunas',
-        createdAt: '2026-07-25T10:00:00Z',
-    },
-    {
-        id: 'PAY-002',
-        paymentNumber: 'PAY-2026-002',
-        invoiceId: 'INV-002',
-        invoiceNumber: 'INV-2026-002',
-        customerName: 'CV Berkah',
-        amount: 4400000,
-        method: 'credit_card',
-        status: 'completed',
-        date: '2026-07-28',
-        reference: 'CC-20260728-001',
-        notes: 'DP 50%',
-        createdAt: '2026-07-28T10:00:00Z',
-    },
-    {
-        id: 'PAY-003',
-        paymentNumber: 'PAY-2026-003',
-        invoiceId: 'INV-003',
-        invoiceNumber: 'INV-2026-003',
-        customerName: 'PT Sejahtera',
-        amount: 25300000,
-        method: 'bank_transfer',
-        status: 'pending',
-        date: '2026-08-10',
-        reference: 'TRF-20260810-001',
-        notes: 'Menunggu konfirmasi bank',
-        createdAt: '2026-08-01T10:00:00Z',
-    },
-    {
-        id: 'PAY-004',
-        paymentNumber: 'PAY-2026-004',
-        invoiceId: 'INV-004',
-        invoiceNumber: 'INV-2026-004',
-        customerName: 'PT Digital Nusantara',
-        amount: 8800000,
-        method: 'bank_transfer',
-        status: 'completed',
-        date: '2026-07-30',
-        reference: 'TRF-20260730-001',
-        notes: 'Pembayaran penuh',
-        createdAt: '2026-07-30T10:00:00Z',
-    },
-    {
-        id: 'PAY-005',
-        paymentNumber: 'PAY-2026-005',
-        invoiceId: 'INV-005',
-        invoiceNumber: 'INV-2026-005',
-        customerName: 'CV Sentosa',
-        amount: 12500000,
-        method: 'ewallet',
-        status: 'failed',
-        date: '2026-08-01',
-        reference: 'EW-20260801-001',
-        notes: 'Saldo tidak cukup',
-        createdAt: '2026-08-01T14:00:00Z',
-    },
-];
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const method = searchParams.get('method');
-    const search = searchParams.get('search');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const method = searchParams.get('method');
+        const search = searchParams.get('search');
+        const type = searchParams.get('type'); // INCOME or EXPENSE
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-    let filtered = [...mockPayments];
+        const where: Record<string, unknown> = { tenantId };
 
-    if (status) {
-        filtered = filtered.filter((p) => p.status === status);
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+
+        if (method) {
+            where.method = method.toUpperCase().replace('-', '_');
+        }
+
+        if (type) {
+            where.type = type.toUpperCase();
+        }
+
+        if (search) {
+            where.OR = [
+                { paymentNumber: { contains: search } },
+                { reference: { contains: search } },
+                { invoice: { invoiceNumber: { contains: search } } },
+                { invoice: { contact: { name: { contains: search } } } },
+            ];
+        }
+
+        const [payments, total] = await Promise.all([
+            prisma.payment.findMany({
+                where,
+                include: {
+                    invoice: {
+                        select: {
+                            id: true,
+                            invoiceNumber: true,
+                            contact: { select: { name: true } },
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.payment.count({ where }),
+        ]);
+
+        const data = payments.map((p) => ({
+            id: p.id,
+            paymentNumber: p.paymentNumber,
+            invoiceId: p.invoiceId,
+            invoiceNumber: p.invoice?.invoiceNumber || '-',
+            customerName: p.invoice?.contact?.name || '-',
+            amount: p.amount,
+            method: p.method.toLowerCase().replace('_', '-'),
+            status: p.status.toLowerCase(),
+            type: p.type,
+            date: p.paymentDate.toISOString().split('T')[0],
+            reference: p.reference || '',
+            notes: p.notes || '',
+            createdAt: p.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    if (method) {
-        filtered = filtered.filter((p) => p.method === method);
-    }
-
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        filtered = filtered.filter(
-            (p) =>
-                p.paymentNumber.toLowerCase().includes(lowerSearch) ||
-                p.customerName.toLowerCase().includes(lowerSearch) ||
-                p.invoiceNumber.toLowerCase().includes(lowerSearch)
-        );
-    }
-
-    return NextResponse.json({
-        success: true,
-        data: filtered,
-        total: filtered.length,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-    });
 }
 
 export async function POST(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
 
-        if (!body.invoiceId || !body.amount || !body.method) {
+        if (!body.amount || !body.method) {
             return NextResponse.json(
-                { success: false, error: 'Invoice ID, amount, and method are required' },
+                { success: false, error: 'Amount and method are required' },
                 { status: 400 }
             );
         }
 
-        const newPayment = {
-            id: `PAY-${Date.now()}`,
-            paymentNumber: `PAY-2026-${String(mockPayments.length + 1).padStart(3, '0')}`,
-            ...body,
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-        };
+        const count = await prisma.payment.count({ where: { tenantId } });
+        const paymentNumber = `PAY-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
-        mockPayments.push(newPayment);
+        const payment = await prisma.payment.create({
+            data: {
+                paymentNumber,
+                amount: parseFloat(body.amount),
+                paymentDate: body.date ? new Date(body.date) : new Date(),
+                method: (body.method || 'BANK_TRANSFER').toUpperCase().replace('-', '_'),
+                status: 'PENDING',
+                type: (body.type || 'INCOME').toUpperCase(),
+                reference: body.reference || '',
+                notes: body.notes || '',
+                invoiceId: body.invoiceId || undefined,
+                tenantId,
+            },
+            include: {
+                invoice: {
+                    select: { invoiceNumber: true, contact: { select: { name: true } } },
+                },
+            },
+        });
 
-        return NextResponse.json({ success: true, data: newPayment }, { status: 201 });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: payment }, { status: 201 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -151,45 +147,74 @@ export async function PUT(request: Request) {
             );
         }
 
-        const index = mockPayments.findIndex((p) => p.id === id);
-        if (index === -1) {
+        const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Payment not found' },
                 { status: 404 }
             );
         }
 
-        mockPayments[index] = { ...mockPayments[index], ...updateData, updatedAt: new Date().toISOString() };
+        if (updateData.status) {
+            updateData.status = updateData.status.toUpperCase();
+        }
+        if (updateData.method) {
+            updateData.method = updateData.method.toUpperCase().replace('-', '_');
+        }
+        if (updateData.date) {
+            updateData.paymentDate = new Date(updateData.date);
+            delete updateData.date;
+        }
 
-        return NextResponse.json({ success: true, data: mockPayments[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        const payment = await prisma.payment.update({
+            where: { id },
+            data: updateData,
+            include: {
+                invoice: {
+                    select: { invoiceNumber: true, contact: { select: { name: true } } },
+                },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: payment });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-    if (!id) {
-        return NextResponse.json(
-            { success: false, error: 'ID is required' },
-            { status: 400 }
-        );
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Payment not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.payment.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const index = mockPayments.findIndex((p) => p.id === id);
-    if (index === -1) {
-        return NextResponse.json(
-            { success: false, error: 'Payment not found' },
-            { status: 404 }
-        );
-    }
-
-    mockPayments.splice(index, 1);
-
-    return NextResponse.json({ success: true, data: null });
 }
