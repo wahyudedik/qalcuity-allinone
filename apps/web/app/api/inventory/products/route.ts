@@ -28,7 +28,9 @@ export async function GET(request: Request) {
         }
 
         if (lowStock === 'true') {
-            where.stock = { lte: prisma.product.fields.minStock };
+            // Filter products where stock <= minStock using raw comparison
+            // Prisma doesn't support field-to-field comparison directly
+            // We'll filter in post-processing below
         }
 
         const [products, total] = await Promise.all([
@@ -45,7 +47,7 @@ export async function GET(request: Request) {
             prisma.product.count({ where }),
         ]);
 
-        const data = products.map((p) => ({
+        const allData = products.map((p) => ({
             id: p.id,
             sku: p.sku,
             name: p.name,
@@ -62,10 +64,13 @@ export async function GET(request: Request) {
             createdAt: p.createdAt.toISOString(),
         }));
 
+        // Post-process: filter lowStock in memory (Prisma can't compare fields)
+        const data = lowStock === 'true' ? allData.filter((p) => p.isLowStock) : allData;
+
         return NextResponse.json({
             success: true,
             data,
-            total,
+            total: lowStock === 'true' ? data.length : total,
             page,
             limit,
             totalPages: Math.ceil(total / limit),

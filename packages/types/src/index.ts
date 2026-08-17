@@ -204,17 +204,22 @@ export interface Lead {
 
 export interface Contact {
     id: ID;
-    companyId: ID;
-    firstName: string;
-    lastName: string;
+    name: string;
+    type: "CUSTOMER" | "SUPPLIER" | "BOTH";
+    company?: string;
     email?: string;
     phone?: string;
-    company?: string;
-    position?: string;
-    leadId?: ID;
-    tags?: string[];
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    taxId?: string;
+    notes?: string;
+    isActive: boolean;
+    tenantId: ID;
     createdAt: Timestamp;
     updatedAt: Timestamp;
+    deletedAt?: Timestamp;
 }
 
 export interface Deal {

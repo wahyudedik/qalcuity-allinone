@@ -60,10 +60,12 @@ export async function GET(request: Request) {
             prisma.contact.findMany({
                 where: {
                     tenantId: auth.tenantId,
+                    isActive: true,
                     OR: [
                         { name: { contains: searchTerm } },
                         { email: { contains: searchTerm } },
                         { company: { contains: searchTerm } },
+                        { phone: { contains: searchTerm } },
                     ],
                 },
                 take: limit,
@@ -85,10 +87,12 @@ export async function GET(request: Request) {
             prisma.employee.findMany({
                 where: {
                     tenantId: auth.tenantId,
+                    status: "ACTIVE",
                     OR: [
                         { name: { contains: searchTerm } },
                         { email: { contains: searchTerm } },
                         { position: { contains: searchTerm } },
+                        { department: { contains: searchTerm } },
                     ],
                 },
                 take: limit,
@@ -114,7 +118,7 @@ export async function GET(request: Request) {
                 subtitle: `${inv.contact?.name || 'Customer'} - Rp ${(inv.total || 0).toLocaleString('id-ID')}`,
                 type: 'Invoice',
                 href: `/dashboard/finance/invoices/${inv.id}`,
-                icon: '💰',
+                icon: 'receipt',
             });
         });
 
@@ -125,7 +129,7 @@ export async function GET(request: Request) {
                 subtitle: `${deal.contact?.name || 'Contact'} - Rp ${(deal.value || 0).toLocaleString('id-ID')}`,
                 type: 'Deal',
                 href: `/dashboard/crm/deals/${deal.id}`,
-                icon: '📈',
+                icon: 'trending-up',
             });
         });
 
@@ -136,7 +140,7 @@ export async function GET(request: Request) {
                 subtitle: lead.company || lead.email || 'Lead',
                 type: 'Lead',
                 href: `/dashboard/crm/leads/${lead.id}`,
-                icon: '🎯',
+                icon: 'target',
             });
         });
 
@@ -147,7 +151,7 @@ export async function GET(request: Request) {
                 subtitle: contact.company || contact.email || 'Contact',
                 type: 'Contact',
                 href: `/dashboard/crm/contacts/${contact.id}`,
-                icon: '👥',
+                icon: 'users',
             });
         });
 
@@ -158,7 +162,7 @@ export async function GET(request: Request) {
                 subtitle: `${product.sku} - Stock: ${product.stock}`,
                 type: 'Product',
                 href: `/dashboard/inventory/products/${product.id}`,
-                icon: '📦',
+                icon: 'package',
             });
         });
 
@@ -169,7 +173,7 @@ export async function GET(request: Request) {
                 subtitle: emp.position || emp.email || 'Employee',
                 type: 'Employee',
                 href: `/dashboard/hr/employees/${emp.id}`,
-                icon: '👤',
+                icon: 'user-check',
             });
         });
 

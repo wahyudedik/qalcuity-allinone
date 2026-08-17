@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import {
+    Users,
+    CheckCircle,
+    Palmtree,
+    Home,
+    Cake,
+} from 'lucide-react'
 
 const summaryCards = [
-    { title: 'Total Karyawan', value: '45', icon: '👥', color: 'text-blue-600', href: '/dashboard/hr/employees' },
-    { title: 'Hadir Hari Ini', value: '38', icon: '✅', color: 'text-green-600', href: '/dashboard/hr/attendance' },
-    { title: 'Cuti Hari Ini', value: '5', icon: '🏖️', color: 'text-yellow-600', href: '/dashboard/hr/leaves' },
-    { title: 'WFH Hari Ini', value: '2', icon: '🏠', color: 'text-purple-600', href: '/dashboard/hr/attendance' },
+    { title: 'Total Karyawan', value: '45', icon: Users, color: 'text-blue-600', href: '/dashboard/hr/employees' },
+    { title: 'Hadir Hari Ini', value: '38', icon: CheckCircle, color: 'text-green-600', href: '/dashboard/hr/attendance' },
+    { title: 'Cuti Hari Ini', value: '5', icon: Palmtree, color: 'text-yellow-600', href: '/dashboard/hr/leaves' },
+    { title: 'WFH Hari Ini', value: '2', icon: Home, color: 'text-purple-600', href: '/dashboard/hr/attendance' },
 ]
 
 const recentLeaves = [
@@ -32,36 +39,42 @@ export default function HrPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">HR Overview</h1>
-                <p className="text-gray-500">Ringkasan data dan aktivitas HR</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">HR Overview</h1>
+                <p className="text-gray-500 dark:text-gray-400">Ringkasan data dan aktivitas HR</p>
             </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {summaryCards.map((card) => (
-                    <Link key={card.title} href={card.href} className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">{card.title}</span>
-                            <span className="text-2xl">{card.icon}</span>
-                        </div>
-                        <p className={`mt-2 text-2xl font-bold ${card.color}`}>{card.value}</p>
-                    </Link>
-                ))}
+                {summaryCards.map((card) => {
+                    const Icon = card.icon
+                    return (
+                        <Link key={card.title} href={card.href} className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{card.title}</span>
+                                <Icon className={`h-6 w-6 ${card.color}`} />
+                            </div>
+                            <p className={`mt-2 text-2xl font-bold ${card.color}`}>{card.value}</p>
+                        </Link>
+                    )
+                })}
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Recent Leave Requests */}
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                        <h2 className="font-semibold text-gray-900">🏖️ Pengajuan Cuti Terbaru</h2>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
+                            <Palmtree className="h-4 w-4 text-yellow-500" />
+                            Pengajuan Cuti Terbaru
+                        </h2>
                         <Link href="/dashboard/hr/leaves" className="text-sm text-blue-600 hover:underline">Lihat Semua →</Link>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                         {recentLeaves.map((leave, i) => (
                             <div key={i} className="flex items-center justify-between px-4 py-3">
                                 <div>
-                                    <p className="font-medium text-gray-900">{leave.name}</p>
-                                    <p className="text-xs text-gray-500">{leave.type} · {leave.dates}</p>
+                                    <p className="font-medium text-gray-900 dark:text-gray-100">{leave.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{leave.type} · {leave.dates}</p>
                                 </div>
                                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[leave.status]}`}>
                                     {leave.status === 'approved' ? 'Disetujui' : leave.status === 'pending' ? 'Menunggu' : 'Ditolak'}
@@ -72,19 +85,24 @@ export default function HrPage() {
                 </div>
 
                 {/* Upcoming Birthdays */}
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="border-b border-gray-200 px-4 py-3">
-                        <h2 className="font-semibold text-gray-900">🎂 Ulang Tahun Mendatang</h2>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
+                            <Cake className="h-4 w-4 text-pink-500" />
+                            Ulang Tahun Mendatang
+                        </h2>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                         {birthdays.map((b, i) => (
                             <div key={i} className="flex items-center gap-3 px-4 py-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 text-lg">🎂</div>
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">{b.name}</p>
-                                    <p className="text-xs text-gray-500">{b.department}</p>
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-900/30">
+                                    <Cake className="h-5 w-5 text-pink-500" />
                                 </div>
-                                <span className="text-sm text-gray-500">{b.date}</span>
+                                <div className="flex-1">
+                                    <p className="font-medium text-gray-900 dark:text-gray-100">{b.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{b.department}</p>
+                                </div>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{b.date}</span>
                             </div>
                         ))}
                     </div>

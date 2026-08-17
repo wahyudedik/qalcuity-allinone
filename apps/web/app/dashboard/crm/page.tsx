@@ -1,12 +1,23 @@
 'use client'
 
 import Link from 'next/link'
+import {
+    Target,
+    Handshake,
+    DollarSign,
+    Trophy,
+    Phone,
+    Mail,
+    CalendarCheck,
+    StickyNote,
+    type LucideIcon,
+} from 'lucide-react'
 
 const summaryCards = [
-    { title: 'Total Leads', value: '156', change: '+23', icon: '🎯', color: 'text-blue-600', href: '/dashboard/crm/leads' },
-    { title: 'Deals Aktif', value: '42', change: '+8', icon: '🤝', color: 'text-green-600', href: '/dashboard/crm/deals' },
-    { title: 'Pipeline Value', value: 'Rp 850 Jt', change: '+15%', icon: '💰', color: 'text-purple-600', href: '/dashboard/crm/pipeline' },
-    { title: 'Win Rate', value: '34.2%', change: '+2.1%', icon: '🏆', color: 'text-yellow-600', href: '/dashboard/crm/deals' },
+    { title: 'Total Leads', value: '156', change: '+23', icon: Target, color: 'text-blue-600', href: '/dashboard/crm/leads' },
+    { title: 'Deals Aktif', value: '42', change: '+8', icon: Handshake, color: 'text-green-600', href: '/dashboard/crm/deals' },
+    { title: 'Pipeline Value', value: 'Rp 850 Jt', change: '+15%', icon: DollarSign, color: 'text-purple-600', href: '/dashboard/crm/pipeline' },
+    { title: 'Win Rate', value: '34.2%', change: '+2.1%', icon: Trophy, color: 'text-yellow-600', href: '/dashboard/crm/deals' },
 ]
 
 const topDeals = [
@@ -32,59 +43,62 @@ const stageColors: Record<string, string> = {
     Closing: 'bg-green-100 text-green-800',
 }
 
-const activityIcons: Record<string, string> = {
-    call: '📞',
-    email: '📧',
-    meeting: '🤝',
-    note: '📝',
+const activityIconMap: Record<string, LucideIcon> = {
+    call: Phone,
+    email: Mail,
+    meeting: CalendarCheck,
+    note: StickyNote,
 }
 
 export default function CrmPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">CRM Overview</h1>
-                <p className="text-gray-500">Ringkasan aktivitas sales dan CRM</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">CRM Overview</h1>
+                <p className="text-gray-500 dark:text-gray-400">Ringkasan aktivitas sales dan CRM</p>
             </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {summaryCards.map((card) => (
-                    <Link key={card.title} href={card.href} className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">{card.title}</span>
-                            <span className="text-2xl">{card.icon}</span>
-                        </div>
-                        <p className={`mt-2 text-xl font-bold ${card.color}`}>{card.value}</p>
-                        <p className="text-sm text-green-600">{card.change} bulan ini</p>
-                    </Link>
-                ))}
+                {summaryCards.map((card) => {
+                    const Icon = card.icon
+                    return (
+                        <Link key={card.title} href={card.href} className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{card.title}</span>
+                                <Icon className={`h-6 w-6 ${card.color}`} />
+                            </div>
+                            <p className={`mt-2 text-xl font-bold ${card.color}`}>{card.value}</p>
+                            <p className="text-sm text-green-600">{card.change} bulan ini</p>
+                        </Link>
+                    )
+                })}
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Top Deals */}
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                        <h2 className="font-semibold text-gray-900">Top Deals</h2>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Top Deals</h2>
                         <Link href="/dashboard/crm/deals" className="text-sm text-blue-600 hover:underline">Lihat Semua →</Link>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                         {topDeals.map((deal) => (
                             <div key={deal.name} className="px-4 py-3">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="font-medium text-gray-900">{deal.name}</p>
+                                        <p className="font-medium text-gray-900 dark:text-gray-100">{deal.name}</p>
                                         <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${stageColors[deal.stage] || 'bg-gray-100 text-gray-800'}`}>
                                             {deal.stage}
                                         </span>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-gray-900">{deal.value}</p>
+                                        <p className="font-semibold text-gray-900 dark:text-gray-100">{deal.value}</p>
                                         <div className="mt-1 flex items-center gap-2">
-                                            <div className="h-1.5 w-16 rounded-full bg-gray-200">
+                                            <div className="h-1.5 w-16 rounded-full bg-gray-200 dark:bg-gray-600">
                                                 <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${deal.winProb}%` }} />
                                             </div>
-                                            <span className="text-xs text-gray-500">{deal.winProb}%</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{deal.winProb}%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -94,29 +108,32 @@ export default function CrmPage() {
                 </div>
 
                 {/* Recent Activities */}
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                        <h2 className="font-semibold text-gray-900">Aktivitas Terbaru</h2>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Aktivitas Terbaru</h2>
                         <Link href="/dashboard/audit" className="text-sm text-blue-600 hover:underline">Lihat Semua →</Link>
                     </div>
-                    <div className="divide-y divide-gray-100">
-                        {recentActivities.map((activity, i) => (
-                            <div key={i} className="flex items-start gap-3 px-4 py-3">
-                                <span className="mt-0.5 text-lg">{activityIcons[activity.type]}</span>
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-900">{activity.text}</p>
-                                    <p className="text-xs text-gray-500">{activity.user} · {activity.time}</p>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {recentActivities.map((activity, i) => {
+                            const ActivityIcon = activityIconMap[activity.type] || StickyNote
+                            return (
+                                <div key={i} className="flex items-start gap-3 px-4 py-3">
+                                    <ActivityIcon className="mt-0.5 h-5 w-5 text-gray-400 dark:text-gray-500" />
+                                    <div className="flex-1">
+                                        <p className="text-sm text-gray-900 dark:text-gray-100">{activity.text}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{activity.user} · {activity.time}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 </div>
             </div>
 
             {/* Pipeline Summary */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-gray-900">Pipeline Summary</h2>
+                    <h2 className="font-semibold text-gray-900 dark:text-gray-100">Pipeline Summary</h2>
                     <Link href="/dashboard/crm/pipeline" className="text-sm text-blue-600 hover:underline">Lihat Pipeline →</Link>
                 </div>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -126,10 +143,10 @@ export default function CrmPage() {
                         { stage: 'Negosiasi', count: 8, value: 'Rp 185 Jt', color: 'border-orange-400' },
                         { stage: 'Closing', count: 4, value: 'Rp 65 Jt', color: 'border-green-400' },
                     ].map((s) => (
-                        <div key={s.stage} className={`rounded-lg border-l-4 ${s.color} bg-gray-50 p-3`}>
-                            <p className="text-sm font-medium text-gray-700">{s.stage}</p>
-                            <p className="text-xl font-bold text-gray-900">{s.count}</p>
-                            <p className="text-xs text-gray-500">{s.value}</p>
+                        <div key={s.stage} className={`rounded-lg border-l-4 ${s.color} bg-gray-50 p-3 dark:bg-gray-700/50`}>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.stage}</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{s.count}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{s.value}</p>
                         </div>
                     ))}
                 </div>

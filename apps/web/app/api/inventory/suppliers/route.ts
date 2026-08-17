@@ -1,138 +1,117 @@
 import { NextResponse } from 'next/server';
-
-const mockSuppliers = [
-    {
-        id: 'SUP-001',
-        name: 'PT Supplier Jaya',
-        contactPerson: 'Ahmad Fauzi',
-        email: 'sales@supplierjaya.com',
-        phone: '021-5551234',
-        address: 'Jl. Industri No. 200, Surabaya',
-        rating: 4.5,
-        totalOrders: 24,
-        totalSpent: 250000000,
-        status: 'active',
-        createdAt: '2025-06-10T10:00:00Z',
-    },
-    {
-        id: 'SUP-002',
-        name: 'CV Komponen Abadi',
-        contactPerson: 'Budi Hartono',
-        email: 'order@komponenabadi.com',
-        phone: '021-5555678',
-        address: 'Jl. Raya Bogor No. 150, Jakarta',
-        rating: 4.2,
-        totalOrders: 18,
-        totalSpent: 180000000,
-        status: 'active',
-        createdAt: '2025-08-15T10:00:00Z',
-    },
-    {
-        id: 'SUP-003',
-        name: 'PT Digital Parts',
-        contactPerson: 'Rina Susanti',
-        email: 'info@digitalparts.com',
-        phone: '021-5559012',
-        address: 'Jl. TB Simatupang No. 100, Jakarta',
-        rating: 3.8,
-        totalOrders: 12,
-        totalSpent: 95000000,
-        status: 'active',
-        createdAt: '2025-10-20T10:00:00Z',
-    },
-    {
-        id: 'SUP-004',
-        name: 'PT Berkah Supply',
-        contactPerson: 'Dedi Kurniawan',
-        email: 'sales@berkahsupply.com',
-        phone: '021-5553456',
-        address: 'Jl. Raya Bekasi No. 200, Bekasi',
-        rating: 4.0,
-        totalOrders: 8,
-        totalSpent: 65000000,
-        status: 'active',
-        createdAt: '2026-01-05T10:00:00Z',
-    },
-    {
-        id: 'SUP-005',
-        name: 'CV Material Sejahtera',
-        contactPerson: 'Eko Prasetyo',
-        email: 'info@materialsejahtera.com',
-        phone: '021-5557890',
-        address: 'Jl. Alternatif Cibubur No. 50, Depok',
-        rating: 3.5,
-        totalOrders: 5,
-        totalSpent: 40000000,
-        status: 'inactive',
-        createdAt: '2026-03-10T10:00:00Z',
-    },
-];
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const isActive = searchParams.get('isActive');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-    let filtered = [...mockSuppliers];
+        const where: Record<string, unknown> = { tenantId };
 
-    if (status) {
-        filtered = filtered.filter((s) => s.status === status);
+        if (isActive !== null && isActive !== undefined && isActive !== '') {
+            where.isActive = isActive === 'true';
+        }
+
+        if (search) {
+            where.OR = [
+                { name: { contains: search } },
+                { contactPerson: { contains: search } },
+                { email: { contains: search } },
+                { phone: { contains: search } },
+                { city: { contains: search } },
+            ];
+        }
+
+        const [suppliers, total] = await Promise.all([
+            prisma.supplier.findMany({
+                where,
+                include: {
+                    _count: { select: { purchaseOrders: true } },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.supplier.count({ where }),
+        ]);
+
+        const data = suppliers.map((s) => ({
+            id: s.id,
+            name: s.name,
+            contactPerson: s.contactPerson || '',
+            email: s.email || '',
+            phone: s.phone || '',
+            address: s.address || '',
+            city: s.city || '',
+            rating: s.rating,
+            notes: s.notes || '',
+            isActive: s.isActive,
+            totalOrders: s._count.purchaseOrders,
+            createdAt: s.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        filtered = filtered.filter(
-            (s) =>
-                s.name.toLowerCase().includes(lowerSearch) ||
-                s.contactPerson.toLowerCase().includes(lowerSearch) ||
-                s.email.toLowerCase().includes(lowerSearch)
-        );
-    }
-
-    return NextResponse.json({
-        success: true,
-        data: filtered,
-        total: filtered.length,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-    });
 }
 
 export async function POST(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
 
-        if (!body.name || !body.email) {
+        if (!body.name) {
             return NextResponse.json(
-                { success: false, error: 'Name and email are required' },
+                { success: false, error: 'Name is required' },
                 { status: 400 }
             );
         }
 
-        const newSupplier = {
-            id: `SUP-${Date.now()}`,
-            ...body,
-            rating: body.rating || 0,
-            totalOrders: 0,
-            totalSpent: 0,
-            status: 'active',
-            createdAt: new Date().toISOString(),
-        };
+        const supplier = await prisma.supplier.create({
+            data: {
+                tenantId,
+                name: body.name,
+                contactPerson: body.contactPerson || null,
+                email: body.email || null,
+                phone: body.phone || null,
+                address: body.address || null,
+                city: body.city || null,
+                rating: body.rating || 0,
+                notes: body.notes || null,
+            },
+        });
 
-        mockSuppliers.push(newSupplier);
-
-        return NextResponse.json({ success: true, data: newSupplier }, { status: 201 });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: supplier }, { status: 201 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -143,45 +122,90 @@ export async function PUT(request: Request) {
             );
         }
 
-        const index = mockSuppliers.findIndex((s) => s.id === id);
-        if (index === -1) {
+        const existing = await prisma.supplier.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Supplier not found' },
                 { status: 404 }
             );
         }
 
-        mockSuppliers[index] = { ...mockSuppliers[index], ...updateData, updatedAt: new Date().toISOString() };
+        const data: Record<string, unknown> = {};
+        if (typeof updateData.name === 'string') data.name = updateData.name;
+        if (typeof updateData.contactPerson === 'string') data.contactPerson = updateData.contactPerson;
+        if (typeof updateData.email === 'string') data.email = updateData.email;
+        if (typeof updateData.phone === 'string') data.phone = updateData.phone;
+        if (typeof updateData.address === 'string') data.address = updateData.address;
+        if (typeof updateData.city === 'string') data.city = updateData.city;
+        if (typeof updateData.rating === 'number') data.rating = updateData.rating;
+        if (typeof updateData.notes === 'string') data.notes = updateData.notes;
+        if (typeof updateData.isActive === 'boolean') data.isActive = updateData.isActive;
 
-        return NextResponse.json({ success: true, data: mockSuppliers[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        const supplier = await prisma.supplier.update({
+            where: { id },
+            data,
+        });
+
+        return NextResponse.json({ success: true, data: supplier });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-    if (!id) {
-        return NextResponse.json(
-            { success: false, error: 'ID is required' },
-            { status: 400 }
-        );
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.supplier.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Supplier not found' },
+                { status: 404 }
+            );
+        }
+
+        // Check if supplier has purchase orders
+        const poCount = await prisma.purchaseOrder.count({
+            where: { supplierId: id },
+        });
+        if (poCount > 0) {
+            // Soft delete - deactivate instead
+            await prisma.supplier.update({
+                where: { id },
+                data: { isActive: false },
+            });
+            return NextResponse.json({
+                success: true,
+                data: null,
+                message: 'Supplier deactivated (has existing purchase orders)',
+            });
+        }
+
+        await prisma.supplier.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const index = mockSuppliers.findIndex((s) => s.id === id);
-    if (index === -1) {
-        return NextResponse.json(
-            { success: false, error: 'Supplier not found' },
-            { status: 404 }
-        );
-    }
-
-    mockSuppliers.splice(index, 1);
-
-    return NextResponse.json({ success: true, data: null });
 }

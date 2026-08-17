@@ -1,116 +1,134 @@
 import { NextResponse } from 'next/server';
-
-const mockAttendanceDetails: Record<string, {
-    id: string;
-    employeeId: string;
-    employeeName: string;
-    date: string;
-    clockIn: string;
-    clockOut: string | null;
-    status: string;
-    workHours: number;
-    overtime: number;
-    notes: string;
-}> = {
-    'ATT-001': {
-        id: 'ATT-001',
-        employeeId: 'EMP-001',
-        employeeName: 'Ahmad Rizky',
-        date: '2026-08-01',
-        clockIn: '08:00',
-        clockOut: '17:30',
-        status: 'present',
-        workHours: 8.5,
-        overtime: 0.5,
-        notes: '',
-    },
-    'ATT-002': {
-        id: 'ATT-002',
-        employeeId: 'EMP-002',
-        employeeName: 'Siti Nurhaliza',
-        date: '2026-08-01',
-        clockIn: '07:45',
-        clockOut: '17:15',
-        status: 'present',
-        workHours: 8.5,
-        overtime: 0,
-        notes: '',
-    },
-    'ATT-003': {
-        id: 'ATT-003',
-        employeeId: 'EMP-003',
-        employeeName: 'Budi Santoso',
-        date: '2026-08-01',
-        clockIn: '09:30',
-        clockOut: '18:00',
-        status: 'late',
-        workHours: 8.5,
-        overtime: 0,
-        notes: 'Terlambat karena macet',
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const record = mockAttendanceDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Attendance record not found' },
-            { status: 404 }
-        );
+        const record = await prisma.attendanceRecord.findFirst({
+            where: { id, tenantId },
+            include: {
+                employee: {
+                    select: { id: true, name: true, employeeId: true, position: true, department: true, email: true, phone: true },
+                },
+            },
+        });
+
+        if (!record) {
+            return NextResponse.json(
+                { success: false, error: 'Attendance record not found' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: record.id,
+            employeeId: record.employeeId,
+            employeeName: record.employee.name,
+            employeeNumber: record.employee.employeeId,
+            position: record.employee.position,
+            department: record.employee.department,
+            date: record.date.toISOString().split('T')[0],
+            clockIn: record.clockIn ? record.clockIn.toISOString().substring(11, 16) : null,
+            clockOut: record.clockOut ? record.clockOut.toISOString().substring(11, 16) : null,
+            status: record.status.toLowerCase(),
+            workHours: record.workHours,
+            notes: record.notes || '',
+            createdAt: record.createdAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({
-        success: true,
-        data: record,
-    });
 }
 
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const body = await request.json();
-    const record = mockAttendanceDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
+        const body = await request.json();
 
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Attendance record not found' },
-            { status: 404 }
-        );
+        const existing = await prisma.attendanceRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Attendance record not found' },
+                { status: 404 }
+            );
+        }
+
+        const data: Record<string, unknown> = {};
+        if (body.date) data.date = new Date(String(body.date));
+        if (body.clockIn) {
+            const dateStr = existing.date.toISOString().split('T')[0];
+            data.clockIn = new Date(`${dateStr}T${body.clockIn}`);
+        }
+        if (body.clockOut) {
+            const dateStr = existing.date.toISOString().split('T')[0];
+            data.clockOut = new Date(`${dateStr}T${body.clockOut}`);
+        }
+        if (typeof body.status === 'string') data.status = body.status.toUpperCase();
+        if (typeof body.workHours === 'number') data.workHours = body.workHours;
+        if (typeof body.notes === 'string') data.notes = body.notes;
+
+        const updated = await prisma.attendanceRecord.update({
+            where: { id },
+            data,
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const updated = { ...record, ...body, id };
-    mockAttendanceDetails[id] = updated;
-
-    return NextResponse.json({
-        success: true,
-        data: updated,
-    });
 }
 
 export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!mockAttendanceDetails[id]) {
-        return NextResponse.json(
-            { success: false, error: 'Attendance record not found' },
-            { status: 404 }
-        );
+        const existing = await prisma.attendanceRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Attendance record not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.attendanceRecord.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockAttendanceDetails[id];
-
-    return NextResponse.json({
-        success: true,
-        message: 'Attendance record deleted successfully',
-    });
 }

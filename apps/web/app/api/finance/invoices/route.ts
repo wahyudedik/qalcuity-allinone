@@ -102,10 +102,6 @@ export async function POST(request: Request) {
             );
         }
 
-        // Generate invoice number
-        const count = await prisma.invoice.count({ where: { tenantId } });
-        const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
-
         // Calculate totals
         const subtotal = body.items.reduce(
             (sum: number, item: { quantity: number; unitPrice: number }) =>
@@ -116,44 +112,52 @@ export async function POST(request: Request) {
         const taxAmount = subtotal * (taxRate / 100);
         const total = subtotal + taxAmount;
 
-        // If no contactId but customerName provided, create contact first
-        let contactId = body.contactId;
-        if (!contactId && body.customerName) {
-            const contact = await prisma.contact.create({
-                data: {
-                    name: body.customerName,
-                    type: 'CUSTOMER',
-                    email: body.customerEmail || undefined,
-                    phone: body.customerPhone || undefined,
-                    address: body.customerAddress || undefined,
-                    tenantId,
-                },
-            });
-            contactId = contact.id;
-        }
+        // Use transaction for atomicity: contact creation + invoice + items
+        const invoice = await prisma.$transaction(async (tx) => {
+            // Generate invoice number with lock to prevent race condition
+            const count = await tx.invoice.count({ where: { tenantId } });
+            const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
-        const invoice = await prisma.invoice.create({
-            data: {
-                invoiceNumber,
-                status: 'DRAFT',
-                dueDate: new Date(body.dueDate || Date.now() + 30 * 24 * 60 * 60 * 1000),
-                notes: body.notes || '',
-                subtotal,
-                taxRate,
-                taxAmount,
-                total,
-                tenantId,
-                contactId,
-                items: {
-                    create: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
-                        description: item.description,
-                        quantity: item.quantity,
-                        unitPrice: item.unitPrice,
-                        total: item.total || item.quantity * item.unitPrice,
-                    })),
+            // If no contactId but customerName provided, create contact first
+            let contactId = body.contactId;
+            if (!contactId && body.customerName) {
+                const contact = await tx.contact.create({
+                    data: {
+                        name: body.customerName,
+                        type: 'CUSTOMER',
+                        email: body.customerEmail || undefined,
+                        phone: body.customerPhone || undefined,
+                        address: body.customerAddress || undefined,
+                        tenantId,
+                    },
+                });
+                contactId = contact.id;
+            }
+
+            // Create invoice with items in single transaction
+            return tx.invoice.create({
+                data: {
+                    invoiceNumber,
+                    status: 'DRAFT',
+                    dueDate: new Date(body.dueDate || Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    notes: body.notes || '',
+                    subtotal,
+                    taxRate,
+                    taxAmount,
+                    total,
+                    tenantId,
+                    contactId,
+                    items: {
+                        create: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                            description: item.description,
+                            quantity: item.quantity,
+                            unitPrice: item.unitPrice,
+                            total: item.total || item.quantity * item.unitPrice,
+                        })),
+                    },
                 },
-            },
-            include: { items: true, contact: true },
+                include: { items: true, contact: true },
+            });
         });
 
         return NextResponse.json({ success: true, data: invoice }, { status: 201 });
@@ -196,7 +200,7 @@ export async function PUT(request: Request) {
             updateData.dueDate = new Date(updateData.dueDate);
         }
 
-        // If items changed, recalculate
+        // If items changed, recalculate and use transaction for atomicity
         if (items && items.length > 0) {
             const subtotal = items.reduce(
                 (sum: number, item: { quantity: number; unitPrice: number }) =>
@@ -209,16 +213,18 @@ export async function PUT(request: Request) {
             updateData.taxAmount = taxAmount;
             updateData.total = subtotal + taxAmount;
 
-            // Delete old items and create new ones
-            await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
-            await prisma.invoiceItem.createMany({
-                data: items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
-                    invoiceId: id,
-                    description: item.description,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    total: item.total || item.quantity * item.unitPrice,
-                })),
+            // Delete old items and create new ones in transaction
+            await prisma.$transaction(async (tx) => {
+                await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+                await tx.invoiceItem.createMany({
+                    data: items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                        invoiceId: id,
+                        description: item.description,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        total: item.total || item.quantity * item.unitPrice,
+                    })),
+                });
             });
         }
 

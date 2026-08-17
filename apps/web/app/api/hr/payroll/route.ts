@@ -1,84 +1,157 @@
 import { NextResponse } from 'next/server';
-
-const mockPayroll = [
-    { id: 'PAY-001', employeeName: 'Ahmad Rizky', employeeId: 'EMP-001', period: 'Agustus 2026', baseSalary: 15000000, allowances: 2000000, deductions: 1500000, netSalary: 15500000, status: 'processed' },
-    { id: 'PAY-002', employeeName: 'Siti Nurhaliza', employeeId: 'EMP-002', period: 'Agustus 2026', baseSalary: 18000000, allowances: 2500000, deductions: 1800000, netSalary: 18700000, status: 'processed' },
-    { id: 'PAY-003', employeeName: 'Budi Santoso', employeeId: 'EMP-003', period: 'Agustus 2026', baseSalary: 12000000, allowances: 1500000, deductions: 1200000, netSalary: 12300000, status: 'paid' },
-    { id: 'PAY-004', employeeName: 'Dewi Lestari', employeeId: 'EMP-004', period: 'Agustus 2026', baseSalary: 16000000, allowances: 2200000, deductions: 1600000, netSalary: 16600000, status: 'paid' },
-    { id: 'PAY-005', employeeName: 'Eko Prasetyo', employeeId: 'EMP-005', period: 'Agustus 2026', baseSalary: 14000000, allowances: 1800000, deductions: 1400000, netSalary: 14400000, status: 'pending' },
-    { id: 'PAY-006', employeeName: 'Fitri Handayani', employeeId: 'EMP-006', period: 'Agustus 2026', baseSalary: 13000000, allowances: 1600000, deductions: 1300000, netSalary: 13300000, status: 'pending' },
-    { id: 'PAY-007', employeeName: 'Hana Permata', employeeId: 'EMP-008', period: 'Agustus 2026', baseSalary: 11000000, allowances: 1400000, deductions: 1100000, netSalary: 11300000, status: 'pending' },
-];
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const period = searchParams.get('period');
-    const search = searchParams.get('search');
-    const employeeId = searchParams.get('employeeId');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const period = searchParams.get('period');
+        const search = searchParams.get('search');
+        const employeeId = searchParams.get('employeeId');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-    let filtered = [...mockPayroll];
+        const where: Record<string, unknown> = { tenantId };
 
-    if (status) {
-        filtered = filtered.filter((payroll) => payroll.status === status);
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+
+        if (period) {
+            where.period = period;
+        }
+
+        if (employeeId) {
+            where.employeeId = employeeId;
+        }
+
+        if (search) {
+            where.OR = [
+                { employee: { name: { contains: search } } },
+                { employee: { employeeId: { contains: search } } },
+                { period: { contains: search } },
+            ];
+        }
+
+        const [records, total] = await Promise.all([
+            prisma.payrollRecord.findMany({
+                where,
+                include: {
+                    employee: {
+                        select: { id: true, name: true, employeeId: true, position: true, department: true, salary: true },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.payrollRecord.count({ where }),
+        ]);
+
+        const data = records.map((r) => ({
+            id: r.id,
+            employeeName: r.employee.name,
+            employeeId: r.employee.employeeId,
+            position: r.employee.position,
+            department: r.employee.department,
+            period: r.period,
+            baseSalary: r.baseSalary,
+            allowances: r.allowances,
+            deductions: r.deductions,
+            bonus: r.bonus,
+            netSalary: r.netSalary,
+            status: r.status.toLowerCase(),
+            paidAt: r.paidAt ? r.paidAt.toISOString() : null,
+            notes: r.notes || '',
+            createdAt: r.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    if (period) {
-        filtered = filtered.filter((payroll) => payroll.period === period);
-    }
-
-    if (employeeId) {
-        filtered = filtered.filter((payroll) => payroll.employeeId === employeeId);
-    }
-
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        filtered = filtered.filter(
-            (payroll) =>
-                payroll.employeeName.toLowerCase().includes(lowerSearch)
-        );
-    }
-
-    return NextResponse.json({
-        success: true,
-        data: filtered,
-        total: filtered.length,
-    });
 }
 
 export async function POST(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
 
-        if (!body.employeeName || !body.period || !body.baseSalary) {
+        if (!body.employeeId || !body.period || !body.baseSalary) {
             return NextResponse.json(
-                { success: false, error: 'Employee name, period, and base salary are required' },
+                { success: false, error: 'Employee ID, period, and base salary are required' },
                 { status: 400 }
             );
         }
 
-        const newPayroll = {
-            id: `PAY-${Date.now()}`,
-            ...body,
-            allowances: body.allowances || 0,
-            deductions: body.deductions || 0,
-            netSalary: (body.baseSalary || 0) + (body.allowances || 0) - (body.deductions || 0),
-            status: 'pending',
-        };
+        // Validate employee belongs to tenant
+        const employee = await prisma.employee.findFirst({
+            where: { id: body.employeeId, tenantId },
+        });
+        if (!employee) {
+            return NextResponse.json(
+                { success: false, error: 'Employee not found' },
+                { status: 404 }
+            );
+        }
 
-        mockPayroll.push(newPayroll);
+        const baseSalary = parseFloat(String(body.baseSalary));
+        const allowances = parseFloat(String(body.allowances || 0));
+        const deductions = parseFloat(String(body.deductions || 0));
+        const bonus = parseFloat(String(body.bonus || 0));
+        const netSalary = baseSalary + allowances - deductions + bonus;
 
-        return NextResponse.json({ success: true, data: newPayroll }, { status: 201 });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        const record = await prisma.payrollRecord.create({
+            data: {
+                period: body.period,
+                baseSalary,
+                allowances,
+                deductions,
+                bonus,
+                netSalary,
+                notes: body.notes || '',
+                employeeId: body.employeeId,
+                tenantId,
+            },
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: record }, { status: 201 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        // Handle unique constraint violation
+        if (message.includes('Unique constraint')) {
+            return NextResponse.json(
+                { success: false, error: 'Payroll record already exists for this employee and period' },
+                { status: 409 }
+            );
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PATCH(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
         const { id, status } = body;
 
@@ -89,30 +162,49 @@ export async function PATCH(request: Request) {
             );
         }
 
-        const index = mockPayroll.findIndex((payroll) => payroll.id === id);
-        if (index === -1) {
+        const validStatuses = ['PENDING', 'PROCESSED', 'PAID'];
+        const newStatus = status.toUpperCase();
+        if (!validStatuses.includes(newStatus)) {
+            return NextResponse.json(
+                { success: false, error: 'Status must be PENDING, PROCESSED, or PAID' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.payrollRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Payroll record not found' },
                 { status: 404 }
             );
         }
 
-        mockPayroll[index] = {
-            ...mockPayroll[index],
-            status,
-        };
+        const updated = await prisma.payrollRecord.update({
+            where: { id },
+            data: {
+                status: newStatus,
+                paidAt: newStatus === 'PAID' ? new Date() : existing.paidAt,
+            },
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
 
-        return NextResponse.json({ success: true, data: mockPayroll[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -123,53 +215,97 @@ export async function PUT(request: Request) {
             );
         }
 
-        const index = mockPayroll.findIndex((payroll) => payroll.id === id);
-        if (index === -1) {
+        const existing = await prisma.payrollRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Payroll record not found' },
                 { status: 404 }
             );
         }
 
-        // Recalculate netSalary if relevant fields changed
-        if (updateData.baseSalary !== undefined || updateData.allowances !== undefined || updateData.deductions !== undefined) {
-            const base = updateData.baseSalary ?? mockPayroll[index].baseSalary;
-            const allowances = updateData.allowances ?? mockPayroll[index].allowances;
-            const deductions = updateData.deductions ?? mockPayroll[index].deductions;
-            updateData.netSalary = base + allowances - deductions;
+        const data: Record<string, unknown> = {};
+        if (typeof updateData.period === 'string') {
+            data.period = updateData.period;
+        }
+        if (typeof updateData.baseSalary === 'number') {
+            data.baseSalary = updateData.baseSalary;
+        }
+        if (typeof updateData.allowances === 'number') {
+            data.allowances = updateData.allowances;
+        }
+        if (typeof updateData.deductions === 'number') {
+            data.deductions = updateData.deductions;
+        }
+        if (typeof updateData.bonus === 'number') {
+            data.bonus = updateData.bonus;
+        }
+        if (typeof updateData.status === 'string') {
+            data.status = updateData.status.toUpperCase();
+        }
+        if (typeof updateData.notes === 'string') {
+            data.notes = updateData.notes;
         }
 
-        mockPayroll[index] = { ...mockPayroll[index], ...updateData };
+        // Recalculate netSalary if any compensation field changed
+        if (data.baseSalary !== undefined || data.allowances !== undefined || data.deductions !== undefined || data.bonus !== undefined) {
+            const base = typeof data.baseSalary === 'number' ? data.baseSalary : existing.baseSalary;
+            const allow = typeof data.allowances === 'number' ? data.allowances : existing.allowances;
+            const deduc = typeof data.deductions === 'number' ? data.deductions : existing.deductions;
+            const bon = typeof data.bonus === 'number' ? data.bonus : existing.bonus;
+            data.netSalary = base + allow - deduc + bon;
+        }
 
-        return NextResponse.json({ success: true, data: mockPayroll[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        const updated = await prisma.payrollRecord.update({
+            where: { id },
+            data,
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-    if (!id) {
-        return NextResponse.json(
-            { success: false, error: 'ID is required' },
-            { status: 400 }
-        );
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.payrollRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Payroll record not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.payrollRecord.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const index = mockPayroll.findIndex((payroll) => payroll.id === id);
-    if (index === -1) {
-        return NextResponse.json(
-            { success: false, error: 'Payroll record not found' },
-            { status: 404 }
-        );
-    }
-
-    mockPayroll.splice(index, 1);
-
-    return NextResponse.json({ success: true, data: null });
 }

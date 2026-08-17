@@ -4,17 +4,50 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getInitials } from "@/lib/utils";
+import {
+    LayoutDashboard,
+    Receipt,
+    FileText,
+    CreditCard,
+    ShoppingCart,
+    BookOpen,
+    TrendingUp,
+    Target,
+    Users,
+    Handshake,
+    Package,
+    Boxes,
+    Tags,
+    Truck,
+    UsersRound,
+    ClipboardCheck,
+    CalendarOff,
+    Wallet,
+    ScrollText,
+    Settings,
+    ChevronRight,
+    X,
+    Zap,
+    type LucideIcon,
+} from "lucide-react";
 
-const menuItems = [
+interface MenuItem {
+    label: string;
+    href: string;
+    icon: LucideIcon;
+    children?: { label: string; href: string }[];
+}
+
+const menuItems: MenuItem[] = [
     {
         label: "Dashboard",
         href: "/dashboard",
-        icon: "📊",
+        icon: LayoutDashboard,
     },
     {
         label: "Finance",
         href: "/dashboard/finance",
-        icon: "💰",
+        icon: Receipt,
         children: [
             { label: "Overview", href: "/dashboard/finance" },
             { label: "Invoices", href: "/dashboard/finance/invoices" },
@@ -27,7 +60,7 @@ const menuItems = [
     {
         label: "Sales & CRM",
         href: "/dashboard/crm",
-        icon: "📈",
+        icon: TrendingUp,
         children: [
             { label: "Overview", href: "/dashboard/crm" },
             { label: "Pipeline", href: "/dashboard/crm/pipeline" },
@@ -39,7 +72,7 @@ const menuItems = [
     {
         label: "Inventory",
         href: "/dashboard/inventory",
-        icon: "📦",
+        icon: Package,
         children: [
             { label: "Overview", href: "/dashboard/inventory" },
             { label: "Products", href: "/dashboard/inventory/products" },
@@ -51,7 +84,7 @@ const menuItems = [
     {
         label: "HR & People",
         href: "/dashboard/hr",
-        icon: "👥",
+        icon: UsersRound,
         children: [
             { label: "Overview", href: "/dashboard/hr" },
             { label: "Employees", href: "/dashboard/hr/employees" },
@@ -63,12 +96,12 @@ const menuItems = [
     {
         label: "Audit Trail",
         href: "/dashboard/audit",
-        icon: "📋",
+        icon: ScrollText,
     },
     {
         label: "Settings",
         href: "/dashboard/settings",
-        icon: "⚙️",
+        icon: Settings,
     },
 ];
 
@@ -82,9 +115,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const { data: session } = useSession();
 
     // Helper untuk mengecek apakah section harus di-expand
-    const isSectionActive = (item: typeof menuItems[0]) => {
+    const isSectionActive = (item: MenuItem) => {
         if (!item.children) return false;
-        // Expand jika pathname cocok dengan href parent ATAU salah satu child
         return pathname === item.href || pathname.startsWith(item.href + "/");
     };
 
@@ -106,7 +138,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 {/* Logo */}
                 <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6 dark:border-gray-700">
                     <Link href="/dashboard" className="flex items-center gap-2">
-                        <span className="text-2xl">⚡</span>
+                        <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Qalcuity</span>
                     </Link>
                     {/* Close button for mobile */}
@@ -114,7 +146,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                         onClick={onClose}
                         className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 lg:hidden"
                     >
-                        <span className="text-xl">✕</span>
+                        <X className="h-5 w-5" />
                     </button>
                 </div>
 
@@ -125,6 +157,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                             const hasChildren = item.children && item.children.length > 0;
                             const shouldExpand = isSectionActive(item);
+                            const Icon = item.icon;
 
                             return (
                                 <li key={item.href}>
@@ -136,18 +169,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
                                             }`}
                                     >
-                                        <span className="text-lg">{item.icon}</span>
+                                        <Icon className="h-5 w-5 shrink-0" />
                                         <span>{item.label}</span>
                                         {hasChildren && (
-                                            <svg
+                                            <ChevronRight
                                                 className={`ml-auto h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform ${shouldExpand ? "rotate-90" : ""
                                                     }`}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
+                                            />
                                         )}
                                     </Link>
 

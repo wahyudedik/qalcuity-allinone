@@ -1,144 +1,140 @@
 import { NextResponse } from 'next/server';
-
-const mockLeaveDetails: Record<string, {
-    id: string;
-    employeeId: string;
-    employeeName: string;
-    type: string;
-    startDate: string;
-    endDate: string;
-    days: number;
-    reason: string;
-    status: string;
-    approvedBy: string | null;
-    createdAt: string;
-}> = {
-    'LV-001': {
-        id: 'LV-001',
-        employeeId: 'EMP-001',
-        employeeName: 'Ahmad Rizky',
-        type: 'annual',
-        startDate: '2026-08-05',
-        endDate: '2026-08-07',
-        days: 3,
-        reason: 'Liburan keluarga',
-        status: 'approved',
-        approvedBy: 'Siti Nurhaliza',
-        createdAt: '2026-07-28T10:00:00Z',
-    },
-    'LV-002': {
-        id: 'LV-002',
-        employeeId: 'EMP-003',
-        employeeName: 'Budi Santoso',
-        type: 'sick',
-        startDate: '2026-08-04',
-        endDate: '2026-08-04',
-        days: 1,
-        reason: 'Sakit demam',
-        status: 'pending',
-        approvedBy: null,
-        createdAt: '2026-08-04T06:00:00Z',
-    },
-    'LV-003': {
-        id: 'LV-003',
-        employeeId: 'EMP-004',
-        employeeName: 'Dewi Lestari',
-        type: 'annual',
-        startDate: '2026-08-10',
-        endDate: '2026-08-12',
-        days: 3,
-        reason: 'Keperluan pribadi',
-        status: 'pending',
-        approvedBy: null,
-        createdAt: '2026-08-01T09:00:00Z',
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const record = mockLeaveDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Leave request not found' },
-            { status: 404 }
-        );
+        const leave = await prisma.leaveRequest.findFirst({
+            where: { id, tenantId },
+            include: {
+                employee: {
+                    select: { id: true, name: true, employeeId: true, position: true, department: true, email: true, phone: true },
+                },
+            },
+        });
+
+        if (!leave) {
+            return NextResponse.json(
+                { success: false, error: 'Leave request not found' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: leave.id,
+            employeeId: leave.employeeId,
+            employeeName: leave.employee.name,
+            employeeNumber: leave.employee.employeeId,
+            position: leave.employee.position,
+            department: leave.employee.department,
+            type: leave.type.toLowerCase(),
+            startDate: leave.startDate.toISOString().split('T')[0],
+            endDate: leave.endDate.toISOString().split('T')[0],
+            days: leave.days,
+            reason: leave.reason || '',
+            status: leave.status.toLowerCase(),
+            appliedDate: leave.appliedDate.toISOString().split('T')[0],
+            approvedBy: leave.approvedBy || null,
+            notes: leave.notes || '',
+            createdAt: leave.createdAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({
-        success: true,
-        data: record,
-    });
 }
 
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const body = await request.json();
-    const record = mockLeaveDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
+        const body = await request.json();
 
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Leave request not found' },
-            { status: 404 }
-        );
+        const existing = await prisma.leaveRequest.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Leave request not found' },
+                { status: 404 }
+            );
+        }
+
+        const data: Record<string, unknown> = {};
+        if (typeof body.type === 'string') data.type = body.type.toUpperCase();
+        if (body.startDate) data.startDate = new Date(String(body.startDate));
+        if (body.endDate) data.endDate = new Date(String(body.endDate));
+        if (typeof body.days === 'number') data.days = body.days;
+        if (typeof body.reason === 'string') data.reason = body.reason;
+        if (typeof body.status === 'string') data.status = body.status.toUpperCase();
+        if (typeof body.approvedBy === 'string') data.approvedBy = body.approvedBy;
+        if (typeof body.notes === 'string') data.notes = body.notes;
+
+        // Recalculate days if dates changed
+        if (data.startDate || data.endDate) {
+            const start = data.startDate ? new Date(String(data.startDate)) : existing.startDate;
+            const end = data.endDate ? new Date(String(data.endDate)) : existing.endDate;
+            data.days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        const updated = await prisma.leaveRequest.update({
+            where: { id },
+            data,
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const updated = { ...record, ...body, id };
-    mockLeaveDetails[id] = updated;
-
-    return NextResponse.json({
-        success: true,
-        data: updated,
-    });
-}
-
-export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    const { id } = params;
-    const body = await request.json();
-    const record = mockLeaveDetails[id];
-
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Leave request not found' },
-            { status: 404 }
-        );
-    }
-
-    const updated = { ...record, ...body, id };
-    mockLeaveDetails[id] = updated;
-
-    return NextResponse.json({
-        success: true,
-        data: updated,
-    });
 }
 
 export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!mockLeaveDetails[id]) {
-        return NextResponse.json(
-            { success: false, error: 'Leave request not found' },
-            { status: 404 }
-        );
+        const existing = await prisma.leaveRequest.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Leave request not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.leaveRequest.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockLeaveDetails[id];
-
-    return NextResponse.json({
-        success: true,
-        message: 'Leave request deleted successfully',
-    });
 }

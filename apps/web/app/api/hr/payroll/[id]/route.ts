@@ -1,152 +1,154 @@
 import { NextResponse } from 'next/server';
-
-const mockPayrollDetails: Record<string, {
-    id: string;
-    employeeId: string;
-    employeeName: string;
-    period: string;
-    baseSalary: number;
-    allowance: number;
-    bonus: number;
-    deductions: number;
-    tax: number;
-    netSalary: number;
-    status: string;
-    paidAt: string | null;
-    createdAt: string;
-}> = {
-    'PAY-001': {
-        id: 'PAY-001',
-        employeeId: 'EMP-001',
-        employeeName: 'Ahmad Rizky',
-        period: 'Juli 2026',
-        baseSalary: 15000000,
-        allowance: 1500000,
-        bonus: 500000,
-        deductions: 250000,
-        tax: 1500000,
-        netSalary: 15250000,
-        status: 'paid',
-        paidAt: '2026-07-28T10:00:00Z',
-        createdAt: '2026-07-25T08:00:00Z',
-    },
-    'PAY-002': {
-        id: 'PAY-002',
-        employeeId: 'EMP-002',
-        employeeName: 'Siti Nurhaliza',
-        period: 'Juli 2026',
-        baseSalary: 18000000,
-        allowance: 2000000,
-        bonus: 1000000,
-        deductions: 300000,
-        tax: 2000000,
-        netSalary: 18700000,
-        status: 'paid',
-        paidAt: '2026-07-28T10:00:00Z',
-        createdAt: '2026-07-25T08:00:00Z',
-    },
-    'PAY-003': {
-        id: 'PAY-003',
-        employeeId: 'EMP-003',
-        employeeName: 'Budi Santoso',
-        period: 'Juli 2026',
-        baseSalary: 10000000,
-        allowance: 1000000,
-        bonus: 0,
-        deductions: 200000,
-        tax: 1000000,
-        netSalary: 9800000,
-        status: 'pending',
-        paidAt: null,
-        createdAt: '2026-07-25T08:00:00Z',
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const record = mockPayrollDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Payroll record not found' },
-            { status: 404 }
-        );
+        const record = await prisma.payrollRecord.findFirst({
+            where: { id, tenantId },
+            include: {
+                employee: {
+                    select: { id: true, name: true, employeeId: true, position: true, department: true, email: true, phone: true, salary: true },
+                },
+            },
+        });
+
+        if (!record) {
+            return NextResponse.json(
+                { success: false, error: 'Payroll record not found' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: record.id,
+            employeeId: record.employeeId,
+            employeeName: record.employee.name,
+            employeeNumber: record.employee.employeeId,
+            position: record.employee.position,
+            department: record.employee.department,
+            period: record.period,
+            baseSalary: record.baseSalary,
+            allowances: record.allowances,
+            deductions: record.deductions,
+            bonus: record.bonus,
+            netSalary: record.netSalary,
+            status: record.status.toLowerCase(),
+            paidAt: record.paidAt ? record.paidAt.toISOString() : null,
+            notes: record.notes || '',
+            createdAt: record.createdAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({
-        success: true,
-        data: record,
-    });
 }
 
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const body = await request.json();
-    const record = mockPayrollDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
+        const body = await request.json();
 
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Payroll record not found' },
-            { status: 404 }
-        );
+        const existing = await prisma.payrollRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Payroll record not found' },
+                { status: 404 }
+            );
+        }
+
+        const data: Record<string, unknown> = {};
+        if (typeof body.period === 'string') data.period = body.period;
+        if (typeof body.baseSalary === 'number') data.baseSalary = body.baseSalary;
+        if (typeof body.allowances === 'number') data.allowances = body.allowances;
+        if (typeof body.deductions === 'number') data.deductions = body.deductions;
+        if (typeof body.bonus === 'number') data.bonus = body.bonus;
+        if (typeof body.status === 'string') data.status = body.status.toUpperCase();
+        if (typeof body.notes === 'string') data.notes = body.notes;
+
+        // Recalculate netSalary if any compensation field changed
+        if (data.baseSalary !== undefined || data.allowances !== undefined || data.deductions !== undefined || data.bonus !== undefined) {
+            const base = typeof data.baseSalary === 'number' ? data.baseSalary : existing.baseSalary;
+            const allow = typeof data.allowances === 'number' ? data.allowances : existing.allowances;
+            const deduc = typeof data.deductions === 'number' ? data.deductions : existing.deductions;
+            const bon = typeof data.bonus === 'number' ? data.bonus : existing.bonus;
+            data.netSalary = base + allow - deduc + bon;
+        }
+
+        // Set paidAt when status changes to PAID
+        if (data.status === 'PAID' && existing.status !== 'PAID') {
+            data.paidAt = new Date();
+        }
+
+        const updated = await prisma.payrollRecord.update({
+            where: { id },
+            data,
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const updated = { ...record, ...body, id };
-    mockPayrollDetails[id] = updated;
-
-    return NextResponse.json({
-        success: true,
-        data: updated,
-    });
-}
-
-export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    const { id } = params;
-    const body = await request.json();
-    const record = mockPayrollDetails[id];
-
-    if (!record) {
-        return NextResponse.json(
-            { success: false, error: 'Payroll record not found' },
-            { status: 404 }
-        );
-    }
-
-    const updated = { ...record, ...body, id };
-    mockPayrollDetails[id] = updated;
-
-    return NextResponse.json({
-        success: true,
-        data: updated,
-    });
 }
 
 export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!mockPayrollDetails[id]) {
-        return NextResponse.json(
-            { success: false, error: 'Payroll record not found' },
-            { status: 404 }
-        );
+        const existing = await prisma.payrollRecord.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Payroll record not found' },
+                { status: 404 }
+            );
+        }
+
+        // Don't allow deleting paid records
+        if (existing.status === 'PAID') {
+            return NextResponse.json(
+                { success: false, error: 'Cannot delete paid payroll records' },
+                { status: 400 }
+            );
+        }
+
+        await prisma.payrollRecord.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockPayrollDetails[id];
-
-    return NextResponse.json({
-        success: true,
-        message: 'Payroll record deleted successfully',
-    });
 }

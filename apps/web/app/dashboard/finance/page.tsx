@@ -1,6 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import {
+    FileText,
+    CheckCircle,
+    Clock,
+    AlertTriangle,
+    ClipboardList,
+    Banknote,
+    ShoppingCart,
+    type LucideIcon,
+} from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 const summaryCards = [
@@ -9,7 +19,7 @@ const summaryCards = [
         value: 'Rp 856.750.000',
         change: '+12.5%',
         changeType: 'positive',
-        icon: '📄',
+        icon: FileText,
         href: '/dashboard/finance/invoices',
     },
     {
@@ -17,7 +27,7 @@ const summaryCards = [
         value: 'Rp 625.000.000',
         change: '+8.3%',
         changeType: 'positive',
-        icon: '✅',
+        icon: CheckCircle,
         href: '/dashboard/finance/invoices',
     },
     {
@@ -25,7 +35,7 @@ const summaryCards = [
         value: 'Rp 231.750.000',
         change: '+22.1%',
         changeType: 'negative',
-        icon: '⏳',
+        icon: Clock,
         href: '/dashboard/finance/invoices',
     },
     {
@@ -33,7 +43,7 @@ const summaryCards = [
         value: 'Rp 47.000.000',
         change: '+15.0%',
         changeType: 'negative',
-        icon: '⚠️',
+        icon: AlertTriangle,
         href: '/dashboard/finance/invoices',
     },
 ]
@@ -54,10 +64,10 @@ const recentPayments = [
 ]
 
 const quickActions = [
-    { label: 'Buat Invoice', icon: '📄', href: '/dashboard/finance/invoices', color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
-    { label: 'Buat Penawaran', icon: '📋', href: '/dashboard/finance/quotations', color: 'bg-green-50 text-green-700 hover:bg-green-100' },
-    { label: 'Catat Pembayaran', icon: '💸', href: '/dashboard/finance/payments', color: 'bg-purple-50 text-purple-700 hover:bg-purple-100' },
-    { label: 'Buat PO', icon: '📦', href: '/dashboard/finance/purchase-orders', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100' },
+    { label: 'Buat Invoice', icon: FileText, href: '/dashboard/finance/invoices', color: 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400' },
+    { label: 'Buat Penawaran', icon: ClipboardList, href: '/dashboard/finance/quotations', color: 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400' },
+    { label: 'Catat Pembayaran', icon: Banknote, href: '/dashboard/finance/payments', color: 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400' },
+    { label: 'Buat PO', icon: ShoppingCart, href: '/dashboard/finance/purchase-orders', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400' },
 ]
 
 const statusStyles: Record<string, string> = {
@@ -77,65 +87,71 @@ export default function FinancePage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Finance Overview</h1>
-                <p className="text-gray-500">Ringkasan keuangan perusahaan</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Finance Overview</h1>
+                <p className="text-gray-500 dark:text-gray-400">Ringkasan keuangan perusahaan</p>
             </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {summaryCards.map((card) => (
-                    <Link
-                        key={card.title}
-                        href={card.href}
-                        className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">{card.title}</span>
-                            <span className="text-2xl">{card.icon}</span>
-                        </div>
-                        <p className="mt-2 text-xl font-bold text-gray-900">{card.value}</p>
-                        <p className={`mt-1 text-sm font-medium ${card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
-                            {card.change} dari bulan lalu
-                        </p>
-                    </Link>
-                ))}
+                {summaryCards.map((card) => {
+                    const Icon = card.icon
+                    return (
+                        <Link
+                            key={card.title}
+                            href={card.href}
+                            className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{card.title}</span>
+                                <Icon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                            </div>
+                            <p className="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
+                            <p className={`mt-1 text-sm font-medium ${card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                                {card.change} dari bulan lalu
+                            </p>
+                        </Link>
+                    )
+                })}
             </div>
 
             {/* Quick Actions */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <h2 className="mb-3 text-sm font-semibold text-gray-700">Aksi Cepat</h2>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <h2 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Aksi Cepat</h2>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {quickActions.map((action) => (
-                        <Link
-                            key={action.label}
-                            href={action.href}
-                            className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${action.color}`}
-                        >
-                            <span className="text-lg">{action.icon}</span>
-                            {action.label}
-                        </Link>
-                    ))}
+                    {quickActions.map((action) => {
+                        const Icon = action.icon
+                        return (
+                            <Link
+                                key={action.label}
+                                href={action.href}
+                                className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${action.color}`}
+                            >
+                                <Icon className="h-5 w-5" />
+                                {action.label}
+                            </Link>
+                        )
+                    })}
                 </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Recent Invoices */}
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                        <h2 className="font-semibold text-gray-900">Invoice Terbaru</h2>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Invoice Terbaru</h2>
                         <Link href="/dashboard/finance/invoices" className="text-sm text-blue-600 hover:underline">
                             Lihat Semua →
                         </Link>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                         {recentInvoices.map((inv) => (
                             <div key={inv.id} className="flex items-center justify-between px-4 py-3">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-900">{inv.id}</p>
-                                    <p className="text-xs text-gray-500">{inv.customer} · {inv.date}</p>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{inv.id}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{inv.customer} · {inv.date}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(inv.amount)}</p>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(inv.amount)}</p>
                                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[inv.status]}`}>
                                         {statusLabels[inv.status]}
                                     </span>
@@ -146,19 +162,19 @@ export default function FinancePage() {
                 </div>
 
                 {/* Recent Payments */}
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                        <h2 className="font-semibold text-gray-900">Pembayaran Terbaru</h2>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Pembayaran Terbaru</h2>
                         <Link href="/dashboard/finance/payments" className="text-sm text-blue-600 hover:underline">
                             Lihat Semua →
                         </Link>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                         {recentPayments.map((pay) => (
                             <div key={pay.id} className="flex items-center justify-between px-4 py-3">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-900">{pay.description}</p>
-                                    <p className="text-xs text-gray-500">{pay.id} · {pay.date}</p>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{pay.description}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{pay.id} · {pay.date}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className={`text-sm font-semibold ${pay.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
@@ -172,20 +188,20 @@ export default function FinancePage() {
             </div>
 
             {/* Cash Flow Summary */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <h2 className="mb-4 font-semibold text-gray-900">Ringkasan Arus Kas (Bulan Ini)</h2>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <h2 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">Ringkasan Arus Kas (Bulan Ini)</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="rounded-lg bg-green-50 p-4">
-                        <p className="text-sm text-green-700">Total Pemasukan</p>
-                        <p className="mt-1 text-2xl font-bold text-green-800">Rp 72.750.000</p>
+                    <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
+                        <p className="text-sm text-green-700 dark:text-green-400">Total Pemasukan</p>
+                        <p className="mt-1 text-2xl font-bold text-green-800 dark:text-green-300">Rp 72.750.000</p>
                     </div>
-                    <div className="rounded-lg bg-red-50 p-4">
-                        <p className="text-sm text-red-700">Total Pengeluaran</p>
-                        <p className="mt-1 text-2xl font-bold text-red-800">Rp 45.500.000</p>
+                    <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
+                        <p className="text-sm text-red-700 dark:text-red-400">Total Pengeluaran</p>
+                        <p className="mt-1 text-2xl font-bold text-red-800 dark:text-red-300">Rp 45.500.000</p>
                     </div>
-                    <div className="rounded-lg bg-blue-50 p-4">
-                        <p className="text-sm text-blue-700">Net Cash Flow</p>
-                        <p className="mt-1 text-2xl font-bold text-blue-800">Rp 27.250.000</p>
+                    <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                        <p className="text-sm text-blue-700 dark:text-blue-400">Net Cash Flow</p>
+                        <p className="mt-1 text-2xl font-bold text-blue-800 dark:text-blue-300">Rp 27.250.000</p>
                     </div>
                 </div>
             </div>

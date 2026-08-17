@@ -45,6 +45,7 @@ export async function GET(request: Request) {
                         select: {
                             id: true,
                             invoiceNumber: true,
+                            total: true,
                             contact: { select: { name: true } },
                         },
                     },
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
             invoiceId: p.invoiceId,
             invoiceNumber: p.invoice?.invoiceNumber || '-',
             customerName: p.invoice?.contact?.name || '-',
+            invoiceTotal: p.invoice?.total || 0,
             amount: p.amount,
             method: p.method.toLowerCase().replace('_', '-'),
             status: p.status.toLowerCase(),
@@ -91,7 +93,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { tenantId, userId } = await requireAuth();
         const body = await request.json();
 
         if (!body.amount || !body.method) {
@@ -101,27 +103,64 @@ export async function POST(request: Request) {
             );
         }
 
-        const count = await prisma.payment.count({ where: { tenantId } });
-        const paymentNumber = `PAY-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+        const amount = parseFloat(String(body.amount));
+        if (isNaN(amount) || amount <= 0) {
+            return NextResponse.json(
+                { success: false, error: 'Amount must be a positive number' },
+                { status: 400 }
+            );
+        }
 
-        const payment = await prisma.payment.create({
-            data: {
-                paymentNumber,
-                amount: parseFloat(body.amount),
-                paymentDate: body.date ? new Date(body.date) : new Date(),
-                method: (body.method || 'BANK_TRANSFER').toUpperCase().replace('-', '_'),
-                status: 'PENDING',
-                type: (body.type || 'INCOME').toUpperCase(),
-                reference: body.reference || '',
-                notes: body.notes || '',
-                invoiceId: body.invoiceId || undefined,
-                tenantId,
-            },
-            include: {
-                invoice: {
-                    select: { invoiceNumber: true, contact: { select: { name: true } } },
+        const status = (body.status || 'PENDING').toUpperCase();
+        if (!['COMPLETED', 'PENDING', 'FAILED'].includes(status)) {
+            return NextResponse.json(
+                { success: false, error: 'Status must be COMPLETED, PENDING, or FAILED' },
+                { status: 400 }
+            );
+        }
+
+        const payment = await prisma.$transaction(async (tx) => {
+            const count = await tx.payment.count({ where: { tenantId } });
+            const paymentNumber = `PAY-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+
+            const newPayment = await tx.payment.create({
+                data: {
+                    paymentNumber,
+                    amount,
+                    paymentDate: body.date ? new Date(body.date) : new Date(),
+                    method: (body.method || 'BANK_TRANSFER').toUpperCase().replace('-', '_'),
+                    status,
+                    type: (body.type || 'INCOME').toUpperCase(),
+                    reference: body.reference || '',
+                    notes: body.notes || '',
+                    invoiceId: body.invoiceId || undefined,
+                    tenantId,
                 },
-            },
+                include: {
+                    invoice: {
+                        select: { invoiceNumber: true, total: true, contact: { select: { name: true } } },
+                    },
+                },
+            });
+
+            // Update invoice status if payment is linked to an invoice and is COMPLETED
+            if (body.invoiceId && status === 'COMPLETED') {
+                const invoice = await tx.invoice.findUnique({
+                    where: { id: body.invoiceId },
+                    include: { payments: { where: { status: 'COMPLETED' } } },
+                });
+
+                if (invoice) {
+                    const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0) + amount;
+                    const newInvoiceStatus = totalPaid >= invoice.total ? 'PAID' : invoice.status;
+                    await tx.invoice.update({
+                        where: { id: body.invoiceId },
+                        data: { status: newInvoiceStatus },
+                    });
+                }
+            }
+
+            return newPayment;
         });
 
         return NextResponse.json({ success: true, data: payment }, { status: 201 });
@@ -155,25 +194,61 @@ export async function PUT(request: Request) {
             );
         }
 
-        if (updateData.status) {
-            updateData.status = updateData.status.toUpperCase();
+        // Build safe update data
+        const data: Record<string, unknown> = {};
+        if (typeof updateData.status === 'string') {
+            data.status = updateData.status.toUpperCase();
         }
-        if (updateData.method) {
-            updateData.method = updateData.method.toUpperCase().replace('-', '_');
+        if (typeof updateData.method === 'string') {
+            data.method = updateData.method.toUpperCase().replace('-', '_');
+        }
+        if (typeof updateData.amount === 'number') {
+            data.amount = updateData.amount;
+        }
+        if (typeof updateData.type === 'string') {
+            data.type = updateData.type.toUpperCase();
+        }
+        if (typeof updateData.reference === 'string') {
+            data.reference = updateData.reference;
+        }
+        if (typeof updateData.notes === 'string') {
+            data.notes = updateData.notes;
         }
         if (updateData.date) {
-            updateData.paymentDate = new Date(updateData.date);
-            delete updateData.date;
+            data.paymentDate = new Date(String(updateData.date));
         }
 
-        const payment = await prisma.payment.update({
-            where: { id },
-            data: updateData,
-            include: {
-                invoice: {
-                    select: { invoiceNumber: true, contact: { select: { name: true } } },
+        const payment = await prisma.$transaction(async (tx) => {
+            const updated = await tx.payment.update({
+                where: { id },
+                data,
+                include: {
+                    invoice: {
+                        select: { id: true, invoiceNumber: true, total: true, contact: { select: { name: true } } },
+                    },
                 },
-            },
+            });
+
+            // Recalculate invoice status if status changed
+            if (data.status && updated.invoiceId) {
+                const invoice = await tx.invoice.findUnique({
+                    where: { id: updated.invoiceId },
+                    include: { payments: true },
+                });
+
+                if (invoice) {
+                    const totalPaid = invoice.payments
+                        .filter((p) => p.id !== id && p.status === 'COMPLETED')
+                        .reduce((sum, p) => sum + p.amount, 0) + (data.status === 'COMPLETED' ? updated.amount : 0);
+                    const newInvoiceStatus = totalPaid >= invoice.total ? 'PAID' : 'SENT';
+                    await tx.invoice.update({
+                        where: { id: updated.invoiceId },
+                        data: { status: newInvoiceStatus },
+                    });
+                }
+            }
+
+            return updated;
         });
 
         return NextResponse.json({ success: true, data: payment });

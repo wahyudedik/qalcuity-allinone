@@ -96,26 +96,15 @@ export async function PUT(
         delete updateData.id;
         delete updateData.items;
 
-        if (updateData.status) {
+        if (updateData.status && typeof updateData.status === 'string') {
             updateData.status = updateData.status.toUpperCase();
         }
         if (updateData.dueDate) {
-            updateData.dueDate = new Date(updateData.dueDate);
+            updateData.dueDate = new Date(updateData.dueDate as string | number);
         }
 
-        // Handle items update if provided
+        // Handle items update if provided — use transaction for atomicity
         if (body.items && body.items.length > 0) {
-            await prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
-            await prisma.invoiceItem.createMany({
-                data: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
-                    invoiceId: id,
-                    description: item.description,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    total: item.total || item.quantity * item.unitPrice,
-                })),
-            });
-
             // Recalculate totals
             const subtotal = body.items.reduce(
                 (sum: number, item: { quantity: number; unitPrice: number }) =>
@@ -127,6 +116,20 @@ export async function PUT(
             updateData.subtotal = subtotal;
             updateData.taxAmount = taxAmount;
             updateData.total = subtotal + taxAmount;
+
+            // Delete old items and create new ones in transaction
+            await prisma.$transaction(async (tx) => {
+                await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+                await tx.invoiceItem.createMany({
+                    data: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                        invoiceId: id,
+                        description: item.description,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        total: item.total || item.quantity * item.unitPrice,
+                    })),
+                });
+            });
         }
 
         const invoice = await prisma.invoice.update({

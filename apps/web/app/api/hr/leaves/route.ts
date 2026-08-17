@@ -1,139 +1,154 @@
 import { NextResponse } from 'next/server';
-
-const mockLeaves = [
-    {
-        id: 'LV-001',
-        employeeName: 'Budi Santoso',
-        employeeId: 'EMP-003',
-        type: 'annual',
-        startDate: '2026-08-03',
-        endDate: '2026-08-07',
-        days: 5,
-        reason: 'Liburan keluarga ke Bali',
-        status: 'approved',
-        appliedDate: '2026-07-25',
-        approvedBy: 'Dewi Lestari',
-    },
-    {
-        id: 'LV-002',
-        employeeName: 'Ahmad Rizky',
-        employeeId: 'EMP-001',
-        type: 'sick',
-        startDate: '2026-08-04',
-        endDate: '2026-08-04',
-        days: 1,
-        reason: 'Sakit demam',
-        status: 'pending',
-        appliedDate: '2026-08-03',
-    },
-    {
-        id: 'LV-003',
-        employeeName: 'Hana Permata',
-        employeeId: 'EMP-008',
-        type: 'personal',
-        startDate: '2026-08-10',
-        endDate: '2026-08-11',
-        days: 2,
-        reason: 'Urusan keluarga',
-        status: 'pending',
-        appliedDate: '2026-08-02',
-    },
-    {
-        id: 'LV-004',
-        employeeName: 'Fitri Handayani',
-        employeeId: 'EMP-006',
-        type: 'annual',
-        startDate: '2026-07-28',
-        endDate: '2026-07-30',
-        days: 3,
-        reason: 'Wedding anniversary',
-        status: 'approved',
-        appliedDate: '2026-07-20',
-        approvedBy: 'Siti Nurhaliza',
-    },
-    {
-        id: 'LV-005',
-        employeeName: 'Eko Prasetyo',
-        employeeId: 'EMP-005',
-        type: 'unpaid',
-        startDate: '2026-08-15',
-        endDate: '2026-08-16',
-        days: 2,
-        reason: 'Keperluan pribadi',
-        status: 'rejected',
-        appliedDate: '2026-08-01',
-        approvedBy: 'Dewi Lestari',
-    },
-];
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const type = searchParams.get('type');
-    const search = searchParams.get('search');
-    const employeeId = searchParams.get('employeeId');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const type = searchParams.get('type');
+        const search = searchParams.get('search');
+        const employeeId = searchParams.get('employeeId');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-    let filtered = [...mockLeaves];
+        const where: Record<string, unknown> = { tenantId };
 
-    if (status) {
-        filtered = filtered.filter((leave) => leave.status === status);
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+
+        if (type) {
+            where.type = type.toUpperCase();
+        }
+
+        if (employeeId) {
+            where.employeeId = employeeId;
+        }
+
+        if (search) {
+            where.OR = [
+                { employee: { name: { contains: search } } },
+                { employee: { employeeId: { contains: search } } },
+                { reason: { contains: search } },
+            ];
+        }
+
+        const [leaves, total] = await Promise.all([
+            prisma.leaveRequest.findMany({
+                where,
+                include: {
+                    employee: {
+                        select: { id: true, name: true, employeeId: true, position: true, department: true },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.leaveRequest.count({ where }),
+        ]);
+
+        const data = leaves.map((l) => ({
+            id: l.id,
+            employeeName: l.employee.name,
+            employeeId: l.employee.employeeId,
+            position: l.employee.position,
+            department: l.employee.department,
+            type: l.type.toLowerCase(),
+            startDate: l.startDate.toISOString().split('T')[0],
+            endDate: l.endDate.toISOString().split('T')[0],
+            days: l.days,
+            reason: l.reason || '',
+            status: l.status.toLowerCase(),
+            appliedDate: l.appliedDate.toISOString().split('T')[0],
+            approvedBy: l.approvedBy || '',
+            notes: l.notes || '',
+            createdAt: l.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    if (type) {
-        filtered = filtered.filter((leave) => leave.type === type);
-    }
-
-    if (employeeId) {
-        filtered = filtered.filter((leave) => leave.employeeId === employeeId);
-    }
-
-    if (search) {
-        const lowerSearch = search.toLowerCase();
-        filtered = filtered.filter(
-            (leave) =>
-                leave.employeeName.toLowerCase().includes(lowerSearch) ||
-                leave.reason.toLowerCase().includes(lowerSearch)
-        );
-    }
-
-    return NextResponse.json({
-        success: true,
-        data: filtered,
-        total: filtered.length,
-    });
 }
 
 export async function POST(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
 
-        if (!body.employeeName || !body.type || !body.startDate || !body.endDate) {
+        if (!body.employeeId || !body.type || !body.startDate || !body.endDate) {
             return NextResponse.json(
-                { success: false, error: 'Employee name, type, start date, and end date are required' },
+                { success: false, error: 'Employee ID, type, start date, and end date are required' },
                 { status: 400 }
             );
         }
 
-        const newLeave = {
-            id: `LV-${Date.now()}`,
-            ...body,
-            status: 'pending',
-            appliedDate: new Date().toISOString().split('T')[0],
-        };
+        // Validate employee belongs to tenant
+        const employee = await prisma.employee.findFirst({
+            where: { id: body.employeeId, tenantId },
+        });
+        if (!employee) {
+            return NextResponse.json(
+                { success: false, error: 'Employee not found' },
+                { status: 404 }
+            );
+        }
 
-        mockLeaves.push(newLeave);
+        const startDate = new Date(body.startDate);
+        const endDate = new Date(body.endDate);
+        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-        return NextResponse.json({ success: true, data: newLeave }, { status: 201 });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        if (days <= 0) {
+            return NextResponse.json(
+                { success: false, error: 'End date must be after start date' },
+                { status: 400 }
+            );
+        }
+
+        const leave = await prisma.leaveRequest.create({
+            data: {
+                type: body.type.toUpperCase(),
+                startDate,
+                endDate,
+                days,
+                reason: body.reason || '',
+                notes: body.notes || '',
+                employeeId: body.employeeId,
+                tenantId,
+            },
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: leave }, { status: 201 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PATCH(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
         const { id, status, approvedBy } = body;
 
@@ -144,31 +159,49 @@ export async function PATCH(request: Request) {
             );
         }
 
-        const index = mockLeaves.findIndex((leave) => leave.id === id);
-        if (index === -1) {
+        const validStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+        const newStatus = status.toUpperCase();
+        if (!validStatuses.includes(newStatus)) {
+            return NextResponse.json(
+                { success: false, error: 'Status must be PENDING, APPROVED, or REJECTED' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.leaveRequest.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Leave request not found' },
                 { status: 404 }
             );
         }
 
-        mockLeaves[index] = {
-            ...mockLeaves[index],
-            status,
-            approvedBy: approvedBy || mockLeaves[index].approvedBy,
-        };
+        const updated = await prisma.leaveRequest.update({
+            where: { id },
+            data: {
+                status: newStatus,
+                approvedBy: approvedBy || existing.approvedBy,
+            },
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
 
-        return NextResponse.json({ success: true, data: mockLeaves[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
+        const { tenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -179,45 +212,98 @@ export async function PUT(request: Request) {
             );
         }
 
-        const index = mockLeaves.findIndex((leave) => leave.id === id);
-        if (index === -1) {
+        const existing = await prisma.leaveRequest.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Leave request not found' },
                 { status: 404 }
             );
         }
 
-        mockLeaves[index] = { ...mockLeaves[index], ...updateData };
+        const data: Record<string, unknown> = {};
+        if (typeof updateData.type === 'string') {
+            data.type = updateData.type.toUpperCase();
+        }
+        if (updateData.startDate) {
+            data.startDate = new Date(String(updateData.startDate));
+        }
+        if (updateData.endDate) {
+            data.endDate = new Date(String(updateData.endDate));
+        }
+        if (typeof updateData.days === 'number') {
+            data.days = updateData.days;
+        }
+        if (typeof updateData.reason === 'string') {
+            data.reason = updateData.reason;
+        }
+        if (typeof updateData.status === 'string') {
+            data.status = updateData.status.toUpperCase();
+        }
+        if (typeof updateData.approvedBy === 'string') {
+            data.approvedBy = updateData.approvedBy;
+        }
+        if (typeof updateData.notes === 'string') {
+            data.notes = updateData.notes;
+        }
 
-        return NextResponse.json({ success: true, data: mockLeaves[index] });
-    } catch {
-        return NextResponse.json(
-            { success: false, error: 'Invalid request body' },
-            { status: 400 }
-        );
+        // Recalculate days if startDate or endDate changed
+        if (data.startDate || data.endDate) {
+            const start = data.startDate ? new Date(String(data.startDate)) : existing.startDate;
+            const end = data.endDate ? new Date(String(data.endDate)) : existing.endDate;
+            data.days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        const updated = await prisma.leaveRequest.update({
+            where: { id },
+            data,
+            include: {
+                employee: { select: { name: true, employeeId: true } },
+            },
+        });
+
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    try {
+        const { tenantId } = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-    if (!id) {
-        return NextResponse.json(
-            { success: false, error: 'ID is required' },
-            { status: 400 }
-        );
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.leaveRequest.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Leave request not found' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.leaveRequest.delete({ where: { id } });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    const index = mockLeaves.findIndex((leave) => leave.id === id);
-    if (index === -1) {
-        return NextResponse.json(
-            { success: false, error: 'Leave request not found' },
-            { status: 404 }
-        );
-    }
-
-    mockLeaves.splice(index, 1);
-
-    return NextResponse.json({ success: true, data: null });
 }
