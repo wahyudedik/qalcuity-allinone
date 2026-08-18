@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle } from 'lucide-react'
 
 interface ProductDetail {
     id: string
@@ -85,7 +86,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             {/* Header */}
             <div>
                 <Link href="/dashboard/inventory/products" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                    ← Kembali ke Produk
+                    <ArrowLeft className="h-4 w-4" />
+                    Kembali ke Produk
                 </Link>
                 <div className="mt-4 flex items-center justify-between">
                     <div>
@@ -198,14 +200,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">Aksi</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                ✏️ Edit Produk
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                                <Pencil className="h-4 w-4" />
+                                Edit Produk
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📦 Restok
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <Package className="h-4 w-4" />
+                                Restok
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📋 Riwayat Stok
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <ClipboardList className="h-4 w-4" />
+                                Riwayat Stok
                             </button>
                         </div>
                     </div>

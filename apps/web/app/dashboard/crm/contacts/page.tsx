@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslation } from '@/lib/i18n'
+import { Download, Plus, Search, LayoutGrid, List } from 'lucide-react'
 
 type Contact = {
     id: string
@@ -26,14 +28,8 @@ const typeStyles: Record<string, string> = {
     lead: 'bg-yellow-100 text-yellow-800',
 }
 
-const typeLabels: Record<string, string> = {
-    customer: 'Customer',
-    supplier: 'Supplier',
-    partner: 'Partner',
-    lead: 'Lead',
-}
-
 export default function ContactsPage() {
+    const { t } = useTranslation()
     const [contacts, setContacts] = useState<Contact[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -78,6 +74,13 @@ export default function ContactsPage() {
         leads: contacts.filter((c) => c.type === 'lead').length,
     }
 
+    const typeLabels: Record<string, string> = {
+        customer: t('crm.contacts.typeCustomer'),
+        supplier: t('crm.contacts.typeSupplier'),
+        partner: t('crm.contacts.typePartner'),
+        lead: t('crm.contacts.typeLead'),
+    }
+
     if (loading) {
         return (
             <div className="space-y-6 p-6">
@@ -113,17 +116,19 @@ export default function ContactsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Kontak</h1>
-                    <p className="text-gray-500">{stats.total} kontak terdaftar</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('crm.contacts.title')}</h1>
+                    <p className="text-gray-500">{stats.total} {t('crm.contacts.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
                     <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        📥 Import
+                        <Download className="h-4 w-4" />
+                        {t('crm.contacts.import')}
                     </button>
                     <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        ＋ Kontak Baru
+                        <Plus className="h-4 w-4" />
+                        {t('crm.contacts.addContact')}
                     </button>
                 </div>
             </div>
@@ -135,19 +140,19 @@ export default function ContactsPage() {
                     <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Customer</p>
+                    <p className="text-sm text-gray-500">{typeLabels.customer}</p>
                     <p className="mt-1 text-2xl font-bold text-green-600">{stats.customers}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Supplier</p>
+                    <p className="text-sm text-gray-500">{typeLabels.supplier}</p>
                     <p className="mt-1 text-2xl font-bold text-blue-600">{stats.suppliers}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Partner</p>
+                    <p className="text-sm text-gray-500">{typeLabels.partner}</p>
                     <p className="mt-1 text-2xl font-bold text-purple-600">{stats.partners}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Lead</p>
+                    <p className="text-sm text-gray-500">{typeLabels.lead}</p>
                     <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.leads}</p>
                 </div>
             </div>
@@ -155,13 +160,16 @@ export default function ContactsPage() {
             {/* Filters & View Toggle */}
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
-                    <input
-                        type="text"
-                        placeholder="Cari kontak..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder={t('crm.contacts.searchPlaceholder')}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     {['all', 'customer', 'supplier', 'partner', 'lead'].map((type) => (
@@ -169,8 +177,8 @@ export default function ContactsPage() {
                             key={type}
                             onClick={() => setFilterType(type)}
                             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filterType === type
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
                             {type === 'all' ? 'Semua' : typeLabels[type] || type}
@@ -181,14 +189,16 @@ export default function ContactsPage() {
                     <button
                         onClick={() => setViewMode('grid')}
                         className={`rounded px-2 py-1 text-xs ${viewMode === 'grid' ? 'bg-gray-100' : ''}`}
+                        title={t('crm.contacts.gridView')}
                     >
-                        ⊞
+                        <LayoutGrid className="h-4 w-4" />
                     </button>
                     <button
                         onClick={() => setViewMode('list')}
                         className={`rounded px-2 py-1 text-xs ${viewMode === 'list' ? 'bg-gray-100' : ''}`}
+                        title={t('crm.contacts.listView')}
                     >
-                        ☰
+                        <List className="h-4 w-4" />
                     </button>
                 </div>
             </div>
@@ -217,13 +227,13 @@ export default function ContactsPage() {
                                 </span>
                             </div>
                             <div className="mt-4 space-y-2 text-sm text-gray-600">
-                                <p>📧 {contact.email}</p>
-                                <p>📱 {contact.phone}</p>
-                                <p>💼 {contact.position}</p>
+                                <p>{contact.email}</p>
+                                <p>{contact.phone}</p>
+                                <p>{contact.position}</p>
                             </div>
                             {contact.totalDeals > 0 && (
                                 <div className="mt-4 border-t border-gray-100 pt-3">
-                                    <p className="text-xs text-gray-500">{contact.totalDeals} deal aktif</p>
+                                    <p className="text-xs text-gray-500">{contact.totalDeals} {t('crm.contacts.activeDeals')}</p>
                                 </div>
                             )}
                         </Link>
@@ -238,12 +248,12 @@ export default function ContactsPage() {
                         <table className="w-full text-left text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 bg-gray-50">
-                                    <th className="px-4 py-3 font-medium text-gray-500">Nama</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Perusahaan</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Email</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Telepon</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Tipe</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Posisi</th>
+                                    <th className="px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.name')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.company')}</th>
+                                    <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.email')}</th>
+                                    <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.phone')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.type')}</th>
+                                    <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.position')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -254,15 +264,15 @@ export default function ContactsPage() {
                                                 {contact.name}
                                             </Link>
                                         </td>
-                                        <td className="px-4 py-3">{contact.company}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-gray-500">{contact.email}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-gray-500">{contact.phone}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="hidden md:table-cell px-4 py-3">{contact.company}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{contact.email}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{contact.phone}</td>
+                                        <td className="hidden md:table-cell px-4 py-3">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${typeStyles[contact.type] || 'bg-gray-100 text-gray-700'}`}>
                                                 {typeLabels[contact.type] || contact.type}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-500">{contact.position}</td>
+                                        <td className="hidden lg:table-cell px-4 py-3 text-gray-500">{contact.position}</td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { formatCurrency } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus, Download } from 'lucide-react'
 
 type Account = {
     id: string
@@ -48,14 +50,6 @@ const MOCK_ACCOUNTS: Account[] = [
     { id: '27', code: '5403', name: 'Biaya Admin Bank', type: 'expense', subtype: 'Beban Lain', balance: 1200000, isActive: true },
 ]
 
-const typeLabels: Record<string, string> = {
-    asset: 'Aset',
-    liability: 'Kewajiban',
-    equity: 'Ekuitas',
-    revenue: 'Pendapatan',
-    expense: 'Beban',
-}
-
 const typeColors: Record<string, string> = {
     asset: 'bg-blue-100 text-blue-800',
     liability: 'bg-red-100 text-red-800',
@@ -65,10 +59,19 @@ const typeColors: Record<string, string> = {
 }
 
 export default function ChartOfAccountsPage() {
+    const { t } = useTranslation()
     const [accounts] = useState<Account[]>(MOCK_ACCOUNTS)
     const [filterType, setFilterType] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [showAddModal, setShowAddModal] = useState(false)
+
+    const typeLabels: Record<string, string> = {
+        asset: t('finance.accounts.types.asset'),
+        liability: t('finance.accounts.types.liability'),
+        equity: t('finance.accounts.types.equity'),
+        revenue: t('finance.accounts.types.revenue'),
+        expense: t('finance.accounts.types.expense'),
+    }
 
     const filteredAccounts = accounts.filter((a) => {
         const matchType = filterType === 'all' || a.type === filterType
@@ -94,18 +97,20 @@ export default function ChartOfAccountsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Chart of Accounts</h1>
-                    <p className="text-gray-500">Daftar akun keuangan perusahaan</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.accounts.title')}</h1>
+                    <p className="text-gray-500">{t('finance.accounts.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
                     <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        📥 Import
+                        <Download className="h-4 w-4" />
+                        {t('finance.accounts.import')}
                     </button>
                     <button
                         onClick={() => setShowAddModal(true)}
                         className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                        ＋ Tambah Akun
+                        <Plus className="h-4 w-4" />
+                        {t('finance.accounts.addAccount')}
                     </button>
                 </div>
             </div>
@@ -113,23 +118,23 @@ export default function ChartOfAccountsPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Aset</p>
+                    <p className="text-sm text-gray-500">{t('finance.accounts.summary.totalAssets')}</p>
                     <p className="mt-1 text-lg font-bold text-blue-600">{formatCurrency(totalAssets)}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Kewajiban</p>
+                    <p className="text-sm text-gray-500">{t('finance.accounts.summary.totalLiabilities')}</p>
                     <p className="mt-1 text-lg font-bold text-red-600">{formatCurrency(totalLiabilities)}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Ekuitas</p>
+                    <p className="text-sm text-gray-500">{t('finance.accounts.summary.totalEquity')}</p>
                     <p className="mt-1 text-lg font-bold text-purple-600">{formatCurrency(totalEquity)}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Pendapatan</p>
+                    <p className="text-sm text-gray-500">{t('finance.accounts.summary.totalRevenue')}</p>
                     <p className="mt-1 text-lg font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Beban</p>
+                    <p className="text-sm text-gray-500">{t('finance.accounts.summary.totalExpenses')}</p>
                     <p className="mt-1 text-lg font-bold text-orange-600">{formatCurrency(totalExpense)}</p>
                 </div>
             </div>
@@ -137,13 +142,16 @@ export default function ChartOfAccountsPage() {
             {/* Filters */}
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
-                    <input
-                        type="text"
-                        placeholder="Cari berdasarkan kode atau nama akun..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder={t('finance.accounts.filter.searchPlaceholder')}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     {['all', 'asset', 'liability', 'equity', 'revenue', 'expense'].map((type) => (
@@ -153,7 +161,7 @@ export default function ChartOfAccountsPage() {
                             className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${filterType === type ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
-                            {type === 'all' ? 'Semua' : typeLabels[type]}
+                            {type === 'all' ? t('finance.accounts.filter.all') : typeLabels[type]}
                         </button>
                     ))}
                 </div>
@@ -168,21 +176,21 @@ export default function ChartOfAccountsPage() {
                                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColors[type]}`}>
                                     {typeLabels[type]}
                                 </span>
-                                <span className="text-sm text-gray-500">({typeAccounts.length} akun)</span>
+                                <span className="text-sm text-gray-500">({typeAccounts.length} {t('finance.accounts.accountsCount')})</span>
                             </div>
                             <span className="text-sm font-semibold text-gray-700">
-                                Total: {formatCurrency(typeAccounts.reduce((sum, a) => sum + a.balance, 0))}
+                                {t('finance.accounts.total')}: {formatCurrency(typeAccounts.reduce((sum, a) => sum + a.balance, 0))}
                             </span>
                         </div>
                         <table className="w-full text-left text-sm">
                             <thead>
                                 <tr className="border-b border-gray-100">
-                                    <th className="px-4 py-2.5 font-medium text-gray-500">Kode</th>
-                                    <th className="px-4 py-2.5 font-medium text-gray-500">Nama Akun</th>
-                                    <th className="px-4 py-2.5 font-medium text-gray-500">Sub-jenis</th>
-                                    <th className="px-4 py-2.5 text-right font-medium text-gray-500">Saldo</th>
-                                    <th className="px-4 py-2.5 font-medium text-gray-500">Status</th>
-                                    <th className="px-4 py-2.5 font-medium text-gray-500">Aksi</th>
+                                    <th className="px-4 py-2.5 font-medium text-gray-500">{t('finance.accounts.table.code')}</th>
+                                    <th className="px-4 py-2.5 font-medium text-gray-500">{t('finance.accounts.table.accountName')}</th>
+                                    <th className="px-4 py-2.5 font-medium text-gray-500">{t('finance.accounts.table.subtype')}</th>
+                                    <th className="px-4 py-2.5 text-right font-medium text-gray-500">{t('finance.accounts.table.balance')}</th>
+                                    <th className="px-4 py-2.5 font-medium text-gray-500">{t('finance.accounts.table.status')}</th>
+                                    <th className="px-4 py-2.5 font-medium text-gray-500">{t('finance.accounts.table.action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -194,11 +202,11 @@ export default function ChartOfAccountsPage() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(account.balance)}</td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${account.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-                                                {account.isActive ? 'Aktif' : 'Nonaktif'}
+                                                {account.isActive ? t('finance.accounts.active') : t('finance.accounts.inactive')}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <button className="text-sm text-blue-600 hover:underline">Edit</button>
+                                            <button className="text-sm text-blue-600 hover:underline">{t('finance.accounts.edit')}</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -212,43 +220,43 @@ export default function ChartOfAccountsPage() {
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-                        <h2 className="mb-4 text-lg font-bold text-gray-900">Tambah Akun Baru</h2>
+                        <h2 className="mb-4 text-lg font-bold text-gray-900">{t('finance.accounts.modal.title')}</h2>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Kode Akun</label>
-                                    <input type="text" placeholder="Contoh: 1104" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">{t('finance.accounts.modal.accountCode')}</label>
+                                    <input type="text" placeholder={t('finance.accounts.modal.accountCodePlaceholder')} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Jenis Akun</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">{t('finance.accounts.modal.accountType')}</label>
                                     <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
-                                        <option value="asset">Aset</option>
-                                        <option value="liability">Kewajiban</option>
-                                        <option value="equity">Ekuitas</option>
-                                        <option value="revenue">Pendapatan</option>
-                                        <option value="expense">Beban</option>
+                                        <option value="asset">{t('finance.accounts.types.asset')}</option>
+                                        <option value="liability">{t('finance.accounts.types.liability')}</option>
+                                        <option value="equity">{t('finance.accounts.types.equity')}</option>
+                                        <option value="revenue">{t('finance.accounts.types.revenue')}</option>
+                                        <option value="expense">{t('finance.accounts.types.expense')}</option>
                                     </select>
                                 </div>
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Nama Akun</label>
-                                <input type="text" placeholder="Nama akun" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+                                <label className="mb-1 block text-sm font-medium text-gray-700">{t('finance.accounts.modal.accountName')}</label>
+                                <input type="text" placeholder={t('finance.accounts.modal.accountNamePlaceholder')} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Sub-jenis</label>
-                                <input type="text" placeholder="Contoh: Kas & Setara Kas" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+                                <label className="mb-1 block text-sm font-medium text-gray-700">{t('finance.accounts.modal.subtype')}</label>
+                                <input type="text" placeholder={t('finance.accounts.modal.subtypePlaceholder')} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Saldo Awal</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">{t('finance.accounts.modal.initialBalance')}</label>
                                 <input type="number" placeholder="0" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end gap-2">
                             <button onClick={() => setShowAddModal(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                Batal
+                                {t('finance.accounts.modal.cancel')}
                             </button>
                             <button onClick={() => setShowAddModal(false)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                Simpan
+                                {t('finance.accounts.modal.save')}
                             </button>
                         </div>
                     </div>

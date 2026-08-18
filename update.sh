@@ -140,8 +140,8 @@ print_step "6/8 - Cek Prisma schema"
 
 if echo "$CHANGED_FILES" | grep -q "schema.prisma"; then
     pnpm db:generate
-    pnpm db:push
-    print_success "Prisma schema di-update"
+    pnpm db:push --skip-generate 2>/dev/null || pnpm db:push
+    print_success "Prisma schema di-update dan di-push ke database"
 else
     # Tetap generate untuk memastikan Prisma Client compatible
     pnpm db:generate 2>/dev/null || true
@@ -162,7 +162,7 @@ pm2 reload ecosystem.config.js --update-env
 pm2 save
 
 # Tunggu beberapa detik untuk memastikan aplikasi running
-sleep 3
+sleep 5
 
 # Cek status
 APP_STATUS=$(pm2 jlist 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
@@ -171,6 +171,15 @@ if [ "$APP_STATUS" = "online" ]; then
     print_success "Aplikasi berhasil di-restart dan berjalan normal"
 else
     print_warning "Status aplikasi: $APP_STATUS - cek pm2 logs untuk detail"
+fi
+
+# Health check — cek apakah aplikasi merespons
+sleep 2
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/health 2>/dev/null || echo "000")
+if [ "$HTTP_STATUS" = "200" ]; then
+    print_success "Health check passed (HTTP $HTTP_STATUS)"
+else
+    print_warning "Health check returned HTTP $HTTP_STATUS — aplikasi mungkin masih memulai"
 fi
 
 # ============================================================

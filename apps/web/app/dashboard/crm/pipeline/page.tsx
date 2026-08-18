@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
 
 type Deal = {
@@ -33,6 +34,7 @@ const stageConfig = [
 ]
 
 export default function PipelinePage() {
+    const { t } = useTranslation()
     const [deals, setDeals] = useState<Deal[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -50,14 +52,16 @@ export default function PipelinePage() {
             if (data.success) {
                 setDeals(data.data)
             } else {
-                setError('Gagal memuat data pipeline')
+                setError(t('common.error'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('common.error'))
         } finally {
             setLoading(false)
         }
     }
+
+    const getStageLabel = (stageId: string) => t(`crm.deals.stages.${stageId}`)
 
     // Organize deals by stage — filter out CLOSED_WON and CLOSED_LOST from active stages for stats
     const activeStages: Stage[] = stageConfig
@@ -95,7 +99,7 @@ export default function PipelinePage() {
                             <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
                         ))}
                     </div>
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                         {[1, 2, 3, 4].map(i => (
                             <div key={i} className="h-96 bg-gray-200 rounded-xl"></div>
                         ))}
@@ -114,7 +118,7 @@ export default function PipelinePage() {
                         onClick={fetchDeals}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('common.retry')}
                     </button>
                 </div>
             </div>
@@ -126,22 +130,22 @@ export default function PipelinePage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
-                    <p className="text-gray-500">{totalDeals} deals · Total {formatCurrency(totalValue)}</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('crm.pipeline.title')}</h1>
+                    <p className="text-gray-500 dark:text-gray-400">{totalDeals} {t('crm.pipeline.subtitle')} {formatCurrency(totalValue)}</p>
                 </div>
                 <div className="flex gap-2">
-                    <div className="flex gap-1 rounded-lg border border-gray-200 p-1">
+                    <div className="flex gap-1 rounded-lg border border-gray-200 p-1 dark:border-gray-700">
                         <button
                             onClick={() => setViewMode('board')}
-                            className={`rounded px-3 py-1.5 text-xs font-medium ${viewMode === 'board' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`rounded px-3 py-1.5 text-xs font-medium ${viewMode === 'board' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'}`}
                         >
-                            Board
+                            {t('crm.pipeline.boardView')}
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`rounded px-3 py-1.5 text-xs font-medium ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`rounded px-3 py-1.5 text-xs font-medium ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'}`}
                         >
-                            List
+                            {t('crm.pipeline.listView')}
                         </button>
                     </div>
                 </div>
@@ -153,26 +157,26 @@ export default function PipelinePage() {
                     const stageValue = stage.deals.reduce((sum, d) => sum + d.value, 0)
                     const stageWeighted = stage.deals.reduce((sum, d) => sum + (d.value * d.probability / 100), 0)
                     return (
-                        <div key={stage.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                        <div key={stage.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                             <div className="flex items-center gap-2">
                                 <div className={`h-3 w-3 rounded-full ${stage.color}`} />
-                                <p className="text-sm font-medium text-gray-700">{stage.name}</p>
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{getStageLabel(stage.id)}</p>
                             </div>
-                            <p className="mt-2 text-xl font-bold text-gray-900">{stage.deals.length}</p>
-                            <p className="text-xs text-gray-500">{formatCurrency(stageValue)}</p>
-                            <p className="text-xs text-blue-600 mt-1">Weighted: {formatCurrency(stageWeighted)}</p>
+                            <p className="mt-2 text-xl font-bold text-gray-900 dark:text-white">{stage.deals.length}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(stageValue)}</p>
+                            <p className="text-xs text-blue-600 mt-1">{t('crm.pipeline.weighted')} {formatCurrency(stageWeighted)}</p>
                         </div>
                     )
                 })}
                 {/* Win Rate Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                     <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-green-500" />
-                        <p className="text-sm font-medium text-gray-700">Win Rate</p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('crm.pipeline.winRate')}</p>
                     </div>
-                    <p className="mt-2 text-xl font-bold text-gray-900">{winRate}%</p>
-                    <p className="text-xs text-green-600">{wonCount} won</p>
-                    <p className="text-xs text-red-500">{lostCount} lost</p>
+                    <p className="mt-2 text-xl font-bold text-gray-900 dark:text-white">{winRate}%</p>
+                    <p className="text-xs text-green-600">{wonCount} {t('crm.pipeline.won')}</p>
+                    <p className="text-xs text-red-500">{lostCount} {t('crm.pipeline.lost')}</p>
                 </div>
             </div>
 
@@ -182,14 +186,14 @@ export default function PipelinePage() {
                     {/* Active Stages */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                         {activeStages.map((stage) => (
-                            <BoardColumn key={stage.id} stage={stage} />
+                            <BoardColumn key={stage.id} stage={stage} getStageLabel={getStageLabel} t={t} />
                         ))}
                     </div>
                     {/* Closed Stages */}
                     {(closedStages.some(s => s.deals.length > 0) || true) && (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             {closedStages.map((stage) => (
-                                <BoardColumn key={stage.id} stage={stage} />
+                                <BoardColumn key={stage.id} stage={stage} getStageLabel={getStageLabel} t={t} />
                             ))}
                         </div>
                     )}
@@ -198,37 +202,37 @@ export default function PipelinePage() {
 
             {/* List View */}
             {viewMode === 'list' && (
-                <div className="rounded-xl border border-gray-200 bg-white">
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b border-gray-200 bg-gray-50">
-                                    <th className="px-4 py-3 font-medium text-gray-500">Deal</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Perusahaan</th>
-                                    <th className="px-4 py-3 text-right font-medium text-gray-500">Nilai</th>
-                                    <th className="px-4 py-3 text-center font-medium text-gray-500">Stage</th>
-                                    <th className="px-4 py-3 text-center font-medium text-gray-500">Win %</th>
-                                    <th className="px-4 py-3 text-center font-medium text-gray-500">Weighted</th>
-                                    <th className="px-4 py-3 font-medium text-gray-500">Owner</th>
+                                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                                    <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.deal')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.company')}</th>
+                                    <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.value')}</th>
+                                    <th className="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.stage')}</th>
+                                    <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.winProb')}</th>
+                                    <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.weighted')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.owner')}</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {allStages.map((stage) =>
                                     stage.deals.map((deal) => (
-                                        <tr key={deal.id} className="hover:bg-gray-50">
-                                            <td className="whitespace-nowrap px-4 py-3 font-medium">{deal.name}</td>
-                                            <td className="px-4 py-3 text-gray-600">{deal.company || '-'}</td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(deal.value)}</td>
+                                        <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">{deal.name}</td>
+                                            <td className="hidden md:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">{deal.company || '-'}</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</td>
                                             <td className="whitespace-nowrap px-4 py-3 text-center">
                                                 <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stage.bgColor} ${stage.color.replace('bg-', 'text-')}`}>
-                                                    {stage.name}
+                                                    {getStageLabel(stage.id)}
                                                 </span>
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-center">{deal.probability}%</td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
+                                            <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center text-gray-600 dark:text-gray-400">{deal.probability}%</td>
+                                            <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
                                                 {formatCurrency(deal.value * deal.probability / 100)}
                                             </td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-gray-500">{deal.assignedTo || '-'}</td>
+                                            <td className="hidden md:table-cell whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{deal.assignedTo || '-'}</td>
                                         </tr>
                                     ))
                                 )}
@@ -239,24 +243,24 @@ export default function PipelinePage() {
             )}
 
             {/* Summary */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <p className="text-sm text-gray-500">Total Pipeline Value</p>
-                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue)}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('crm.pipeline.totalPipelineValue')}</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue)}</p>
                     </div>
                     <div>
-                        <p className="text-sm text-gray-500">Weighted Pipeline</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('crm.pipeline.weightedPipeline')}</p>
                         <p className="text-2xl font-bold text-blue-600">{formatCurrency(weightedValue)}</p>
                     </div>
                     <div>
-                        <p className="text-sm text-gray-500">Avg Deal Size</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('crm.pipeline.avgDealSize')}</p>
                         <p className="text-2xl font-bold text-green-600">
                             {formatCurrency(totalDeals > 0 ? totalValue / totalDeals : 0)}
                         </p>
                     </div>
                     <div>
-                        <p className="text-sm text-gray-500">Win Rate</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('crm.pipeline.winRate')}</p>
                         <p className="text-2xl font-bold text-purple-600">{winRate}%</p>
                     </div>
                 </div>
@@ -265,13 +269,13 @@ export default function PipelinePage() {
     )
 }
 
-function BoardColumn({ stage }: { stage: Stage }) {
+function BoardColumn({ stage, getStageLabel, t }: { stage: Stage; getStageLabel: (id: string) => string; t: (key: string) => string }) {
     return (
         <div className={`rounded-xl border border-gray-200 ${stage.bgColor} p-4`}>
             <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className={`h-3 w-3 rounded-full ${stage.color}`} />
-                    <h3 className="font-semibold text-gray-900">{stage.name}</h3>
+                    <h3 className="font-semibold text-gray-900">{getStageLabel(stage.id)}</h3>
                 </div>
                 <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
                     {stage.deals.length}
@@ -280,7 +284,7 @@ function BoardColumn({ stage }: { stage: Stage }) {
             <div className="space-y-3">
                 {stage.deals.length === 0 ? (
                     <p className="rounded-lg bg-white/50 p-4 text-center text-sm text-gray-500">
-                        Tidak ada deal
+                        {t('crm.pipeline.noDeals')}
                     </p>
                 ) : (
                     stage.deals.map((deal) => (
@@ -309,8 +313,8 @@ function BoardColumn({ stage }: { stage: Stage }) {
                                 </div>
                             </div>
                             <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                                <span>{deal.assignedTo || 'Unassigned'}</span>
-                                <span>Weighted: {formatCurrency(deal.value * deal.probability / 100)}</span>
+                                <span>{deal.assignedTo || t('crm.pipeline.unassigned')}</span>
+                                <span>{t('crm.pipeline.weighted')} {formatCurrency(deal.value * deal.probability / 100)}</span>
                             </div>
                         </div>
                     ))

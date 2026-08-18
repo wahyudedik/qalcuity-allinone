@@ -17,6 +17,7 @@ import {
     type LucideIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 interface DashboardStats {
     revenue: { current: number; previous: number; change: number; currency: string }
@@ -66,6 +67,7 @@ export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const { t } = useTranslation()
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -76,10 +78,10 @@ export default function DashboardPage() {
                 if (data.success) {
                     setStats(data.data)
                 } else {
-                    setError('Gagal memuat data dashboard')
+                    setError(t('dashboard.failedToLoad'))
                 }
             } catch {
-                setError('Gagal memuat data dashboard')
+                setError(t('dashboard.failedToLoad'))
             } finally {
                 setLoading(false)
             }
@@ -111,12 +113,12 @@ export default function DashboardPage() {
         return (
             <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
-                    <p className="text-lg text-gray-600">{error || 'Data tidak tersedia'}</p>
+                    <p className="text-lg text-gray-600">{error || t('common.noData')}</p>
                     <button
                         onClick={() => window.location.reload()}
                         className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
                     >
-                        Muat Ulang
+                        {t('common.refresh') || 'Muat Ulang'}
                     </button>
                 </div>
             </div>
@@ -131,17 +133,17 @@ export default function DashboardPage() {
     }
 
     const statValues = [
-        { title: 'Total Revenue', value: formatCurrency(stats.revenue.current), change: stats.revenue.change },
-        { title: 'Total Orders', value: stats.orders.current.toString(), change: stats.orders.change },
-        { title: 'Customers', value: stats.customers.current.toString(), change: stats.customers.change },
-        { title: 'Products', value: stats.products.current.toString(), change: stats.products.change },
+        { title: t('dashboard.totalRevenue'), value: formatCurrency(stats.revenue.current), change: stats.revenue.change },
+        { title: t('dashboard.totalOrders'), value: stats.orders.current.toString(), change: stats.orders.change },
+        { title: t('dashboard.customers'), value: stats.customers.current.toString(), change: stats.customers.change },
+        { title: t('dashboard.products'), value: stats.products.current.toString(), change: stats.products.change },
     ]
 
     const quickActions = [
-        { href: '/dashboard/finance/invoices', iconKey: 'invoice', label: 'Buat Invoice' },
-        { href: '/dashboard/crm/leads', iconKey: 'lead', label: 'Kelola Lead' },
-        { href: '/dashboard/inventory/products', iconKey: 'product', label: 'Kelola Produk' },
-        { href: '/dashboard/finance/payments', iconKey: 'payment', label: 'Catat Pembayaran' },
+        { href: '/dashboard/finance/invoices', iconKey: 'invoice', label: t('dashboard.createInvoice') },
+        { href: '/dashboard/crm/leads', iconKey: 'lead', label: t('dashboard.manageLeads') },
+        { href: '/dashboard/inventory/products', iconKey: 'product', label: t('dashboard.manageProducts') },
+        { href: '/dashboard/finance/payments', iconKey: 'payment', label: t('dashboard.recordPayment') },
     ]
 
     return (
@@ -150,7 +152,7 @@ export default function DashboardPage() {
             <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Selamat datang kembali! Berikut ringkasan bisnis Anda hari ini.
+                    {t('dashboard.welcome')}
                 </p>
             </div>
 
@@ -176,7 +178,7 @@ export default function DashboardPage() {
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                     <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                         <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                        Alerts
+                        {t('dashboard.alerts')}
                     </h3>
                     <div className="mt-4 space-y-3">
                         {stats.alerts.map((alert) => {
@@ -202,7 +204,7 @@ export default function DashboardPage() {
                                             href={moduleLinks[alert.moduleId]}
                                             className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                         >
-                                            Lihat →
+                                            {t('common.view')} →
                                         </Link>
                                     )}
                                 </div>
@@ -216,8 +218,8 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Revenue Chart */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Revenue</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">6 bulan terakhir</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.revenue')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.lastSixMonths')}</p>
                     <div className="mt-4 flex h-48 items-end gap-2">
                         {[40, 65, 45, 80, 60, 95].map((height, i) => (
                             <div key={i} className="flex flex-1 flex-col items-center gap-1">
@@ -235,8 +237,8 @@ export default function DashboardPage() {
 
                 {/* Recent Activity */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Activity</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Aktivitas terbaru</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.recentActivity')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.latestActivity')}</p>
                     <div className="mt-4 space-y-4">
                         {stats.recentActivities.length > 0 ? (
                             stats.recentActivities.map((activity) => (
@@ -262,7 +264,7 @@ export default function DashboardPage() {
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada aktivitas terbaru</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.noActivity')}</p>
                         )}
                     </div>
                 </div>
@@ -270,7 +272,7 @@ export default function DashboardPage() {
 
             {/* Quick Actions */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Actions</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.quickActions')}</h3>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {quickActions.map((action) => {
                         const Icon = quickActionIcons[action.iconKey]

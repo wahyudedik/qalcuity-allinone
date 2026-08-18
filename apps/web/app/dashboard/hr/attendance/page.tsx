@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
+import { useTranslation } from '@/lib/i18n'
+import {
+    Search,
+    Download,
+    ClipboardList,
+    Calendar,
+    BarChart3,
+    AlertTriangle,
+    Clock,
+    UserX,
+    Users,
+} from 'lucide-react'
 
 interface AttendanceRecord {
     id: string
@@ -14,6 +26,7 @@ interface AttendanceRecord {
 }
 
 export default function AttendancePage() {
+    const { t } = useTranslation()
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
     const [historicalData, setHistoricalData] = useState<AttendanceRecord[]>([])
     const [loading, setLoading] = useState(true)
@@ -23,11 +36,11 @@ export default function AttendancePage() {
     const [searchQuery, setSearchQuery] = useState('')
 
     const statusConfig = {
-        present: { label: 'Hadir', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-        late: { label: 'Terlambat', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-        absent: { label: 'Tidak Hadir', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
-        leave: { label: 'Cuti', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-        'wfH': { label: 'WFH', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
+        present: { label: t('hr.attendance.present') || 'Hadir', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
+        late: { label: t('hr.attendance.late') || 'Terlambat', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
+        absent: { label: t('hr.attendance.absent') || 'Tidak Hadir', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+        leave: { label: t('hr.attendance.leave') || 'Cuti', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
+        'wfH': { label: t('hr.attendance.wfh') || 'WFH', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
     }
 
     const fetchAttendance = async () => {
@@ -93,7 +106,7 @@ export default function AttendancePage() {
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12">
-                <span className="text-4xl">⚠️</span>
+                <AlertTriangle className="h-10 w-10 text-yellow-500" />
                 <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
                 <button onClick={fetchAttendance} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                     Coba Lagi
@@ -107,8 +120,8 @@ export default function AttendancePage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Absensi</h1>
-                    <p className="text-gray-500">Monitor kehadiran karyawan harian</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('hr.attendance.title') || 'Absensi'}</h1>
+                    <p className="text-gray-500">{t('hr.attendance.subtitle') || 'Monitor kehadiran karyawan harian'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <input
@@ -118,8 +131,8 @@ export default function AttendancePage() {
                         className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                     />
                     <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        <span>⬇</span>
-                        Export
+                        <Download className="h-4 w-4" />
+                        {t('hr.attendance.export') || 'Export'}
                     </button>
                 </div>
             </div>
@@ -128,23 +141,23 @@ export default function AttendancePage() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <div className="text-2xl font-bold text-gray-900">{attendanceData.length}</div>
-                    <div className="text-sm text-gray-500">Total Karyawan</div>
+                    <div className="text-sm text-gray-500">{t('hr.attendance.totalEmployees') || 'Total Karyawan'}</div>
                 </div>
                 <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                     <div className="text-2xl font-bold text-green-600">{presentCount}</div>
-                    <div className="text-sm text-green-600">Hadir / WFH</div>
+                    <div className="text-sm text-green-600">{t('hr.attendance.presentWFH') || 'Hadir / WFH'}</div>
                 </div>
                 <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
                     <div className="text-2xl font-bold text-yellow-600">{lateCount}</div>
-                    <div className="text-sm text-yellow-600">Terlambat</div>
+                    <div className="text-sm text-yellow-600">{t('hr.attendance.late') || 'Terlambat'}</div>
                 </div>
                 <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                     <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-                    <div className="text-sm text-red-600">Tidak Hadir</div>
+                    <div className="text-sm text-red-600">{t('hr.attendance.absent') || 'Tidak Hadir'}</div>
                 </div>
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                     <div className="text-2xl font-bold text-blue-600">{leaveCount}</div>
-                    <div className="text-sm text-blue-600">Cuti</div>
+                    <div className="text-sm text-blue-600">{t('hr.attendance.leave') || 'Cuti'}</div>
                 </div>
             </div>
 
@@ -156,24 +169,30 @@ export default function AttendancePage() {
                         className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === 'today' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                             }`}
                     >
-                        📋 Hari Ini
+                        <span className="flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4" />
+                            {t('hr.attendance.today') || 'Hari Ini'}
+                        </span>
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
                         className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === 'history' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                             }`}
                     >
-                        📅 Riwayat
+                        <span className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            {t('hr.attendance.history') || 'Riwayat'}
+                        </span>
                     </button>
                 </nav>
             </div>
 
             {/* Search */}
             <div className="relative max-w-md">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                     type="text"
-                    placeholder="Cari nama karyawan..."
+                    placeholder={t('hr.attendance.searchPlaceholder') || 'Cari nama karyawan...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -187,12 +206,12 @@ export default function AttendancePage() {
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Karyawan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jam Masuk</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jam Keluar</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jam Kerja</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.action') || 'Aksi'}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -239,11 +258,11 @@ export default function AttendancePage() {
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Karyawan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jam Masuk</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jam Keluar</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jam Kerja</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -274,8 +293,11 @@ export default function AttendancePage() {
 
             {/* Summary Card */}
             <div className="rounded-xl border border-gray-200 bg-white p-6">
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">📊 Ringkasan Kehadiran Minggu Ini</h3>
-                <div className="grid grid-cols-5 gap-4">
+                <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    Ringkasan Kehadiran Minggu Ini
+                </h3>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
                     <div className="text-center">
                         <div className="text-3xl font-bold text-green-600">92%</div>
                         <div className="text-sm text-gray-500">Tingkat Kehadiran</div>

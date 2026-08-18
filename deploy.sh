@@ -256,16 +256,16 @@ setup_pm2() {
     fi
 
     # Buat ecosystem file
-    cat > "$APP_DIR/ecosystem.config.js" << 'EOF'
+    cat > "$APP_DIR/ecosystem.config.js" << EOF
 module.exports = {
   apps: [{
-    name: 'qalcuity-web',
+    name: '$PM2_APP_NAME',
     cwd: './apps/web',
     script: 'node_modules/.bin/next',
-    args: 'start -p 3000',
+    args: 'start -p $APP_PORT',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: $APP_PORT
     },
     instances: 'max',
     exec_mode: 'cluster',

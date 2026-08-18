@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus, DollarSign, Clock, XCircle, BarChart3 } from 'lucide-react'
 
 type Payment = {
     id: string
@@ -20,6 +22,7 @@ type Payment = {
 }
 
 export default function PaymentsPage() {
+    const { t } = useTranslation()
     const [payments, setPayments] = useState<Payment[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -39,10 +42,10 @@ export default function PaymentsPage() {
             if (data.success) {
                 setPayments(data.data)
             } else {
-                setError('Gagal memuat data pembayaran')
+                setError(t('finance.payments.error'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('finance.payments.errorGeneric'))
         } finally {
             setLoading(false)
         }
@@ -62,20 +65,20 @@ export default function PaymentsPage() {
     const failedAmount = payments.filter((p) => p.status === 'failed').reduce((sum, p) => sum + p.amount, 0)
 
     const stats = [
-        { label: 'Total Pembayaran', value: formatCurrency(totalIncome), icon: '💰', color: 'text-green-600' },
-        { label: 'Menunggu Konfirmasi', value: formatCurrency(pendingAmount), icon: '⏳', color: 'text-yellow-600' },
-        { label: 'Gagal', value: formatCurrency(failedAmount), icon: '❌', color: 'text-red-600' },
-        { label: 'Total Transaksi', value: payments.length.toString(), icon: '📊', color: 'text-blue-600' },
+        { label: t('finance.payments.stats.totalPayment'), value: formatCurrency(totalIncome), icon: <DollarSign className="h-6 w-6" />, color: 'text-green-600' },
+        { label: t('finance.payments.stats.pendingConfirmation'), value: formatCurrency(pendingAmount), icon: <Clock className="h-6 w-6" />, color: 'text-yellow-600' },
+        { label: t('finance.payments.stats.failed'), value: formatCurrency(failedAmount), icon: <XCircle className="h-6 w-6" />, color: 'text-red-600' },
+        { label: t('finance.payments.stats.totalTransactions'), value: payments.length.toString(), icon: <BarChart3 className="h-6 w-6" />, color: 'text-blue-600' },
     ]
 
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
-                return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-green-100 text-green-700">Selesai</span>
+                return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-green-100 text-green-700">{t('finance.payments.statusCompleted')}</span>
             case 'pending':
-                return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700">Menunggu</span>
+                return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700">{t('finance.payments.statusPending')}</span>
             case 'failed':
-                return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-red-100 text-red-700">Gagal</span>
+                return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-red-100 text-red-700">{t('finance.payments.statusFailed')}</span>
             default:
                 return <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-700">{status}</span>
         }
@@ -83,10 +86,10 @@ export default function PaymentsPage() {
 
     const getMethodLabel = (method: string) => {
         const methods: Record<string, string> = {
-            bank_transfer: 'Transfer Bank',
-            credit_card: 'Kartu Kredit',
-            ewallet: 'E-Wallet',
-            cash: 'Tunai',
+            bank_transfer: t('finance.payments.methods.bank_transfer'),
+            credit_card: t('finance.payments.methods.credit_card'),
+            ewallet: t('finance.payments.methods.ewallet'),
+            cash: t('finance.payments.methods.cash'),
         }
         return methods[method] || method
     }
@@ -116,7 +119,7 @@ export default function PaymentsPage() {
                         onClick={fetchPayments}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('finance.payments.retry')}
                     </button>
                 </div>
             </div>
@@ -128,14 +131,12 @@ export default function PaymentsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Pembayaran</h1>
-                    <p className="text-gray-500">Kelola semua transaksi pembayaran</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.payments.title')}</h1>
+                    <p className="text-gray-500">{t('finance.payments.subtitle')}</p>
                 </div>
                 <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Catat Pembayaran
+                    <Plus className="h-4 w-4" />
+                    {t('finance.payments.recordPayment')}
                 </button>
             </div>
 
@@ -144,7 +145,7 @@ export default function PaymentsPage() {
                 {stats.map((stat) => (
                     <div key={stat.label} className="rounded-xl border border-gray-200 bg-white p-4">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">{stat.icon}</span>
+                            <span className={stat.color}>{stat.icon}</span>
                             <div>
                                 <p className="text-sm text-gray-500">{stat.label}</p>
                                 <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -158,12 +159,10 @@ export default function PaymentsPage() {
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
                     <div className="relative">
-                        <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari pembayaran..."
+                            placeholder={t('finance.payments.searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
@@ -175,19 +174,19 @@ export default function PaymentsPage() {
                     onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Tipe</option>
-                    <option value="income">Pemasukan</option>
-                    <option value="expense">Pengeluaran</option>
+                    <option value="all">{t('finance.payments.filter.allTypes')}</option>
+                    <option value="income">{t('finance.payments.filter.income')}</option>
+                    <option value="expense">{t('finance.payments.filter.expense')}</option>
                 </select>
                 <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value as 'all' | 'completed' | 'pending' | 'failed')}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="completed">Selesai</option>
-                    <option value="pending">Menunggu</option>
-                    <option value="failed">Gagal</option>
+                    <option value="all">{t('finance.payments.filter.allStatus')}</option>
+                    <option value="completed">{t('finance.payments.filter.completed')}</option>
+                    <option value="pending">{t('finance.payments.filter.pending')}</option>
+                    <option value="failed">{t('finance.payments.filter.failed')}</option>
                 </select>
             </div>
 
@@ -197,21 +196,21 @@ export default function PaymentsPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-500">Nomor</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Tanggal</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Kontak</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Metode</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Referensi</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Invoice</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-500">Jumlah</th>
-                                <th className="px-4 py-3 text-center font-medium text-gray-500">Status</th>
+                                <th className="px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.number')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.date')}</th>
+                                <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.contact')}</th>
+                                <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.method')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.reference')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.invoice')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-500">{t('finance.payments.table.amount')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500">{t('finance.payments.table.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredPayments.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
-                                        Tidak ada pembayaran ditemukan
+                                        {t('finance.payments.empty')}
                                     </td>
                                 </tr>
                             ) : (
@@ -222,15 +221,15 @@ export default function PaymentsPage() {
                                                 {payment.paymentNumber}
                                             </Link>
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3">{formatDate(payment.date)}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3">{formatDate(payment.date)}</td>
+                                        <td className="hidden md:table-cell px-4 py-3">
                                             <div>
                                                 <div className="font-medium">{payment.customerName}</div>
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3">{getMethodLabel(payment.method)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{payment.reference}</td>
-                                        <td className="whitespace-nowrap px-4 py-3">
+                                        <td className="hidden md:table-cell whitespace-nowrap px-4 py-3">{getMethodLabel(payment.method)}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 font-mono text-xs">{payment.reference}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3">
                                             <Link href={`/dashboard/finance/invoices/${payment.invoiceId}`} className="text-blue-600 hover:underline">
                                                 {payment.invoiceNumber}
                                             </Link>

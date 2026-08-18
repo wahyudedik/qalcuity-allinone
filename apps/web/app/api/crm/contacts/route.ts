@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 
 export async function GET(request: Request) {
     try {
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId: authTenantId } = await requireAuth();
         const body = await request.json();
 
         if (!body.name) {
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
 
         const contact = await prisma.contact.create({
             data: {
-                tenantId: auth.tenantId,
+                tenantId: authTenantId,
                 name: body.name,
                 email: body.email || null,
                 phone: body.phone || null,
@@ -109,6 +110,8 @@ export async function POST(request: Request) {
             },
         });
 
+        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Contact', entityId: contact.id, newValues: contact as unknown as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: contact }, { status: 201 });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
@@ -121,7 +124,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId: authTenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -133,7 +136,7 @@ export async function PUT(request: Request) {
         }
 
         const existing = await prisma.contact.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId: authTenantId },
         });
 
         if (!existing) {
@@ -160,6 +163,8 @@ export async function PUT(request: Request) {
             },
         });
 
+        void logAudit({ userId, tenantId: authTenantId, action: 'UPDATE', entity: 'Contact', entityId: id, newValues: updateData as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: contact });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
@@ -172,7 +177,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId: authTenantId } = await requireAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -184,7 +189,7 @@ export async function DELETE(request: Request) {
         }
 
         const existing = await prisma.contact.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId: authTenantId },
         });
 
         if (!existing) {
@@ -195,6 +200,8 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.contact.delete({ where: { id } });
+
+        void logAudit({ userId, tenantId: authTenantId, action: 'DELETE', entity: 'Contact', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

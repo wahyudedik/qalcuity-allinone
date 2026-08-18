@@ -33,7 +33,7 @@ export default function InventoryLayout({ children }: { children: React.ReactNod
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-1 overflow-x-auto" aria-label="Inventory tabs">
                     {inventoryTabs.map((tab) => {
-                        const isActive = pathname === tab.href || (tab.href !== '/dashboard/inventory' && pathname.startsWith(tab.href))
+                        const isActive = pathname === tab.href || (tab.href !== '/dashboard/inventory' && pathname?.startsWith(tab.href))
                         const Icon = tab.icon
                         return (
                             <Link

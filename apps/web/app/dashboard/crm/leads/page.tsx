@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
+import { Download, Plus, Search } from 'lucide-react'
 
 type Lead = {
     id: string
@@ -41,6 +43,7 @@ const sourceColors: Record<string, string> = {
 }
 
 export default function LeadsPage() {
+    const { t } = useTranslation()
     const [leads, setLeads] = useState<Lead[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -119,17 +122,19 @@ export default function LeadsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-                    <p className="text-gray-500">Kelola prospek dan lead masuk</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('crm.leads.title')}</h1>
+                    <p className="text-gray-500">{t('crm.leads.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
                     <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        📥 Import
+                        <Download className="h-4 w-4" />
+                        {t('crm.leads.import')}
                     </button>
                     <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        ＋ Lead Baru
+                        <Plus className="h-4 w-4" />
+                        {t('crm.leads.addLead')}
                     </button>
                 </div>
             </div>
@@ -161,13 +166,16 @@ export default function LeadsPage() {
             {/* Filters */}
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
-                    <input
-                        type="text"
-                        placeholder="Cari berdasarkan nama atau perusahaan..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder={t('crm.leads.searchPlaceholder')}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {['all', 'new', 'contacted', 'qualified', 'unqualified'].map((status) => (
@@ -191,20 +199,20 @@ export default function LeadsPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-500">Nama</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Perusahaan</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Email</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Telepon</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Sumber</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-500">Nilai</th>
-                                <th className="px-4 py-3 text-center font-medium text-gray-500">Status</th>
+                                <th className="px-4 py-3 font-medium text-gray-500">{t('crm.leads.table.name')}</th>
+                                <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.leads.table.company')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.leads.table.email')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.leads.table.phone')}</th>
+                                <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.leads.table.source')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-500">{t('crm.leads.table.value')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500">{t('crm.leads.table.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                                        Tidak ada lead ditemukan
+                                        {t('crm.leads.empty')}
                                     </td>
                                 </tr>
                             ) : (
@@ -215,10 +223,10 @@ export default function LeadsPage() {
                                                 {lead.name}
                                             </Link>
                                         </td>
-                                        <td className="px-4 py-3">{lead.company}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-gray-500">{lead.email}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-gray-500">{lead.phone}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="hidden md:table-cell px-4 py-3">{lead.company}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{lead.email}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{lead.phone}</td>
+                                        <td className="hidden md:table-cell px-4 py-3">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${sourceColors[lead.source] || 'bg-gray-50 text-gray-700'}`}>
                                                 {lead.source}
                                             </span>

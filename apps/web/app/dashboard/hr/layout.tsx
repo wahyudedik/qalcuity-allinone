@@ -33,7 +33,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-1 overflow-x-auto" aria-label="HR tabs">
                     {hrTabs.map((tab) => {
-                        const isActive = pathname === tab.href || (tab.href !== '/dashboard/hr' && pathname.startsWith(tab.href))
+                        const isActive = pathname === tab.href || (tab.href !== '/dashboard/hr' && pathname?.startsWith(tab.href))
                         const Icon = tab.icon
                         return (
                             <Link

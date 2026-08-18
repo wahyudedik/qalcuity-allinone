@@ -858,13 +858,18 @@ Data Collection → Preprocessing → Training → Validation → Deployment →
 
 ---
 
-**Last Updated:** August 6, 2026
+**Last Updated:** August 18, 2026
 **Maintainer:** Qalcuity AI Team
 
 ### Changelog
 
 | Date | Change | Impact |
 |------|--------|--------|
+| 2026-08-18 | i18n support (Bahasa Indonesia + English) | AI agent responses can be localized per user preference |
+| 2026-08-18 | Lucide icons across all modules | Consistent visual language for AI agent UI components |
+| 2026-08-18 | Responsive tables (CRM + Finance) | AI agent dashboards adapt to mobile/tablet/desktop |
+| 2026-08-18 | All modules i18n'd (Finance, CRM, HR, Inventory) | AI agents have full localized context for all business data |
+| 2026-08-18 | Deploy scripts updated (health check, configurable port) | AI agent uptime monitoring via /api/health endpoint |
 | 2026-08-06 | Dashboard stats API connected to real DB queries | AI agents can now access real-time business data |
 | 2026-08-06 | Audit trail connected to real AuditLog model | Anomaly detection has real audit data |
 | 2026-08-06 | Global search (Ctrl+K) across all modules | AI agents can leverage search context |

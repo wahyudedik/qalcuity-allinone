@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 
 export async function GET(request: Request) {
     try {
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId, userId } = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const body = await request.json();
 
         if (!body.amount || !body.method) {
@@ -163,6 +164,8 @@ export async function POST(request: Request) {
             return newPayment;
         });
 
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Payment', entityId: payment.id, newValues: payment as unknown as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: payment }, { status: 201 });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -175,7 +178,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -251,6 +254,8 @@ export async function PUT(request: Request) {
             return updated;
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Payment', entityId: id, newValues: data as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: payment });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -263,7 +268,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -283,6 +288,8 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.payment.delete({ where: { id } });
+
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Payment', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

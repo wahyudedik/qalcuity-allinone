@@ -3,6 +3,18 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
+import { useTranslation } from '@/lib/i18n'
+import {
+    Search,
+    Plus,
+    Building2,
+    Mail,
+    Phone,
+    User,
+    LayoutGrid,
+    List,
+    AlertTriangle,
+} from 'lucide-react'
 
 interface Employee {
     id: string
@@ -17,6 +29,7 @@ interface Employee {
 }
 
 export default function EmployeesPage() {
+    const { t } = useTranslation()
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -50,7 +63,7 @@ export default function EmployeesPage() {
                 setEmployees(mapped)
             }
         } catch {
-            setError('Gagal memuat data karyawan')
+            setError(t('hr.employees.retry') || 'Gagal memuat data karyawan')
         } finally {
             setLoading(false)
         }
@@ -76,9 +89,9 @@ export default function EmployeesPage() {
     }
 
     const statusLabels = {
-        'active': 'Aktif',
-        'on-leave': 'Cuti',
-        'inactive': 'Tidak Aktif',
+        'active': t('hr.employees.active') || 'Aktif',
+        'on-leave': t('hr.employees.onLeave') || 'Cuti',
+        'inactive': t('hr.employees.inactive') || 'Tidak Aktif',
     }
 
     const getInitials = (name: string) => {
@@ -116,10 +129,10 @@ export default function EmployeesPage() {
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12">
-                <span className="text-4xl">⚠️</span>
+                <AlertTriangle className="h-10 w-10 text-yellow-500" />
                 <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
                 <button onClick={fetchEmployees} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    Coba Lagi
+                    {t('hr.employees.retry') || 'Coba Lagi'}
                 </button>
             </div>
         )
@@ -130,15 +143,15 @@ export default function EmployeesPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Karyawan</h1>
-                    <p className="text-gray-500">Kelola data karyawan dan informasi personal</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('hr.employees.title') || 'Karyawan'}</h1>
+                    <p className="text-gray-500">{t('hr.employees.subtitle') || 'Kelola data karyawan dan informasi personal'}</p>
                 </div>
                 <Link
                     href="/dashboard/hr/employees/new"
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                    <span>＋</span>
-                    Tambah Karyawan
+                    <Plus className="h-4 w-4" />
+                    {t('hr.employees.addEmployee') || 'Tambah Karyawan'}
                 </Link>
             </div>
 
@@ -146,35 +159,35 @@ export default function EmployeesPage() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <div className="text-2xl font-bold text-gray-900">{employees.length}</div>
-                    <div className="text-sm text-gray-500">Total Karyawan</div>
+                    <div className="text-sm text-gray-500">{t('hr.employees.totalEmployees') || 'Total Karyawan'}</div>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <div className="text-2xl font-bold text-green-600">
                         {employees.filter(e => e.status === 'active').length}
                     </div>
-                    <div className="text-sm text-gray-500">Aktif</div>
+                    <div className="text-sm text-gray-500">{t('hr.employees.active') || 'Aktif'}</div>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <div className="text-2xl font-bold text-yellow-600">
                         {employees.filter(e => e.status === 'on-leave').length}
                     </div>
-                    <div className="text-sm text-gray-500">Sedang Cuti</div>
+                    <div className="text-sm text-gray-500">{t('hr.employees.onLeave') || 'Sedang Cuti'}</div>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <div className="text-2xl font-bold text-gray-600">
                         {employees.filter(e => e.status === 'inactive').length}
                     </div>
-                    <div className="text-sm text-gray-500">Tidak Aktif</div>
+                    <div className="text-sm text-gray-500">{t('hr.employees.inactive') || 'Tidak Aktif'}</div>
                 </div>
             </div>
 
             {/* Filters */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center">
                 <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari nama, posisi, atau email..."
+                        placeholder={t('hr.employees.searchPlaceholder') || 'Cari nama, posisi, atau email...'}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -186,7 +199,7 @@ export default function EmployeesPage() {
                     className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                 >
                     {departments.map(dept => (
-                        <option key={dept} value={dept}>{dept === 'All' ? 'Semua Departemen' : dept}</option>
+                        <option key={dept} value={dept}>{dept === 'All' ? (t('hr.employees.allDepartments') || 'Semua Departemen') : dept}</option>
                     ))}
                 </select>
                 <select
@@ -194,23 +207,25 @@ export default function EmployeesPage() {
                     onChange={(e) => setSelectedStatus(e.target.value)}
                     className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="All">Semua Status</option>
-                    <option value="active">Aktif</option>
-                    <option value="on-leave">Cuti</option>
-                    <option value="inactive">Tidak Aktif</option>
+                    <option value="All">{t('hr.employees.allStatuses') || 'Semua Status'}</option>
+                    <option value="active">{t('hr.employees.active') || 'Aktif'}</option>
+                    <option value="on-leave">{t('hr.employees.onLeave') || 'Cuti'}</option>
+                    <option value="inactive">{t('hr.employees.inactive') || 'Tidak Aktif'}</option>
                 </select>
                 <div className="flex rounded-lg border border-gray-300">
                     <button
                         onClick={() => setViewMode('grid')}
                         className={`px-3 py-2 text-sm ${viewMode === 'grid' ? 'bg-gray-100' : ''}`}
+                        title={t('hr.employees.gridView') || 'Tampilan Grid'}
                     >
-                        ⊞
+                        <LayoutGrid className="h-4 w-4" />
                     </button>
                     <button
                         onClick={() => setViewMode('list')}
                         className={`px-3 py-2 text-sm ${viewMode === 'list' ? 'bg-gray-100' : ''}`}
+                        title={t('hr.employees.listView') || 'Tampilan Daftar'}
                     >
-                        ☰
+                        <List className="h-4 w-4" />
                     </button>
                 </div>
             </div>
@@ -234,27 +249,27 @@ export default function EmployeesPage() {
                             </div>
                             <div className="mt-4 space-y-2 text-sm">
                                 <div className="flex items-center gap-2 text-gray-600">
-                                    <span>🏢</span>
+                                    <Building2 className="h-4 w-4 flex-shrink-0" />
                                     <span>{emp.department}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-gray-600">
-                                    <span>📧</span>
+                                    <Mail className="h-4 w-4 flex-shrink-0" />
                                     <span className="truncate">{emp.email}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-gray-600">
-                                    <span>📞</span>
+                                    <Phone className="h-4 w-4 flex-shrink-0" />
                                     <span>{emp.phone}</span>
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
                                 <span className="text-xs text-gray-500">
-                                    Bergabung: {new Date(emp.joinDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {t('hr.employees.joined') || 'Bergabung'}: {new Date(emp.joinDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </span>
                                 <Link
                                     href={`/dashboard/hr/employees/${emp.id}`}
                                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                 >
-                                    Detail →
+                                    {t('hr.employees.detail') || 'Detail'} →
                                 </Link>
                             </div>
                         </div>
@@ -267,11 +282,11 @@ export default function EmployeesPage() {
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Karyawan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posisi</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Departemen</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bergabung</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.position') || 'Posisi'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.department') || 'Departemen'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.status') || 'Status'}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.hireDate') || 'Bergabung'}</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
                                 </tr>
                             </thead>
@@ -304,7 +319,7 @@ export default function EmployeesPage() {
                                                 href={`/dashboard/hr/employees/${emp.id}`}
                                                 className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                             >
-                                                Lihat
+                                                {t('hr.employees.view') || 'Lihat'}
                                             </Link>
                                         </td>
                                     </tr>
@@ -317,9 +332,9 @@ export default function EmployeesPage() {
 
             {filteredEmployees.length === 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-                    <span className="text-4xl">👤</span>
-                    <h3 className="mt-4 text-lg font-medium text-gray-900">Tidak ada karyawan ditemukan</h3>
-                    <p className="mt-2 text-gray-500">Coba ubah filter atau kata kunci pencarian</p>
+                    <User className="mx-auto h-10 w-10 text-gray-400" />
+                    <h3 className="mt-4 text-lg font-medium text-gray-900">{t('hr.employees.emptyState') || 'Tidak ada karyawan ditemukan'}</h3>
+                    <p className="mt-2 text-gray-500">{t('hr.employees.emptyHint') || 'Coba ubah filter atau kata kunci pencarian'}</p>
                 </div>
             )}
         </div>

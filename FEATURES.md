@@ -607,22 +607,29 @@ Enterprise-grade security untuk data protection.
 ## 📊 Feature Priority Matrix
 
 ### MVP (Phase 1 - 2-3 bulan)
-- [x] Core Platform (Dashboard, Auth, Audit Trail)
-- [x] Finance & Accounting (Basic)
-- [x] Sales & CRM (Basic)
-- [x] Inventory (Basic)
-- [x] Mobile App (Basic)
-- [x] Coretax Integration
+- [x] Core Platform (Dashboard, Auth, Audit Trail, Dark Mode, Global Search)
+- [x] Finance & Accounting (Invoices, Quotations, Payments, Purchase Orders, Chart of Accounts)
+- [x] Sales & CRM (Leads, Contacts, Deals, Pipeline Board/List)
+- [x] Inventory (Products, Suppliers, Categories, Stock)
+- [x] HR (Employees, Attendance, Leaves, Payroll)
+- [x] Settings (Profile, Company, Team, Notifications, Security, Billing)
+- [x] i18n Support (Bahasa Indonesia + English)
+- [x] Lucide Icons (consistent icon system across all modules)
+- [x] Responsive Tables (mobile-friendly column hiding)
+- [x] Audit Trail (all mutations logged)
+- [x] Deploy Scripts (PM2, health check, configurable port)
+- [x] Mobile App (Basic screens)
+- [ ] Coretax Integration
 
 ### Phase 2 (4-6 bulan)
-- [ ] HR & People Ops
 - [ ] Field Service Module
-- [ ] Advanced Reporting
-- [ ] AI Basic Features
+- [ ] Advanced Reporting (Custom report builder, pivot table)
+- [ ] AI Basic Features (NLP query, document extraction)
 - [ ] Omnichannel Support
+- [ ] Bank Reconciliation (auto)
 
 ### Phase 3 (7-12 bulan)
-- [ ] Full AI Agent
+- [ ] Full AI Agent Suite
 - [ ] Multi-entity Advanced
 - [ ] Marketplace Integration
 - [ ] White-label
@@ -645,6 +652,18 @@ Enterprise-grade security untuk data protection.
 
 ## 📝 Changelog
 
+### v1.1.0 (August 18, 2026)
+- ✅ i18n support: Bahasa Indonesia + English (custom lightweight i18n with React Context)
+- ✅ Lucide React icons: consistent icon system across all 40+ UI files
+- ✅ Responsive tables: mobile-friendly column hiding (CRM + Finance modules)
+- ✅ HR module: full i18n + Lucide (employees, attendance, leaves, payroll)
+- ✅ Inventory module: full i18n + Lucide (products, suppliers, categories, stock)
+- ✅ Finance module: full i18n + Lucide (invoices, payments, quotations, purchase orders)
+- ✅ CRM module: full i18n + Lucide (leads, contacts, deals, pipeline, overview)
+- ✅ Settings pages: profile, company, team, notifications, security, billing
+- ✅ API routes: DB transactions, validation, audit trail on all mutations
+- ✅ Deploy scripts: PM2 health check, configurable port, robust db:push
+
 ### v1.0.0 (August 2026)
 - Initial feature set documentation
 - MVP scope defined
@@ -652,5 +671,5 @@ Enterprise-grade security untuk data protection.
 
 ---
 
-**Last Updated:** August 3, 2026
+**Last Updated:** August 18, 2026
 **Maintainer:** Qalcuity Product Team

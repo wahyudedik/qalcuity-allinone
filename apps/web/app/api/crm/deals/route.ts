@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 
 export async function GET(request: Request) {
     try {
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const body = await request.json();
 
         if (!body.title) {
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
 
         const deal = await prisma.deal.create({
             data: {
-                tenantId: auth.tenantId,
+                tenantId: tenantId,
                 title: body.title,
                 value: body.value || 0,
                 stage: (body.stage || 'DISCOVERY').toUpperCase().replace(' ', '_'),
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
             },
         });
 
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Deal', entityId: deal.id, newValues: { title: deal.title, value: deal.value, stage: deal.stage } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: deal }, { status: 201 });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
@@ -116,7 +118,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -128,7 +130,7 @@ export async function PUT(request: Request) {
         }
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId: tenantId },
         });
 
         if (!existing) {
@@ -152,6 +154,7 @@ export async function PUT(request: Request) {
             },
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: updateData as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: deal });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
@@ -164,7 +167,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -176,7 +179,7 @@ export async function DELETE(request: Request) {
         }
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId: tenantId },
         });
 
         if (!existing) {
@@ -188,6 +191,7 @@ export async function DELETE(request: Request) {
 
         await prisma.deal.delete({ where: { id } });
 
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Deal', entityId: id, oldValues: { title: existing.title, value: existing.value, stage: existing.stage } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';

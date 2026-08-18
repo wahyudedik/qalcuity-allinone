@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { Star, Pencil, FileText, BarChart3 } from 'lucide-react'
 
 interface EmployeeDetail {
     id: string
@@ -200,8 +201,11 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                         <div className="mt-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-500">Rating</span>
-                                <span className="text-lg font-bold text-yellow-500">
-                                    {'⭐'.repeat(Math.round(employee.performance.rating))} {employee.performance.rating}
+                                <span className="flex items-center gap-1 text-lg font-bold text-yellow-500">
+                                    {Array.from({ length: Math.round(employee.performance.rating) }).map((_, i) => (
+                                        <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                    ))}
+                                    <span className="ml-1">{employee.performance.rating}</span>
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
@@ -215,14 +219,17 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">Aksi</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                ✏️ Edit Profil
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                                <Pencil className="h-4 w-4" />
+                                Edit Profil
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📄 Lihat Slip Gaji
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <FileText className="h-4 w-4" />
+                                Lihat Slip Gaji
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📊 Riwayat Kehadiran
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <BarChart3 className="h-4 w-4" />
+                                Riwayat Kehadiran
                             </button>
                         </div>
                     </div>

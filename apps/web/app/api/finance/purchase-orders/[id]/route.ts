@@ -81,11 +81,11 @@ export async function PUT(
         delete updateData.id;
         delete updateData.items;
 
-        if (updateData.status) {
+        if (typeof updateData.status === 'string') {
             updateData.status = updateData.status.toUpperCase();
         }
         if (updateData.expectedDelivery) {
-            updateData.deliveryDate = new Date(updateData.expectedDelivery);
+            updateData.deliveryDate = new Date(String(updateData.expectedDelivery));
             delete updateData.expectedDelivery;
         }
 

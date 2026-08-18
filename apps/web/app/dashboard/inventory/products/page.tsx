@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus, Download, Package, AlertTriangle } from 'lucide-react'
 
 type Product = {
     id: string
@@ -21,6 +23,7 @@ type Product = {
 }
 
 export default function ProductsPage() {
+    const { t } = useTranslation()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -40,10 +43,10 @@ export default function ProductsPage() {
             if (data.success) {
                 setProducts(data.data)
             } else {
-                setError('Gagal memuat data produk')
+                setError(t('inventory.products.error'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('inventory.products.errorHint'))
         } finally {
             setLoading(false)
         }
@@ -88,12 +91,13 @@ export default function ProductsPage() {
         return (
             <div className="p-6">
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-red-500" />
                     <p className="text-red-600">{error}</p>
                     <button
                         onClick={fetchProducts}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('inventory.products.retry')}
                     </button>
                 </div>
             </div>
@@ -104,48 +108,55 @@ export default function ProductsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Produk</h1>
-                    <p className="text-gray-500">{stats.total} produk terdaftar</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('inventory.products.title')}</h1>
+                    <p className="text-gray-500">{stats.total} {t('inventory.products.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">📥 Import</button>
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">＋ Produk Baru</button>
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <Download className="h-4 w-4" />
+                        {t('inventory.products.import')}
+                    </button>
+                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                        <Plus className="h-4 w-4" />
+                        {t('inventory.products.addProduct')}
+                    </button>
                 </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Produk</p>
+                    <p className="text-sm text-gray-500">{t('inventory.products.totalProducts')}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Aktif</p>
+                    <p className="text-sm text-gray-500">{t('inventory.products.activeCount')}</p>
                     <p className="mt-1 text-2xl font-bold text-green-600">{stats.active}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Stok Menipis</p>
+                    <p className="text-sm text-gray-500">{t('inventory.products.lowStockCount')}</p>
                     <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.lowStock}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Stok Habis</p>
+                    <p className="text-sm text-gray-500">{t('inventory.products.outOfStockCount')}</p>
                     <p className="mt-1 text-2xl font-bold text-red-600">{stats.outOfStock}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Nilai Stok</p>
+                    <p className="text-sm text-gray-500">{t('inventory.products.stockValue')}</p>
                     <p className="mt-1 text-xl font-bold text-blue-600">{formatCurrency(stats.totalValue)}</p>
                 </div>
             </div>
 
             {/* Filters */}
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
-                <div className="flex-1">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari SKU atau nama produk..."
+                        placeholder={t('inventory.products.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
                 <select
@@ -154,7 +165,7 @@ export default function ProductsPage() {
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
                     {categories.map((c) => (
-                        <option key={c} value={c}>{c === 'all' ? 'Semua Kategori' : c}</option>
+                        <option key={c} value={c}>{c === 'all' ? t('inventory.products.allCategories') : c}</option>
                     ))}
                 </select>
                 <select
@@ -162,9 +173,9 @@ export default function ProductsPage() {
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="active">Aktif</option>
-                    <option value="inactive">Nonaktif</option>
+                    <option value="all">{t('inventory.products.allStatuses')}</option>
+                    <option value="active">{t('inventory.products.active')}</option>
+                    <option value="inactive">{t('inventory.products.inactive')}</option>
                 </select>
             </div>
 
@@ -174,21 +185,22 @@ export default function ProductsPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-600">SKU</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Nama Produk</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Kategori</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Harga Jual</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Harga Beli</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Stok</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Min Stok</th>
-                                <th className="px-4 py-3 text-center font-medium text-gray-600">Status</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.products.sku')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.products.name')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.products.category')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.sellPrice')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.buyPrice')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.stock')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.minStock')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-600">{t('inventory.products.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
-                                        Tidak ada produk ditemukan
+                                        <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                        {t('inventory.products.noProducts')}
                                     </td>
                                 </tr>
                             ) : (
@@ -219,7 +231,7 @@ export default function ProductsPage() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-gray-500">{product.minStock}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${product.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                {product.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                                                {product.status === 'active' ? t('inventory.products.active') : t('inventory.products.inactive')}
                                             </span>
                                         </td>
                                     </tr>

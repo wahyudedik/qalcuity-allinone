@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getInitials } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import {
     LayoutDashboard,
     Receipt,
@@ -38,72 +39,75 @@ interface MenuItem {
     children?: { label: string; href: string }[];
 }
 
-const menuItems: MenuItem[] = [
-    {
-        label: "Dashboard",
-        href: "/dashboard",
-        icon: LayoutDashboard,
-    },
-    {
-        label: "Finance",
-        href: "/dashboard/finance",
-        icon: Receipt,
-        children: [
-            { label: "Overview", href: "/dashboard/finance" },
-            { label: "Invoices", href: "/dashboard/finance/invoices" },
-            { label: "Quotations", href: "/dashboard/finance/quotations" },
-            { label: "Payments", href: "/dashboard/finance/payments" },
-            { label: "Purchase Orders", href: "/dashboard/finance/purchase-orders" },
-            { label: "Chart of Account", href: "/dashboard/finance/accounts" },
-        ],
-    },
-    {
-        label: "Sales & CRM",
-        href: "/dashboard/crm",
-        icon: TrendingUp,
-        children: [
-            { label: "Overview", href: "/dashboard/crm" },
-            { label: "Pipeline", href: "/dashboard/crm/pipeline" },
-            { label: "Leads", href: "/dashboard/crm/leads" },
-            { label: "Contacts", href: "/dashboard/crm/contacts" },
-            { label: "Deals", href: "/dashboard/crm/deals" },
-        ],
-    },
-    {
-        label: "Inventory",
-        href: "/dashboard/inventory",
-        icon: Package,
-        children: [
-            { label: "Overview", href: "/dashboard/inventory" },
-            { label: "Products", href: "/dashboard/inventory/products" },
-            { label: "Stock", href: "/dashboard/inventory/stock" },
-            { label: "Categories", href: "/dashboard/inventory/categories" },
-            { label: "Suppliers", href: "/dashboard/inventory/suppliers" },
-        ],
-    },
-    {
-        label: "HR & People",
-        href: "/dashboard/hr",
-        icon: UsersRound,
-        children: [
-            { label: "Overview", href: "/dashboard/hr" },
-            { label: "Employees", href: "/dashboard/hr/employees" },
-            { label: "Attendance", href: "/dashboard/hr/attendance" },
-            { label: "Leaves", href: "/dashboard/hr/leaves" },
-            { label: "Payroll", href: "/dashboard/hr/payroll" },
-        ],
-    },
-    {
-        label: "Audit Trail",
-        href: "/dashboard/audit",
-        icon: ScrollText,
-    },
-    {
-        label: "Settings",
-        href: "/dashboard/settings",
-        icon: Settings,
-    },
-];
+// Menu items are defined inside the component to access t()
+function getMenuItems(t: (key: string) => string): MenuItem[] {
+    return [
+        {
+            label: t("nav.dashboard") || "Dashboard",
+            href: "/dashboard",
+            icon: LayoutDashboard,
+        },
+        {
+            label: t("nav.finance") || "Finance",
+            href: "/dashboard/finance",
+            icon: Receipt,
+            children: [
+                { label: t("nav.overview") || "Overview", href: "/dashboard/finance" },
+                { label: t("nav.invoices") || "Invoices", href: "/dashboard/finance/invoices" },
+                { label: t("nav.quotations") || "Quotations", href: "/dashboard/finance/quotations" },
+                { label: t("nav.payments") || "Payments", href: "/dashboard/finance/payments" },
+                { label: t("nav.purchaseOrders") || "Purchase Orders", href: "/dashboard/finance/purchase-orders" },
+                { label: t("nav.chartOfAccount") || "Chart of Account", href: "/dashboard/finance/accounts" },
+            ],
+        },
+        {
+            label: t("nav.salesCrm") || "Sales & CRM",
+            href: "/dashboard/crm",
+            icon: TrendingUp,
+            children: [
+                { label: t("nav.overview") || "Overview", href: "/dashboard/crm" },
+                { label: t("nav.pipeline") || "Pipeline", href: "/dashboard/crm/pipeline" },
+                { label: t("nav.leads") || "Leads", href: "/dashboard/crm/leads" },
+                { label: t("nav.contacts") || "Contacts", href: "/dashboard/crm/contacts" },
+                { label: t("nav.deals") || "Deals", href: "/dashboard/crm/deals" },
+            ],
+        },
+        {
+            label: t("nav.inventory") || "Inventory",
+            href: "/dashboard/inventory",
+            icon: Package,
+            children: [
+                { label: t("nav.overview") || "Overview", href: "/dashboard/inventory" },
+                { label: t("nav.products") || "Products", href: "/dashboard/inventory/products" },
+                { label: t("nav.stock") || "Stock", href: "/dashboard/inventory/stock" },
+                { label: t("nav.categories") || "Categories", href: "/dashboard/inventory/categories" },
+                { label: t("nav.suppliers") || "Suppliers", href: "/dashboard/inventory/suppliers" },
+            ],
+        },
+        {
+            label: t("nav.hrPeople") || "HR & People",
+            href: "/dashboard/hr",
+            icon: UsersRound,
+            children: [
+                { label: t("nav.overview") || "Overview", href: "/dashboard/hr" },
+                { label: t("nav.employees") || "Employees", href: "/dashboard/hr/employees" },
+                { label: t("nav.attendance") || "Attendance", href: "/dashboard/hr/attendance" },
+                { label: t("nav.leaves") || "Leaves", href: "/dashboard/hr/leaves" },
+                { label: t("nav.payroll") || "Payroll", href: "/dashboard/hr/payroll" },
+            ],
+        },
+        {
+            label: t("nav.auditTrail") || "Audit Trail",
+            href: "/dashboard/audit",
+            icon: ScrollText,
+        },
+        {
+            label: t("nav.settings") || "Settings",
+            href: "/dashboard/settings",
+            icon: Settings,
+        },
+    ];
+}
 
 interface SidebarProps {
     isOpen?: boolean;
@@ -113,11 +117,12 @@ interface SidebarProps {
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const pathname = usePathname();
     const { data: session } = useSession();
+    const { t } = useTranslation();
 
     // Helper untuk mengecek apakah section harus di-expand
     const isSectionActive = (item: MenuItem) => {
         if (!item.children) return false;
-        return pathname === item.href || pathname.startsWith(item.href + "/");
+        return pathname === item.href || pathname?.startsWith(item.href + "/");
     };
 
     return (
@@ -153,8 +158,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 {/* Navigation */}
                 <nav className="flex-1 overflow-y-auto p-4">
                     <ul className="space-y-1">
-                        {menuItems.map((item) => {
-                            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                        {getMenuItems(t).map((item) => {
+                            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
                             const hasChildren = item.children && item.children.length > 0;
                             const shouldExpand = isSectionActive(item);
                             const Icon = item.icon;

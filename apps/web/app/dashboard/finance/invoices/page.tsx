@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { InvoiceForm } from '@/components/finance/invoice-form'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus, ChevronRight, FileText } from 'lucide-react'
 
 type Invoice = {
     id: string
@@ -28,6 +30,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 }
 
 export default function InvoicesPage() {
+    const { t } = useTranslation()
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -47,10 +50,10 @@ export default function InvoicesPage() {
             if (data.success) {
                 setInvoices(data.data)
             } else {
-                setError('Gagal memuat data invoice')
+                setError(t('finance.invoices.error'))
             }
-        } catch (err) {
-            setError('Terjadi kesalahan saat memuat data')
+        } catch {
+            setError(t('finance.invoices.errorGeneric'))
         } finally {
             setLoading(false)
         }
@@ -81,12 +84,12 @@ export default function InvoicesPage() {
             const result = await response.json()
             if (result.success) {
                 setShowCreateModal(false)
-                fetchInvoices() // Refresh data
+                fetchInvoices()
             } else {
-                alert('Gagal membuat invoice: ' + result.error)
+                alert(`${t('finance.invoices.createError')}: ${result.error}`)
             }
         } catch {
-            alert('Terjadi kesalahan saat membuat invoice')
+            alert(t('finance.invoices.createErrorGeneric'))
         }
     }
 
@@ -115,7 +118,7 @@ export default function InvoicesPage() {
                         onClick={fetchInvoices}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('finance.invoices.retry')}
                     </button>
                 </div>
             </div>
@@ -127,41 +130,39 @@ export default function InvoicesPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Invoice</h1>
-                    <p className="text-gray-500">Kelola invoice dan tagihan Anda</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.invoices.title')}</h1>
+                    <p className="text-gray-500">{t('finance.invoices.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Buat Invoice
+                    <Plus className="h-4 w-4" />
+                    {t('finance.invoices.createInvoice')}
                 </button>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Invoice</p>
+                    <p className="text-sm text-gray-500">{t('finance.invoices.stats.totalInvoice')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{invoices.length} invoice</p>
+                    <p className="text-xs text-gray-400 mt-1">{invoices.length} {t('finance.invoices.title').toLowerCase()}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Sudah Dibayar</p>
+                    <p className="text-sm text-gray-500">{t('finance.invoices.stats.paid')}</p>
                     <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{invoices.filter(i => i.status === 'paid').length} invoice</p>
+                    <p className="text-xs text-gray-400 mt-1">{invoices.filter(i => i.status === 'paid').length} {t('finance.invoices.title').toLowerCase()}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Belum Dibayar</p>
+                    <p className="text-sm text-gray-500">{t('finance.invoices.stats.unpaid')}</p>
                     <p className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.outstanding)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').length} invoice</p>
+                    <p className="text-xs text-gray-400 mt-1">{invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').length} {t('finance.invoices.title').toLowerCase()}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Draft</p>
+                    <p className="text-sm text-gray-500">{t('finance.invoices.stats.draft')}</p>
                     <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
-                    <p className="text-xs text-gray-400 mt-1">Belum dikirim</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('finance.invoices.stats.notSent')}</p>
                 </div>
             </div>
 
@@ -169,12 +170,10 @@ export default function InvoicesPage() {
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
                     <div className="relative">
-                        <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari invoice..."
+                            placeholder={t('finance.invoices.searchPlaceholder')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
@@ -186,13 +185,13 @@ export default function InvoicesPage() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="sent">Terkirim</option>
-                    <option value="paid">Lunas</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="partially_paid">Bayar Sebagian</option>
-                    <option value="cancelled">Dibatalkan</option>
+                    <option value="all">{t('finance.invoices.filter.allStatus')}</option>
+                    <option value="draft">{t('finance.invoices.filter.draft')}</option>
+                    <option value="sent">{t('finance.invoices.filter.sent')}</option>
+                    <option value="paid">{t('finance.invoices.filter.paid')}</option>
+                    <option value="overdue">{t('finance.invoices.filter.overdue')}</option>
+                    <option value="partially_paid">{t('finance.invoices.filter.partiallyPaid')}</option>
+                    <option value="cancelled">{t('finance.invoices.filter.cancelled')}</option>
                 </select>
             </div>
 
@@ -202,20 +201,20 @@ export default function InvoicesPage() {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nomor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Customer</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tanggal</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Jatuh Tempo</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Jumlah</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Aksi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.number')}</th>
+                                <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.customer')}</th>
+                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.date')}</th>
+                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.dueDate')}</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.amount')}</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.status')}</th>
+                                <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.action')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredInvoices.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                                        Tidak ada invoice ditemukan
+                                        {t('finance.invoices.empty')}
                                     </td>
                                 </tr>
                             ) : (
@@ -226,20 +225,18 @@ export default function InvoicesPage() {
                                                 {invoice.invoiceNumber}
                                             </Link>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-gray-900">{invoice.customerName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(invoice.createdAt)}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(invoice.dueDate)}</td>
+                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-gray-900">{invoice.customerName}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(invoice.createdAt)}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(invoice.dueDate)}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right font-medium">{formatCurrency(invoice.total)}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[invoice.status]?.color || 'bg-gray-100 text-gray-700'}`}>
                                                 {statusConfig[invoice.status]?.label || invoice.status}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right">
+                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-right">
                                             <Link href={`/dashboard/finance/invoices/${invoice.id}`} className="text-blue-600 hover:text-blue-800">
-                                                <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
+                                                <ChevronRight className="h-4 w-4 inline" />
                                             </Link>
                                         </td>
                                     </tr>

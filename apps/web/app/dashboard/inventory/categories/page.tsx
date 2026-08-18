@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { formatCurrency } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus, MoreHorizontal, Eye, Package } from 'lucide-react'
 
 type Category = {
     id: string
@@ -23,6 +25,7 @@ const MOCK_CATEGORIES: Category[] = [
 ]
 
 export default function CategoriesPage() {
+    const { t } = useTranslation()
     const [categories] = useState<Category[]>(MOCK_CATEGORIES)
     const [searchQuery, setSearchQuery] = useState('')
 
@@ -36,15 +39,25 @@ export default function CategoriesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Kategori Produk</h1>
-                    <p className="text-gray-500">{categories.length} kategori · {totalProducts} produk</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('inventory.categories.title')}</h1>
+                    <p className="text-gray-500">{categories.length} {t('inventory.categories.categoriesCount')} · {totalProducts} {t('inventory.categories.productsCount')}</p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">＋ Kategori Baru</button>
+                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <Plus className="h-4 w-4" />
+                    {t('inventory.categories.addCategory')}
+                </button>
             </div>
 
             {/* Search */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <input type="text" placeholder="Cari kategori..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            <div className="rounded-xl border border-gray-200 bg-white p-4 relative">
+                <Search className="absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                    type="text"
+                    placeholder={t('inventory.categories.searchPlaceholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
             </div>
 
             {/* Categories Grid */}
@@ -56,14 +69,19 @@ export default function CategoriesPage() {
                                 <h3 className="font-semibold text-gray-900">{cat.name}</h3>
                                 <p className="mt-1 text-xs text-gray-500">{cat.description}</p>
                             </div>
-                            <button className="text-gray-400 hover:text-gray-600">⋯</button>
+                            <button className="text-gray-400 hover:text-gray-600" aria-label={t('inventory.categories.dots')}>
+                                <MoreHorizontal className="h-5 w-5" />
+                            </button>
                         </div>
                         <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
                             <div>
-                                <p className="text-sm font-semibold text-gray-900">{cat.productCount} produk</p>
+                                <p className="text-sm font-semibold text-gray-900">{cat.productCount} {t('inventory.categories.productsCount')}</p>
                                 <p className="text-xs text-gray-500">{formatCurrency(cat.totalValue)}</p>
                             </div>
-                            <button className="text-xs text-blue-600 hover:underline">Lihat →</button>
+                            <button className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                                <Eye className="h-3 w-3" />
+                                {t('inventory.categories.view')}
+                            </button>
                         </div>
                     </div>
                 ))}

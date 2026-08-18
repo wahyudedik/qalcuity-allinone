@@ -10,23 +10,25 @@ import {
     Handshake,
     type LucideIcon,
 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface TabItem {
     href: string
-    label: string
+    labelKey: string
     icon: LucideIcon
 }
 
 const crmTabs: TabItem[] = [
-    { href: '/dashboard/crm', label: 'Ringkasan', icon: BarChart3 },
-    { href: '/dashboard/crm/pipeline', label: 'Pipeline', icon: GitBranch },
-    { href: '/dashboard/crm/leads', label: 'Leads', icon: Target },
-    { href: '/dashboard/crm/contacts', label: 'Kontak', icon: Users },
-    { href: '/dashboard/crm/deals', label: 'Deals', icon: Handshake },
+    { href: '/dashboard/crm', labelKey: 'crm.layout.tabs.overview', icon: BarChart3 },
+    { href: '/dashboard/crm/pipeline', labelKey: 'crm.layout.tabs.pipeline', icon: GitBranch },
+    { href: '/dashboard/crm/leads', labelKey: 'crm.layout.tabs.leads', icon: Target },
+    { href: '/dashboard/crm/contacts', labelKey: 'crm.layout.tabs.contacts', icon: Users },
+    { href: '/dashboard/crm/deals', labelKey: 'crm.layout.tabs.deals', icon: Handshake },
 ]
 
 export default function CrmLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const { t } = useTranslation()
 
     return (
         <div className="space-y-6">
@@ -34,7 +36,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-1 overflow-x-auto" aria-label="CRM tabs">
                     {crmTabs.map((tab) => {
-                        const isActive = pathname === tab.href || (tab.href !== '/dashboard/crm' && pathname.startsWith(tab.href))
+                        const isActive = pathname === tab.href || (tab.href !== '/dashboard/crm' && pathname?.startsWith(tab.href))
                         const Icon = tab.icon
                         return (
                             <Link
@@ -46,7 +48,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
-                                {tab.label}
+                                {t(tab.labelKey)}
                             </Link>
                         )
                     })}

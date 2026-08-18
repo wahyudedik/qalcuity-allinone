@@ -4,9 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import { useTranslation } from '@/lib/i18n'
 
 export default function RegisterPage() {
     const router = useRouter()
+    const { t } = useTranslation()
     const [formData, setFormData] = useState({
         companyName: '',
         fullName: '',
@@ -31,7 +33,7 @@ export default function RegisterPage() {
         setError('')
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Password tidak cocok')
+            setError(t('auth.confirmPassword') + '!')
             return
         }
 
@@ -58,7 +60,7 @@ export default function RegisterPage() {
             const data = await res.json()
 
             if (!res.ok) {
-                setError(data.error || 'Terjadi kesalahan')
+                setError(data.error || t('common.error'))
                 return
             }
 
@@ -77,7 +79,7 @@ export default function RegisterPage() {
                 router.refresh()
             }
         } catch (err) {
-            setError('Terjadi kesalahan. Silakan coba lagi.')
+            setError(t('common.error'))
         } finally {
             setIsLoading(false)
         }
@@ -110,9 +112,9 @@ export default function RegisterPage() {
             </div>
 
             <div>
-                <h2 className="text-2xl font-bold text-gray-900">Buat Akun Baru</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{t('auth.registerTitle')}</h2>
                 <p className="text-gray-600 mt-2">
-                    Mulai kelola bisnis Anda dengan Qalcuity.
+                    {t('auth.registerSubtitle')}
                 </p>
             </div>
 
@@ -125,7 +127,7 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Nama Perusahaan
+                        {t('settings.companyName')}
                     </label>
                     <input
                         id="companyName"
@@ -141,7 +143,7 @@ export default function RegisterPage() {
 
                 <div>
                     <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Nama Lengkap
+                        {t('common.name')}
                     </label>
                     <input
                         id="fullName"
@@ -157,7 +159,7 @@ export default function RegisterPage() {
 
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Email
+                        {t('auth.email')}
                     </label>
                     <input
                         id="email"
@@ -173,7 +175,7 @@ export default function RegisterPage() {
 
                 <div>
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Password
+                        {t('auth.password')}
                     </label>
                     <div className="relative">
                         <input
@@ -221,7 +223,7 @@ export default function RegisterPage() {
 
                 <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Konfirmasi Password
+                        {t('auth.confirmPassword')}
                     </label>
                     <input
                         id="confirmPassword"
@@ -234,7 +236,7 @@ export default function RegisterPage() {
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder:text-gray-400"
                     />
                     {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                        <p className="text-xs text-red-500 mt-1">Password tidak cocok</p>
+                        <p className="text-xs text-red-500 mt-1">{t('auth.confirmPassword')}!</p>
                     )}
                 </div>
 
@@ -269,10 +271,10 @@ export default function RegisterPage() {
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                            Membuat akun...
+                            {t('auth.registering')}
                         </span>
                     ) : (
-                        'Buat Akun'
+                        t('auth.register')
                     )}
                 </button>
             </form>
@@ -282,7 +284,7 @@ export default function RegisterPage() {
                     <div className="w-full border-t border-gray-300" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-gray-50 text-gray-500">atau</span>
+                    <span className="px-2 bg-gray-50 text-gray-500">/</span>
                 </div>
             </div>
 
@@ -296,13 +298,13 @@ export default function RegisterPage() {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                Daftar dengan Google
+                {t('auth.register')} Google
             </button>
 
             <p className="text-center text-gray-600">
-                Sudah punya akun?{' '}
+                {t('auth.hasAccount')}{' '}
                 <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                    Masuk
+                    {t('auth.login')}
                 </Link>
             </p>
         </div>

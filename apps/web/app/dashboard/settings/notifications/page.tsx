@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from '@/lib/i18n'
+import { MessageCircle } from 'lucide-react'
 
 export default function NotificationsSettingsPage() {
+    const { t } = useTranslation()
     const [settings, setSettings] = useState({
         emailInvoice: true,
         emailPayment: true,
@@ -41,9 +44,9 @@ export default function NotificationsSettingsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-lg font-semibold text-gray-900">Pengaturan Notifikasi</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('settings.notificationsTitle') || 'Pengaturan Notifikasi'}</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                    Pilih notifikasi mana yang ingin Anda terima
+                    {t('settings.notificationsSubtitle') || 'Pilih notifikasi mana yang ingin Anda terima'}
                 </p>
             </div>
 
@@ -56,29 +59,29 @@ export default function NotificationsSettingsPage() {
                         </svg>
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">Email</h3>
-                        <p className="text-sm text-gray-500">Notifikasi via email</p>
+                        <h3 className="font-medium text-gray-900">{t('settings.emailNotifications') || 'Email'}</h3>
+                        <p className="text-sm text-gray-500">{t('settings.emailDesc') || 'Notifikasi via email'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Invoice Baru</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.newInvoice') || 'Invoice Baru'}</div>
                             <div className="text-xs text-gray-500">Dapatkan notifikasi saat invoice baru dibuat</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailInvoice} onToggle={() => toggleSetting('emailInvoice')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Pembayaran Diterima</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
                             <div className="text-xs text-gray-500">Notifikasi saat pembayaran masuk</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailPayment} onToggle={() => toggleSetting('emailPayment')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Invoice Overdue</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
                             <div className="text-xs text-gray-500">Pengingat invoice yang sudah jatuh tempo</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailOverdue} onToggle={() => toggleSetting('emailOverdue')} />
@@ -109,29 +112,29 @@ export default function NotificationsSettingsPage() {
                         </svg>
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">Push Notification</h3>
-                        <p className="text-sm text-gray-500">Notifikasi langsung di browser</p>
+                        <h3 className="font-medium text-gray-900">{t('settings.pushNotifications') || 'Push Notification'}</h3>
+                        <p className="text-sm text-gray-500">{t('settings.pushDesc') || 'Notifikasi langsung di browser'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Invoice Baru</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.newInvoice') || 'Invoice Baru'}</div>
                             <div className="text-xs text-gray-500">Push notification untuk invoice baru</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushInvoice} onToggle={() => toggleSetting('pushInvoice')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Pembayaran Diterima</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
                             <div className="text-xs text-gray-500">Push notification saat pembayaran masuk</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushPayment} onToggle={() => toggleSetting('pushPayment')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Invoice Overdue</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
                             <div className="text-xs text-gray-500">Push notification untuk invoice overdue</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushOverdue} onToggle={() => toggleSetting('pushOverdue')} />
@@ -150,32 +153,32 @@ export default function NotificationsSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">💬</span>
+                        <MessageCircle className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
                         <h3 className="font-medium text-gray-900">WhatsApp</h3>
-                        <p className="text-sm text-gray-500">Notifikasi via WhatsApp Business API</p>
+                        <p className="text-sm text-gray-500">{t('settings.whatsappDesc') || 'Notifikasi via WhatsApp Business API'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Invoice Baru</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.newInvoice') || 'Invoice Baru'}</div>
                             <div className="text-xs text-gray-500">Kirim invoice ke customer via WhatsApp</div>
                         </div>
                         <ToggleSwitch enabled={settings.whatsappInvoice} onToggle={() => toggleSetting('whatsappInvoice')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Pembayaran Diterima</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
                             <div className="text-xs text-gray-500">Konfirmasi pembayaran via WhatsApp</div>
                         </div>
                         <ToggleSwitch enabled={settings.whatsappPayment} onToggle={() => toggleSetting('whatsappPayment')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Reminder Overdue</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Reminder Overdue'}</div>
                             <div className="text-xs text-gray-500">Kirim reminder pembayaran via WhatsApp</div>
                         </div>
                         <ToggleSwitch enabled={settings.whatsappOverdue} onToggle={() => toggleSetting('whatsappOverdue')} />
@@ -192,22 +195,22 @@ export default function NotificationsSettingsPage() {
                         </svg>
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">SMS</h3>
-                        <p className="text-sm text-gray-500">Notifikasi via SMS (memerlukan integrasi)</p>
+                        <h3 className="font-medium text-gray-900">{t('settings.smsNotifications') || 'SMS'}</h3>
+                        <p className="text-sm text-gray-500">{t('settings.smsDesc') || 'Notifikasi via SMS (memerlukan integrasi)'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Invoice Overdue</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
                             <div className="text-xs text-gray-500">SMS reminder untuk invoice overdue</div>
                         </div>
                         <ToggleSwitch enabled={settings.smsOverdue} onToggle={() => toggleSetting('smsOverdue')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">Pembayaran Diterima</div>
+                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
                             <div className="text-xs text-gray-500">Konfirmasi pembayaran via SMS</div>
                         </div>
                         <ToggleSwitch enabled={settings.smsPayment} onToggle={() => toggleSetting('smsPayment')} />
@@ -217,7 +220,7 @@ export default function NotificationsSettingsPage() {
 
             <div className="flex justify-end">
                 <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                    Simpan Pengaturan
+                    {t('common.save') || 'Simpan Pengaturan'}
                 </button>
             </div>
         </div>

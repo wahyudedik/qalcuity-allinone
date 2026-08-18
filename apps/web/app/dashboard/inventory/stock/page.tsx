@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { formatCurrency } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus, Package, AlertTriangle } from 'lucide-react'
 
 type StockItem = {
     id: string
@@ -33,13 +35,8 @@ const statusStyles: Record<string, string> = {
     out: 'bg-red-100 text-red-800',
 }
 
-const statusLabels: Record<string, string> = {
-    ok: 'Aman',
-    low: 'Menipis',
-    out: 'Habis',
-}
-
 export default function StockPage() {
+    const { t } = useTranslation()
     const [stock, setStock] = useState<StockItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -56,7 +53,6 @@ export default function StockPage() {
             const response = await fetch('/api/inventory/products')
             const data = await response.json()
             if (data.success) {
-                // Map products to stock items
                 const stockItems: StockItem[] = data.data.map((product: Product) => ({
                     id: product.id,
                     sku: product.sku,
@@ -70,10 +66,10 @@ export default function StockPage() {
                 }))
                 setStock(stockItems)
             } else {
-                setError('Gagal memuat data stok')
+                setError(t('inventory.stock.error'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('inventory.stock.errorHint'))
         } finally {
             setLoading(false)
         }
@@ -93,6 +89,12 @@ export default function StockPage() {
         low: stock.filter(s => s.status === 'low').length,
         out: stock.filter(s => s.status === 'out').length,
         totalValue: stock.reduce((sum, s) => sum + (s.unitPrice * s.stock), 0),
+    }
+
+    const statusLabels: Record<string, string> = {
+        ok: t('inventory.stock.ok'),
+        low: t('inventory.stock.low'),
+        out: t('inventory.stock.out'),
     }
 
     if (loading) {
@@ -115,12 +117,13 @@ export default function StockPage() {
         return (
             <div className="p-6">
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-red-500" />
                     <p className="text-red-600">{error}</p>
                     <button
                         onClick={fetchStock}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('inventory.stock.retry')}
                     </button>
                 </div>
             </div>
@@ -131,41 +134,45 @@ export default function StockPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Manajemen Stok</h1>
-                    <p className="text-gray-500">Monitor dan kelola stok produk</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('inventory.stock.title')}</h1>
+                    <p className="text-gray-500">{t('inventory.stock.subtitle')}</p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">＋ Adjust Stok</button>
+                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <Plus className="h-4 w-4" />
+                    {t('inventory.stock.adjustStok')}
+                </button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Item</p>
+                    <p className="text-sm text-gray-500">{t('inventory.stock.totalItems')}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Aman</p>
+                    <p className="text-sm text-gray-500">{t('inventory.stock.ok')}</p>
                     <p className="mt-1 text-2xl font-bold text-green-600">{stats.ok}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Menipis</p>
+                    <p className="text-sm text-gray-500">{t('inventory.stock.low')}</p>
                     <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.low}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Habis</p>
+                    <p className="text-sm text-gray-500">{t('inventory.stock.out')}</p>
                     <p className="mt-1 text-2xl font-bold text-red-600">{stats.out}</p>
                 </div>
             </div>
 
             {/* Filters */}
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
-                <div className="flex-1">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari SKU atau nama produk..."
+                        placeholder={t('inventory.stock.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -178,7 +185,7 @@ export default function StockPage() {
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            {s === 'all' ? 'Semua' : statusLabels[s] || s}
+                            {s === 'all' ? t('inventory.stock.allStatuses') : statusLabels[s] || s}
                         </button>
                     ))}
                 </div>
@@ -190,20 +197,21 @@ export default function StockPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-600">SKU</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Nama Produk</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Kategori</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Stok Saat Ini</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Min Stok</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">Nilai Stok</th>
-                                <th className="px-4 py-3 text-center font-medium text-gray-600">Status</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.stock.sku')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.stock.productName')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.stock.category')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.stock.currentStock')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.stock.minStock')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.stock.stockValue')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-600">{t('inventory.stock.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                                        Tidak ada data stok ditemukan
+                                        <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                        {t('inventory.stock.noData')}
                                     </td>
                                 </tr>
                             ) : (

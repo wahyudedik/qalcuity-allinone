@@ -139,23 +139,34 @@
 ### MVP Deliverables
 
 - [x] Web App (core utama) — auth, dashboard, audit trail, dark mode, global search
-- [x] Finance module (invoice, quotation, payment, purchase orders)
-- [x] Sales CRM (leads, contacts, pipeline, deals)
-- [x] HR module (employees, attendance, leaves, payroll) — basic UI ready
-- [x] Inventory module (products, suppliers, categories, stock) — basic UI ready
+- [x] Finance module (invoice, quotation, payment, purchase orders) — i18n + Lucide + responsive
+- [x] Sales CRM (leads, contacts, pipeline, deals) — i18n + Lucide + responsive
+- [x] HR module (employees, attendance, leaves, payroll) — i18n + Lucide
+- [x] Inventory module (products, suppliers, categories, stock) — i18n + Lucide
+- [x] Settings (profile, company, team, notifications, security, billing)
+- [x] i18n support (Bahasa Indonesia + English)
+- [x] Responsive tables (mobile-friendly column hiding)
+- [x] Deploy scripts (PM2 health check, configurable port, robust db:push)
 - [ ] Mobile App (iOS & Android) — basic screens ready, needs polish
 - [ ] Integration Hub — settings page exists, needs full integration
 - [ ] AI basic — dashboard stats connected to real DB, needs AI insights
 - [ ] Landing page & documentation
 
 #### Recently Completed (Aug 2026):
+- ✅ **Tahap 0.1–0.2**: Safe migration (company field + soft deletes), Contact search bug fix
+- ✅ **Tahap 1.1–1.2**: Lucide icons across sidebar, header, search modal, all module layouts (40+ files)
+- ✅ **Tahap 2.1–2.2**: API routes hardened (DB transactions, validation), audit trail on all mutations
+- ✅ **Tahap 3.1–3.2**: i18n foundation (messages/id.json, en.json), UI strings localized
+- ✅ **Tahap 4.1–4.2**: Settings pages (profile, company, team, notifications, security, billing) + API routes
+- ✅ **Tahap 5.1–5.2**: HR module i18n + Lucide, Inventory module i18n + Lucide
+- ✅ **Tahap 6.1**: Finance module — all 10 files i18n + Lucide
+- ✅ **Tahap 7.1**: Responsive tables — CRM (6 files) + Finance (4 files) with column hiding
+- ✅ **Tahap 8.1**: Deploy scripts — health check endpoint, configurable port, robust db:push fallback
 - ✅ Pipeline stage fix (DB enum alignment: DISCOVERY, PROPOSAL, NEGOTIATION, CLOSING, CLOSED_WON, CLOSED_LOST)
 - ✅ Dashboard stats connected to real database queries
 - ✅ Audit trail page connected to real AuditLog API
-- ✅ Settings profile page connected to real user data
 - ✅ Global search (Ctrl+K) across all modules
 - ✅ Dark mode (Tailwind class strategy with CSS variables)
-- ✅ Code cleanup (deduplicated getInitials, Link instead of `<a>`)
 
 ### MVP Success Criteria
 
@@ -506,12 +517,10 @@
 
 | Week | Progress | Blockers | Next Week |
 |------|----------|----------|-----------|
-| W1 (Aug 1-7) | - | - | Kickoff, setup |
-| W2 (Aug 8-14) | - | - | - |
-| W3 (Aug 15-21) | - | - | - |
-| W4 (Aug 22-31) | - | - | - |
+| W1 (Aug 1-7) | DB migration, Contact bug fix, Lucide icons (sidebar/header) | None | Module layouts i18n |
+| W2 (Aug 8-14) | Lucide icons (all modules), API routes hardened, audit trail | None | i18n setup, settings |
+| W3 (Aug 15-18) | i18n foundation, settings pages, HR/Inventory/Finance/CRM i18n, responsive tables, deploy scripts, documentation | None | Build sanity check |
 
-*Fill in weekly as development progresses*
 
 ---
 
@@ -549,6 +558,7 @@
 
 | Date | Change | Author |
 |------|--------|--------|
+| Aug 18, 2026 | Tahap 0.1–8.1 complete: i18n, Lucide, responsive, deploy, docs | Dev Team |
 | Aug 3, 2026 | Initial roadmap created | Product Team |
 
 ---
@@ -563,5 +573,5 @@
 
 ---
 
-**Last Updated:** August 3, 2026
+**Last Updated:** August 18, 2026
 **Maintainer:** Qalcuity Product Team

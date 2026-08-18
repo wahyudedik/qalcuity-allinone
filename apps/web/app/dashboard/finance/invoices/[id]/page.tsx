@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle } from 'lucide-react'
 
 interface InvoiceDetail {
     id: string
@@ -30,6 +32,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 }
 
 export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
+    const { t } = useTranslation()
     const [showSendModal, setShowSendModal] = useState(false)
     const [invoice, setInvoice] = useState<InvoiceDetail | null>(null)
     const [loading, setLoading] = useState(true)
@@ -44,16 +47,16 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                 if (data.success) {
                     setInvoice(data.data)
                 } else {
-                    setError('Invoice tidak ditemukan')
+                    setError(t('finance.invoiceDetail.error'))
                 }
             } catch {
-                setError('Gagal memuat data invoice')
+                setError(t('finance.invoiceDetail.errorLoad'))
             } finally {
                 setLoading(false)
             }
         }
         fetchInvoice()
-    }, [params.id])
+    }, [params.id, t])
 
     if (loading) {
         return (
@@ -67,9 +70,9 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
     if (error || !invoice) {
         return (
             <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-gray-500">{error || 'Invoice tidak ditemukan'}</p>
+                <p className="text-gray-500">{error || t('finance.invoiceDetail.error')}</p>
                 <Link href="/dashboard/finance/invoices" className="mt-4 text-blue-600 hover:underline">
-                    Kembali ke Invoices
+                    {t('finance.invoiceDetail.backToInvoices')}
                 </Link>
             </div>
         )
@@ -81,35 +84,29 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard/finance/invoices" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
+                        <ArrowLeft className="h-5 w-5 text-gray-600" />
                     </Link>
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl font-bold text-gray-900">{invoice.id}</h1>
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[invoice.status].color}`}>
-                                {statusConfig[invoice.status].label}
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[invoice.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                {statusConfig[invoice.status]?.label || invoice.status}
                             </span>
                         </div>
-                        <p className="text-gray-600 mt-1">Dibuat pada {invoice.createdAt}</p>
+                        <p className="text-gray-600 mt-1">{t('finance.invoiceDetail.createdOn')} {invoice.createdAt}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <button className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        Print
+                        <Printer className="h-4 w-4" />
+                        {t('finance.invoiceDetail.print')}
                     </button>
                     <button
                         onClick={() => setShowSendModal(true)}
                         className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Kirim Invoice
+                        <Send className="h-4 w-4" />
+                        {t('finance.invoiceDetail.sendInvoice')}
                     </button>
                 </div>
             </div>
@@ -134,11 +131,11 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                 </div>
                             </div>
                             <div className="text-right">
-                                <h2 className="text-3xl font-bold text-gray-900 mb-2">INVOICE</h2>
+                                <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('finance.invoiceDetail.invoice')}</h2>
                                 <div className="text-sm text-gray-600 space-y-1">
-                                    <p><span className="font-medium">Nomor:</span> {invoice.id}</p>
-                                    <p><span className="font-medium">Tanggal:</span> {invoice.createdAt}</p>
-                                    <p><span className="font-medium">Jatuh Tempo:</span> {invoice.dueDate}</p>
+                                    <p><span className="font-medium">{t('finance.invoiceDetail.number')}:</span> {invoice.id}</p>
+                                    <p><span className="font-medium">{t('finance.invoiceDetail.date')}:</span> {invoice.createdAt}</p>
+                                    <p><span className="font-medium">{t('finance.invoiceDetail.dueDate')}:</span> {invoice.dueDate}</p>
                                 </div>
                             </div>
                         </div>
@@ -146,7 +143,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
 
                     {/* Bill To */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Tagih Ke:</h3>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">{t('finance.invoiceDetail.billTo')}</h3>
                         <div className="text-gray-900">
                             <p className="font-semibold">{invoice.customerName}</p>
                             <p className="text-sm text-gray-600">{invoice.customerEmail}</p>
@@ -160,10 +157,10 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Deskripsi</th>
-                                    <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">Qty</th>
-                                    <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Harga</th>
-                                    <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Total</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.description')}</th>
+                                    <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.qty')}</th>
+                                    <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.price')}</th>
+                                    <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.total')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -183,15 +180,15 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                             <div className="flex justify-end">
                                 <div className="w-64 space-y-2">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Subtotal</span>
+                                        <span className="text-gray-600">{t('finance.invoiceDetail.subtotal')}</span>
                                         <span className="text-gray-900">{formatCurrency(invoice.subtotal)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Pajak (PPN 0%)</span>
+                                        <span className="text-gray-600">{t('finance.invoiceDetail.tax')}</span>
                                         <span className="text-gray-900">{formatCurrency(invoice.tax)}</span>
                                     </div>
                                     <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
-                                        <span className="text-gray-900">Total</span>
+                                        <span className="text-gray-900">{t('finance.invoiceDetail.grandTotal')}</span>
                                         <span className="text-blue-600">{formatCurrency(invoice.total)}</span>
                                     </div>
                                 </div>
@@ -202,13 +199,13 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                     {/* Notes & Terms */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="font-medium text-gray-900 mb-2">Catatan</h3>
+                            <h3 className="font-medium text-gray-900 mb-2">{t('finance.invoiceDetail.notes')}</h3>
                             <p className="text-sm text-gray-600">{invoice.notes}</p>
                         </div>
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="font-medium text-gray-900 mb-2">Informasi Tambahan</h3>
-                            <p className="text-sm text-gray-600">Invoice Number: {invoice.invoiceNumber}</p>
-                            <p className="text-sm text-gray-600">Currency: {invoice.currency}</p>
+                            <h3 className="font-medium text-gray-900 mb-2">{t('finance.invoiceDetail.additionalInfo')}</h3>
+                            <p className="text-sm text-gray-600">{t('finance.invoiceDetail.invoiceNumber')}: {invoice.invoiceNumber}</p>
+                            <p className="text-sm text-gray-600">{t('finance.invoiceDetail.currency')}: {invoice.currency}</p>
                         </div>
                     </div>
                 </div>
@@ -217,27 +214,23 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                 <div className="space-y-6">
                     {/* Status */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-4">Status Invoice</h3>
+                        <h3 className="font-medium text-gray-900 mb-4">{t('finance.invoiceDetail.statusInvoice')}</h3>
                         <div className="space-y-3">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
+                                    <CheckCircle className="w-4 h-4 text-green-600" />
                                 </div>
                                 <div>
-                                    <div className="text-sm font-medium text-gray-900">Dibuat</div>
+                                    <div className="text-sm font-medium text-gray-900">{t('finance.invoiceDetail.created')}</div>
                                     <div className="text-xs text-gray-500">3 Agustus 2026, 09:30</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
+                                    <Send className="w-4 h-4 text-blue-600" />
                                 </div>
                                 <div>
-                                    <div className="text-sm font-medium text-gray-900">Dikirim</div>
+                                    <div className="text-sm font-medium text-gray-900">{t('finance.invoiceDetail.sent')}</div>
                                     <div className="text-xs text-gray-500">3 Agustus 2026, 09:35</div>
                                 </div>
                             </div>
@@ -246,8 +239,8 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                     <div className="w-3 h-3 bg-gray-300 rounded-full" />
                                 </div>
                                 <div>
-                                    <div className="text-sm font-medium text-gray-400">Dibayar</div>
-                                    <div className="text-xs text-gray-400">Menunggu pembayaran</div>
+                                    <div className="text-sm font-medium text-gray-400">{t('finance.invoiceDetail.paid')}</div>
+                                    <div className="text-xs text-gray-400">{t('finance.invoiceDetail.waitingPayment')}</div>
                                 </div>
                             </div>
                         </div>
@@ -258,47 +251,39 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                         <h3 className="font-medium text-gray-900 mb-4">Aksi</h3>
                         <div className="space-y-2">
                             <button className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Catat Pembayaran
+                                <CheckCircle className="h-4 w-4" />
+                                {t('finance.invoiceDetail.recordPayment')}
                             </button>
                             <button className="w-full px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Kirim Ulang
+                                <RotateCcw className="h-4 w-4" />
+                                {t('finance.invoiceDetail.resend')}
                             </button>
                             <button className="w-full px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                </svg>
-                                Download PDF
+                                <FileText className="h-4 w-4" />
+                                {t('finance.invoiceDetail.downloadPDF')}
                             </button>
                             <button className="w-full px-4 py-2.5 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                Batalkan Invoice
+                                <XCircle className="h-4 w-4" />
+                                {t('finance.invoiceDetail.cancelInvoice')}
                             </button>
                         </div>
                     </div>
 
                     {/* Activity */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-4">Aktivitas</h3>
+                        <h3 className="font-medium text-gray-900 mb-4">{t('finance.invoiceDetail.activity')}</h3>
                         <div className="space-y-3">
                             <div className="flex items-start gap-3">
                                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
                                 <div>
-                                    <div className="text-sm text-gray-900">Invoice dikirim ke finance@majubersama.com</div>
+                                    <div className="text-sm text-gray-900">{t('finance.invoiceDetail.activitySent')} finance@majubersama.com</div>
                                     <div className="text-xs text-gray-500">3 Agustus 2026, 09:35</div>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2" />
                                 <div>
-                                    <div className="text-sm text-gray-900">Invoice dibuat oleh Budi Santoso</div>
+                                    <div className="text-sm text-gray-900">{t('finance.invoiceDetail.activityCreated')} Budi Santoso</div>
                                     <div className="text-xs text-gray-500">3 Agustus 2026, 09:30</div>
                                 </div>
                             </div>
@@ -312,10 +297,10 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/50" onClick={() => setShowSendModal(false)} />
                     <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Kirim Invoice</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('finance.invoiceDetail.sendModalTitle')}</h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Tujuan</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('finance.invoiceDetail.emailLabel')}</label>
                                 <input
                                     type="email"
                                     defaultValue="finance@majubersama.com"
@@ -323,10 +308,10 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pesan (opsional)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('finance.invoiceDetail.messageLabel')}</label>
                                 <textarea
                                     rows={3}
-                                    placeholder="Tambahkan pesan untuk customer..."
+                                    placeholder={t('finance.invoiceDetail.messagePlaceholder')}
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                                 />
                             </div>
@@ -335,10 +320,10 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                     onClick={() => setShowSendModal(false)}
                                     className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
-                                    Batal
+                                    {t('finance.invoiceDetail.cancel')}
                                 </button>
                                 <button className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                                    Kirim
+                                    {t('finance.invoiceDetail.send')}
                                 </button>
                             </div>
                         </div>

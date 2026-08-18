@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { ArrowLeft, Star, Pencil, Package, ClipboardList } from 'lucide-react'
 
 interface SupplierDetail {
     id: string
@@ -78,7 +79,8 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
             {/* Header */}
             <div>
                 <Link href="/dashboard/inventory/suppliers" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                    ← Kembali ke Suppliers
+                    <ArrowLeft className="h-4 w-4" />
+                    Kembali ke Suppliers
                 </Link>
                 <div className="mt-4 flex items-center justify-between">
                     <div>
@@ -91,9 +93,12 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                         </span>
                         <div className="text-right">
                             <p className="text-sm text-gray-500">Rating</p>
-                            <p className="text-lg font-bold text-yellow-500">
-                                {'⭐'.repeat(Math.round(supplier.rating))} {supplier.rating}
-                            </p>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: 5 }, (_, i) => (
+                                    <Star key={i} className={`h-4 w-4 ${i < Math.round(supplier.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                ))}
+                                <span className="ml-1 text-sm font-medium text-gray-700">{supplier.rating}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -173,9 +178,12 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-500">Rating</span>
-                                <span className="text-sm font-medium text-yellow-500">
-                                    {'⭐'.repeat(Math.round(supplier.rating))} {supplier.rating}/5
-                                </span>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: 5 }, (_, i) => (
+                                        <Star key={i} className={`h-3 w-3 ${i < Math.round(supplier.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                    ))}
+                                    <span className="ml-1 text-sm text-gray-700">{supplier.rating}/5</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -199,14 +207,17 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">Aksi</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                ✏️ Edit Supplier
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                                <Pencil className="h-4 w-4" />
+                                Edit Supplier
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📦 Buat PO
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <Package className="h-4 w-4" />
+                                Buat PO
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📋 Riwayat Pesanan
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <ClipboardList className="h-4 w-4" />
+                                Riwayat Pesanan
                             </button>
                         </div>
                     </div>

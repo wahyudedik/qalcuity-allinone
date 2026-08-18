@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PurchaseOrderForm } from '@/components/finance/purchase-order-form'
+import { useTranslation } from '@/lib/i18n'
+import { Search, Plus } from 'lucide-react'
 
 type PurchaseOrder = {
     id: string
@@ -37,6 +39,7 @@ const statusLabels: Record<string, string> = {
 }
 
 export default function PurchaseOrdersPage() {
+    const { t } = useTranslation()
     const [orders, setOrders] = useState<PurchaseOrder[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -56,10 +59,10 @@ export default function PurchaseOrdersPage() {
             if (data.success) {
                 setOrders(data.data)
             } else {
-                setError('Gagal memuat data purchase order')
+                setError(t('finance.purchaseOrders.error'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('finance.purchaseOrders.errorGeneric'))
         } finally {
             setLoading(false)
         }
@@ -92,11 +95,19 @@ export default function PurchaseOrdersPage() {
                 setShowCreateModal(false)
                 fetchOrders()
             } else {
-                alert('Gagal membuat purchase order: ' + result.error)
+                alert(`${t('finance.purchaseOrders.createError')}: ${result.error}`)
             }
         } catch {
-            alert('Terjadi kesalahan saat membuat purchase order')
+            alert(t('finance.purchaseOrders.createErrorGeneric'))
         }
+    }
+
+    const i18nStatusLabels: Record<string, string> = {
+        draft: t('finance.purchaseOrders.statusLabels.draft'),
+        sent: t('finance.purchaseOrders.statusLabels.sent'),
+        confirmed: t('finance.purchaseOrders.statusLabels.confirmed'),
+        received: t('finance.purchaseOrders.statusLabels.received'),
+        cancelled: t('finance.purchaseOrders.statusLabels.cancelled'),
     }
 
     if (loading) {
@@ -124,7 +135,7 @@ export default function PurchaseOrdersPage() {
                         onClick={fetchOrders}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('finance.purchaseOrders.retry')}
                     </button>
                 </div>
             </div>
@@ -136,41 +147,39 @@ export default function PurchaseOrdersPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Purchase Order</h1>
-                    <p className="text-gray-500">Kelola pesanan pembelian ke supplier</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.purchaseOrders.title')}</h1>
+                    <p className="text-gray-500">{t('finance.purchaseOrders.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Buat PO
+                    <Plus className="h-4 w-4" />
+                    {t('finance.purchaseOrders.createPO')}
                 </button>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total PO</p>
+                    <p className="text-sm text-gray-500">{t('finance.purchaseOrders.stats.totalPO')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
                     <p className="text-xs text-gray-400 mt-1">{orders.length} PO</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Draft</p>
+                    <p className="text-sm text-gray-500">{t('finance.purchaseOrders.stats.draft')}</p>
                     <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
-                    <p className="text-xs text-gray-400 mt-1">Belum dikirim</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('finance.purchaseOrders.stats.notSent')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Pending</p>
+                    <p className="text-sm text-gray-500">{t('finance.purchaseOrders.stats.pending')}</p>
                     <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                    <p className="text-xs text-gray-400 mt-1">Menunggu konfirmasi</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('finance.purchaseOrders.stats.waitingConfirmation')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Diterima</p>
+                    <p className="text-sm text-gray-500">{t('finance.purchaseOrders.stats.received')}</p>
                     <p className="text-2xl font-bold text-green-600">{stats.received}</p>
-                    <p className="text-xs text-gray-400 mt-1">Selesai</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('finance.purchaseOrders.stats.completed')}</p>
                 </div>
             </div>
 
@@ -178,12 +187,10 @@ export default function PurchaseOrdersPage() {
             <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                 <div className="flex-1">
                     <div className="relative">
-                        <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari PO..."
+                            placeholder={t('finance.purchaseOrders.searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
@@ -196,11 +203,11 @@ export default function PurchaseOrdersPage() {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filterStatus === status
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            {status === 'all' ? 'Semua' : statusLabels[status] || status}
+                            {status === 'all' ? t('finance.purchaseOrders.filter.all') : i18nStatusLabels[status] || status}
                         </button>
                     ))}
                 </div>
@@ -212,20 +219,20 @@ export default function PurchaseOrdersPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-500">Nomor PO</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Supplier</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Items</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Tanggal Dibuat</th>
-                                <th className="px-4 py-3 font-medium text-gray-500">Estimasi</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-500">Total</th>
-                                <th className="px-4 py-3 text-center font-medium text-gray-500">Status</th>
+                                <th className="px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.poNumber')}</th>
+                                <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.supplier')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.items')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.createdDate')}</th>
+                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.estimated')}</th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-500">{t('finance.purchaseOrders.table.total')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500">{t('finance.purchaseOrders.table.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                                        Tidak ada purchase order ditemukan
+                                        {t('finance.purchaseOrders.empty')}
                                     </td>
                                 </tr>
                             ) : (
@@ -236,16 +243,16 @@ export default function PurchaseOrdersPage() {
                                                 {po.poNumber}
                                             </Link>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="hidden md:table-cell px-4 py-3">
                                             <div className="font-medium">{po.supplierName}</div>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-500">{po.items?.length || 0} item</td>
-                                        <td className="whitespace-nowrap px-4 py-3">{formatDate(po.createdAt)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3">{formatDate(po.expectedDelivery)}</td>
+                                        <td className="hidden lg:table-cell px-4 py-3 text-gray-500">{po.items?.length || 0} item</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3">{formatDate(po.createdAt)}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3">{formatDate(po.expectedDelivery)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(po.total)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[po.status] || 'bg-gray-100 text-gray-700'}`}>
-                                                {statusLabels[po.status] || po.status}
+                                                {i18nStatusLabels[po.status] || po.status}
                                             </span>
                                         </td>
                                     </tr>
