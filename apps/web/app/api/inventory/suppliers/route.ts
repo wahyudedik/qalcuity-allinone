@@ -43,7 +43,7 @@ export async function GET(request: Request) {
             prisma.supplier.count({ where }),
         ]);
 
-        const data = suppliers.map((s) => ({
+        const data = suppliers.map((s: any) => ({
             id: s.id,
             name: s.name,
             contactPerson: s.contactPerson || '',

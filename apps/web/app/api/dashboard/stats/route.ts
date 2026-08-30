@@ -99,7 +99,7 @@ export async function GET() {
         const totalRevenue = Number(totalInvoices._sum.total || 0);
 
         // Build recent activities from audit logs
-        const recentActivities = recentAuditLogs.map((log) => {
+        const recentActivities = recentAuditLogs.map((log: any) => {
             const entityIcons: Record<string, string> = {
                 Invoice: 'dollar-sign',
                 Deal: 'trending-up',

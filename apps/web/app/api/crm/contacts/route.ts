@@ -58,7 +58,7 @@ export async function GET(request: Request) {
             prisma.contact.count({ where }),
         ]);
 
-        const data = contacts.map((c) => ({
+        const data = contacts.map((c: any) => ({
             id: c.id,
             name: c.name,
             email: c.email,

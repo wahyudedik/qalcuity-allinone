@@ -45,7 +45,7 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            data: notifications.map((n) => ({
+            data: notifications.map((n: any) => ({
                 id: n.id,
                 type: 'PAYMENT_RECEIVED',
                 title: `Pembayaran Baru dari ${n.tenant.name}`,

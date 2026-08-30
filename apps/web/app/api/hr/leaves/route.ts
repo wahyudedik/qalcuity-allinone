@@ -53,7 +53,7 @@ export async function GET(request: Request) {
             prisma.leaveRequest.count({ where }),
         ]);
 
-        const data = leaves.map((l) => ({
+        const data = leaves.map((l: any) => ({
             id: l.id,
             employeeName: l.employee.name,
             employeeId: l.employee.employeeId,

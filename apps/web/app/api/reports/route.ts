@@ -431,7 +431,7 @@ export async function GET(request: Request) {
                 if (!po.deliveryDate) return false
                 return new Date(po.deliveryDate) >= new Date(po.orderDate)
             }).length
-            const totalSpent = s.purchaseOrders.reduce((sum, po) => sum + Number(po.total), 0)
+            const totalSpent = s.purchaseOrders.reduce((sum: any, po: any) => sum + Number(po.total), 0)
             return {
                 name: s.name,
                 rating: Number(s.rating),
