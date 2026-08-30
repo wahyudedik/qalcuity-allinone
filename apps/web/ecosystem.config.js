@@ -7,6 +7,7 @@ module.exports = {
         env: {
             NODE_ENV: 'production',
             PORT: 3000,
+            PRISMA_QUERY_ENGINE_TYPE: 'library',
         },
         instances: 1, // Gunakan 1 untuk VPS 2GB RAM, max untuk VPS 4GB+
         exec_mode: 'fork', // Gunakan 'fork' untuk 1 instance, 'cluster' untuk multi-instance
