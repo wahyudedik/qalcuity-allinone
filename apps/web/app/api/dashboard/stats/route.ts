@@ -127,7 +127,7 @@ export async function GET() {
         // Build alerts
         const alerts: Array<{ id: string; type: string; title: string; message: string; moduleId: string }> = [];
 
-        overdueInvoices.forEach((inv) => {
+        overdueInvoices.forEach((inv: any) => {
             alerts.push({
                 id: `overdue-${inv.id}`,
                 type: 'danger',
@@ -137,7 +137,7 @@ export async function GET() {
             });
         });
 
-        lowStockProducts.forEach((prod) => {
+        lowStockProducts.forEach((prod: any) => {
             alerts.push({
                 id: `lowstock-${prod.id}`,
                 type: 'warning',
