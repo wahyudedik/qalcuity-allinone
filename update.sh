@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-# Qalcuity - Update Script (Harian)
-# Untuk update otomatis / manual dari server
+# Qalcuity - Update Script
+# Untuk update dari repository + rebuild + restart service
 # ============================================================
 # Jalankan manual: sudo ./update.sh
 # Atau otomatis via cron (sudah di-setup oleh deploy.sh)
@@ -10,18 +10,21 @@
 set -e
 
 # --- Prisma Engine Configuration ---
-# VPS ini tidak bisa download Prisma engine binary dari binaries.prisma.sh
-# Gunakan library engine sebagai workaround
 export PRISMA_QUERY_ENGINE_TYPE=library
 
 # --- Konfigurasi ---
 APP_NAME="qalcuity"
 APP_DIR="/www/wwwroot/qalcuity"
-PM2_APP_NAME="qalcuity-web"
+APP_PORT=3000
 LOG_FILE="/var/log/qalcuity-update.log"
 BRANCH="main"
 
-# --- Warna untuk output --- 
+# --- PostgreSQL (aaPanel) ---
+PG_BIN="/www/server/pgsql/bin"
+DB_NAME="qalcuity"
+DB_USER="qalcuity"
+
+# --- Warna untuk output ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -71,35 +74,35 @@ if [ ! -d "$APP_DIR" ]; then
 fi
 cd "$APP_DIR"
 
-# --- 2. Load NVM ---
-print_step "2/8 - Load Node.js environment"
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-print_success "Node.js $(node -v) loaded"
+# --- 2. Cek Node.js ---
+print_step "2/8 - Cek Node.js environment"
+if ! command -v node &> /dev/null; then
+    print_error "Node.js tidak ditemukan!"
+fi
+print_success "Node.js $(node -v) | pnpm $(pnpm -v)"
 
-# --- 3. Backup database (sebelum update) ---
+# --- 3. Backup database PostgreSQL ---
 print_step "3/8 - Backup database"
 BACKUP_DIR="$APP_DIR/backups"
 mkdir -p "$BACKUP_DIR"
-BACKUP_FILE="$BACKUP_DIR/db_backup_$(date '+%Y%m%d_%H%M%S').db"
+BACKUP_FILE="$BACKUP_DIR/pg_backup_$(date '+%Y%m%d_%H%M%S').sql"
 
-# Backup SQLite
-if [ -f "$APP_DIR/packages/db/prisma/dev.db" ]; then
-    cp "$APP_DIR/packages/db/prisma/dev.db" "$BACKUP_FILE"
-    print_success "Database SQLite di-backup ke $BACKUP_FILE"
-fi
-
-# Backup PostgreSQL (jika ada)
-if grep -q "postgresql" "$APP_DIR/apps/web/.env" 2>/dev/null; then
-    if command -v pg_dump &> /dev/null; then
-        pg_dump qalcuity > "$BACKUP_DIR/pg_backup_$(date '+%Y%m%d_%H%M%S').sql" 2>/dev/null || true
-        print_success "PostgreSQL backup selesai"
+# Backup PostgreSQL via aaPanel path
+if [ -x "$PG_BIN/pg_dump" ]; then
+    $PG_BIN/pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null || true
+    if [ -s "$BACKUP_FILE" ]; then
+        print_success "PostgreSQL backup: $BACKUP_FILE"
+    else
+        print_warning "Backup kosong (database mungkin belum ada)"
+        rm -f "$BACKUP_FILE"
     fi
+else
+    print_warning "pg_dump tidak ditemukan di $PG_BIN, skip backup"
 fi
 
-# Bersihkan backup lama (hapus yang > 30 hari)
-find "$BACKUP_DIR" -name "*.db" -mtime +30 -delete 2>/dev/null || true
+# Bersihkan backup lama (>30 hari)
 find "$BACKUP_DIR" -name "*.sql" -mtime +30 -delete 2>/dev/null || true
+find "$BACKUP_DIR" -name "*.db" -mtime +30 -delete 2>/dev/null || true
 
 # --- 4. Cek ada update baru ---
 print_step "4/8 - Cek update terbaru dari repository"
@@ -107,7 +110,7 @@ print_step "4/8 - Cek update terbaru dari repository"
 # Simpan commit hash sebelum update
 COMMIT_BEFORE=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 
-# Fetch & pull
+# Fetch & cek
 git fetch origin "$BRANCH"
 COMMIT_AFTER=$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo "unknown")
 
@@ -130,7 +133,6 @@ print_success "Code berhasil di-pull"
 # --- 5. Install dependency baru (jika ada perubahan) ---
 print_step "5/8 - Install dependencies"
 
-# Cek apakah ada perubahan di package.json
 CHANGED_FILES=$(git diff --name-only "$COMMIT_BEFORE" "$COMMIT_AFTER" 2>/dev/null || echo "")
 
 if echo "$CHANGED_FILES" | grep -q "package.json\|pnpm-lock.yaml"; then
@@ -148,7 +150,6 @@ if echo "$CHANGED_FILES" | grep -q "schema.prisma"; then
     pnpm db:push --skip-generate 2>/dev/null || pnpm db:push
     print_success "Prisma schema di-update dan di-push ke database"
 else
-    # Tetap generate untuk memastikan Prisma Client compatible
     pnpm db:generate 2>/dev/null || true
     print_success "Prisma Client verified"
 fi
@@ -159,32 +160,27 @@ print_step "7/8 - Build aplikasi"
 pnpm build
 print_success "Build berhasil"
 
-# --- 8. Restart aplikasi ---
-print_step "8/8 - Restart aplikasi via PM2"
+# --- 8. Restart service ---
+print_step "8/8 - Restart service"
 
-# Reload PM2 untuk apply perubahan
-pm2 reload ecosystem.config.js --update-env
-pm2 save
+# Kill process lama di port 3000
+fuser -k $APP_PORT/tcp 2>/dev/null || true
+sleep 2
 
-# Tunggu beberapa detik untuk memastikan aplikasi running
+# Pastikan start.sh executable
+chmod +x "$APP_DIR/apps/web/start.sh"
+
+# Start service via start.sh (background)
+cd "$APP_DIR/apps/web"
+bash start.sh &
 sleep 5
 
-# Cek status
-APP_STATUS=$(pm2 jlist 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-if [ "$APP_STATUS" = "online" ]; then
-    print_success "Aplikasi berhasil di-restart dan berjalan normal"
-else
-    print_warning "Status aplikasi: $APP_STATUS - cek pm2 logs untuk detail"
-fi
-
-# Health check — cek apakah aplikasi merespons
-sleep 2
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/health 2>/dev/null || echo "000")
+# Health check
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$APP_PORT/api/health 2>/dev/null || echo "000")
 if [ "$HTTP_STATUS" = "200" ]; then
-    print_success "Health check passed (HTTP $HTTP_STATUS)"
+    print_success "Health check passed (HTTP $HTTP_STATUS) — Service running!"
 else
-    print_warning "Health check returned HTTP $HTTP_STATUS — aplikasi mungkin masih memulai"
+    print_warning "Health check returned HTTP $HTTP_STATUS — cek log jika error"
 fi
 
 # ============================================================
@@ -199,8 +195,8 @@ echo -e "📅 Waktu update   : $(date '+%Y-%m-%d %H:%M:%S WIB')"
 echo -e "🔀 Branch         : ${GREEN}$BRANCH${NC}"
 echo -e "📝 Commit         : ${GREEN}${COMMIT_AFTER:0:7}${NC}"
 echo -e "📦 Backup         : ${GREEN}$BACKUP_FILE${NC}"
+echo -e "🌐 URL            : ${GREEN}https://qalcuity.com${NC}"
 echo ""
 echo -e "${YELLOW}📋 Log file: $LOG_FILE${NC}"
-echo -e "${YELLOW}📋 Cek status: pm2 status${NC}"
-echo -e "${YELLOW}📋 Lihat log: pm2 logs $PM2_APP_NAME${NC}"
+echo -e "${YELLOW}📋 Cek status: lsof -i:$APP_PORT${NC}"
 echo ""
