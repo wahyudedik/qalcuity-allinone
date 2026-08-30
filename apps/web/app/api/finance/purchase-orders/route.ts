@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { createPurchaseOrderSchema, updatePurchaseOrderSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -80,43 +82,38 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.supplierId && !body.supplierName) {
+        const validation = createPurchaseOrderSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Supplier is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        if (!body.items || body.items.length === 0) {
-            return NextResponse.json(
-                { success: false, error: 'At least one item is required' },
-                { status: 400 }
-            );
-        }
+        const validatedData = validation.data;
 
         const count = await prisma.purchaseOrder.count({ where: { tenantId } });
         const poNumber = `PO-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
-        const subtotal = body.items.reduce(
-            (sum: number, item: { quantity: number; unitPrice: number }) =>
-                sum + item.quantity * item.unitPrice,
+        const subtotal = validatedData.items.reduce(
+            (sum, item) => sum + item.quantity * item.unitPrice,
             0
         );
-        const taxRate = body.taxRate || 11;
+        const taxRate = validatedData.taxRate || 11;
         const taxAmount = subtotal * (taxRate / 100);
         const total = subtotal + taxAmount;
 
-        let supplierId = body.supplierId;
-        if (!supplierId && body.supplierName) {
+        let supplierId = validatedData.supplierId;
+        if (!supplierId && validatedData.supplierName) {
             const supplier = await prisma.supplier.create({
                 data: {
-                    name: body.supplierName,
-                    email: body.supplierEmail || undefined,
-                    phone: body.supplierPhone || undefined,
-                    address: body.supplierAddress || undefined,
+                    name: validatedData.supplierName,
+                    email: validatedData.supplierEmail || undefined,
+                    phone: validatedData.supplierPhone || undefined,
+                    address: validatedData.supplierAddress || undefined,
                     tenantId,
                 },
             });
@@ -128,8 +125,8 @@ export async function POST(request: Request) {
                 poNumber,
                 status: 'DRAFT',
                 orderDate: new Date(),
-                deliveryDate: body.expectedDelivery ? new Date(body.expectedDelivery) : undefined,
-                notes: body.notes || '',
+                deliveryDate: validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : undefined,
+                notes: validatedData.notes || '',
                 subtotal,
                 taxRate,
                 taxAmount,
@@ -137,7 +134,7 @@ export async function POST(request: Request) {
                 tenantId,
                 supplierId,
                 items: {
-                    create: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                    create: validatedData.items.map((item) => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -147,6 +144,8 @@ export async function POST(request: Request) {
             },
             include: { items: true, supplier: true },
         });
+
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'PurchaseOrder', entityId: purchaseOrder.id, newValues: { poNumber: purchaseOrder.poNumber, total: purchaseOrder.total, status: purchaseOrder.status } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: purchaseOrder }, { status: 201 });
     } catch (error: unknown) {
@@ -160,48 +159,63 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, items, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
 
+        const validation = updatePurchaseOrderSchema.safeParse({ ...updateData, items });
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
         const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Purchase Order not found' },
+                { success: false, error: 'Purchase Order tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        if (updateData.status) {
-            updateData.status = updateData.status.toUpperCase();
+        const data: Record<string, unknown> = {};
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
         }
-        if (updateData.expectedDelivery) {
-            updateData.deliveryDate = new Date(updateData.expectedDelivery);
-            delete updateData.expectedDelivery;
+        if (validatedData.expectedDelivery !== undefined) {
+            data.deliveryDate = validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : null;
+        }
+        if (validatedData.taxRate !== undefined) {
+            data.taxRate = validatedData.taxRate;
+        }
+        if (validatedData.notes !== undefined) {
+            data.notes = validatedData.notes;
         }
 
-        if (items && items.length > 0) {
-            const subtotal = items.reduce(
-                (sum: number, item: { quantity: number; unitPrice: number }) =>
-                    sum + item.quantity * item.unitPrice,
+        if (validatedData.items && validatedData.items.length > 0) {
+            const subtotal = validatedData.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
                 0
             );
-            const taxRate = updateData.taxRate || existing.taxRate;
+            const taxRate = validatedData.taxRate || existing.taxRate;
             const taxAmount = subtotal * (taxRate / 100);
-            updateData.subtotal = subtotal;
-            updateData.taxAmount = taxAmount;
-            updateData.total = subtotal + taxAmount;
+            data.subtotal = subtotal;
+            data.taxAmount = taxAmount;
+            data.total = subtotal + taxAmount;
 
             await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
             await prisma.purchaseOrderItem.createMany({
-                data: items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                data: validatedData.items.map((item) => ({
                     purchaseOrderId: id,
                     description: item.description,
                     quantity: item.quantity,
@@ -213,9 +227,11 @@ export async function PUT(request: Request) {
 
         const purchaseOrder = await prisma.purchaseOrder.update({
             where: { id },
-            data: updateData,
+            data,
             include: { items: true, supplier: true },
         });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PurchaseOrder', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: purchaseOrder });
     } catch (error: unknown) {
@@ -229,7 +245,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -249,6 +265,9 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.purchaseOrder.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'PurchaseOrder', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

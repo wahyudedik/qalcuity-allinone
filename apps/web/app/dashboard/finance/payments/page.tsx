@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, DollarSign, Clock, XCircle, BarChart3 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type Payment = {
     id: string
@@ -23,6 +24,8 @@ type Payment = {
 
 export default function PaymentsPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [payments, setPayments] = useState<Payment[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -134,10 +137,12 @@ export default function PaymentsPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.payments.title')}</h1>
                     <p className="text-gray-500">{t('finance.payments.subtitle')}</p>
                 </div>
-                <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                {canMutate && (
+                    <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                     <Plus className="h-4 w-4" />
                     {t('finance.payments.recordPayment')}
-                </button>
+                    </button>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -190,8 +195,51 @@ export default function PaymentsPage() {
                 </select>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-gray-200 bg-white">
+            {/* Kartu pembayaran untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filteredPayments.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                        {t('finance.payments.empty')}
+                    </div>
+                ) : (
+                    filteredPayments.map((payment) => (
+                        <div key={payment.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <Link href={`/dashboard/finance/payments/${payment.id}`} className="font-medium text-blue-600 hover:underline">
+                                        {payment.paymentNumber}
+                                    </Link>
+                                    <p className="text-sm text-gray-500">{payment.customerName}</p>
+                                </div>
+                                {getStatusBadge(payment.status)}
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500">{t('finance.payments.table.amount')}:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(payment.amount)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.payments.table.date')}:</span>
+                                    <span className="ml-1">{formatDate(payment.date)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.payments.table.method')}:</span>
+                                    <span className="ml-1">{getMethodLabel(payment.method)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.payments.table.invoice')}:</span>
+                                    <Link href={`/dashboard/finance/invoices/${payment.invoiceId}`} className="ml-1 text-blue-600 hover:underline">
+                                        {payment.invoiceNumber}
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel pembayaran untuk tampilan desktop */}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 type AuditLog = {
     id: string
@@ -46,6 +48,8 @@ const actionLabels: Record<string, string> = {
 }
 
 export default function AuditPage() {
+    const { data: session, status } = useSession()
+    const router = useRouter()
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -90,6 +94,31 @@ export default function AuditPage() {
     useEffect(() => {
         setPage(1)
     }, [selectedModule, selectedAction, search])
+
+    // ─── Role Check: Hanya ADMIN+ yang bisa mengakses Audit Trail ─────────────
+    useEffect(() => {
+        if (status === 'loading') return
+        const role = session?.user?.role
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            router.push('/dashboard')
+        }
+    }, [session, status, router])
+
+    if (status === 'loading') {
+        return (
+            <div className="p-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="h-64 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        )
+    }
+
+    const role = session?.user?.role
+    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        return null
+    }
 
     const formatTimestamp = (timestamp: string) => {
         const date = new Date(timestamp)

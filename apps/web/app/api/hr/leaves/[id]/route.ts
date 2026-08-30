@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updateLeaveSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -60,29 +62,39 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
+
+        const validation = updateLeaveSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.leaveRequest.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Leave request not found' },
+                { success: false, error: 'Leave request tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         const data: Record<string, unknown> = {};
-        if (typeof body.type === 'string') data.type = body.type.toUpperCase();
-        if (body.startDate) data.startDate = new Date(String(body.startDate));
-        if (body.endDate) data.endDate = new Date(String(body.endDate));
-        if (typeof body.days === 'number') data.days = body.days;
-        if (typeof body.reason === 'string') data.reason = body.reason;
-        if (typeof body.status === 'string') data.status = body.status.toUpperCase();
-        if (typeof body.approvedBy === 'string') data.approvedBy = body.approvedBy;
-        if (typeof body.notes === 'string') data.notes = body.notes;
+        if (validatedData.type !== undefined) data.type = validatedData.type.toUpperCase();
+        if (validatedData.startDate !== undefined) data.startDate = new Date(validatedData.startDate);
+        if (validatedData.endDate !== undefined) data.endDate = new Date(validatedData.endDate);
+        if (validatedData.days !== undefined) data.days = validatedData.days;
+        if (validatedData.reason !== undefined) data.reason = validatedData.reason;
+        if (validatedData.status !== undefined) data.status = validatedData.status.toUpperCase();
+        if (validatedData.approvedBy !== undefined) data.approvedBy = validatedData.approvedBy;
+        if (validatedData.notes !== undefined) data.notes = validatedData.notes;
 
         // Recalculate days if dates changed
         if (data.startDate || data.endDate) {
@@ -99,6 +111,8 @@ export async function PUT(
             },
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'LeaveRequest', entityId: id, newValues: data as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -114,7 +128,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.leaveRequest.findFirst({
@@ -128,6 +142,9 @@ export async function DELETE(
         }
 
         await prisma.leaveRequest.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'LeaveRequest', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

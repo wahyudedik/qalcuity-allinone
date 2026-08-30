@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Star, Pencil, FileText, BarChart3 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
+import { Star, Pencil, FileText, BarChart3, ArrowLeft, Mail, Phone, MapPin, Building2, Calendar, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 interface EmployeeDetail {
     id: string
@@ -23,16 +26,15 @@ interface EmployeeDetail {
     performance: { rating: number; lastReview: string }
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    active: { label: 'Aktif', color: 'bg-green-100 text-green-800' },
-    inactive: { label: 'Tidak Aktif', color: 'bg-red-100 text-red-800' },
-    probation: { label: 'Masa Percobaan', color: 'bg-yellow-100 text-yellow-800' },
-}
-
 export default function EmployeeDetailPage({ params }: { params: { id: string } }) {
+    const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
+    const router = useRouter()
     const [employee, setEmployee] = useState<EmployeeDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
         const fetchEmployee = async () => {
@@ -42,16 +44,32 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                 if (data.success) {
                     setEmployee(data.data)
                 } else {
-                    setError('Karyawan tidak ditemukan')
+                    setError(t('hr.employeeDetail.error'))
                 }
             } catch {
-                setError('Gagal memuat data karyawan')
+                setError(t('hr.employeeDetail.errorLoad'))
             } finally {
                 setLoading(false)
             }
         }
         fetchEmployee()
-    }, [params.id])
+    }, [params.id, t])
+
+    const handleDelete = async () => {
+        if (!window.confirm(t('hr.employeeDetail.confirmDelete'))) return
+        try {
+            const res = await fetch(`/api/hr/employees/${params.id}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('hr.employeeDetail.deleteSuccess'), type: 'success' })
+                router.push('/dashboard/hr/employees')
+            } else {
+                setToast({ message: data.error || t('hr.employeeDetail.deleteError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('hr.employeeDetail.deleteError'), type: 'error' })
+        }
+    }
 
     if (loading) {
         return (
@@ -66,16 +84,15 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
         return (
             <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
-                    <p className="text-lg text-gray-600">{error || 'Data tidak tersedia'}</p>
+                    <p className="text-lg text-gray-600">{error || t('hr.employeeDetail.error')}</p>
                     <Link href="/dashboard/hr/employees" className="mt-4 inline-block text-blue-600 hover:text-blue-800">
-                        ← Kembali ke Karyawan
+                        ← {t('hr.employeeDetail.backToEmployees')}
                     </Link>
                 </div>
             </div>
         )
     }
 
-    const statusInfo = statusConfig[employee.status] || { label: employee.status, color: 'bg-gray-100 text-gray-800' }
     const fullName = `${employee.firstName} ${employee.lastName}`
 
     return (
@@ -83,7 +100,8 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
             {/* Header */}
             <div>
                 <Link href="/dashboard/hr/employees" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                    ← Kembali ke Karyawan
+                    <ArrowLeft className="h-4 w-4" />
+                    {t('hr.employeeDetail.backToEmployees')}
                 </Link>
                 <div className="mt-4 flex items-center gap-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-600">
@@ -93,9 +111,6 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                         <h1 className="text-2xl font-bold text-gray-900">{fullName}</h1>
                         <p className="text-sm text-gray-500">{employee.position} • {employee.department}</p>
                     </div>
-                    <span className={`ml-auto inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${statusInfo.color}`}>
-                        {statusInfo.label}
-                    </span>
                 </div>
             </div>
 
@@ -104,33 +119,42 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                 <div className="lg:col-span-2 space-y-6">
                     {/* Personal Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Informasi Pribadi</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.personalInfo')}</h3>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <p className="text-sm text-gray-500">Email</p>
-                                <p className="font-medium text-gray-900">{employee.email}</p>
+                            <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-sm text-gray-500">{t('hr.employeeDetail.email')}</p>
+                                    <p className="font-medium text-gray-900">{employee.email}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Telepon</p>
-                                <p className="font-medium text-gray-900">{employee.phone}</p>
+                            <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-sm text-gray-500">{t('hr.employeeDetail.phone')}</p>
+                                    <p className="font-medium text-gray-900">{employee.phone}</p>
+                                </div>
                             </div>
-                            <div className="sm:col-span-2">
-                                <p className="text-sm text-gray-500">Alamat</p>
-                                <p className="font-medium text-gray-900">{employee.address}</p>
+                            <div className="flex items-start gap-2 sm:col-span-2">
+                                <MapPin className="mt-1 h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-sm text-gray-500">{t('hr.employeeDetail.address')}</p>
+                                    <p className="font-medium text-gray-900">{employee.address}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Emergency Contact */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Kontak Darurat</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.emergencyContact')}</h3>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <p className="text-sm text-gray-500">Nama</p>
+                                <p className="text-sm text-gray-500">{t('hr.employeeDetail.emergencyContact')}</p>
                                 <p className="font-medium text-gray-900">{employee.emergencyContact}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Telepon</p>
+                                <p className="text-sm text-gray-500">{t('hr.employeeDetail.emergencyPhone')}</p>
                                 <p className="font-medium text-gray-900">{employee.emergencyPhone}</p>
                             </div>
                         </div>
@@ -139,7 +163,7 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                     {/* Skills */}
                     {employee.skills.length > 0 && (
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="text-lg font-semibold text-gray-900">Keahlian</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.skills')}</h3>
                             <div className="mt-4 flex flex-wrap gap-2">
                                 {employee.skills.map((skill) => (
                                     <span key={skill} className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
@@ -155,22 +179,28 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                 <div className="space-y-6">
                     {/* Work Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Informasi Kerja</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.workInfo')}</h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Departemen</span>
+                                <span className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Building2 className="h-4 w-4" /> {t('hr.employeeDetail.department')}
+                                </span>
                                 <span className="text-sm font-medium text-gray-900">{employee.department}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Posisi</span>
+                                <span className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Pencil className="h-4 w-4" /> {t('hr.employeeDetail.position')}
+                                </span>
                                 <span className="text-sm font-medium text-gray-900">{employee.position}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Tanggal Masuk</span>
+                                <span className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Calendar className="h-4 w-4" /> {t('hr.employeeDetail.hireDate')}
+                                </span>
                                 <span className="text-sm text-gray-900">{formatDate(employee.joinDate)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">ID Karyawan</span>
+                                <span className="text-sm text-gray-500">{t('hr.employeeDetail.employeeId')}</span>
                                 <span className="font-mono text-sm text-gray-900">{employee.id}</span>
                             </div>
                         </div>
@@ -178,29 +208,29 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
 
                     {/* Compensation */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Kompensasi</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.compensation')}</h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Gaji Pokok</span>
+                                <span className="text-sm text-gray-500">{t('hr.employeeDetail.baseSalary')}</span>
                                 <span className="text-sm font-medium text-gray-900">{formatCurrency(employee.salary)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">THR</span>
+                                <span className="text-sm text-gray-500">{t('hr.employeeDetail.thr')}</span>
                                 <span className="text-sm font-medium text-gray-900">{formatCurrency(employee.salary)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">BPJS</span>
-                                <span className="text-sm font-medium text-green-600">✓ Full Coverage</span>
+                                <span className="text-sm text-gray-500">{t('hr.employeeDetail.bpjs')}</span>
+                                <span className="text-sm font-medium text-green-600">{t('hr.employeeDetail.fullCoverage')}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Performance */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Performa</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.performance')}</h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Rating</span>
+                                <span className="text-sm text-gray-500">{t('hr.employeeDetail.rating')}</span>
                                 <span className="flex items-center gap-1 text-lg font-bold text-yellow-500">
                                     {Array.from({ length: Math.round(employee.performance.rating) }).map((_, i) => (
                                         <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -209,7 +239,7 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Review Terakhir</span>
+                                <span className="text-sm text-gray-500">{t('hr.employeeDetail.lastReview')}</span>
                                 <span className="text-sm text-gray-900">{formatDate(employee.performance.lastReview)}</span>
                             </div>
                         </div>
@@ -217,20 +247,26 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
 
                     {/* Actions */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Aksi</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
                             <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                                 <Pencil className="h-4 w-4" />
-                                Edit Profil
+                                {t('hr.employeeDetail.editProfile')}
                             </button>
                             <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                 <FileText className="h-4 w-4" />
-                                Lihat Slip Gaji
+                                {t('hr.employeeDetail.viewPayslip')}
                             </button>
                             <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                 <BarChart3 className="h-4 w-4" />
-                                Riwayat Kehadiran
+                                {t('hr.employeeDetail.attendanceHistory')}
                             </button>
+                            {canMutate && (
+                                <button onClick={handleDelete} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                                <Trash2 className="h-4 w-4" />
+                                {t('hr.employeeDetail.delete')}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -14,6 +14,7 @@ import {
     UserCheck,
     Package,
     Banknote,
+    Sparkles,
     type LucideIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -266,6 +267,40 @@ export default function DashboardPage() {
                         ) : (
                             <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.noActivity')}</p>
                         )}
+                    </div>
+                </div>
+            </div>
+
+            {/* AI Insights */}
+            <div className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+                <div className="mb-4 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    <h2 className="text-lg font-semibold">AI Insights</h2>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-lg bg-white/10 p-4">
+                        <p className="text-sm opacity-80">Revenue Insight</p>
+                        <p className="font-semibold">↑ 12.5% dari bulan lalu</p>
+                        <p className="mt-1 text-xs opacity-70">
+                            Pertumbuhan stabil. Pertimbangkan promosi untuk mencapai target Q3.
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg bg-white/10 p-4">
+                        <p className="text-sm opacity-80">Cash Flow Alert</p>
+                        <p className="font-semibold">⚠️ 2 invoice overdue</p>
+                        <p className="mt-1 text-xs opacity-70">
+                            Total Rp 2.000.000 perlu follow up segera.
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg bg-white/10 p-4">
+                        <p className="text-sm opacity-80">Stock Warning</p>
+                        <p className="font-semibold">3 produk low stock</p>
+                        <p className="mt-1 text-xs opacity-70">
+                            Widget A, Part B, dan Service C perlu restock.
+                        </p>
                     </div>
                 </div>
             </div>

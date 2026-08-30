@@ -200,46 +200,85 @@ export default function PipelinePage() {
                 </div>
             )}
 
-            {/* List View */}
+            {/* List View - Mobile Cards */}
             {viewMode === 'list' && (
-                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead>
-                                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-                                    <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.deal')}</th>
-                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.company')}</th>
-                                    <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.value')}</th>
-                                    <th className="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.stage')}</th>
-                                    <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.winProb')}</th>
-                                    <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.weighted')}</th>
-                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.owner')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {allStages.map((stage) =>
-                                    stage.deals.map((deal) => (
-                                        <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                            <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">{deal.name}</td>
-                                            <td className="hidden md:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">{deal.company || '-'}</td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</td>
-                                            <td className="whitespace-nowrap px-4 py-3 text-center">
-                                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stage.bgColor} ${stage.color.replace('bg-', 'text-')}`}>
-                                                    {getStageLabel(stage.id)}
-                                                </span>
-                                            </td>
-                                            <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center text-gray-600 dark:text-gray-400">{deal.probability}%</td>
-                                            <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
-                                                {formatCurrency(deal.value * deal.probability / 100)}
-                                            </td>
-                                            <td className="hidden md:table-cell whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{deal.assignedTo || '-'}</td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                <>
+                    <div className="md:hidden space-y-3">
+                        {allStages.map((stage) =>
+                            stage.deals.map((deal) => (
+                                <div key={deal.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{deal.name}</div>
+                                            {deal.company && <div className="text-sm text-gray-500 dark:text-gray-400">{deal.company}</div>}
+                                        </div>
+                                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stage.bgColor} ${stage.color.replace('bg-', 'text-')}`}>
+                                            {getStageLabel(stage.id)}
+                                        </span>
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.value')}:</span>
+                                            <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.winProb')}:</span>
+                                            <span className="ml-1">{deal.probability}%</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.weighted')}:</span>
+                                            <span className="ml-1 font-medium text-green-600">{formatCurrency(deal.value * deal.probability / 100)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">Owner:</span>
+                                            <span className="ml-1">{deal.assignedTo || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
-                </div>
+
+                    {/* List View - Desktop Table */}
+                    <div className="hidden md:block rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                                        <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.deal')}</th>
+                                        <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.company')}</th>
+                                        <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.value')}</th>
+                                        <th className="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.stage')}</th>
+                                        <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.winProb')}</th>
+                                        <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.weighted')}</th>
+                                        <th className="px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.owner')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {allStages.map((stage) =>
+                                        stage.deals.map((deal) => (
+                                            <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">{deal.name}</td>
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{deal.company || '-'}</td>
+                                                <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</td>
+                                                <td className="whitespace-nowrap px-4 py-3 text-center">
+                                                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stage.bgColor} ${stage.color.replace('bg-', 'text-')}`}>
+                                                        {getStageLabel(stage.id)}
+                                                    </span>
+                                                </td>
+                                                <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center text-gray-600 dark:text-gray-400">{deal.probability}%</td>
+                                                <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
+                                                    {formatCurrency(deal.value * deal.probability / 100)}
+                                                </td>
+                                                <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{deal.assignedTo || '-'}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* Summary */}

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PurchaseOrderForm } from '@/components/finance/purchase-order-form'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type PurchaseOrder = {
     id: string
@@ -40,12 +41,22 @@ const statusLabels: Record<string, string> = {
 
 export default function PurchaseOrdersPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [orders, setOrders] = useState<PurchaseOrder[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     useEffect(() => {
         fetchOrders()
@@ -94,11 +105,28 @@ export default function PurchaseOrdersPage() {
             if (result.success) {
                 setShowCreateModal(false)
                 fetchOrders()
+                setToast({ message: 'Purchase Order berhasil dibuat', type: 'success' })
             } else {
-                alert(`${t('finance.purchaseOrders.createError')}: ${result.error}`)
+                setToast({ message: `${t('finance.purchaseOrders.createError')}: ${result.error}`, type: 'error' })
             }
         } catch {
-            alert(t('finance.purchaseOrders.createErrorGeneric'))
+            setToast({ message: t('finance.purchaseOrders.createErrorGeneric'), type: 'error' })
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus Purchase Order ini?')) return
+        try {
+            const response = await fetch(`/api/finance/purchase-orders/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchOrders()
+                setToast({ message: 'Purchase Order berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus Purchase Order', type: 'error' })
         }
     }
 
@@ -150,13 +178,15 @@ export default function PurchaseOrdersPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.purchaseOrders.title')}</h1>
                     <p className="text-gray-500">{t('finance.purchaseOrders.subtitle')}</p>
                 </div>
-                <button
+                {canMutate && (
+                    <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
+                    >
                     <Plus className="h-4 w-4" />
                     {t('finance.purchaseOrders.createPO')}
-                </button>
+                    </button>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -213,19 +243,67 @@ export default function PurchaseOrdersPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-gray-200 bg-white">
+            {/* Kartu PO untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filtered.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                        {t('finance.purchaseOrders.empty')}
+                    </div>
+                ) : (
+                    filtered.map((po) => (
+                        <div key={po.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <Link href={`/dashboard/finance/purchase-orders/${po.id}`} className="font-medium text-blue-600 hover:underline">
+                                        {po.poNumber}
+                                    </Link>
+                                    <p className="text-sm text-gray-500">{po.supplierName}</p>
+                                </div>
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[po.status] || 'bg-gray-100 text-gray-700'}`}>
+                                    {i18nStatusLabels[po.status] || po.status}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500">{t('finance.purchaseOrders.table.total')}:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(po.total)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.purchaseOrders.table.items')}:</span>
+                                    <span className="ml-1">{po.items?.length || 0} item</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.purchaseOrders.table.estimated')}:</span>
+                                    <span className="ml-1">{formatDate(po.expectedDelivery)}</span>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                                <button
+                                    onClick={() => handleDelete(po.id)}
+                                    className="text-sm text-red-500 hover:text-red-700"
+                                >
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel PO untuk tampilan desktop */}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.poNumber')}</th>
-                                <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.supplier')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.supplier')}</th>
                                 <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.items')}</th>
                                 <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.createdDate')}</th>
                                 <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.purchaseOrders.table.estimated')}</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-500">{t('finance.purchaseOrders.table.total')}</th>
                                 <th className="px-4 py-3 text-center font-medium text-gray-500">{t('finance.purchaseOrders.table.status')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -243,7 +321,7 @@ export default function PurchaseOrdersPage() {
                                                 {po.poNumber}
                                             </Link>
                                         </td>
-                                        <td className="hidden md:table-cell px-4 py-3">
+                                        <td className="px-4 py-3">
                                             <div className="font-medium">{po.supplierName}</div>
                                         </td>
                                         <td className="hidden lg:table-cell px-4 py-3 text-gray-500">{po.items?.length || 0} item</td>
@@ -254,6 +332,17 @@ export default function PurchaseOrdersPage() {
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[po.status] || 'bg-gray-100 text-gray-700'}`}>
                                                 {i18nStatusLabels[po.status] || po.status}
                                             </span>
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-center">
+                                            {canMutate && (
+                                                <button
+                                                onClick={() => handleDelete(po.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                                title="Hapus"
+                                                >
+                                                <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -269,6 +358,13 @@ export default function PurchaseOrdersPage() {
                 onClose={() => setShowCreateModal(false)}
                 onSubmit={handleCreatePO}
             />
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
         </div>
     )
 }

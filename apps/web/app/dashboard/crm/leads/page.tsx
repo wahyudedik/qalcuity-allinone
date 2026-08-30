@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Plus, Search } from 'lucide-react'
+import { Download, Plus, Search, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type Lead = {
     id: string
@@ -44,11 +45,21 @@ const sourceColors: Record<string, string> = {
 
 export default function LeadsPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [leads, setLeads] = useState<Lead[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     useEffect(() => {
         fetchLeads()
@@ -78,6 +89,22 @@ export default function LeadsPage() {
             l.company.toLowerCase().includes(searchQuery.toLowerCase())
         return matchStatus && matchSearch
     })
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus lead ini?')) return
+        try {
+            const response = await fetch(`/api/crm/leads/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchLeads()
+                setToast({ message: 'Lead berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus lead', type: 'error' })
+        }
+    }
 
     const stats = {
         total: leads.length,
@@ -132,10 +159,12 @@ export default function LeadsPage() {
                         <Download className="h-4 w-4" />
                         {t('crm.leads.import')}
                     </button>
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    {canMutate && (
+                        <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                         <Plus className="h-4 w-4" />
                         {t('crm.leads.addLead')}
-                    </button>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -193,8 +222,64 @@ export default function LeadsPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-gray-200 bg-white">
+            {/* Kartu lead untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filtered.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                        {t('crm.leads.empty')}
+                    </div>
+                ) : (
+                    filtered.map((lead) => (
+                        <div key={lead.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <Link href={`/dashboard/crm/leads/${lead.id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                                        {lead.name}
+                                    </Link>
+                                    <p className="text-sm text-gray-500">{lead.company}</p>
+                                </div>
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[lead.status] || 'bg-gray-100 text-gray-700'}`}>
+                                    {statusLabels[lead.status] || lead.status}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500">{t('crm.leads.table.email')}:</span>
+                                    <span className="ml-1">{lead.email}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('crm.leads.table.phone')}:</span>
+                                    <span className="ml-1">{lead.phone}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('crm.leads.table.source')}:</span>
+                                    <span className={`ml-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${sourceColors[lead.source] || 'bg-gray-50 text-gray-700'}`}>
+                                        {lead.source}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('crm.leads.table.value')}:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(lead.value || 0)}</span>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                                <Link href={`/dashboard/crm/leads/${lead.id}`} className="text-sm text-blue-600 hover:text-blue-800">
+                                    {t('common.view') || 'Lihat'}
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(lead.id)}
+                                    className="text-sm text-red-600 hover:text-red-800"
+                                >
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel lead untuk tampilan desktop */}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
@@ -206,6 +291,7 @@ export default function LeadsPage() {
                                 <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.leads.table.source')}</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-500">{t('crm.leads.table.value')}</th>
                                 <th className="px-4 py-3 text-center font-medium text-gray-500">{t('crm.leads.table.status')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -237,6 +323,17 @@ export default function LeadsPage() {
                                                 {statusLabels[lead.status] || lead.status}
                                             </span>
                                         </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-center">
+                                            {canMutate && (
+                                                <button
+                                                onClick={() => handleDelete(lead.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                                title="Hapus"
+                                                >
+                                                <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -244,6 +341,14 @@ export default function LeadsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
         </div>
     )
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
-import { Download, Plus, Search, LayoutGrid, List } from 'lucide-react'
+import { Download, Plus, Search, LayoutGrid, List, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type Contact = {
     id: string
@@ -30,12 +31,22 @@ const typeStyles: Record<string, string> = {
 
 export default function ContactsPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [contacts, setContacts] = useState<Contact[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filterType, setFilterType] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     useEffect(() => {
         fetchContacts()
@@ -65,6 +76,22 @@ export default function ContactsPage() {
             c.company.toLowerCase().includes(searchQuery.toLowerCase())
         return matchType && matchSearch
     })
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus kontak ini?')) return
+        try {
+            const response = await fetch(`/api/crm/contacts/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchContacts()
+                setToast({ message: 'Kontak berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus kontak', type: 'error' })
+        }
+    }
 
     const stats = {
         total: contacts.length,
@@ -126,10 +153,12 @@ export default function ContactsPage() {
                         <Download className="h-4 w-4" />
                         {t('crm.contacts.import')}
                     </button>
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    {canMutate && (
+                        <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                         <Plus className="h-4 w-4" />
                         {t('crm.contacts.addContact')}
-                    </button>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -243,41 +272,86 @@ export default function ContactsPage() {
 
             {/* List View */}
             {viewMode === 'list' && (
-                <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead>
-                                <tr className="border-b border-gray-200 bg-gray-50">
-                                    <th className="px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.name')}</th>
-                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.company')}</th>
-                                    <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.email')}</th>
-                                    <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.phone')}</th>
-                                    <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.type')}</th>
-                                    <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.position')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filtered.map((contact) => (
-                                    <tr key={contact.id} className="cursor-pointer hover:bg-gray-50">
-                                        <td className="whitespace-nowrap px-4 py-3">
-                                            <Link href={`/dashboard/crm/contacts/${contact.id}`} className="font-medium text-blue-600 hover:underline">
-                                                {contact.name}
-                                            </Link>
-                                        </td>
-                                        <td className="hidden md:table-cell px-4 py-3">{contact.company}</td>
-                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{contact.email}</td>
-                                        <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{contact.phone}</td>
-                                        <td className="hidden md:table-cell px-4 py-3">
-                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${typeStyles[contact.type] || 'bg-gray-100 text-gray-700'}`}>
-                                                {typeLabels[contact.type] || contact.type}
-                                            </span>
-                                        </td>
-                                        <td className="hidden lg:table-cell px-4 py-3 text-gray-500">{contact.position}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <>
+                    {/* Kartu kontak untuk tampilan mobile */}
+                    <div className="md:hidden space-y-3">
+                        {filtered.map((contact) => (
+                            <Link
+                                key={contact.id}
+                                href={`/dashboard/crm/contacts/${contact.id}`}
+                                className="block rounded-xl border border-gray-200 bg-white p-4"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-medium text-gray-900">{contact.name}</h3>
+                                        <p className="text-sm text-gray-500">{contact.company}</p>
+                                    </div>
+                                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${typeStyles[contact.type] || 'bg-gray-100 text-gray-700'}`}>
+                                        {typeLabels[contact.type] || contact.type}
+                                    </span>
+                                </div>
+                                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">{t('crm.contacts.table.email')}:</span>
+                                        <span className="ml-1">{contact.email}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">{t('crm.contacts.table.phone')}:</span>
+                                        <span className="ml-1">{contact.phone}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">{t('crm.contacts.table.position')}:</span>
+                                        <span className="ml-1">{contact.position}</span>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
+
+                    {/* Tabel kontak untuk tampilan desktop */}
+                    <div className="hidden md:block rounded-xl border border-gray-200 bg-white">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-200 bg-gray-50">
+                                        <th className="px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.name')}</th>
+                                        <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.company')}</th>
+                                        <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.email')}</th>
+                                        <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.phone')}</th>
+                                        <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.type')}</th>
+                                        <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('crm.contacts.table.position')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filtered.map((contact) => (
+                                        <tr key={contact.id} className="cursor-pointer hover:bg-gray-50">
+                                            <td className="whitespace-nowrap px-4 py-3">
+                                                <Link href={`/dashboard/crm/contacts/${contact.id}`} className="font-medium text-blue-600 hover:underline">
+                                                    {contact.name}
+                                                </Link>
+                                            </td>
+                                            <td className="hidden md:table-cell px-4 py-3">{contact.company}</td>
+                                            <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{contact.email}</td>
+                                            <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-gray-500">{contact.phone}</td>
+                                            <td className="hidden md:table-cell px-4 py-3">
+                                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${typeStyles[contact.type] || 'bg-gray-100 text-gray-700'}`}>
+                                                    {typeLabels[contact.type] || contact.type}
+                                                </span>
+                                            </td>
+                                            <td className="hidden lg:table-cell px-4 py-3 text-gray-500">{contact.position}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
                 </div>
             )}
         </div>

@@ -53,7 +53,6 @@ export function truncate(text: string, length: number): string {
     if (text.length <= length) return text;
     return text.substring(0, length) + "...";
 }
-
 export function getInitials(name: string): string {
     return name
         .split(" ")
@@ -63,7 +62,30 @@ export function getInitials(name: string): string {
         .substring(0, 2);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function classNames(...classes: (string | boolean | undefined | null)[]) {
-    return classes.filter(Boolean).join(" ");
+/**
+ * Parse currency string to number.
+ * Handles "Rp 1.000.000", "Rp1.000.000", "1000000", "1,000,000" etc.
+ */
+export function parseCurrency(value: string): number {
+    if (typeof value !== 'number') {
+        return Number(String(value).replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
+    }
+    return value;
 }
+
+/**
+ * Safe number to fixed decimal string.
+ * Avoids floating point display issues like 0.10000000000000001
+ */
+export function toFixed(value: number, decimals: number = 2): string {
+    return Number(value).toFixed(decimals);
+}
+
+/**
+ * Round a monetary value to avoid floating point precision issues.
+ * Uses Math.round to avoid issues like 19.999999999999996
+ */
+export function roundMoney(value: number): number {
+    return Math.round(value * 100) / 100;
+}
+

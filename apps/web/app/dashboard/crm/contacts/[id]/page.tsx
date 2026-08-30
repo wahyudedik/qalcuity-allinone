@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/utils'
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Trash2 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
+import { useSession } from 'next-auth/react'
 
 interface ContactDetail {
     id: string
@@ -17,17 +20,22 @@ interface ContactDetail {
     createdAt: string
 }
 
-const typeConfig: Record<string, { label: string; color: string }> = {
-    customer: { label: 'Customer', color: 'bg-blue-100 text-blue-700' },
-    supplier: { label: 'Supplier', color: 'bg-green-100 text-green-700' },
-    partner: { label: 'Partner', color: 'bg-purple-100 text-purple-700' },
-    lead: { label: 'Lead', color: 'bg-yellow-100 text-yellow-700' },
+const typeConfig: Record<string, { color: string }> = {
+    customer: { color: 'bg-blue-100 text-blue-700' },
+    supplier: { color: 'bg-green-100 text-green-700' },
+    partner: { color: 'bg-purple-100 text-purple-700' },
+    lead: { color: 'bg-yellow-100 text-yellow-700' },
 }
 
 export default function ContactDetailPage({ params }: { params: { id: string } }) {
+    const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
+    const router = useRouter()
     const [contact, setContact] = useState<ContactDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
         const fetchContact = async () => {
@@ -38,16 +46,32 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                 if (data.success) {
                     setContact(data.data)
                 } else {
-                    setError('Contact tidak ditemukan')
+                    setError(t('crm.contactDetail.error'))
                 }
             } catch {
-                setError('Gagal memuat data contact')
+                setError(t('crm.contactDetail.errorLoad'))
             } finally {
                 setLoading(false)
             }
         }
         fetchContact()
-    }, [params.id])
+    }, [params.id, t])
+
+    const handleDelete = async () => {
+        if (!window.confirm(t('crm.contactDetail.confirmDelete'))) return
+        try {
+            const res = await fetch(`/api/crm/contacts/${params.id}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('crm.contactDetail.deleteSuccess'), type: 'success' })
+                router.push('/dashboard/crm/contacts')
+            } else {
+                setToast({ message: data.error || t('crm.contactDetail.deleteError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('crm.contactDetail.deleteError'), type: 'error' })
+        }
+    }
 
     if (loading) {
         return (
@@ -61,9 +85,9 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
     if (error || !contact) {
         return (
             <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-gray-500">{error || 'Contact tidak ditemukan'}</p>
+                <p className="text-gray-500">{error || t('crm.contactDetail.error')}</p>
                 <Link href="/dashboard/crm/contacts" className="mt-4 text-blue-600 hover:underline">
-                    Kembali ke Contacts
+                    {t('crm.contactDetail.backToContacts')}
                 </Link>
             </div>
         )
@@ -72,10 +96,8 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
         <div className="space-y-6">
             {/* Back Button */}
             <Link href="/dashboard/crm/contacts" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Kembali ke Contacts
+                <ArrowLeft className="h-4 w-4" />
+                {t('crm.contactDetail.backToContacts')}
             </Link>
 
             {/* Header */}
@@ -88,7 +110,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                         <h1 className="text-2xl font-bold text-gray-900">{contact.name}</h1>
                         <div className="flex items-center gap-2 mt-1">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${typeConfig[contact.type].color}`}>
-                                {typeConfig[contact.type].label}
+                                {t(`crm.contactDetail.${contact.type}`)}
                             </span>
                             <span className="text-sm text-gray-500">• {contact.position}</span>
                         </div>
@@ -96,11 +118,17 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                 </div>
                 <div className="flex items-center gap-3">
                     <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Edit
+                        {t('crm.contactDetail.edit')}
                     </button>
-                    <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                        Buat Deal Baru
-                    </button>
+                    {canMutate && (
+                        <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                        <Trash2 className="inline h-4 w-4 mr-1" />
+                        {t('crm.contactDetail.delete')}
+                        </button>
+                    )}
+                    <Link href="/dashboard/crm/deals" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                        {t('crm.contactDetail.createNewDeal')}
+                    </Link>
                 </div>
             </div>
 
@@ -109,31 +137,31 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                 <div className="lg:col-span-2 space-y-6">
                     {/* Contact Details */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Detail Kontak</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.contactDetail.title')}</h2>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm text-gray-500">Nama</p>
+                                <p className="text-sm text-gray-500">{t('crm.contactDetail.name')}</p>
                                 <p className="font-medium text-gray-900">{contact.name}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Perusahaan</p>
+                                <p className="text-sm text-gray-500">{t('crm.contactDetail.company')}</p>
                                 <p className="font-medium text-gray-900">{contact.company}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Posisi</p>
+                                <p className="text-sm text-gray-500">{t('crm.contactDetail.position')}</p>
                                 <p className="font-medium text-gray-900">{contact.position}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Tipe</p>
-                                <p className="font-medium text-gray-900">{typeConfig[contact.type]?.label || contact.type}</p>
+                                <p className="text-sm text-gray-500">{t('crm.contactDetail.type')}</p>
+                                <p className="font-medium text-gray-900">{t(`crm.contactDetail.${contact.type}`)}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Notes */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Catatan</h2>
-                        <p className="text-sm text-gray-600">{contact.notes || 'Tidak ada catatan'}</p>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.contactDetail.notes')}</h2>
+                        <p className="text-sm text-gray-600">{contact.notes || t('crm.contactDetail.noNotes')}</p>
                     </div>
                 </div>
 
@@ -141,34 +169,49 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                 <div className="space-y-6">
                     {/* Contact Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Informasi Kontak</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('crm.contactDetail.contactInfo')}</h3>
                         <div className="space-y-3">
-                            <div>
-                                <p className="text-xs text-gray-500">Email</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.email}</p>
+                            <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.contactDetail.email')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{contact.email}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-500">Telepon</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.phone}</p>
+                            <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.contactDetail.phone')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{contact.phone}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-500">Perusahaan</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.company}</p>
+                            <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.contactDetail.company')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{contact.company}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-500">Alamat</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.address}</p>
+                            <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.contactDetail.address')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{contact.address}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-500">Sejak</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.createdAt}</p>
+                            <div className="flex items-center gap-2">
+                                <Briefcase className="h-4 w-4 text-gray-400" />
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.contactDetail.since')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{contact.createdAt}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Notes */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-3">Catatan</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('crm.contactDetail.notes')}</h3>
                         <p className="text-sm text-gray-600">{contact.notes}</p>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,8 +12,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import { fetchProducts, fetchSuppliers, formatCurrency, ProductData, SupplierData } from '../lib/api';
 import LoadingView from '../components/LoadingView';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
+import SearchBar from '../components/SearchBar';
 
 type Tab = 'products' | 'stock' | 'suppliers';
 type InventoryScreenProp = NativeStackNavigationProp<RootStackParamList, 'Inventory'>;
@@ -29,6 +31,8 @@ export default function InventoryScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
 
     const loadData = async () => {
         try {
@@ -78,18 +82,76 @@ export default function InventoryScreen({ navigation }: Props) {
         }
     };
 
+    const getProductStatus = (product: ProductData) => {
+        if (product.status) return product.status;
+        if (product.stock === 0) return 'out_of_stock';
+        if (product.stock <= product.minStock) return 'low_stock';
+        return 'in_stock';
+    };
+
     // Compute stock alerts from real products
     const stockAlerts = products.filter(p => p.stock <= p.minStock);
 
-    if (loading) return <LoadingView message="Memuat data inventory..." />;
+    // Filtered products
+    const filteredProducts = useMemo(() => {
+        let result = products;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (p) =>
+                    p.name?.toLowerCase().includes(q) ||
+                    p.sku?.toLowerCase().includes(q) ||
+                    p.category?.toLowerCase().includes(q)
+            );
+        }
+        if (statusFilter !== 'all') {
+            result = result.filter((p) => getProductStatus(p) === statusFilter);
+        }
+        return result;
+    }, [products, searchQuery, statusFilter]);
+
+    // Filtered suppliers
+    const filteredSuppliers = useMemo(() => {
+        if (!searchQuery) return suppliers;
+        const q = searchQuery.toLowerCase();
+        return suppliers.filter(
+            (s) => s.name?.toLowerCase().includes(q)
+        );
+    }, [suppliers, searchQuery]);
+
+    // Filtered stock alerts
+    const filteredStockAlerts = useMemo(() => {
+        if (!searchQuery) return stockAlerts;
+        const q = searchQuery.toLowerCase();
+        return stockAlerts.filter(
+            (p) => p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q)
+        );
+    }, [stockAlerts, searchQuery]);
+
+    const productStatusFilters = [
+        { label: 'Semua', value: 'all' },
+        { label: 'In Stock', value: 'in_stock' },
+        { label: 'Low Stock', value: 'low_stock' },
+        { label: 'Out of Stock', value: 'out_of_stock' },
+    ];
+
+    if (loading) return <LoadingSkeleton variant="list" rows={5} />;
     if (error) return <ErrorView message={error} onRetry={loadData} />;
 
     const renderProducts = () => (
         <View style={styles.section}>
-            {products.length === 0 ? (
-                <EmptyView icon="📦" title="Belum ada produk" message="Produk akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari produk..."
+                filterOptions={productStatusFilters}
+                activeFilter={statusFilter}
+                onFilterChange={setStatusFilter}
+            />
+            {filteredProducts.length === 0 ? (
+                <EmptyView title="Tidak ada produk" message={searchQuery ? 'Tidak ditemukan produk yang sesuai' : 'Produk akan muncul di sini'} />
             ) : (
-                products.map((product) => (
+                filteredProducts.map((product) => (
                     <TouchableOpacity
                         key={product.id}
                         style={styles.listItem}
@@ -98,14 +160,14 @@ export default function InventoryScreen({ navigation }: Props) {
                     >
                         <View style={styles.listItemContent}>
                             <View style={styles.listItemHeader}>
-                                <Text style={styles.listItemTitle}>{product.name}</Text>
-                                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(product.status || (product.stock > 0 ? 'in_stock' : 'out_of_stock')) + '20' }]}>
-                                    <Text style={[styles.statusText, { color: getStatusColor(product.status || (product.stock > 0 ? 'in_stock' : 'out_of_stock')) }]}>
-                                        {getStatusLabel(product.status || (product.stock > 0 ? 'in_stock' : 'out_of_stock'))}
+                                <Text style={styles.listItemTitle} numberOfLines={1}>{product.name}</Text>
+                                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(getProductStatus(product)) + '20' }]}>
+                                    <Text style={[styles.statusText, { color: getStatusColor(getProductStatus(product)) }]}>
+                                        {getStatusLabel(getProductStatus(product))}
                                     </Text>
                                 </View>
                             </View>
-                            <Text style={styles.listItemSubtitle}>{product.sku} • {product.category}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{product.sku} · {product.category}</Text>
                             <View style={styles.listItemFooter}>
                                 <Text style={styles.listItemPrice}>{formatCurrency(product.price)}</Text>
                                 <Text style={styles.listItemStock}>Stock: {product.stock}</Text>
@@ -119,19 +181,24 @@ export default function InventoryScreen({ navigation }: Props) {
 
     const renderStock = () => (
         <View style={styles.section}>
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari produk..."
+            />
             <View style={styles.alertHeader}>
-                <Text style={styles.alertTitle}>⚠️ Stock Alerts</Text>
-                <Text style={styles.alertSubtitle}>{stockAlerts.length} produk perlu perhatian</Text>
+                <Text style={styles.alertTitle}>Stock Alerts</Text>
+                <Text style={styles.alertSubtitle}>{filteredStockAlerts.length} produk perlu perhatian</Text>
             </View>
-            {stockAlerts.length === 0 ? (
-                <EmptyView icon="✅" title="Stok aman" message="Tidak ada produk yang perlu perhatian" />
+            {filteredStockAlerts.length === 0 ? (
+                <EmptyView title="Stok aman" message={searchQuery ? 'Tidak ditemukan produk yang sesuai' : 'Tidak ada produk yang perlu perhatian'} />
             ) : (
-                stockAlerts.map((item) => (
+                filteredStockAlerts.map((item) => (
                     <View key={item.id} style={styles.listItem}>
                         <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.stock === 0 ? 'out_of_stock' : 'low_stock') }]} />
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{item.name}</Text>
-                            <Text style={styles.listItemSubtitle}>
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{item.name}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>
                                 Stock: {item.stock} / Minimum: {item.minStock}
                             </Text>
                             <View style={styles.progressBar}>
@@ -154,21 +221,26 @@ export default function InventoryScreen({ navigation }: Props) {
 
     const renderSuppliers = () => (
         <View style={styles.section}>
-            {suppliers.length === 0 ? (
-                <EmptyView icon="🏭" title="Belum ada supplier" message="Supplier akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari supplier..."
+            />
+            {filteredSuppliers.length === 0 ? (
+                <EmptyView title="Tidak ada supplier" message={searchQuery ? 'Tidak ditemukan supplier yang sesuai' : 'Supplier akan muncul di sini'} />
             ) : (
-                suppliers.map((supplier) => (
+                filteredSuppliers.map((supplier) => (
                     <View key={supplier.id} style={styles.listItem}>
                         <View style={styles.supplierAvatar}>
                             <Text style={styles.supplierAvatarText}>{supplier.name.charAt(0)}</Text>
                         </View>
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{supplier.name}</Text>
-                            <Text style={styles.listItemSubtitle}>
-                                {supplier.products} produk • Rating: {supplier.rating}
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{supplier.name}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>
+                                {supplier.products} produk · Rating: {supplier.rating}
                             </Text>
                             <View style={styles.ratingContainer}>
-                                <Text style={styles.ratingText}>⭐ {supplier.rating}</Text>
+                                <Text style={styles.ratingText}>★ {supplier.rating}</Text>
                             </View>
                         </View>
                     </View>
@@ -185,10 +257,10 @@ export default function InventoryScreen({ navigation }: Props) {
                     <TouchableOpacity
                         key={tab}
                         style={[styles.tab, activeTab === tab && styles.activeTab]}
-                        onPress={() => setActiveTab(tab)}
+                        onPress={() => { setActiveTab(tab); setSearchQuery(''); setStatusFilter('all'); }}
                     >
                         <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'products' ? 'Produk' : tab === 'stock' ? 'Stok' : 'Supplier'}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -196,7 +268,8 @@ export default function InventoryScreen({ navigation }: Props) {
 
             <ScrollView
                 style={styles.scrollView}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+                showsVerticalScrollIndicator={false}
             >
                 {activeTab === 'products' && renderProducts()}
                 {activeTab === 'stock' && renderStock()}

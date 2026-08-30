@@ -119,7 +119,7 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.quotationsDetail.companyName')}</p>
-                                <p className="font-medium text-gray-900">{quotation.customerName}</p>
+                                <Link href="/dashboard/crm/contacts" className="font-medium text-blue-600 hover:underline">{quotation.customerName}</Link>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.quotationsDetail.email')}</p>

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { createLeaveSchema, updateLeaveSchema, approveLeaveSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -88,53 +90,59 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.employeeId || !body.type || !body.startDate || !body.endDate) {
+        const validation = createLeaveSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Employee ID, type, start date, and end date are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
+        const validatedData = validation.data;
+
         // Validate employee belongs to tenant
         const employee = await prisma.employee.findFirst({
-            where: { id: body.employeeId, tenantId },
+            where: { id: validatedData.employeeId, tenantId },
         });
         if (!employee) {
             return NextResponse.json(
-                { success: false, error: 'Employee not found' },
+                { success: false, error: 'Karyawan tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        const startDate = new Date(body.startDate);
-        const endDate = new Date(body.endDate);
+        const startDate = new Date(validatedData.startDate);
+        const endDate = new Date(validatedData.endDate);
         const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
         if (days <= 0) {
             return NextResponse.json(
-                { success: false, error: 'End date must be after start date' },
+                { success: false, error: 'Tanggal selesai harus setelah tanggal mulai' },
                 { status: 400 }
             );
         }
 
         const leave = await prisma.leaveRequest.create({
             data: {
-                type: body.type.toUpperCase(),
+                type: validatedData.type.toUpperCase(),
                 startDate,
                 endDate,
                 days,
-                reason: body.reason || '',
-                notes: body.notes || '',
-                employeeId: body.employeeId,
+                reason: validatedData.reason || '',
+                notes: validatedData.notes || '',
+                employeeId: validatedData.employeeId,
                 tenantId,
             },
             include: {
                 employee: { select: { name: true, employeeId: true } },
             },
         });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'LeaveRequest', entityId: leave.id, newValues: { type: leave.type, startDate: leave.startDate, endDate: leave.endDate, days: leave.days } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: leave }, { status: 201 });
     } catch (error: unknown) {
@@ -148,32 +156,26 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const body = await request.json();
-        const { id, status, approvedBy } = body;
 
-        if (!id || !status) {
+        const validation = approveLeaveSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'ID and status are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        const validStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+        const { id, status, approvedBy } = validation.data;
         const newStatus = status.toUpperCase();
-        if (!validStatuses.includes(newStatus)) {
-            return NextResponse.json(
-                { success: false, error: 'Status must be PENDING, APPROVED, or REJECTED' },
-                { status: 400 }
-            );
-        }
 
         const existing = await prisma.leaveRequest.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Leave request not found' },
+                { success: false, error: 'Leave request tidak ditemukan' },
                 { status: 404 }
             );
         }
@@ -189,6 +191,9 @@ export async function PATCH(request: Request) {
             },
         });
 
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'LeaveRequest', entityId: id, newValues: { status: newStatus } as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -201,51 +206,61 @@ export async function PATCH(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
+
+        const validation = updateLeaveSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.leaveRequest.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Leave request not found' },
+                { success: false, error: 'Leave request tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         const data: Record<string, unknown> = {};
-        if (typeof updateData.type === 'string') {
-            data.type = updateData.type.toUpperCase();
+        if (validatedData.type !== undefined) {
+            data.type = validatedData.type.toUpperCase();
         }
-        if (updateData.startDate) {
-            data.startDate = new Date(String(updateData.startDate));
+        if (validatedData.startDate !== undefined) {
+            data.startDate = new Date(validatedData.startDate);
         }
-        if (updateData.endDate) {
-            data.endDate = new Date(String(updateData.endDate));
+        if (validatedData.endDate !== undefined) {
+            data.endDate = new Date(validatedData.endDate);
         }
-        if (typeof updateData.days === 'number') {
-            data.days = updateData.days;
+        if (validatedData.days !== undefined) {
+            data.days = validatedData.days;
         }
-        if (typeof updateData.reason === 'string') {
-            data.reason = updateData.reason;
+        if (validatedData.reason !== undefined) {
+            data.reason = validatedData.reason;
         }
-        if (typeof updateData.status === 'string') {
-            data.status = updateData.status.toUpperCase();
+        if (validatedData.status !== undefined) {
+            data.status = validatedData.status.toUpperCase();
         }
-        if (typeof updateData.approvedBy === 'string') {
-            data.approvedBy = updateData.approvedBy;
+        if (validatedData.approvedBy !== undefined) {
+            data.approvedBy = validatedData.approvedBy;
         }
-        if (typeof updateData.notes === 'string') {
-            data.notes = updateData.notes;
+        if (validatedData.notes !== undefined) {
+            data.notes = validatedData.notes;
         }
 
         // Recalculate days if startDate or endDate changed
@@ -263,6 +278,8 @@ export async function PUT(request: Request) {
             },
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'LeaveRequest', entityId: id, newValues: data as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -275,7 +292,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -297,6 +314,9 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.leaveRequest.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'LeaveRequest', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

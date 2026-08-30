@@ -64,7 +64,8 @@ export interface Company {
 // Finance Module
 // --------------------------------------------
 
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatusLower = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatus = InvoiceStatusLower; // alias kept for backward compatibility
 export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'failed';
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'credit_card' | 'qris' | 'ewallet';
 
@@ -326,7 +327,8 @@ export interface StockMovement {
 // --------------------------------------------
 
 export type EmployeeStatus = 'active' | 'inactive' | 'on_leave' | 'terminated';
-export type LeaveType = 'annual' | 'sick' | 'personal' | 'maternity' | 'unpaid';
+export type LeaveTypeLower = 'annual' | 'sick' | 'personal' | 'maternity' | 'unpaid';
+export type LeaveType = LeaveTypeLower; // alias kept for backward compatibility
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type AttendanceStatus = 'present' | 'late' | 'absent' | 'leave' | 'wfh';
 
@@ -471,3 +473,509 @@ export interface Activity {
     timestamp: Timestamp;
     moduleId: string;
 }
+
+// --------------------------------------------
+// DTO Types (Create/Update Request Bodies)
+// --------------------------------------------
+
+export interface CreateInvoiceDTO {
+    contactId?: string;
+    customerName: string;
+    items: CreateInvoiceItemDTO[];
+    taxRate?: number;
+    discount?: number;
+    dueDate: string;
+    notes?: string;
+}
+
+export interface CreateInvoiceItemDTO {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+}
+
+export interface UpdateInvoiceDTO extends Partial<CreateInvoiceDTO> {
+    status?: InvoiceStatus;
+}
+
+export interface CreateQuotationDTO {
+    contactId?: string;
+    customerName: string;
+    items: CreateQuotationItemDTO[];
+    taxRate?: number;
+    discount?: number;
+    validUntil: string;
+    notes?: string;
+    terms?: string;
+}
+
+export interface CreateQuotationItemDTO {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+}
+
+export interface UpdateQuotationDTO extends Partial<CreateQuotationDTO> {
+    status?: QuotationStatus;
+}
+
+export interface CreatePaymentDTO {
+    invoiceId?: string;
+    customerName: string;
+    amount: number;
+    method: PaymentMethodType;
+    type?: PaymentTransactionType;
+    reference?: string;
+    notes?: string;
+    paymentDate: string;
+}
+
+export interface UpdatePaymentDTO extends Partial<CreatePaymentDTO> {
+    status?: PaymentTransactionStatus;
+}
+
+export interface CreatePurchaseOrderDTO {
+    supplierId?: string;
+    supplierName: string;
+    items: CreatePurchaseOrderItemDTO[];
+    taxRate?: number;
+    deliveryDate?: string;
+    notes?: string;
+}
+
+export interface CreatePurchaseOrderItemDTO {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+}
+
+export interface UpdatePurchaseOrderDTO extends Partial<CreatePurchaseOrderDTO> {
+    status?: PurchaseOrderStatus;
+}
+
+export interface CreateContactDTO {
+    name: string;
+    type: ContactType;
+    company?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    taxId?: string;
+    notes?: string;
+}
+
+export interface UpdateContactDTO extends Partial<CreateContactDTO> { }
+
+export interface CreateLeadDTO {
+    name: string;
+    company?: string;
+    email?: string;
+    phone?: string;
+    source?: string;
+    value?: number;
+    notes?: string;
+    contactId?: string;
+}
+
+export interface UpdateLeadDTO extends Partial<CreateLeadDTO> {
+    status?: LeadStatus;
+}
+
+export interface CreateDealDTO {
+    title: string;
+    value?: number;
+    stage?: DealStage;
+    probability?: number;
+    closeDate?: string;
+    notes?: string;
+    contactId?: string;
+    leadId?: string;
+}
+
+export interface UpdateDealDTO extends Partial<CreateDealDTO> {
+    stage?: DealStage;
+}
+
+export interface CreateProductDTO {
+    sku: string;
+    name: string;
+    description?: string;
+    unit?: string;
+    price?: number;
+    cost?: number;
+    stock?: number;
+    minStock?: number;
+    categoryId?: string;
+}
+
+export interface UpdateProductDTO extends Partial<CreateProductDTO> {
+    isActive?: boolean;
+}
+
+export interface CreateCategoryDTO {
+    name: string;
+    description?: string;
+}
+
+export interface UpdateCategoryDTO extends Partial<CreateCategoryDTO> { }
+
+export interface CreateSupplierDTO {
+    name: string;
+    contactPerson?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    rating?: number;
+    notes?: string;
+}
+
+export interface UpdateSupplierDTO extends Partial<CreateSupplierDTO> { }
+
+export interface CreateEmployeeDTO {
+    employeeId: string;
+    name: string;
+    email: string;
+    phone?: string;
+    position: string;
+    department?: string;
+    joinDate: string;
+    salary?: number;
+}
+
+export interface UpdateEmployeeDTO extends Partial<CreateEmployeeDTO> {
+    status?: EmployeeStatusType;
+}
+
+export interface CreateAttendanceDTO {
+    employeeId: string;
+    date: string;
+    clockIn?: string;
+    clockOut?: string;
+    status: AttendanceStatusType;
+    notes?: string;
+}
+
+export interface CreateLeaveRequestDTO {
+    employeeId: string;
+    type: LeaveType;
+    startDate: string;
+    endDate: string;
+    days: number;
+    reason?: string;
+}
+
+export interface UpdateLeaveRequestDTO {
+    status: LeaveRequestStatus;
+    notes?: string;
+}
+
+export interface CreatePayrollDTO {
+    employeeId: string;
+    period: string;
+    baseSalary: number;
+    allowances?: number;
+    deductions?: number;
+    bonus?: number;
+}
+
+export interface UpdatePayrollDTO {
+    status: PayrollStatus;
+    paidAt?: string;
+}
+
+// --------------------------------------------
+// Auth Types
+// --------------------------------------------
+
+export interface LoginDTO {
+    email: string;
+    password: string;
+}
+
+export interface RegisterDTO {
+    name: string;
+    email: string;
+    password: string;
+    companyName?: string;
+}
+
+export interface AuthUser {
+    id: ID;
+    email: string;
+    name: string;
+    avatar?: string;
+    role: SystemRole;
+    tenantId: ID;
+    tenantName: string;
+}
+
+export interface AuthSession {
+    user: AuthUser;
+    accessToken: string;
+    expiresAt: Timestamp;
+}
+
+// --------------------------------------------
+// Subscription & Billing Types
+// --------------------------------------------
+
+export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'PENDING_PAYMENT' | 'SUSPENDED' | 'CANCELLED';
+export type BillingPeriod = 'monthly' | 'yearly';
+export type PaymentTransactionStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+export interface SubscriptionPlan {
+    id: ID;
+    name: string;
+    slug: string;
+    description?: string;
+    price: number;
+    billingPeriod: BillingPeriod;
+    maxUsers: number;
+    maxProducts: number;
+    maxStorage?: string;
+    features?: string[];
+    isActive: boolean;
+    sortOrder: number;
+}
+
+export interface TenantSubscription {
+    id: ID;
+    tenantId: ID;
+    planId: ID;
+    plan?: SubscriptionPlan;
+    status: SubscriptionStatus;
+    startDate: Timestamp;
+    endDate?: Timestamp;
+    nextBillingDate?: Timestamp;
+    paymentMethod?: string;
+}
+
+export interface BillingPayment {
+    id: ID;
+    subscriptionId: ID;
+    tenantId: ID;
+    amount: number;
+    paymentMethod: string;
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    proofFileUrl?: string;
+    proofFileName?: string;
+    reference?: string;
+    status: PaymentTransactionStatus;
+    verifiedById?: ID;
+    verifiedAt?: Timestamp;
+    rejectReason?: string;
+    notes?: string;
+    waConfirmed: boolean;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+}
+
+// --------------------------------------------
+// API Request/Response Types
+// --------------------------------------------
+
+export interface ListQueryParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    status?: string;
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+}
+
+export interface ListResponse<T> {
+    success: boolean;
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface DetailResponse<T> {
+    success: boolean;
+    data: T;
+}
+
+export interface MutationResponse<T = void> {
+    success: boolean;
+    data?: T;
+    message?: string;
+    error?: string;
+}
+
+export interface ErrorResponse {
+    success: false;
+    error: string;
+    message?: string;
+    statusCode: number;
+}
+
+// --------------------------------------------
+// Dashboard & Reporting Types
+// --------------------------------------------
+
+export interface RevenueMetrics {
+    totalRevenue: number;
+    previousRevenue: number;
+    change: number;
+    changePercent: number;
+}
+
+export interface SalesMetrics {
+    totalDeals: number;
+    wonDeals: number;
+    lostDeals: number;
+    winRate: number;
+    pipelineValue: number;
+    weightedPipeline: number;
+}
+
+export interface InventoryMetrics {
+    totalProducts: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    totalStockValue: number;
+}
+
+export interface HRMetrics {
+    totalEmployees: number;
+    activeEmployees: number;
+    onLeaveCount: number;
+    pendingLeaves: number;
+}
+
+export interface CashFlowSummary {
+    totalIncome: number;
+    totalExpense: number;
+    netCashFlow: number;
+    period: string;
+}
+
+export interface ChartDataPoint {
+    label: string;
+    value: number;
+    color?: string;
+}
+
+export interface ChartDataset {
+    label: string;
+    data: number[];
+    color?: string;
+}
+
+export interface ReportConfig {
+    type: ReportType;
+    startDate?: string;
+    endDate?: string;
+    groupBy?: 'day' | 'week' | 'month' | 'quarter' | 'year';
+    format?: 'json' | 'csv' | 'excel';
+}
+
+export type ReportType =
+    | 'revenue'
+    | 'expenses'
+    | 'profit_loss'
+    | 'invoices'
+    | 'payments'
+    | 'sales_pipeline'
+    | 'inventory'
+    | 'employees'
+    | 'attendance'
+    | 'payroll'
+    | 'tax';
+
+// --------------------------------------------
+// Integration Types
+// --------------------------------------------
+
+export type IntegrationType = 'whatsapp' | 'marketplace' | 'payment' | 'email' | 'sms' | 'other';
+export type PaymentGatewayProvider = 'midtrans' | 'xendit' | 'manual';
+
+export interface IntegrationConfig {
+    id: ID;
+    tenantId: ID;
+    provider: string;
+    type: IntegrationType;
+    apiKey?: string;
+    isActive: boolean;
+    config?: Record<string, string>;
+    lastSyncAt?: Timestamp;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+}
+
+// --------------------------------------------
+// File Upload Types
+// --------------------------------------------
+
+export interface FileUpload {
+    id: ID;
+    filename: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+    url: string;
+    tenantId: ID;
+    uploadedBy: ID;
+    createdAt: Timestamp;
+}
+
+export interface UploadResponse {
+    success: boolean;
+    file?: FileUpload;
+    error?: string;
+}
+
+// --------------------------------------------
+// Notification Types
+// --------------------------------------------
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+export type NotificationChannel = 'email' | 'push' | 'sms' | 'whatsapp';
+
+export interface Notification {
+    id: ID;
+    tenantId: ID;
+    userId: ID;
+    title: string;
+    message: string;
+    type: NotificationType;
+    isRead: boolean;
+    actionUrl?: string;
+    createdAt: Timestamp;
+}
+
+// --------------------------------------------
+// Additional Enums (matching Prisma uppercase strings)
+// --------------------------------------------
+
+export type SystemRole = 'SUPERADMIN' | 'ADMIN' | 'USER' | 'VIEWER';
+export type UserRoleSystem = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+
+export type ContactType = 'CUSTOMER' | 'SUPPLIER' | 'BOTH';
+export type InvoiceStatusDB = 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+export type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+export type PurchaseOrderStatus = 'DRAFT' | 'SENT' | 'CONFIRMED' | 'RECEIVED' | 'CANCELLED';
+export type PaymentMethodType = 'BANK_TRANSFER' | 'CASH' | 'CREDIT_CARD' | 'E_WALLET';
+export type PaymentTransactionType = 'INCOME' | 'EXPENSE';
+export type PaymentTransactionStatusType = 'COMPLETED' | 'PENDING' | 'FAILED';
+export type LeadStatusType = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'NEGOTIATION' | 'WON' | 'LOST';
+export type DealStageType = 'DISCOVERY' | 'PROPOSAL' | 'NEGOTIATION' | 'CLOSING' | 'CLOSED_WON' | 'CLOSED_LOST';
+export type ProductStatusType = 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED';
+export type StockMovementType = 'IN' | 'OUT' | 'ADJUSTMENT';
+export type EmployeeStatusType = 'ACTIVE' | 'INACTIVE' | 'TERMINATED';
+export type AttendanceStatusType = 'PRESENT' | 'LATE' | 'ABSENT' | 'LEAVE' | 'WFH';
+export type LeaveTypeDB = 'ANNUAL' | 'SICK' | 'PERSONAL' | 'MATERNITY' | 'UNPAID';
+export type LeaveRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type PayrollStatus = 'PENDING' | 'PROCESSED' | 'PAID';
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT';

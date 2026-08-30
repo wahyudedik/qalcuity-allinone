@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updatePayrollSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -60,28 +62,38 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
+
+        const validation = updatePayrollSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.payrollRecord.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payroll record not found' },
+                { success: false, error: 'Payroll record tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         const data: Record<string, unknown> = {};
-        if (typeof body.period === 'string') data.period = body.period;
-        if (typeof body.baseSalary === 'number') data.baseSalary = body.baseSalary;
-        if (typeof body.allowances === 'number') data.allowances = body.allowances;
-        if (typeof body.deductions === 'number') data.deductions = body.deductions;
-        if (typeof body.bonus === 'number') data.bonus = body.bonus;
-        if (typeof body.status === 'string') data.status = body.status.toUpperCase();
-        if (typeof body.notes === 'string') data.notes = body.notes;
+        if (validatedData.period !== undefined) data.period = validatedData.period;
+        if (validatedData.baseSalary !== undefined) data.baseSalary = validatedData.baseSalary;
+        if (validatedData.allowances !== undefined) data.allowances = validatedData.allowances;
+        if (validatedData.deductions !== undefined) data.deductions = validatedData.deductions;
+        if (validatedData.bonus !== undefined) data.bonus = validatedData.bonus;
+        if (validatedData.status !== undefined) data.status = validatedData.status.toUpperCase();
+        if (validatedData.notes !== undefined) data.notes = validatedData.notes;
 
         // Recalculate netSalary if any compensation field changed
         if (data.baseSalary !== undefined || data.allowances !== undefined || data.deductions !== undefined || data.bonus !== undefined) {
@@ -105,6 +117,8 @@ export async function PUT(
             },
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PayrollRecord', entityId: id, newValues: data as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -120,7 +134,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.payrollRecord.findFirst({
@@ -142,6 +156,9 @@ export async function DELETE(
         }
 
         await prisma.payrollRecord.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'PayrollRecord', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

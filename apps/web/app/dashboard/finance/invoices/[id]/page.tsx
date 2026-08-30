@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle } from 'lucide-react'
+import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle, CreditCard, Smartphone, QrCode, Building2 } from 'lucide-react'
 
 interface InvoiceDetail {
     id: string
@@ -145,7 +145,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
                         <h3 className="text-sm font-medium text-gray-500 mb-2">{t('finance.invoiceDetail.billTo')}</h3>
                         <div className="text-gray-900">
-                            <p className="font-semibold">{invoice.customerName}</p>
+                            <Link href="/dashboard/crm/contacts" className="font-semibold text-blue-600 hover:underline">{invoice.customerName}</Link>
                             <p className="text-sm text-gray-600">{invoice.customerEmail}</p>
                             <p className="text-sm text-gray-600">{invoice.customerPhone}</p>
                             <p className="text-sm text-gray-600">{invoice.customerAddress}</p>
@@ -154,26 +154,28 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
 
                     {/* Items */}
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.description')}</th>
-                                    <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.qty')}</th>
-                                    <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.price')}</th>
-                                    <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.total')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {invoice.items.map((item, idx) => (
-                                    <tr key={idx}>
-                                        <td className="py-4 px-6 text-sm text-gray-900">{item.name} - {item.description}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-600 text-center">{item.quantity}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice)}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-900 text-right font-medium">{formatCurrency(item.total)}</td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.description')}</th>
+                                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.qty')}</th>
+                                        <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.price')}</th>
+                                        <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">{t('finance.invoiceDetail.total')}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {invoice.items.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td className="py-4 px-6 text-sm text-gray-900">{item.name} - {item.description}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-600 text-center">{item.quantity}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice)}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-900 text-right font-medium">{formatCurrency(item.total)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
                         {/* Totals */}
                         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
@@ -192,6 +194,67 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                         <span className="text-blue-600">{formatCurrency(invoice.total)}</span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Payment Methods */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                        <h3 className="font-medium text-gray-900 mb-4">Metode Pembayaran Tersedia</h3>
+                        <p className="text-sm text-gray-500 mb-4">Customer dapat membayar invoice ini menggunakan metode berikut:</p>
+
+                        {/* Virtual Account */}
+                        <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Building2 className="h-4 w-4 text-blue-600" />
+                                <h4 className="text-sm font-medium text-gray-900">Virtual Account</h4>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                {['BCA', 'Mandiri', 'BNI', 'BRI'].map((bank) => (
+                                    <div key={bank} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                                        <CreditCard className="h-4 w-4 text-gray-500" />
+                                        <span className="text-sm text-gray-700">{bank}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Credit Card */}
+                        <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <CreditCard className="h-4 w-4 text-purple-600" />
+                                <h4 className="text-sm font-medium text-gray-900">Kartu Kredit / Debit</h4>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-sm text-gray-700">Visa, Mastercard, JCB — via Midtrans/Xendit</span>
+                            </div>
+                        </div>
+
+                        {/* E-Wallet */}
+                        <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Smartphone className="h-4 w-4 text-green-600" />
+                                <h4 className="text-sm font-medium text-gray-900">E-Wallet</h4>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                {['GoPay', 'OVO', 'Dana', 'ShopeePay'].map((wallet) => (
+                                    <div key={wallet} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                                        <Smartphone className="h-4 w-4 text-gray-500" />
+                                        <span className="text-sm text-gray-700">{wallet}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* QRIS */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <QrCode className="h-4 w-4 text-indigo-600" />
+                                <h4 className="text-sm font-medium text-gray-900">QRIS</h4>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                                <QrCode className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm text-gray-700">Scan QRIS dari semua bank & e-wallet Indonesia</span>
                             </div>
                         </div>
                     </div>

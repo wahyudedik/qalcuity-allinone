@@ -1,74 +1,251 @@
 # 🗺️ Qalcuity All-in-One — Product Roadmap
 
 > **Vision:** Menjadi B2B Operating System #1 untuk UKM & Mid-Market Indonesia
-
-### 📌 Business Model
-
-> **Qalcuity = Aplikasi + Server + AI built-in.** Developer hanya menyediakan aplikasi SaaS dan server. User menyewa aplikasi dan mendapatkan update fitur berkala. **Tidak ada biaya integrasi dari sisi Qalcuity** — user yang bayar API pihak ketiga (WhatsApp, Shopee, Payment Gateway, dll) langsung ke provider masing-masing.
-
-### 🖥️ Platform Strategy
-
-| Platform | Target Users | Key Features |
-|----------|-------------|--------------|
-| **Web App** | Admin, Finance, HR, Manager | Full features, admin panel, reporting |
-| **Desktop App** | Staff, Operator | Offline mode, heavy data entry |
-| **Mobile App** | Field team, Sales, Management | Quick actions, approvals, notifications |
+> **Last Updated:** August 29, 2026
 
 ---
 
 ## 📋 Daftar Isi
 
-1. [Vision & Strategy](#1-vision--strategy)
-2. [Timeline Overview](#2-timeline-overview)
-3. [Phase 1: MVP Foundation](#3-phase-1-mvp-foundation)
-4. [Phase 2: Core Modules](#4-phase-2-core-modules)
-5. [Phase 3: Advanced Features](#5-phase-3-advanced-features)
-6. [Phase 4: Enterprise & Scale](#6-phase-4-enterprise--scale)
-7. [Key Milestones](#7-key-milestones)
-8. [Success Metrics](#8-success-metrics)
-9. [Risks & Mitigation](#9-risks--mitigation)
-10. [Resource Planning](#10-resource-planning)
+1. [NOW](#-now-current-sprint)
+2. [NEXT](#-next-next-2-4-weeks)
+3. [LATER](#-later-future-phases)
+4. [BLOCKED](#-blocked)
+5. [COMPLETED](#-completed)
+6. [Phase Overview](#-phase-overview)
+7. [Success Metrics](#-success-metrics)
+8. [Risks & Mitigation](#-risks--mitigation)
 
 ---
 
-## 1. Vision & Strategy
+## 🟢 NOW (Current Sprint)
 
-### Product Vision
+> **Phase 1 (MVP Stabilization)** — August 2026
+> Fokus: Stabilisasi MVP, bug fixes, production readiness
 
-> "All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia — Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja."
+### Active Tasks
 
-### Strategic Pillars
+| # | Task | Module | Priority | Status |
+|---|------|--------|----------|--------|
+| 1 | CoA & Reconciliation — migrate from in-memory to persistent DB store | Finance | High | `in_progress` |
+| 2 | ~~Settings pages — complete CRUD for company, notifications, security, team~~ ✅ Done | ~~Settings~~ | ~~Medium~~ | ~~`in_progress`~~ ✅ |
+| 3 | Email notification — real SMTP integration (currently placeholder) | Integration | Medium | `in_progress` |
+| 4 | Payment gateway — real Midtrans/Xendit integration | Integration | Medium | `in_progress` |
+| 5 | AI Chat — replace mock responses with real LLM integration | AI | Low | `in_progress` |
+| 6 | Landing page & documentation | Marketing | Low | `in_progress` |
 
-| Pillar | Description |
-|--------|-------------|
-| **Unified Platform** | Satu aplikasi untuk semua kebutuhan bisnis (Web, Desktop, Mobile) |
-| **AI-Native** | AI built-in, bukan sekadar fitur tambahan |
-| **Compliance** | Built-in untuk regulasi Indonesia (Coretax, PDP) |
-| **Offline-Capable** | Desktop & Mobile bisa offline, sync saat online |
-| **Modularity** | Bisa pakai per modul, bayar sesuai kebutuhan |
-| **User-Managed Integration** | User kelola integrasi pihak ketiga sendiri via dashboard |
+### Known Issues Being Fixed
 
-### Target Market
-
-| Segment | Size | Priority |
-|---------|------|----------|
-| **UMKM** (1-5 karyawan) | ~64 juta usaha | Phase 1-2 |
-| **UKM** (6-25 karyawan) | ~500K usaha | Phase 1-2 |
-| **Mid-market** (26-100 karyawan) | ~50K usaha | Phase 2-3 |
-| **Enterprise** (100+ karyawan) | ~10K usaha | Phase 3-4 |
-
-### Competitive Landscape
-
-| Competitor | Weakness | Our Advantage |
-|------------|----------|---------------|
-| Jurnal.id | Limited AI, basic HR | AI-native, full HR module |
-| Mekari | Fragmented products | Unified platform |
-| Zoho | Poor localization | Indonesia-first |
-| Odoo | Complex setup | Easy onboarding |
+| # | Issue | Severity | Module |
+|---|-------|----------|--------|
+| 1 | CoA & Reconciliation use in-memory store (not persistent across restarts) | Medium | Finance |
+| 2 | AI Chat uses mock responses (no real LLM integration yet) | Low | AI |
+| 3 | SMTP config is placeholder — emails not actually sent | Medium | Notifications |
+| 4 | ~~Settings pages may have incomplete CRUD operations~~ ✅ Fixed | ~~Medium~~ | Settings |
+| 5 | ~~Float type for monetary fields (should be Decimal for PostgreSQL prod)~~ ✅ Fixed | ~~Low~~ | Database |
+| 6 | Rate limiter is in-memory (not suitable for multi-instance deployment) | Low | API |
 
 ---
 
-## 2. Timeline Overview
+## 🔵 NEXT (Next 2-4 weeks)
+
+> **Phase 2 Start** — September-Oktober 2026
+> Fokus: Field Service, Advanced Reporting, Basic AI, Omnichannel, Bank Reconciliation
+
+### Planned Tasks
+
+| # | Task | Module | Phase |
+|---|------|--------|-------|
+| 1 | Field Service Module — job scheduling, technician assignment, mobile checklist | Operations | Phase 2 |
+| 2 | Advanced Reporting — custom report builder, pivot table, scheduled reports | Reporting | Phase 2 |
+| 3 | Natural Language Query — real NLP for business data queries | AI | Phase 2 |
+| 4 | Document Extraction — PDF/OCR processing for invoices, PO, KTP | AI | Phase 2 |
+| 5 | Bank Reconciliation (auto) — connect to real bank feeds | Finance | Phase 2 |
+| 6 | Omnichannel Support — WhatsApp, Email, Instagram integration | Support | Phase 2 |
+| 7 | Offline capability — Service worker, local cache for mobile/desktop | Platform | Phase 2 |
+| 8 | Full inventory module — stock opname, multi-warehouse, batch tracking | Inventory | Phase 2 |
+
+---
+
+## 🟡 LATER (Future Phases)
+
+> **Phase 3-4** — 2027
+> Fokus: Full AI Agent Suite, Advanced Multi-entity, Marketplace, White-label, Enterprise
+
+### Phase 3: Full AI Agent Suite (March-May 2027)
+
+| # | Task | Module |
+|---|------|--------|
+| 1 | Finance Agent — auto-generate invoice, anomaly detection, cash flow prediction | AI |
+| 2 | Sales Agent — win probability, next best action, lead scoring | AI |
+| 3 | Inventory Agent — stockout prediction, auto-reorder, demand forecasting | AI |
+| 4 | HR Agent — contract generation, leave prediction, attrition risk | AI |
+| 5 | Support Agent — auto-categorize, suggested reply, sentiment analysis | AI |
+| 6 | AI Template Generator — contract, JD, email template generation | AI |
+| 7 | Anomaly Detection — fraud, data error, compliance alerts | AI |
+
+### Phase 3: Advanced Multi-entity (March-May 2027)
+
+| # | Task | Module |
+|---|------|--------|
+| 1 | Multi-entity support — cabang, anak perusahaan | Platform |
+| 2 | Multi-currency — base currency, exchange rates | Platform |
+| 3 | Consolidated reporting — cross-entity reports | Reporting |
+
+### Phase 3: Marketplace Integration (March-May 2027)
+
+| # | Task | Module |
+|---|------|--------|
+| 1 | Shopee integration — product sync, order management | Integration |
+| 2 | Tokopedia integration — product sync, order management | Integration |
+| 3 | Lazada integration — product sync, order management | Integration |
+
+### Phase 4: Enterprise & Scale (June-November 2027)
+
+| # | Task | Module |
+|---|------|--------|
+| 1 | White-label platform — custom branding, reseller portal | Platform |
+| 2 | SSO integration — SAML 2.0, OAuth 2.0 | Security |
+| 3 | Advanced approval workflows — conditional routing, delegation | Platform |
+| 4 | Open API v2 — GraphQL, webhook builder, API sandbox | Integration |
+| 5 | Predictive analytics — revenue forecasting, churn prediction | AI |
+| 6 | Self-learning capabilities — model improvement from usage | AI |
+| 7 | Coretax integration — e-Faktur, PPh 21, PPN | Tax |
+| 8 | SOC 2 Type II compliance | Security |
+
+---
+
+## 🔴 BLOCKED
+
+> Item yang terhambat oleh dependency atau issue
+
+| # | Item | Blocked By | Impact | Mitigation |
+|---|------|-----------|--------|------------|
+| 1 | Coretax Integration | Coretax API docs belum available | Tax compliance delayed | Monitor release, prepare adapter pattern |
+| 2 | Real LLM Integration | API key & cost decision pending | AI features use mock data | Continue with mock, prepare architecture |
+| 3 | ~~PostgreSQL Production Migration~~ | ~~Dev environment still on SQLite~~ | ~~Float precision issues in production~~ | ✅ Migrated to PostgreSQL, Decimal type |
+
+---
+
+## ✅ COMPLETED
+
+> Semua item yang sudah selesai dikerjakan
+
+### Phase 1 — MVP Foundation (August 2026)
+
+#### Core Platform
+- [x] Authentication — NextAuth JWT with CredentialsProvider
+- [x] RBAC — 4 roles (SUPERADMIN, ADMIN, MEMBER, VIEWER)
+- [x] RBAC Defense-in-depth — 3 layers: middleware + API route + UI visibility (35 routes + 22 pages)
+- [x] Registration flow
+- [x] Session management — JWT strategy with role + tenantId
+- [x] Password hashing — bcryptjs
+- [x] Dashboard layout — unified real-time view
+- [x] Audit Trail — all mutations logged with old/new values (77 audit calls, 10 endpoints)
+- [x] Rate Limiting — in-memory rate limiter per IP
+- [x] Health Check — `/api/health` endpoint
+- [x] Global Search — Ctrl+K across all modules
+- [x] Dark Mode — class-based toggle (Tailwind)
+- [x] i18n — Bahasa Indonesia + English, 20+ pages localized
+- [x] Responsive Design — mobile-first, 44x44px touch targets
+- [x] Responsive Tables — dual layout (mobile cards + desktop tables) on 17 pages
+- [x] Zod Validation — 14+ schemas, 19 API routes validated
+- [x] Lucide Icons — consistent icon system across all modules
+- [x] Empty States — all CRUD pages
+- [x] Toast Notifications — CRUD operation feedback
+- [x] Confirmation Dialogs — delete on 14+ pages
+- [x] Navigation Links — cross-entity navigation
+- [x] Loading States — 9 loading.tsx files for detail pages
+
+#### Finance & Accounting
+- [x] Chart of Account — full CRUD tree view with hierarchical relationships
+- [x] Invoice management — create, read, update, delete
+- [x] Quotation management — create, read, update, delete
+- [x] Payment recording — create, read, update, delete
+- [x] Purchase Order management — create, read, update, delete
+- [x] Bank Reconciliation — manual page + API route
+
+#### Sales & CRM
+- [x] Lead management — CRUD
+- [x] Contact management — CRUD
+- [x] Deal management — CRUD with pipeline stages
+- [x] Pipeline board — Kanban view with 6 stages
+- [x] Pipeline list view — table with sorting & filtering
+
+#### HR & People Ops
+- [x] Employee database — CRUD
+- [x] Attendance management — CRUD
+- [x] Leave management — CRUD with approval workflow
+- [x] Payroll management — CRUD
+
+#### Inventory & Supply Chain
+- [x] Product catalog — CRUD
+- [x] Supplier management — CRUD
+- [x] Category management — CRUD
+- [x] Stock movements — tracking
+
+#### Settings & Admin
+- [x] Profile settings — CRUD with i18n
+- [x] Company settings — with logo upload, CRUD with i18n
+- [x] Team management — CRUD with i18n
+- [x] Notification settings — SMTP config, CRUD with i18n
+- [x] Security settings — CRUD with i18n
+- [x] Integrations settings — CRUD with i18n
+- [x] Billing & Subscription — plan selection, manual transfer, superadmin approval
+
+#### Reporting
+- [x] Advanced Reporting — 12 report types
+- [x] Export — CSV, Excel, Print
+- [x] Charts — Bar, Pie, Line (custom implementation)
+
+#### AI Features (Basic)
+- [x] AI Chat — floating button component
+- [x] AI Hub — centralized page at `/dashboard/ai`
+- [x] AI Insights — business insight cards on dashboard
+- [x] AI Sidebar Menu — dedicated menu item
+
+#### Platforms
+- [x] Web App — core Next.js application
+- [x] Desktop App — Electron wrapper
+- [x] Mobile App — React Native/Expo with SearchBar, LoadingSkeleton, pull-to-refresh
+
+#### Infrastructure
+- [x] Seed data — comprehensive demo data for all modules
+- [x] Deploy scripts — PM2 health check, configurable port
+
+### Changelog
+
+| Date | Change | Impact |
+|------|--------|--------|
+| 2026-08-29 | Zod Validation — 14+ schemas, 19 API routes validated | Input security |
+| 2026-08-29 | Audit Logging — 77 audit calls across 10 mutation endpoints | Compliance |
+| 2026-08-29 | RBAC Defense-in-depth — 3 layers, 35 API routes + 22 pages | Access control |
+| 2026-08-29 | Responsive Tables — dual layout on 17 pages | Mobile UX |
+| 2026-08-29 | i18n Expansion — 20+ pages localized, 200+ new keys | Internationalization |
+| 2026-08-29 | Settings Pages — 6 pages completed with full i18n | Settings |
+| 2026-08-29 | Detail Pages — 9 loading.tsx, delete on 6 pages, 48 i18n keys | CRUD completeness |
+| 2026-08-29 | Pipeline Fix — stage name mismatch, CLOSED_WON/LOST added | CRM |
+| 2026-08-29 | Sidebar Fix — navigation reorder, billing path fix | Navigation |
+| 2026-08-28 | Billing & Subscription — Plan selection, manual transfer, superadmin approve/reject | Revenue management |
+| 2026-08-28 | Role Superadmin — RBAC 4 role, sidebar filtering, middleware protection | Access control |
+| 2026-08-28 | AI Features — Chat, Hub, Insights, sidebar menu | AI foundation |
+| 2026-08-28 | Advanced Reporting — 12 report types, export, charts | Business intelligence |
+| 2026-08-28 | Payment Gateway — Midtrans/Xendit config + processing API | Payment processing |
+| 2026-08-28 | Email Notification — SMTP config + email templates | Communication |
+| 2026-08-28 | File Upload — drag & drop component + logo upload | Document management |
+| 2026-08-28 | Bank Reconciliation — manual page + API | Financial reconciliation |
+| 2026-08-28 | Desktop App — Electron wrapper | Desktop platform |
+| 2026-08-28 | Mobile App Polish — SearchBar, LoadingSkeleton, pull-to-refresh | Mobile UX |
+| 2026-08-28 | Chart of Accounts — full CRUD tree view | Finance foundation |
+| 2026-08-28 | Seed data — comprehensive demo data | Demo & testing |
+| 2026-08-28 | Empty states, Toast notifications, Confirmation dialogs | UX improvements |
+| 2026-08-28 | Mobile responsive, Navigation links, Lucide icons | UI consistency |
+| 2026-08-18 | i18n support, All modules localized | Internationalization |
+| 2026-08-06 | Dashboard stats, Audit trail, Global search, Dark mode | Core features |
+
+---
+
+## 📊 Phase Overview
 
 ```
 2026 Q3          2026 Q4          2027 Q1          2027 Q2          2027 Q3          2027 Q4
@@ -76,307 +253,38 @@
    ▼                ▼                ▼                ▼                ▼                ▼
 ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
 │ MVP  │   →    │Phase1│   →    │Phase2│   →    │Phase3│   →    │Phase4│   →    │Full  │
-│Launch│        │  +   │        │  +   │        │  +   │        │  +   │        │Suite │
+│Done ✅│        │ NOW  │        │ NEXT │        │LATER │        │LATER │        │Suite │
 └──────┘        └──────┘        └──────┘        └──────┘        └──────┘        └──────┘
    │                │                │                │                │                │
-   │                │                │                │                │                │
- Aug '26        Nov '26         Feb '27         May '27         Aug '27         Nov '27
+ Aug '26        Sep-Oct '26     Nov '26-Feb '27  Mar-May '27    Jun-Aug '27    Sep-Nov '27
 ```
 
-### Quick Summary
+| Phase | Duration | Focus | Key Deliverables | Status |
+|-------|----------|-------|------------------|--------|
+| **MVP** | Aug 2026 (Completed) | Core platform + Finance + CRM + HR + Inventory | Foundation ready | ✅ `completed` |
+| **Phase 1** | Sep-Oct 2026 (NOW) | Stabilization, bug fixes, production readiness | Production-ready MVP | 🟢 `in_progress` |
+| **Phase 2** | Nov 2026-Feb 2027 | Field Service, Advanced Reporting, Basic AI | First paying customers | 🔵 `planned` |
+| **Phase 3** | Mar-May 2027 | Full AI Agent Suite, Multi-entity, Marketplace | Differentiated features | 🟡 `planned` |
+| **Phase 4** | Jun-Nov 2027 | Enterprise, White-label, Predictive AI | Scale & monetization | 🟡 `planned` |
 
-| Phase | Duration | Focus | Key Deliverables |
-|-------|----------|-------|------------------|
-| **MVP** | Aug-Oct 2026 (12 weeks) | Core platform + Finance | Foundation ready for beta |
-| **Phase 1** | Nov 2026-Feb 2027 (14 weeks) | Sales + Inventory + Mobile | First paying customers |
-| **Phase 2** | Mar-May 2027 (12 weeks) | HR + Operations + AI | Full module coverage |
-| **Phase 3** | Jun-Aug 2027 (12 weeks) | Advanced AI + Integrations | Differentiated features |
-| **Phase 4** | Sep-Nov 2027 (12 weeks) | Enterprise + White-label | Scale & monetization |
+### Success Criteria Per Phase
 
----
-
-## 3. Phase 1: MVP Foundation
-
-**Duration:** August - October 2026 (12 weeks)
-**Goal:** Launch beta dengan core features yang usable
-
-### Week 1-4: Infrastructure & Core Platform
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 1 | Setup CI/CD pipeline | DevOps | ⬜ |
-| 1 | Database schema design | Backend | ✅ |
-| 1-2 | Authentication & authorization | Backend | ✅ |
-| 2-3 | Core UI components (design system) | Frontend | ✅ |
-| 3-4 | Dashboard layout | Frontend | ✅ |
-| 3-4 | Web App (core utama) | Frontend | ✅ |
-| 4 | Multi-role access control | Backend | ✅ |
-| 4 | Integration Hub (dashboard) | Full-stack | 🔶 Partial |
-
-### Week 5-8: Finance Module (Basic)
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 5-6 | Chart of Account setup | Backend | 🔶 Partial |
-| 5-6 | Invoice creation & management | Full-stack | ✅ |
-| 6-7 | Quotation management | Full-stack | ✅ |
-| 7-8 | Payment recording | Backend | ✅ |
-| 7-8 | Basic financial reports | Full-stack | 🔶 Partial |
-| 8 | Bank reconciliation (manual) | Backend | ⬜ |
-
-### Week 9-12: Sales CRM (Basic) + Mobile + AI
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 9-10 | Lead management | Full-stack | ✅ |
-| 9-10 | Pipeline (Kanban view) | Frontend | ✅ |
-| 10-11 | Deal management | Full-stack | ✅ |
-| 11 | Quote → Invoice flow | Full-stack | 🔶 Partial |
-| 11-12 | Mobile app (iOS & Android) | Mobile | 🔶 Partial |
-| 11-12 | Basic AI insights | AI/ML | 🔶 Partial |
-| 12 | Integration Hub v1 | Full-stack | 🔶 Partial |
-
-### MVP Deliverables
-
-- [x] Web App (core utama) — auth, dashboard, audit trail, dark mode, global search
-- [x] Finance module (invoice, quotation, payment, purchase orders) — i18n + Lucide + responsive
-- [x] Sales CRM (leads, contacts, pipeline, deals) — i18n + Lucide + responsive
-- [x] HR module (employees, attendance, leaves, payroll) — i18n + Lucide
-- [x] Inventory module (products, suppliers, categories, stock) — i18n + Lucide
-- [x] Settings (profile, company, team, notifications, security, billing)
-- [x] i18n support (Bahasa Indonesia + English)
-- [x] Responsive tables (mobile-friendly column hiding)
-- [x] Deploy scripts (PM2 health check, configurable port, robust db:push)
-- [ ] Mobile App (iOS & Android) — basic screens ready, needs polish
-- [ ] Integration Hub — settings page exists, needs full integration
-- [ ] AI basic — dashboard stats connected to real DB, needs AI insights
-- [ ] Landing page & documentation
-
-#### Recently Completed (Aug 2026):
-- ✅ **Tahap 0.1–0.2**: Safe migration (company field + soft deletes), Contact search bug fix
-- ✅ **Tahap 1.1–1.2**: Lucide icons across sidebar, header, search modal, all module layouts (40+ files)
-- ✅ **Tahap 2.1–2.2**: API routes hardened (DB transactions, validation), audit trail on all mutations
-- ✅ **Tahap 3.1–3.2**: i18n foundation (messages/id.json, en.json), UI strings localized
-- ✅ **Tahap 4.1–4.2**: Settings pages (profile, company, team, notifications, security, billing) + API routes
-- ✅ **Tahap 5.1–5.2**: HR module i18n + Lucide, Inventory module i18n + Lucide
-- ✅ **Tahap 6.1**: Finance module — all 10 files i18n + Lucide
-- ✅ **Tahap 7.1**: Responsive tables — CRM (6 files) + Finance (4 files) with column hiding
-- ✅ **Tahap 8.1**: Deploy scripts — health check endpoint, configurable port, robust db:push fallback
-- ✅ Pipeline stage fix (DB enum alignment: DISCOVERY, PROPOSAL, NEGOTIATION, CLOSING, CLOSED_WON, CLOSED_LOST)
-- ✅ Dashboard stats connected to real database queries
-- ✅ Audit trail page connected to real AuditLog API
-- ✅ Global search (Ctrl+K) across all modules
-- ✅ Dark mode (Tailwind class strategy with CSS variables)
-
-### MVP Success Criteria
-
-| Metric | Target |
-|--------|--------|
-| Beta users | 50 companies |
-| User satisfaction | > 3.5/5 |
-| Critical bugs | < 5 |
-| Core flows working | 100% |
+| Phase | Metric | Target |
+|-------|--------|--------|
+| **MVP** | Core flows working | 100% |
+| **MVP** | Critical bugs | < 5 |
+| **Phase 1** | Beta users | 50 companies |
+| **Phase 1** | User satisfaction | > 3.5/5 |
+| **Phase 2** | Paying customers | 20 companies |
+| **Phase 2** | MRR | Rp 10 juta |
+| **Phase 3** | Paying customers | 100 companies |
+| **Phase 3** | MRR | Rp 50 juta |
+| **Phase 4** | Paying customers | 500 companies |
+| **Phase 4** | MRR | Rp 250 juta |
 
 ---
 
-## 4. Phase 2: Core Modules
-
-**Duration:** November 2026 - February 2027 (14 weeks)
-**Goal:** First paying customers, full basic modules
-
-### Week 1-4: Inventory Module
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 1-2 | Product catalog | Full-stack | ⬜ |
-| 2-3 | Stock management | Backend | ⬜ |
-| 3 | Purchase order | Full-stack | ⬜ |
-| 3-4 | Supplier management | Full-stack | ⬜ |
-| 4 | Basic reports | Full-stack | ⬜ |
-
-### Week 5-8: Desktop App + Advanced Finance
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 5-6 | Desktop App (Electron) | Desktop | ⬜ |
-| 6-7 | Offline sync engine | Backend | ⬜ |
-| 7-8 | Desktop-specific UI | Frontend | ⬜ |
-
-### Week 9-12: Finance Advanced + Tax + Mobile Enhancement
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 9-10 | Bank reconciliation (auto) | Backend | ⬜ |
-| 9-10 | Expense management | Full-stack | ⬜ |
-| 10-11 | e-Faktur integration | Backend | ⬜ |
-| 11-12 | PPh 21 calculation | Backend | ⬜ |
-| 11-12 | Coretax readiness | Backend | ⬜ |
-| 11-12 | Advanced financial reports | Full-stack | ⬜ |
-
-### Week 13-14: Mobile Enhancement + Launch Prep
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 13 | Offline mode (Mobile) | Mobile | ⬜ |
-| 13 | Push notifications | Mobile | ⬜ |
-| 13 | Payment gateway integration | Backend | ⬜ |
-| 14 | AI suggestions (basic) | AI/ML | ⬜ |
-| 14 | Landing page update | Marketing | ⬜ |
-| 14 | Documentation | Tech Writer | ⬜ |
-| 14 | Beta → Production migration | DevOps | ⬜ |
-
-### Phase 2 Deliverables
-
-- [ ] Full inventory module
-- [ ] Desktop App (Electron) — offline capable
-- [ ] Advanced finance (bank reconciliation, tax)
-- [ ] Enhanced mobile (offline, notifications)
-- [ ] AI features v2
-- [ ] Payment gateway integration
-
-### Phase 2 Success Criteria
-
-| Metric | Target |
-|--------|--------|
-| Paying customers | 20 companies |
-| MRR | Rp 10 juta |
-| NPS | > 30 |
-| Churn rate | < 10% monthly |
-
----
-
-## 5. Phase 3: Advanced Features
-
-**Duration:** March - May 2027 (12 weeks)
-**Goal:** HR + Operations modules, advanced AI
-
-### Week 1-4: HR Module
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 1-2 | Employee database | Full-stack | ⬜ |
-| 2-3 | Attendance (GPS check-in) | Full-stack | ⬜ |
-| 3 | Leave management | Full-stack | ⬜ |
-| 3-4 | Payroll (basic) | Backend | ⬜ |
-| 4 | Template builder (basic) | Full-stack | ⬜ |
-
-### Week 5-8: Operations & Project
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 5-6 | Project management | Full-stack | ⬜ |
-| 6-7 | Task & time tracking | Full-stack | ⬜ |
-| 7-8 | Field service (basic) | Full-stack | ⬜ |
-| 8 | Quality checklist | Full-stack | ⬜ |
-
-### Week 9-12: Advanced AI
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 9-10 | Natural language query | AI/ML | ⬜ |
-| 10-11 | Document extraction | AI/ML | ⬜ |
-| 11-12 | AI template generator | AI/ML | ⬜ |
-| 11-12 | Anomaly detection | AI/ML | ⬜ |
-
-### Phase 3 Deliverables
-
-- [ ] Full HR module (attendance, leave, payroll, templates)
-- [ ] Project management
-- [ ] Field service basic
-- [ ] Advanced AI features
-- [ ] Document extraction
-
-### Phase 3 Success Criteria
-
-| Metric | Target |
-|--------|--------|
-| Paying customers | 100 companies |
-| MRR | Rp 50 juta |
-| AI feature usage | > 40% of users |
-| NPS | > 40 |
-
----
-
-## 6. Phase 4: Enterprise & Scale
-
-**Duration:** June - November 2027 (24 weeks)
-**Goal:** Enterprise features, white-label, full ecosystem
-
-### Week 1-8: Enterprise Features
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 1-4 | Multi-entity support | Backend | ⬜ |
-| 3-6 | Advanced approval workflows | Backend | ⬜ |
-| 5-8 | SSO integration | Backend | ⬜ |
-| 5-8 | Advanced security features | Security | ⬜ |
-
-### Week 9-16: Integration Dashboard Advanced
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 9-12 | Integration Dashboard v2 (marketplace templates) | Backend | ⬜ |
-| 9-12 | OAuth 2.0 flow (user authorize sendiri) | Backend | ⬜ |
-| 11-14 | Shipping integration templates | Backend | ⬜ |
-| 13-16 | Open API v2 | Backend | ⬜ |
-| 13-16 | Webhook builder (user-custom) | Full-stack | ⬜ |
-| 13-16 | API documentation & sandbox | Full-stack | ⬜ |
-
-### Week 17-24: White-label & Advanced AI
-
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 17-20 | White-label platform | Full-stack | ⬜ |
-| 17-20 | Reseller portal | Full-stack | ⬜ |
-| 21-24 | Full AI Agent suite | AI/ML | ⬜ |
-| 21-24 | Predictive analytics | AI/ML | ⬜ |
-
-### Phase 4 Deliverables
-
-- [ ] Multi-entity & advanced security
-- [ ] Integration Dashboard v2 (templates, OAuth flow, webhooks)
-- [ ] White-label platform
-- [ ] Full AI Agent suite
-- [ ] Open API v2
-
-### Phase 4 Success Criteria
-
-| Metric | Target |
-|--------|--------|
-| Paying customers | 500 companies |
-| MRR | Rp 250 juta |
-| White-label partners | 10 agencies |
-| Enterprise customers | 20 companies |
-
----
-
-## 7. Key Milestones
-
-### 2026
-
-| Date | Milestone | Dependencies |
-|------|-----------|--------------|
-| **Aug 2026** | MVP Development Start | Team hired |
-| **Oct 2026** | MVP Beta Launch | MVP complete |
-| **Nov 2026** | First 50 Beta Users | Marketing push |
-| **Dec 2026** | MVP → Production | Beta feedback |
-| **Dec 2026** | First Paying Customer | Sales ready |
-
-### 2027
-
-| Date | Milestone | Dependencies |
-|------|-----------|--------------|
-| **Feb 2027** | 20 Paying Customers | Product-market fit |
-| **Mar 2027** | HR Module Launch | HR development |
-| **May 2027** | 100 Paying Customers | Growth marketing |
-| **Jun 2027** | Enterprise Tier Launch | Enterprise features |
-| **Aug 2027** | White-label Launch | White-label ready |
-| **Nov 2027** | 500 Customers | Scale operations |
-| **Dec 2027** | Series A Readiness | Metrics achieved |
-
----
-
-## 8. Success Metrics
+## 📈 Success Metrics
 
 ### North Star Metric
 
@@ -396,26 +304,21 @@
 | **Efficiency** | CAC payback | < 6 months |
 | **Efficiency** | LTV/CAC ratio | > 3x |
 
-### OKR Framework
+### Key Milestones
 
-#### Objective 1: Achieve Product-Market Fit
-- KR1: 100 paying customers by May 2027
-- KR2: NPS > 40 by Q2 2027
-- KR3: Monthly churn < 8% by Q2 2027
-
-#### Objective 2: Build AI-Powered Differentiation
-- KR1: AI features used by > 40% of users
-- KR2: AI accuracy > 90% for key features
-- KR3: Time saved > 5 hours/user/week
-
-#### Objective 3: Scale Revenue
-- KR1: MRR Rp 250 juta by Nov 2027
-- KR2: ACV > Rp 10 juta for mid-market
-- KR3: White-label contributing 20% of revenue
+| Date | Milestone | Status |
+|------|-----------|--------|
+| **Aug 2026** | MVP Development Complete | ✅ Done |
+| **Oct 2026** | MVP Beta Launch | 🟢 In Progress |
+| **Dec 2026** | MVP → Production | 🔵 Planned |
+| **Feb 2027** | 20 Paying Customers | 🔵 Planned |
+| **May 2027** | 100 Paying Customers | 🔵 Planned |
+| **Aug 2027** | White-label Launch | 🟡 Later |
+| **Nov 2027** | 500 Customers | 🟡 Later |
 
 ---
 
-## 9. Risks & Mitigation
+## ⚠️ Risks & Mitigation
 
 ### Technical Risks
 
@@ -435,143 +338,21 @@
 | **Competitor response** | High | Medium | Speed to market, differentiation |
 | **Regulatory changes** | Low | High | Compliance monitoring |
 
-### Resource Risks
+---
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| **Key person departure** | Medium | High | Documentation, knowledge sharing |
-| **Hiring delays** | High | Medium | Contractor network, outsourcing |
-| **Budget overrun** | Medium | High | Monthly reviews, contingency |
+## 📝 Documentation References
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| **AGENT.md** | AI Agent development rules | [`AGENT.md`](AGENT.md) |
+| **FEATURES.md** | Feature list with status | [`FEATURES.md`](FEATURES.md) |
+| **CURRENT.md** | Current state & known issues | [`CURRENT.md`](CURRENT.md) |
+| **ARCHITECTURE.md** | System architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| **DATABASE.md** | Database schema | [`docs/DATABASE.md`](docs/DATABASE.md) |
+| **SECURITY.md** | Security rules | [`docs/SECURITY.md`](docs/SECURITY.md) |
+| **UI_UX.md** | UI/UX guidelines | [`docs/UI_UX.md`](docs/UI_UX.md) |
 
 ---
 
-## 10. Resource Planning
-
-### Team Structure
-
-#### Phase 1 (MVP): 10 people
-
-| Role | Count | Responsibility |
-|------|-------|----------------|
-| **Product Manager** | 1 | Strategy, roadmap, priorities |
-| **Tech Lead** | 1 | Architecture, code review |
-| **Backend Engineer** | 2 | API, database, integrations |
-| **Frontend Engineer** | 2 | Web App (core utama), design system |
-| **Mobile Engineer** | 2 | iOS & Android apps |
-| **DevOps** | 1 | Infrastructure, CI/CD |
-| **UI/UX Designer** | 1 | Design system, user flows |
-
-#### Phase 2: 14 people (+4)
-
-| Role | Count | Responsibility |
-|------|-------|----------------|
-| **Desktop Engineer** | 1 | Desktop App (Electron) |
-| **HR Module Lead** | 1 | HR module development |
-| **AI/ML Engineer** | 1 | AI features |
-| **QA Engineer** | 1 | Testing, quality |
-
-#### Phase 3: 18 people (+4)
-
-| Role | Count | Responsibility |
-|------|-------|----------------|
-| **Security Engineer** | 1 | Security, compliance |
-| **Data Engineer** | 1 | Data pipeline, analytics |
-| **Technical Writer** | 1 | Documentation |
-| **Customer Success** | 1 | Onboarding, support |
-
-#### Phase 4: 26 people (+8)
-
-| Role | Count | Responsibility |
-|------|-------|----------------|
-| **Enterprise Sales** | 2 | Enterprise customers |
-| **Solution Architect** | 1 | Custom implementations |
-| **Partner Manager** | 1 | White-label partners |
-| **Support Engineer** | 2 | User support, integration help |
-| **Additional Engineers** | 3 | Scale & features |
-
-### Budget Allocation
-
-#### Phase 1 (MVP): Rp 500 juta
-
-| Category | Amount | Percentage |
-|----------|--------|------------|
-| **Salaries** | Rp 350 juta | 70% |
-| **Infrastructure** | Rp 50 juta | 10% |
-| **Tools & Licenses** | Rp 30 juta | 6% |
-| **Marketing** | Rp 40 juta | 8% |
-| **Contingency** | Rp 30 juta | 6% |
-
-#### Annual Budget Growth
-
-| Year | Budget | Revenue Target | Burn Rate |
-|------|--------|----------------|-----------|
-| 2026 | Rp 750 juta | Rp 50 juta | Rp 60 juta/bulan |
-| 2027 | Rp 3 miliar | Rp 3 miliar | Rp 250 juta/bulan |
-| 2028 | Rp 10 miliar | Rp 15 miliar | Break-even |
-
----
-
-## 📅 Weekly Status Updates
-
-### August 2026
-
-| Week | Progress | Blockers | Next Week |
-|------|----------|----------|-----------|
-| W1 (Aug 1-7) | DB migration, Contact bug fix, Lucide icons (sidebar/header) | None | Module layouts i18n |
-| W2 (Aug 8-14) | Lucide icons (all modules), API routes hardened, audit trail | None | i18n setup, settings |
-| W3 (Aug 15-18) | i18n foundation, settings pages, HR/Inventory/Finance/CRM i18n, responsive tables, deploy scripts, documentation | None | Build sanity check |
-
-
----
-
-## 📌 Platform Summary
-
-| Platform | Development | Target Users | Key Differentiator |
-|----------|-------------|-------------|-------------------|
-| **Web App** | Phase 1 (MVP) | Admin, Finance, HR, Manager | Core utama, full features |
-| **Mobile App** | Phase 1 (MVP) | Field team, Sales, Management | Offline mode, quick actions |
-| **Desktop App** | Phase 2 | Staff, Operator | Offline capable, heavy data entry |
-
-### Integration Philosophy
-
-> **User-Managed Integrations** — Qalcuity menyediakan Integration Dashboard tempat user plug API key mereka sendiri. User yang bayar ke provider pihak ketiga (WhatsApp, Shopee, Xendit, dll). Qalcuity **tidak membeli atau menyediakan** API pihak ketiga.
-
-| Integration Type | Method | User Action | Siapa Bayar |
-|-----------------|--------|-------------|-------------|
-| **API Key** | User masukkan API key di dashboard | Self-service | User ke provider |
-| **OAuth 2.0** | User authorize via browser | Click & connect | User ke provider |
-| **Webhook** | User set URL endpoint | Configuration | Gratis |
-| **CSV Import** | User upload file | Manual upload | Gratis |
-
-### Revenue Model
-
-| Revenue Stream | Description |
-|---------------|-------------|
-| **Subscription** | Sewa aplikasi bulanan/tahunan per tier |
-| **Add-on Modules** | Module tambahan (Field Service, Advanced AI, dll) |
-| **White-label** | Reseller bisa jual ulang dengan branding sendiri |
-| **Enterprise** | Custom deployment untuk perusahaan besar |
-
----
-
-## 🔄 Change Log
-
-| Date | Change | Author |
-|------|--------|--------|
-| Aug 18, 2026 | Tahap 0.1–8.1 complete: i18n, Lucide, responsive, deploy, docs | Dev Team |
-| Aug 3, 2026 | Initial roadmap created | Product Team |
-
----
-
-## 📞 Contacts
-
-| Role | Name | Email |
-|------|------|-------|
-| **Product Manager** | TBD | product@qalcuity.com |
-| **Tech Lead** | TBD | tech@qalcuity.com |
-| **CEO** | TBD | ceo@qalcuity.com |
-
----
-
-**Last Updated:** August 18, 2026
+**Last Updated:** August 29, 2026
 **Maintainer:** Qalcuity Product Team

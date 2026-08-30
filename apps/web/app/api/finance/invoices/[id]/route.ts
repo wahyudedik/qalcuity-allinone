@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -80,48 +82,59 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
+
+        const { items, ...restBody } = body;
+        const validation = updateInvoiceSchema.safeParse({ ...restBody, items });
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Invoice not found' },
+                { success: false, error: 'Invoice tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        const updateData: Record<string, unknown> = { ...body };
-        delete updateData.id;
-        delete updateData.items;
-
-        if (updateData.status && typeof updateData.status === 'string') {
-            updateData.status = updateData.status.toUpperCase();
+        const updateData: Record<string, unknown> = {};
+        if (validatedData.status) {
+            updateData.status = validatedData.status.toUpperCase();
         }
-        if (updateData.dueDate) {
-            updateData.dueDate = new Date(updateData.dueDate as string | number);
+        if (validatedData.dueDate !== undefined) {
+            updateData.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
+        }
+        if (validatedData.taxRate !== undefined) {
+            updateData.taxRate = validatedData.taxRate;
+        }
+        if (validatedData.notes !== undefined) {
+            updateData.notes = validatedData.notes;
         }
 
         // Handle items update if provided — use transaction for atomicity
-        if (body.items && body.items.length > 0) {
-            // Recalculate totals
-            const subtotal = body.items.reduce(
-                (sum: number, item: { quantity: number; unitPrice: number }) =>
-                    sum + item.quantity * item.unitPrice,
+        if (validatedData.items && validatedData.items.length > 0) {
+            const subtotal = validatedData.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
                 0
             );
-            const taxRate = body.taxRate || existing.taxRate;
+            const taxRate = validatedData.taxRate || existing.taxRate;
             const taxAmount = subtotal * (taxRate / 100);
             updateData.subtotal = subtotal;
             updateData.taxAmount = taxAmount;
             updateData.total = subtotal + taxAmount;
 
-            // Delete old items and create new ones in transaction
             await prisma.$transaction(async (tx) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
-                    data: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                    data: (validatedData.items ?? []).map((item) => ({
                         invoiceId: id,
                         description: item.description,
                         quantity: item.quantity,
@@ -138,6 +151,8 @@ export async function PUT(
             include: { items: true, contact: true },
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: updateData as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: invoice });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -153,7 +168,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
@@ -165,6 +180,9 @@ export async function DELETE(
         }
 
         await prisma.invoice.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

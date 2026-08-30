@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -60,36 +62,57 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
+
+        const validation = updatePaymentSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payment not found' },
+                { success: false, error: 'Payment tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        const updateData: Record<string, string | number | boolean | Date | null | undefined> = { ...body };
-        delete updateData.id;
-
-        if (updateData.status && typeof updateData.status === 'string') {
-            updateData.status = updateData.status.toUpperCase();
+        const updateData: Record<string, string | number | boolean | Date | null | undefined> = {};
+        if (validatedData.status) {
+            updateData.status = validatedData.status.toUpperCase();
         }
-        if (updateData.method && typeof updateData.method === 'string') {
-            updateData.method = updateData.method.toUpperCase().replace('-', '_');
+        if (validatedData.method) {
+            updateData.method = validatedData.method.toUpperCase().replace('-', '_');
         }
-        if (updateData.date) {
-            updateData.paymentDate = new Date(updateData.date as string);
-            delete updateData.date;
+        if (validatedData.amount !== undefined) {
+            updateData.amount = validatedData.amount;
+        }
+        if (validatedData.type) {
+            updateData.type = validatedData.type.toUpperCase();
+        }
+        if (validatedData.reference !== undefined) {
+            updateData.reference = validatedData.reference;
+        }
+        if (validatedData.notes !== undefined) {
+            updateData.notes = validatedData.notes;
+        }
+        if (validatedData.date !== undefined) {
+            updateData.paymentDate = validatedData.date ? new Date(validatedData.date) : null;
         }
 
         const payment = await prisma.payment.update({
             where: { id },
             data: updateData,
         });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Payment', entityId: id, newValues: updateData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: payment });
     } catch (error: unknown) {
@@ -106,7 +129,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
@@ -118,6 +141,9 @@ export async function DELETE(
         }
 
         await prisma.payment.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Payment', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

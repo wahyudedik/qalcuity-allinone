@@ -13,7 +13,9 @@ import {
     Clock,
     UserX,
     Users,
+    Trash2,
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 interface AttendanceRecord {
     id: string
@@ -27,6 +29,8 @@ interface AttendanceRecord {
 
 export default function AttendancePage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
     const [historicalData, setHistoricalData] = useState<AttendanceRecord[]>([])
     const [loading, setLoading] = useState(true)
@@ -34,6 +38,14 @@ export default function AttendancePage() {
     const [activeTab, setActiveTab] = useState<'today' | 'history'>('today')
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [searchQuery, setSearchQuery] = useState('')
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     const statusConfig = {
         present: { label: t('hr.attendance.present') || 'Hadir', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
@@ -89,6 +101,22 @@ export default function AttendancePage() {
     const historyDataFiltered = historicalData.filter(a =>
         a.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
     )
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus data absensi ini?')) return
+        try {
+            const response = await fetch(`/api/hr/attendance/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchAttendance()
+                setToast({ message: 'Data absensi berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus data absensi', type: 'error' })
+        }
+    }
 
     if (loading) {
         return (
@@ -199,96 +227,202 @@ export default function AttendancePage() {
                 />
             </div>
 
-            {/* Today's Attendance */}
+            {/* Today's Attendance - Mobile */}
             {activeTab === 'today' && (
-                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.action') || 'Aksi'}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {todayData.map((record) => (
-                                    <tr key={record.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4">
-                                            <div className="font-medium text-gray-900">{record.employeeName}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`h-2 w-2 rounded-full ${statusConfig[record.status].dot}`} />
-                                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[record.status].color}`}>
-                                                    {statusConfig[record.status].label}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {record.clockIn || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {record.clockOut || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {record.workHours > 0 ? `${record.workHours} jam` : '-'}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="text-sm text-blue-600 hover:text-blue-700">
-                                                Detail
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <>
+                    <div className="md:hidden space-y-3">
+                        {todayData.length === 0 ? (
+                            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                                <Users className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+                                <p className="text-sm">Belum ada data kehadiran hari ini</p>
+                            </div>
+                        ) : (
+                            todayData.map((record) => (
+                                <div key={record.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                                    <div className="flex items-start justify-between">
+                                        <div className="font-medium text-gray-900">{record.employeeName}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`h-2 w-2 rounded-full ${statusConfig[record.status].dot}`} />
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[record.status].color}`}>
+                                                {statusConfig[record.status].label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-500">{t('hr.attendance.clockIn') || 'Masuk'}:</span>
+                                            <span className="ml-1">{record.clockIn || '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">{t('hr.attendance.clockOut') || 'Keluar'}:</span>
+                                            <span className="ml-1">{record.clockOut || '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">{t('hr.attendance.workHours') || 'Jam'}:</span>
+                                            <span className="ml-1">{record.workHours > 0 ? `${record.workHours}j` : '-'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 flex justify-end">
+                                        <button className="text-sm text-blue-600 hover:text-blue-700">
+                                            Detail
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
-                </div>
+
+                    {/* Today's Attendance - Desktop */}
+                    <div className="hidden md:block rounded-xl border border-gray-200 bg-white overflow-hidden">
+                        {todayData.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <Users className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Belum ada data kehadiran hari ini</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Data kehadiran karyawan akan muncul di sini</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.action') || 'Aksi'}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {todayData.map((record) => (
+                                            <tr key={record.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-medium text-gray-900">{record.employeeName}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`h-2 w-2 rounded-full ${statusConfig[record.status].dot}`} />
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[record.status].color}`}>
+                                                            {statusConfig[record.status].label}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">
+                                                    {record.clockIn || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">
+                                                    {record.clockOut || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">
+                                                    {record.workHours > 0 ? `${record.workHours} jam` : '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button className="text-sm text-blue-600 hover:text-blue-700">
+                                                        Detail
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
             )}
 
-            {/* History */}
+            {/* History - Mobile */}
             {activeTab === 'history' && (
-                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {historyDataFiltered.map((record) => (
-                                    <tr key={record.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {new Date(record.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900">{record.employeeName}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`h-2 w-2 rounded-full ${statusConfig[record.status].dot}`} />
-                                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[record.status].color}`}>
-                                                    {statusConfig[record.status].label}
-                                                </span>
+                <>
+                    <div className="md:hidden space-y-3">
+                        {historyDataFiltered.length === 0 ? (
+                            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                                <Calendar className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+                                <p className="text-sm">Belum ada riwayat kehadiran</p>
+                            </div>
+                        ) : (
+                            historyDataFiltered.map((record) => (
+                                <div key={record.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <div className="font-medium text-gray-900">{record.employeeName}</div>
+                                            <div className="text-xs text-gray-500">
+                                                {new Date(record.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{record.clockIn || '-'}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{record.clockOut || '-'}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{record.workHours} jam</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`h-2 w-2 rounded-full ${statusConfig[record.status].dot}`} />
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[record.status].color}`}>
+                                                {statusConfig[record.status].label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-500">{t('hr.attendance.clockIn') || 'Masuk'}:</span>
+                                            <span className="ml-1">{record.clockIn || '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">{t('hr.attendance.clockOut') || 'Keluar'}:</span>
+                                            <span className="ml-1">{record.clockOut || '-'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">{t('hr.attendance.workHours') || 'Jam'}:</span>
+                                            <span className="ml-1">{record.workHours}j</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
-                </div>
+
+                    {/* History - Desktop */}
+                    <div className="hidden md:block rounded-xl border border-gray-200 bg-white overflow-hidden">
+                        {historyDataFiltered.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <Calendar className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Belum ada riwayat kehadiran</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Riwayat kehadiran karyawan akan muncul di sini</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {historyDataFiltered.map((record) => (
+                                            <tr key={record.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 text-sm text-gray-600">
+                                                    {new Date(record.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                                </td>
+                                                <td className="px-6 py-4 font-medium text-gray-900">{record.employeeName}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`h-2 w-2 rounded-full ${statusConfig[record.status].dot}`} />
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[record.status].color}`}>
+                                                            {statusConfig[record.status].label}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{record.clockIn || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{record.clockOut || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{record.workHours} jam</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
             )}
 
             {/* Summary Card */}
@@ -320,6 +454,13 @@ export default function AttendancePage() {
                     </div>
                 </div>
             </div>
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
         </div>
     )
 }

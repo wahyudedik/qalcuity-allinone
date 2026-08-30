@@ -10,23 +10,25 @@ import {
     Banknote,
     type LucideIcon,
 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface TabItem {
     href: string
-    label: string
+    labelKey: string
     icon: LucideIcon
 }
 
 const hrTabs: TabItem[] = [
-    { href: '/dashboard/hr', label: 'Ringkasan', icon: BarChart3 },
-    { href: '/dashboard/hr/employees', label: 'Karyawan', icon: Users },
-    { href: '/dashboard/hr/attendance', label: 'Absensi', icon: Clock },
-    { href: '/dashboard/hr/leaves', label: 'Cuti', icon: Palmtree },
-    { href: '/dashboard/hr/payroll', label: 'Payroll', icon: Banknote },
+    { href: '/dashboard/hr', labelKey: 'hr.layout.tabs.overview', icon: BarChart3 },
+    { href: '/dashboard/hr/employees', labelKey: 'hr.layout.tabs.employees', icon: Users },
+    { href: '/dashboard/hr/attendance', labelKey: 'hr.layout.tabs.attendance', icon: Clock },
+    { href: '/dashboard/hr/leaves', labelKey: 'hr.layout.tabs.leaves', icon: Palmtree },
+    { href: '/dashboard/hr/payroll', labelKey: 'hr.layout.tabs.payroll', icon: Banknote },
 ]
 
 export default function HrLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const { t } = useTranslation()
 
     return (
         <div className="space-y-6">
@@ -45,7 +47,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
-                                {tab.label}
+                                {t(tab.labelKey)}
                             </Link>
                         )
                     })}

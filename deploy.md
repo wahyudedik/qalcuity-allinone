@@ -125,13 +125,17 @@ Setelah login pertama kali, aaPanel akan menawarkan instalasi web server:
 
 1. Pilih **LNMP (Recommended)**:
    - Nginx: **1.24** (atau versi terbaru)
-   - MySQL: **8.0** (atau versi terbaru)
    - PHP: **8.1** (atau versi terbaru)
-   - phpMyAdmin: **Latest**
    
 2. Klik **One-Click Install**
 
 3. Tunggu proses install selesai (bisa 5-15 menit tergantung server)
+
+4. Install **PostgreSQL** dari App Store:
+   - Buka **App Store** di sidebar
+   - Cari **PostgreSQL**
+   - Klik **Install** (pilih versi 14+ atau 16+)
+   - Tunggu proses install selesai
 
 > 💡 Anda bisa memilih versi lain, yang penting **Nginx** harus terinstall.
 
@@ -228,14 +232,15 @@ nano /www/wwwroot/qalcuity/apps/web/.env
 Update isi file `.env`:
 
 ```env
-# Database (SQLite sudah di-setup otomatis)
-DATABASE_URL="file:./dev.db"
+# Database (PostgreSQL)
+DATABASE_URL="postgresql://qalcuity_user:your_password@localhost:5432/qalcuity?schema=public"
 
-# Auth - Ganti dengan domain Anda
-NEXTAUTH_SECRET="ganti-dengan-secret-yang-panjang-dan-random"
+# Auth - Ganti dengan secret yang random
+NEXTAUTH_SECRET="$(openssl rand -hex 32)"
 NEXTAUTH_URL="https://domain-anda.com"
 
 # App
+NODE_ENV="production"
 NEXT_PUBLIC_APP_NAME="Qalcuity"
 NEXT_PUBLIC_APP_URL="https://domain-anda.com"
 ```
@@ -270,7 +275,7 @@ pm2 restart qalcuity-web
 | **PHP Version** | **Pure Static** (pilih ini!) |
 | **SSL** | Jangan dulu, setup nanti |
 | **FTP** | Jangan dicentang |
-| **Database** | Jangan dulu, pakai SQLite |
+| **Database** | Tidak perlu — pakai PostgreSQL standalone |
 
 Klik **Submit**.
 
@@ -482,12 +487,13 @@ Di aaPanel, Anda bisa monitor:
 ### 8.4 Backup Database Manual
 
 ```bash
-# Backup SQLite
-cp /www/wwwroot/qalcuity/packages/db/prisma/dev.db \
-   /www/wwwroot/qalcuity/backups/manual_backup_$(date '+%Y%m%d').db
+# Backup PostgreSQL
+mkdir -p /www/wwwroot/qalcuity/backups
+pg_dump -U qalcuity_user -h localhost qalcuity > \
+   /www/wwwroot/qalcuity/backups/pg_$(date '+%Y%m%d_%H%M%S').sql
 
-# Backup PostgreSQL (jika menggunakan)
-pg_dump qalcuity > /www/wwwroot/qalcuity/backups/pg_manual_$(date '+%Y%m%d').sql
+# Restore dari backup
+psql -U qalcuity_user -h localhost qalcuity < /www/wwwroot/qalcuity/backups/pg_20260829.sql
 ```
 
 ### 8.5 Lihat Log Update
@@ -578,13 +584,25 @@ pnpm build
 cd /www/wwwroot/qalcuity
 
 # Regenerate Prisma Client
-pnpm db:generate
+npx prisma generate
 
-# Push schema
-pnpm db:push
+# Push schema ke PostgreSQL
+npx prisma db push
 
 # Jika masih error, seed ulang
-pnpm db:seed
+npx prisma db seed
+```
+
+**Jika error koneksi PostgreSQL:**
+```bash
+# Cek PostgreSQL running
+systemctl status postgresql
+
+# Restart PostgreSQL
+systemctl restart postgresql
+
+# Cek port
+netstat -tlnp | grep 5432
 ```
 
 ### 9.6 SSL Tidak Bisa Apply
@@ -620,10 +638,12 @@ ufw reload
 
 | Perintah | Fungsi |
 |----------|--------|
-| `pnpm db:generate` | Generate Prisma Client |
-| `pnpm db:push` | Push schema ke DB |
-| `pnpm db:seed` | Seed data awal |
-| `pnpm db:studio` | Buka Prisma Studio (dev) |
+| `npx prisma generate` | Generate Prisma Client |
+| `npx prisma db push` | Push schema ke PostgreSQL |
+| `npx prisma db seed` | Seed data awal |
+| `npx prisma studio` | Buka Prisma Studio (visual DB) |
+| `npx prisma migrate deploy` | Deploy migrations ke production |
+| `npx prisma validate` | Validasi schema |
 
 ### 📁 Lokasi Penting
 
@@ -632,7 +652,7 @@ ufw reload
 | `/www/wwwroot/qalcuity/` | Root project |
 | `/www/wwwroot/qalcuity/apps/web/` | Next.js app |
 | `/www/wwwroot/qalcuity/apps/web/.env` | Environment variables |
-| `/www/wwwroot/qalcuity/packages/db/prisma/dev.db` | Database SQLite |
+| `/www/wwwroot/qalcuity/backups/` | Database backups |
 | `/www/wwwroot/qalcuity/ecosystem.config.js` | PM2 config |
 | `/var/log/qalcuity-update.log` | Log update |
 
@@ -691,14 +711,17 @@ User Browser
           │
           ▼
 ┌─────────────────────┐
-│    SQLite / PG      │
+│    PostgreSQL       │
 │    Database         │
+│   (Port 5432)       │
 └─────────────────────┘
 ```
 
 ---
 
-> **Catatan:** Script `deploy.sh` dan `update.sh` sudah termasuk di repository. Pastikan file-file ini executable sebelum dijalankan:
+> **Catatan:**
+> - Script `deploy.sh` dan `update.sh` sudah termasuk di repository. Pastikan file-file ini executable sebelum dijalankan:
 > ```bash
 > chmod +x deploy.sh update.sh
 > ```
+> - Untuk panduan lengkap PostgreSQL + aaPanel, lihat [`DEPLOY-POSTGRESQL.md`](DEPLOY-POSTGRESQL.md)

@@ -1,87 +1,92 @@
 import { NextResponse } from 'next/server';
-
-const mockEmployeeDetails: Record<string, {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    department: string;
-    position: string;
-    joinDate: string;
-    status: string;
-    salary: number;
-    address: string;
-    emergencyContact: string;
-    emergencyPhone: string;
-    skills: string[];
-    performance: { rating: number; lastReview: string };
-}> = {
-    'EMP-001': {
-        id: 'EMP-001',
-        firstName: 'Ahmad',
-        lastName: 'Rizky',
-        email: 'ahmad@qalcuity.com',
-        phone: '+62 812 3456 7890',
-        department: 'Engineering',
-        position: 'Senior Developer',
-        joinDate: '2024-03-15',
-        status: 'active',
-        salary: 15000000,
-        address: 'Jl. Teknologi No. 42, Jakarta Selatan',
-        emergencyContact: 'Siti Rizky',
-        emergencyPhone: '+62 812 1111 2222',
-        skills: ['TypeScript', 'React', 'Node.js', 'PostgreSQL'],
-        performance: { rating: 4.5, lastReview: '2026-06-30' },
-    },
-    'EMP-002': {
-        id: 'EMP-002',
-        firstName: 'Siti',
-        lastName: 'Nurhaliza',
-        email: 'siti@qalcuity.com',
-        phone: '+62 856 7890 1234',
-        department: 'Finance',
-        position: 'Finance Manager',
-        joinDate: '2024-01-10',
-        status: 'active',
-        salary: 18000000,
-        address: 'Jl. Keuangan No. 15, Jakarta Pusat',
-        emergencyContact: 'Ahmad Nurhaliza',
-        emergencyPhone: '+62 856 3333 4444',
-        skills: ['Financial Analysis', 'Accounting', 'Tax', 'Budgeting'],
-        performance: { rating: 4.8, lastReview: '2026-06-30' },
-    },
-    'EMP-003': {
-        id: 'EMP-003',
-        firstName: 'Budi',
-        lastName: 'Santoso',
-        email: 'budi@qalcuity.com',
-        phone: '+62 878 9012 3456',
-        department: 'HR',
-        position: 'HR Specialist',
-        joinDate: '2024-06-01',
-        status: 'on_leave',
-        salary: 12000000,
-        address: 'Jl. Kemanusiaan No. 8, Jakarta Barat',
-        emergencyContact: 'Dewi Santoso',
-        emergencyPhone: '+62 878 5555 6666',
-        skills: ['Recruitment', 'Employee Relations', 'Payroll', 'BPJS'],
-        performance: { rating: 4.2, lastReview: '2026-06-30' },
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { sanitizeInput } from '@/lib/sanitize';
+import { logAudit } from '@/lib/audit';
+import { updateEmployeeSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const employee = mockEmployeeDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!employee) {
-        return NextResponse.json({ success: false, error: 'Employee not found' }, { status: 404 });
+        const employee = await prisma.employee.findFirst({
+            where: { id, tenantId },
+            include: {
+                attendanceRecords: {
+                    orderBy: { date: 'desc' },
+                    take: 10,
+                },
+                leaveRequests: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 10,
+                },
+                payrollRecords: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 5,
+                },
+            },
+        });
+
+        if (!employee) {
+            return NextResponse.json(
+                { success: false, error: 'Karyawan tidak ditemukan' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: employee.id,
+            employeeId: employee.employeeId,
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone || '',
+            position: employee.position,
+            department: employee.department || '',
+            joinDate: employee.joinDate.toISOString(),
+            salary: employee.salary,
+            status: employee.status,
+            attendance: employee.attendanceRecords.map((a) => ({
+                id: a.id,
+                date: a.date.toISOString(),
+                clockIn: a.clockIn?.toISOString() || null,
+                clockOut: a.clockOut?.toISOString() || null,
+                status: a.status,
+                workHours: a.workHours,
+            })),
+            leaves: employee.leaveRequests.map((l) => ({
+                id: l.id,
+                type: l.type,
+                startDate: l.startDate.toISOString(),
+                endDate: l.endDate.toISOString(),
+                days: l.days,
+                reason: l.reason || '',
+                status: l.status,
+                appliedDate: l.appliedDate.toISOString(),
+            })),
+            payroll: employee.payrollRecords.map((p) => ({
+                id: p.id,
+                period: p.period,
+                baseSalary: p.baseSalary,
+                allowances: p.allowances,
+                deductions: p.deductions,
+                netSalary: p.netSalary,
+                status: p.status,
+            })),
+            createdAt: employee.createdAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, data: employee });
 }
 
 export async function PUT(
@@ -89,18 +94,56 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
 
-        if (!mockEmployeeDetails[id]) {
-            return NextResponse.json({ success: false, error: 'Employee not found' }, { status: 404 });
+        const validation = updateEmployeeSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
         }
 
-        mockEmployeeDetails[id] = { ...mockEmployeeDetails[id], ...body };
+        const validatedData = validation.data;
 
-        return NextResponse.json({ success: true, data: mockEmployeeDetails[id] });
-    } catch {
-        return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+        const existing = await prisma.employee.findFirst({
+            where: { id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Karyawan tidak ditemukan' },
+                { status: 404 }
+            );
+        }
+
+        // Build safe update data with sanitization
+        const data: Record<string, unknown> = {};
+        if (validatedData.name !== undefined) data.name = sanitizeInput(validatedData.name);
+        if (validatedData.email !== undefined) data.email = sanitizeInput(validatedData.email);
+        if (validatedData.phone !== undefined) data.phone = validatedData.phone ? sanitizeInput(validatedData.phone) : null;
+        if (validatedData.position !== undefined) data.position = sanitizeInput(validatedData.position);
+        if (validatedData.department !== undefined) data.department = sanitizeInput(validatedData.department);
+        if (validatedData.salary !== undefined) data.salary = validatedData.salary;
+        if (validatedData.status !== undefined) data.status = validatedData.status;
+        if (validatedData.joinDate !== undefined) data.joinDate = new Date(validatedData.joinDate);
+
+        const employee = await prisma.employee.update({
+            where: { id },
+            data,
+        });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Employee', entityId: id, newValues: data as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: employee });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
@@ -108,13 +151,32 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const { userId, tenantId } = await requireMutateAuth();
+        const { id } = params;
 
-    if (!mockEmployeeDetails[id]) {
-        return NextResponse.json({ success: false, error: 'Employee not found' }, { status: 404 });
+        const existing = await prisma.employee.findFirst({
+            where: { id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Karyawan tidak ditemukan' },
+                { status: 404 }
+            );
+        }
+
+        await prisma.employee.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Employee', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockEmployeeDetails[id];
-
-    return NextResponse.json({ success: true, data: null });
 }

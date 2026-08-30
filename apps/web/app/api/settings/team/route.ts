@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth } from '@/lib/session'
+import { requireAuth, requireMutateAuth } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 
 export async function GET() {
@@ -49,7 +49,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth()
+        const { userId, tenantId, role: callerRole } = await requireMutateAuth()
+
+        // Only ADMIN and SUPERADMIN can invite team members
+        if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: 'Only admins can invite team members' },
+                { status: 403 }
+            )
+        }
+
         const body = await request.json()
 
         if (!body.email || typeof body.email !== 'string') {
@@ -60,7 +69,7 @@ export async function POST(request: Request) {
         }
 
         const email = body.email.trim().toLowerCase()
-        const role = ['ADMIN', 'MEMBER', 'VIEWER'].includes(body.role?.toUpperCase())
+        const role = ['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN'].includes(body.role?.toUpperCase())
             ? body.role.toUpperCase()
             : 'MEMBER'
 
@@ -131,7 +140,15 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth()
+        const { userId, tenantId, role: callerRole } = await requireMutateAuth()
+
+        // Only ADMIN and SUPERADMIN can update team members
+        if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: 'Only admins can update team members' },
+                { status: 403 }
+            )
+        }
         const body = await request.json()
 
         if (!body.memberId || typeof body.memberId !== 'string') {
@@ -150,7 +167,14 @@ export async function PUT(request: Request) {
         }
 
         const updateData: Record<string, unknown> = {}
-        if (body.role && ['ADMIN', 'MEMBER', 'VIEWER'].includes(body.role.toUpperCase())) {
+        if (body.role && ['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN'].includes(body.role.toUpperCase())) {
+            // Prevent non-superadmin from assigning SUPERADMIN role
+            if (body.role.toUpperCase() === 'SUPERADMIN' && callerRole !== 'SUPERADMIN') {
+                return NextResponse.json(
+                    { success: false, error: 'Only superadmin can assign superadmin role' },
+                    { status: 403 }
+                )
+            }
             updateData.role = body.role.toUpperCase()
         }
         if (typeof body.isActive === 'boolean') {
@@ -216,7 +240,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth()
+        const { userId, tenantId } = await requireMutateAuth()
         const { searchParams } = new URL(request.url)
         const memberId = searchParams.get('id')
 

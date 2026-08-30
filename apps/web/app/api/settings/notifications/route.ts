@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth } from '@/lib/session'
+import { requireAuth, requireMutateAuth } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 
 interface NotificationPreferences {
@@ -77,7 +77,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth()
+        const { userId, tenantId } = await requireMutateAuth()
         const body = await request.json()
 
         // Get current settings

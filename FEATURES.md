@@ -11,9 +11,9 @@
 
 | Platform | Description | Status |
 |----------|-------------|--------|
-| **Web App** | Core utama, full feature, admin panel | MVP |
-| **Desktop App** | Electron-based, offline capable | Phase 2 |
-| **Mobile App** | iOS & Android, field-ready | MVP |
+| **Web App** | Core utama, full feature, admin panel | `production_ready` |
+| **Desktop App** | Electron-based, offline capable | `partial` |
+| **Mobile App** | iOS & Android, field-ready | `partial` |
 
 ### 💰 Yang Qalcuity Sediakan
 
@@ -40,7 +40,7 @@
 
 ## 📋 Daftar Isi
 
-1. [Core Platform](#1-core-platform-wajib-ada)
+1. [Core Platform](#1-core-platform)
 2. [Finance & Accounting](#2-finance--accounting)
 3. [Sales & CRM](#3-sales--crm)
 4. [Inventory & Supply Chain](#4-inventory--supply-chain)
@@ -54,26 +54,32 @@
 
 ---
 
-## 1. Core Platform (Wajib Ada)
+## 1. Core Platform
 
 Foundation yang menjadi tulang punggung seluruh modul.
 
 | Fitur | Deskripsi | Status |
 |-------|-----------|--------|
-| **Unified Dashboard** | Satu tampilan real-time untuk Finance, Sales, Operations, HR, Inventory | ✅ MVP Done |
-| **Multi-platform** | Web (core utama), Desktop, Mobile (iOS + Android) | MVP |
-| **Multi-entity & Multi-currency** | Support cabang, anak perusahaan, multi-negara dengan base currency | Phase 3 |
-| **Role-based Access + Approval Workflow** | Custom approval chain multi-level, delegation, conditional routing | ✅ MVP Done |
-| **Audit Trail Lengkap** | Semua aksi tercatat dengan timestamp, user, IP, dan perubahan data | ✅ MVP Done |
-| **Dark Mode** | Tema gelap untuk kenyamanan penggunaan malam hari | ✅ MVP Done |
-| **Global Search** | Pencarian lintas modul dengan Ctrl+K shortcut | ✅ MVP Done |
-
-### Key Highlights:
-- **3 Platform** — Web (core utama), Desktop (Electron), Mobile (iOS & Android)
-- **Real-time sync** antara web, desktop, dan mobile
-- **Offline-first architecture** — data lokal di-cache, sync saat online
-- **Customizable dashboard** — drag & drop widget sesuai kebutuhan user
-- **Multi-language support** — Indonesia, English (expandable)
+| **Unified Dashboard** | Satu tampilan real-time untuk Finance, Sales, Operations, HR, Inventory | `production_ready` |
+| **Multi-platform** | Web (core utama), Desktop, Mobile (iOS + Android) | `partial` |
+| **Multi-entity & Multi-currency** | Support cabang, anak perusahaan, multi-negara dengan base currency | `planned` |
+| **Role-based Access + Approval Workflow** | Custom approval chain multi-level, delegation, conditional routing | `production_ready` |
+| **Audit Trail Lengkap** | Semua aksi tercatat dengan timestamp, user, IP, dan perubahan data | `production_ready` |
+| **Dark Mode** | Tema gelap untuk kenyamanan penggunaan malam hari | `production_ready` |
+| **Global Search** | Pencarian lintas modul dengan Ctrl+K shortcut | `production_ready` |
+| **i18n Support** | Bahasa Indonesia + English, custom lightweight i18n provider, 20+ pages localized | `production_ready` |
+| **Responsive Design** | Mobile-first, 44x44px touch targets, responsive tables | `production_ready` |
+| **Responsive Tables** | Dual layout (mobile cards + desktop tables) di 17 halaman | `production_ready` |
+| **Zod Validation** | 14+ schemas di `validation-schemas.ts`, 19 API routes | `production_ready` |
+| **RBAC Defense-in-depth** | 3 lapisan: middleware + API route + UI visibility, 35 API routes + 22 pages | `production_ready` |
+| **Lucide Icons** | Consistent icon system across all modules | `production_ready` |
+| **Empty States** | All CRUD pages have empty state components | `production_ready` |
+| **Toast Notifications** | CRUD operation success/error feedback | `production_ready` |
+| **Confirmation Dialogs** | Delete confirmation on 14+ CRUD pages | `production_ready` |
+| **Navigation Links** | Cross-entity navigation (e.g., Invoice → Contact) | `production_ready` |
+| **Loading States** | 9 loading.tsx files untuk detail pages | `production_ready` |
+| **Seed Data** | Comprehensive demo data for all modules | `production_ready` |
+| **Deploy Scripts** | PM2 health check, configurable port, robust db:push | `production_ready` |
 
 ---
 
@@ -82,71 +88,80 @@ Foundation yang menjadi tulang punggung seluruh modul.
 Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 
 ### 2.1 Core Accounting
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Chart of Account** | Template CoA industri + custom, multi-level grouping |
-| **General Ledger** | Otomatis dari semua transaksi, real-time posting |
-| **Journal Entry** | Manual & auto-generated, supporting multi-currency |
-| **Trial Balance** | Real-time, drill-down ke detail transaksi |
-| **Financial Statements** | Balance Sheet, Income Statement, Cash Flow, Equity Statement |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Chart of Account** | Template CoA industri + custom, multi-level grouping, full CRUD tree view — **Migrated to Prisma DB** | `production_ready` |
+| **General Ledger** | Otomatis dari semua transaksi, real-time posting | `partial` |
+| **Journal Entry** | Manual & auto-generated, supporting multi-currency | `partial` |
+| **Trial Balance** | Real-time, drill-down ke detail transaksi | `planned` |
+| **Financial Statements** | Balance Sheet, Income Statement, Cash Flow, Equity Statement | `planned` |
 
 ### 2.2 Accounts Receivable
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Invoice** | Custom template, recurring invoice, batch generation |
-| **Quotation** | Convert to invoice, version tracking |
-| **Payment Tracking** | Multi-payment method, partial payment, auto-reconciliation |
-| **Aging Report** | 30/60/90 day buckets, automated reminder |
-| **Credit Limit Management** | Auto-block order jika melebihi limit |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Invoice** | Custom template, recurring invoice, batch generation | `production_ready` |
+| **Quotation** | Convert to invoice, version tracking | `production_ready` |
+| **Payment Tracking** | Multi-payment method, partial payment, auto-reconciliation | `production_ready` |
+| **Aging Report** | 30/60/90 day buckets, automated reminder | `partial` |
+| **Credit Limit Management** | Auto-block order jika melebihi limit | `planned` |
 
 ### 2.3 Accounts Payable
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Purchase Order** | Approval workflow, 3-way matching |
-| **Bills & Expenses** | Upload receipt, auto-categorize dengan AI |
-| **Payment Processing** | Batch payment, scheduled payment |
-| **Supplier Management** | Rating, performance tracking, payment terms |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Purchase Order** | Approval workflow, 3-way matching | `production_ready` |
+| **Bills & Expenses** | Upload receipt, auto-categorize dengan AI | `partial` |
+| **Payment Processing** | Batch payment, scheduled payment | `partial` |
+| **Supplier Management** | Rating, performance tracking, payment terms | `production_ready` |
 
 ### 2.4 Bank & Cash
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Bank Reconciliation** | Otomatis dengan integrasi bank Indonesia (BCA, BRI, Mandiri, BNI) |
-| **Multi-bank Account** | Support unlimited rekening |
-| **Petty Cash** | Approval workflow, auto-replenishment |
-| **Bank Feed** | Auto-import transaksi dari bank |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Bank Reconciliation** | Manual reconciliation page dengan API route — **Migrated to Prisma DB** (CoAAccount + BankTransaction models) | `production_ready` |
+| **Multi-bank Account** | Support unlimited rekening | `planned` |
+| **Petty Cash** | Approval workflow, auto-replenishment | `planned` |
+| **Bank Feed** | Auto-import transaksi dari bank | `planned` |
 
 ### 2.5 Tax Engine
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Coretax-ready** | Siap integrasi dengan sistem pajak terbaru |
-| **e-Faktur** | Generate & report Faktur Pajak elektronik |
-| **PPh 21** | Kalkulasi otomatis gaji karyawan |
-| **PPh 23** | withholding tax untuk service |
-| **PPN** |自动 perhitungan PPN masukan & keluaran |
-| **Tax Report** | SPT Masa, recap pajak bulanan/tahunan |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Coretax-ready** | Siap integrasi dengan sistem pajak terbaru | `planned` |
+| **e-Faktur** | Generate & report Faktur Pajak elektronik | `planned` |
+| **PPh 21** | Kalkulasi otomatis gaji karyawan | `planned` |
+| **PPh 23** | Withholding tax untuk service | `planned` |
+| **PPN** | Auto perhitungan PPN masukan & keluaran | `planned` |
+| **Tax Report** | SPT Masa, recap pajak bulanan/tahunan | `planned` |
 
 ### 2.6 Revenue Recognition
-| Fitur | Deskripsi |
-|-------|-----------|
-| **ASC 606 / IFRS 15** | Compliance standar internasional |
-| **Subscription Revenue** | Recognition berdasarkan periode |
-| **Milestone-based** | Recognition berdasarkan pencapaian project |
-| **Multi-element** | Bundle product/service dengan different recognition |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **ASC 606 / IFRS 15** | Compliance standar internasional | `planned` |
+| **Subscription Revenue** | Recognition berdasarkan periode | `planned` |
+| **Milestone-based** | Recognition berdasarkan pencapaian project | `planned` |
+| **Multi-element** | Bundle product/service dengan different recognition | `planned` |
 
 ### 2.7 Reporting
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Standard Reports** | 50+ laporan bawaan |
-| **Custom Report Builder** | Drag & drop, pivot table, chart |
-| **Scheduled Reports** | Auto-send via email |
-| **Export** | PDF, Excel, CSV |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Standard Reports** | 12 report types (Finance, Sales, HR, Inventory) | `production_ready` |
+| **Custom Report Builder** | Drag & drop, pivot table, chart | `planned` |
+| **Scheduled Reports** | Auto-send via email | `planned` |
+| **Export** | CSV, Excel, Print — built-in export utilities | `production_ready` |
+| **Chart Components** | Bar, Pie, Line charts — custom implementation | `production_ready` |
 
 ### 2.8 Cash Flow Forecasting (AI)
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Prediction** | 30/60/90 hari ke depan |
-| **Scenario Analysis** | Best/worst case modeling |
-| **Alert** | Prediksi cash shortfall |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Prediction** | 30/60/90 hari ke depan | `planned` |
+| **Scenario Analysis** | Best/worst case modeling | `planned` |
+| **Alert** | Prediksi cash shortfall | `planned` |
 
 ---
 
@@ -155,52 +170,58 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 Pipeline yang powerful dengan AI untuk meningkatkan konversi.
 
 ### 3.1 Pipeline Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Kanban View** | Drag & drop cards antar stage |
-| **List View** | Table dengan sorting & filtering |
-| **Multiple Pipelines** | Berbagai jenis penjualan (direct, reseller, enterprise) |
-| **Custom Stages** | Flexible sesuai bisnis process |
-| **Deal Value Forecasting** | Weighted pipeline berdasarkan probability |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Kanban View** | Drag & drop cards antar stage (6 stages: DISCOVERY → CLOSED_LOST) | `production_ready` |
+| **List View** | Table dengan sorting & filtering | `production_ready` |
+| **Multiple Pipelines** | Berbagai jenis penjualan (direct, reseller, enterprise) | `planned` |
+| **Custom Stages** | 6 stages: DISCOVERY, QUALIFICATION, PROPOSAL, NEGOTIATION, CLOSED_WON, CLOSED_LOST | `production_ready` |
+| **Deal Value Forecasting** | Weighted pipeline berdasarkan probability | `partial` |
 
 ### 3.2 Lead Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Lead Capture** | Website form, WhatsApp, marketplace, manual |
-| **Lead Scoring** | AI-based scoring berdasarkan engagement |
-| **Lead Assignment** | Round-robin, territory-based, manual |
-| **Lead Source Tracking** | Attribution multi-touch |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Lead Capture** | Website form, WhatsApp, marketplace, manual | `production_ready` |
+| **Lead Scoring** | AI-based scoring berdasarkan engagement | `planned` |
+| **Lead Assignment** | Round-robin, territory-based, manual | `planned` |
+| **Lead Source Tracking** | Attribution multi-touch | `partial` |
 
 ### 3.3 Quote to Order
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Quote Builder** | Custom template, terms & conditions |
-| **Approval Workflow** | Discount approval, credit check |
-| **Convert to Order** | Seamless, auto-populate data |
-| **Convert to Invoice** | Trigger fulfillment process |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Quote Builder** | Custom template, terms & conditions | `production_ready` |
+| **Approval Workflow** | Discount approval, credit check | `planned` |
+| **Convert to Order** | Seamless, auto-populate data | `partial` |
+| **Convert to Invoice** | Trigger fulfillment process | `partial` |
 
 ### 3.4 Customer 360°
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Unified Profile** | Semua data customer di satu tempat |
-| **Transaction History** | Invoice, payment, order history |
-| **Interaction Timeline** | Email, chat, call, meeting notes |
-| **Segmentation** | RFM analysis, custom segment |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Unified Profile** | Semua data customer di satu tempat | `production_ready` |
+| **Transaction History** | Invoice, payment, order history | `partial` |
+| **Interaction Timeline** | Email, chat, call, meeting notes | `planned` |
+| **Segmentation** | RFM analysis, custom segment | `planned` |
 
 ### 3.5 Sales Intelligence (AI)
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Win Probability** | Predict likelihood menang deal |
-| **Next Best Action** | Suggest follow-up yang tepat |
-| **Sales Forecasting** | Pipeline-based & historical prediction |
-| **Competitor Analysis** | Win/loss tracking vs competitor |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Win Probability** | Predict likelihood menang deal | `planned` |
+| **Next Best Action** | Suggest follow-up yang tepat | `planned` |
+| **Sales Forecasting** | Pipeline-based & historical prediction | `planned` |
+| **Competitor Analysis** | Win/loss tracking vs competitor | `planned` |
 
 ### 3.6 Commission Calculator
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Flexible Rules** | Tiered, flat, hybrid |
-| **Real-time Calculation** | Live commission preview |
-| **Disbursement** | Auto-create payable saat closing |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Flexible Rules** | Tiered, flat, hybrid | `planned` |
+| **Real-time Calculation** | Live commission preview | `planned` |
+| **Disbursement** | Auto-create payable saat closing | `planned` |
 
 ---
 
@@ -209,44 +230,49 @@ Pipeline yang powerful dengan AI untuk meningkatkan konversi.
 Real-time visibility dan kontrol penuh atas inventaris.
 
 ### 4.1 Stock Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Multi-warehouse** | Unlimited lokasi, inter-warehouse transfer |
-| **Real-time Stock** | Live update setiap transaksi |
-| **Stock Opname** | Physical count dengan variance report |
-| **Unit of Measure** | Multi-UoM, conversion rate |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Multi-warehouse** | Unlimited lokasi, inter-warehouse transfer | `planned` |
+| **Real-time Stock** | Live update setiap transaksi | `production_ready` |
+| **Stock Opname** | Physical count dengan variance report | `planned` |
+| **Unit of Measure** | Multi-UoM, conversion rate | `planned` |
 
 ### 4.2 Product Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Product Catalog** | Variants, attributes, images |
-| **Batch/Lot Tracking** | Expiry date, manufacturing date |
-| **Serial Number** | Individual item tracking |
-| **Bill of Materials** | Untuk manufacturing/assembly |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Product Catalog** | Variants, attributes, images | `production_ready` |
+| **Batch/Lot Tracking** | Expiry date, manufacturing date | `planned` |
+| **Serial Number** | Individual item tracking | `planned` |
+| **Bill of Materials** | Untuk manufacturing/assembly | `planned` |
 
 ### 4.3 Procurement
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Purchase Order** | Auto-generated dari reorder point |
-| **Supplier Management** | Performance score, lead time tracking |
-| **Goods Receipt** | QC check,GRN process |
-| **Supplier Price Monitoring** | Bandingkan harga real-time |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Purchase Order** | Auto-generated dari reorder point | `production_ready` |
+| **Supplier Management** | Performance score, lead time tracking | `production_ready` |
+| **Goods Receipt** | QC check, GRN process | `planned` |
+| **Supplier Price Monitoring** | Bandingkan harga real-time | `planned` |
 
 ### 4.4 Warehouse Operations
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Putaway Rules** | Auto-assign lokasi penyimpanan |
-| **Picking Strategy** | FIFO, FEFO, LIFO |
-| **Barcode/QR Scanning** | Mobile scanning untuk receiving, picking, packing |
-| **Shipping Integration** | JNE, J&T, SiCepat, Grab Express |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Putaway Rules** | Auto-assign lokasi penyimpanan | `planned` |
+| **Picking Strategy** | FIFO, FEFO, LIFO | `planned` |
+| **Barcode/QR Scanning** | Mobile scanning untuk receiving, picking, packing | `planned` |
+| **Shipping Integration** | JNE, J&T, SiCepat, Grab Express | `planned` |
 
 ### 4.5 Inventory Intelligence (AI)
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Low-stock Alert** | Predictive notification |
-| **Auto-reorder Suggestion** | Based on demand pattern |
-| **Demand Forecasting** | Seasonal & trend analysis |
-| **Dead Stock Detection** | Identify slow-moving inventory |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Low-stock Alert** | Predictive notification | `planned` |
+| **Auto-reorder Suggestion** | Based on demand pattern | `planned` |
+| **Demand Forecasting** | Seasonal & trend analysis | `planned` |
+| **Dead Stock Detection** | Identify slow-moving inventory | `planned` |
 
 ---
 
@@ -255,68 +281,65 @@ Real-time visibility dan kontrol penuh atas inventaris.
 HR yang efisien dengan automation untuk fokus pada people.
 
 ### 5.1 Employee Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Employee Database** | Comprehensive profile, documents, history |
-| **Digital Onboarding** | Checklist-based, document upload |
-| **Org Chart** | Visual hierarchy, reporting line |
-| **Employee Self-Service** | Profile update, document request |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Employee Database** | Comprehensive profile, documents, history | `production_ready` |
+| **Digital Onboarding** | Checklist-based, document upload | `planned` |
+| **Org Chart** | Visual hierarchy, reporting line | `planned` |
+| **Employee Self-Service** | Profile update, document request | `planned` |
 
 ### 5.2 Template Builder (Pain Point Solution)
 
 > 🎯 **Fitur unggulan** — Template Builder cerdas untuk HR documents
 
-| Template | Deskripsi |
-|----------|-----------|
-| **Offer Letter** | Auto-fill dari data kandidat |
-| **Kontrak Kerja** | PKWT, PKWTT, dengan auto-renewal reminder |
-| **Warning Letter** | Level 1, 2, 3 dengan progressive tracking |
-| **Performance Review** | Custom form, rating scale |
-| **Termination Letter** | Dengan reason tracking & checklist |
-| **Surat Keterangan** | Keterangan kerja, domisili, dll |
-
-**Fitur Template Builder:**
-- Visual drag & drop editor
-- Variable system ({{employee_name}}, {{start_date}}, dll)
-- Conditional content (if level = manager, add section X)
-- Version control & audit
-- Digital signature integration
-- Bulk generate untuk multiple employees
+| Template | Deskripsi | Status |
+|----------|-----------|--------|
+| **Offer Letter** | Auto-fill dari data kandidat | `planned` |
+| **Kontrak Kerja** | PKWT, PKWTT, dengan auto-renewal reminder | `planned` |
+| **Warning Letter** | Level 1, 2, 3 dengan progressive tracking | `planned` |
+| **Performance Review** | Custom form, rating scale | `planned` |
+| **Termination Letter** | Dengan reason tracking & checklist | `planned` |
+| **Surat Keterangan** | Keterangan kerja, domisili, dll | `planned` |
 
 ### 5.3 Attendance & Time
-| Fitur | Deskripsi |
-|-------|-----------|
-| **GPS Check-in** | Geofencing untuk area kantor |
-| **Face Recognition** | Anti-fake attendance |
-| **WhatsApp Check-in** | Via chat command |
-| **Flexible Schedule** | Shift, flex time, compressed week |
-| **Overtime Management** | Auto-calculate sesuai regulasi |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **GPS Check-in** | Geofencing untuk area kantor | `partial` |
+| **Face Recognition** | Anti-fake attendance | `planned` |
+| **WhatsApp Check-in** | Via chat command | `planned` |
+| **Flexible Schedule** | Shift, flex time, compressed week | `planned` |
+| **Overtime Management** | Auto-calculate sesuai regulasi | `planned` |
 
 ### 5.4 Leave Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Leave Types** | Annual, sick, maternity, unpaid, custom |
-| **Approval Workflow** | Multi-level, delegation |
-| **Leave Balance** | Real-time tracking |
-| **Leave Calendar** | Team availability view |
-| **Public Holiday** | Indonesian & custom holidays |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Leave Types** | Annual, sick, maternity, unpaid, custom | `production_ready` |
+| **Approval Workflow** | Multi-level, delegation | `production_ready` |
+| **Leave Balance** | Real-time tracking | `partial` |
+| **Leave Calendar** | Team availability view | `planned` |
+| **Public Holiday** | Indonesian & custom holidays | `planned` |
 
 ### 5.5 Payroll
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Auto Calculation** | Gaji, tunjangan, potongan |
-| **PPh 21** | Perhitungan pajak otomatis |
-| **BPJS** | Kesehatan & Ketenagakerjaan |
-| **THR** | Tunjangan hari raya calculation |
-| **Payroll Report** | Slip gaji, recap, SPT |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Auto Calculation** | Gaji, tunjangan, potongan | `production_ready` |
+| **PPh 21** | Perhitungan pajak otomatis | `partial` |
+| **BPJS** | Kesehatan & Ketenagakerjaan | `partial` |
+| **THR** | Tunjangan hari raya calculation | `planned` |
+| **Payroll Report** | Slip gaji, recap, SPT | `partial` |
 
 ### 5.6 Performance & OKR
-| Fitur | Deskripsi |
-|-------|-----------|
-| **OKR Setting** | Company → Team → Individual |
-| **Regular Check-in** | 1-on-1 meeting notes |
-| **360° Feedback** | Multi-rater assessment |
-| **Performance Review** | Periodic, project-based |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **OKR Setting** | Company → Team → Individual | `planned` |
+| **Regular Check-in** | 1-on-1 meeting notes | `planned` |
+| **360° Feedback** | Multi-rater assessment | `planned` |
+| **Performance Review** | Periodic, project-based | `planned` |
 
 ---
 
@@ -325,42 +348,45 @@ HR yang efisien dengan automation untuk fokus pada people.
 Manage projects dan field operations dengan efisien.
 
 ### 6.1 Project Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Project Types** | Fixed price, time & material, retainer |
-| **Gantt Chart** | Visual timeline, dependencies |
-| **Kanban Board** | Task management |
-| **Resource Allocation** | Capacity planning |
-| **Budget Tracking** | Cost vs revenue monitoring |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Project Types** | Fixed price, time & material, retainer | `planned` |
+| **Gantt Chart** | Visual timeline, dependencies | `planned` |
+| **Kanban Board** | Task management | `planned` |
+| **Resource Allocation** | Capacity planning | `planned` |
+| **Budget Tracking** | Cost vs revenue monitoring | `planned` |
 
 ### 6.2 Task & Time Tracking
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Task Assignment** | Assignee, deadline, priority |
-| **Time Logging** | Manual & timer-based |
-| **Timesheet** | Weekly/monthly approval |
-| **Productivity Report** | Per person, per project |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Task Assignment** | Assignee, deadline, priority | `planned` |
+| **Time Logging** | Manual & timer-based | `planned` |
+| **Timesheet** | Weekly/monthly approval | `planned` |
+| **Productivity Report** | Per person, per project | `planned` |
 
 ### 6.3 Field Service Module
 
 > 🎯 **Fitur khusus** untuk industri lapangan (konstruksi, serviced, maintenance)
 
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Job Scheduling** | Drag & drop calendar |
-| **Technician Assignment** | Based on skill, location, availability |
-| **Mobile Checklist** | Custom form, photo upload |
-| **Before-After Photos** | Geo-tagged, timestamped |
-| **Digital Signature** | Customer sign-off di mobile |
-| **Job Status Update** | Real-time ke customer |
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Job Scheduling** | Drag & drop calendar | `planned` |
+| **Technician Assignment** | Based on skill, location, availability | `planned` |
+| **Mobile Checklist** | Custom form, photo upload | `planned` |
+| **Before-After Photos** | Geo-tagged, timestamped | `planned` |
+| **Digital Signature** | Customer sign-off di mobile | `planned` |
+| **Job Status Update** | Real-time ke customer | `planned` |
 
 ### 6.4 Quality & Compliance
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Quality Checklist** | Custom templates per job type |
-| **Non-conformance** | Log & track issues |
-| **Corrective Action** | CAPA workflow |
-| **Compliance Form** | Regulatory checklist |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Quality Checklist** | Custom templates per job type | `planned` |
+| **Non-conformance** | Log & track issues | `planned` |
+| **Corrective Action** | CAPA workflow | `planned` |
+| **Compliance Form** | Regulatory checklist | `planned` |
 
 ---
 
@@ -369,97 +395,113 @@ Manage projects dan field operations dengan efisien.
 Omnichannel support yang terintegrasi.
 
 ### 7.1 Omnichannel Inbox
-| Channel | Integrasi |
-|---------|-----------|
-| **Email** | IMAP/SMTP, Gmail, Outlook |
-| **WhatsApp Business** | Official API |
-| **Instagram** | DM & comment |
-| **Live Chat** | Website widget |
-| **Facebook** | Messenger |
+
+| Channel | Integrasi | Status |
+|---------|-----------|--------|
+| **Email** | IMAP/SMTP — Real SMTP transport via nodemailer, console fallback | `production_ready` |
+| **WhatsApp Business** | Official API | `planned` |
+| **Instagram** | DM & comment | `planned` |
+| **Live Chat** | Website widget | `planned` |
+| **Facebook** | Messenger | `planned` |
 
 ### 7.2 Ticket Management
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Ticket System** | Auto-create dari channel manapun |
-| **Priority & Category** | Custom fields, auto-routing |
-| **SLA Tracking** | Response time, resolution time |
-| **Escalation** | Auto-escalate jika SLA terancam |
-| **Internal Note** | Private note antar agent |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Ticket System** | Auto-create dari channel manapun | `planned` |
+| **Priority & Category** | Custom fields, auto-routing | `planned` |
+| **SLA Tracking** | Response time, resolution time | `planned` |
+| **Escalation** | Auto-escalate jika SLA terancam | `planned` |
+| **Internal Note** | Private note antar agent | `planned` |
 
 ### 7.3 Knowledge Base
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Article Editor** | Rich text, video embed |
-| **Categories** | Hierarchical organization |
-| **Search** | Full-text search |
-| **AI Suggestion** | Auto-suggest article saat agent reply |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Article Editor** | Rich text, video embed | `planned` |
+| **Categories** | Hierarchical organization | `planned` |
+| **Search** | Full-text search | `planned` |
+| **AI Suggestion** | Auto-suggest article saat agent reply | `planned` |
 
 ### 7.4 AI Chatbot
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Automated Reply** | Jawaban pertanyaan umum |
-| **Handoff to Human** | Seamless escalation |
-| **Learning** | Improve dari interaction history |
-| **Multi-language** | ID & EN |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Automated Reply** | Jawaban pertanyaan umum | `planned` |
+| **Handoff to Human** | Seamless escalation | `planned` |
+| **Learning** | Improve dari interaction history | `planned` |
+| **Multi-language** | ID & EN | `planned` |
 
 ### 7.5 Customer Portal
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Invoice View** | Download, pay online |
-| **Order Status** | Real-time tracking |
-| **Support Ticket** | Submit & track |
-| **Knowledge Base** | Self-service |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Invoice View** | Download, pay online | `planned` |
+| **Order Status** | Real-time tracking | `planned` |
+| **Support Ticket** | Submit & track | `planned` |
+| **Knowledge Base** | Self-service | `planned` |
 
 ---
 
 ## 8. AI Features
 
-AI yang benar-benar useful, bukan gimmick.
+AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam biaya sewa — tidak ada biaya tambahan ke provider AI.**
 
-### 8.1 AI Agent Capabilities
+### 8.1 AI Hub & Chat
 
-| Agent | Fungsi |
-|-------|--------|
-| **Finance Agent** | Auto-generate invoice, detect anomalies, suggest payment |
-| **Sales Agent** | Win probability, next best action, follow-up reminder |
-| **Inventory Agent** | Stockout prediction, reorder suggestion, dead stock alert |
-| **HR Agent** | Contract generation, leave prediction, attrition risk |
-| **Support Agent** | Auto-categorize ticket, suggest reply, sentiment analysis |
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **AI Chat** | Floating button chat assistant — OpenAI provider + Mock fallback, API route at `/api/ai/chat` | `production_ready` |
+| **AI Hub** | Centralized page `/dashboard/ai` untuk semua AI features | `partial` |
+| **AI Insights** | Dashboard cards dengan AI-generated business insights | `partial` |
+| **AI Menu** | Sidebar menu AI Features untuk akses cepat | `production_ready` |
 
-### 8.2 Natural Language Query
+### 8.2 AI Agent Capabilities
 
-```
-Contoh queries:
-- "Tampilkan penjualan produk X bulan ini vs bulan lalu"
-- "Siapa sales terbaik Q2 2026?"
-- "Berapa total outstanding invoice?"
-- "Prediksi cash flow 30 hari ke depan"
-- "Generate laporan PPh 21 bulan Juni"
-```
+| Agent | Fungsi | Status |
+|-------|--------|--------|
+| **Finance Agent** | Auto-generate invoice, detect anomalies, suggest payment | `planned` |
+| **Sales Agent** | Win probability, next best action, follow-up reminder | `planned` |
+| **Inventory Agent** | Stockout prediction, reorder suggestion, dead stock alert | `planned` |
+| **HR Agent** | Contract generation, leave prediction, attrition risk | `planned` |
+| **Support Agent** | Auto-categorize ticket, suggest reply, sentiment analysis | `planned` |
 
-### 8.3 Smart Document Extraction
-| Fitur | Deskripsi |
-|-------|-----------|
-| **PDF Processing** | Upload PO/Invoice → auto-extract data |
-| **OCR** | Scan KTP, NPWP, dokumen lain |
-| **Auto-validation** | Check completeness & accuracy |
-| **Auto-entry** | Push ke system tanpa manual input |
+### 8.3 Natural Language Query
 
-### 8.4 AI Template Generator
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Contract Generator** | Input requirements → draft kontrak |
-| **Job Description** | Generate JD dari role title |
-| **Email Template** | Context-aware email draft |
-| **Report Summary** | Auto-summarize long reports |
+| Contoh Query | Response | Status |
+|--------------|----------|--------|
+| "Tampilkan penjualan produk X bulan ini vs bulan lalu" | Tabel perbandingan + chart | `planned` |
+| "Siapa sales terbaik Q2 2026?" | Ranked list + metrics | `planned` |
+| "Berapa total outstanding invoice?" | Jumlah + aging breakdown | `planned` |
+| "Prediksi cash flow 30 hari ke depan" | Line chart + scenario analysis | `planned` |
+| "Generate laporan PPh 21 bulan Juni" | Formatted report | `planned` |
 
-### 8.5 Anomaly Detection
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Fraud Detection** | Unusual transaction pattern |
-| **Data Error** | Duplicate, mismatch, outlier |
-| **Compliance Alert** | Regulatory deadline reminder |
-| **Performance Anomaly** | Revenue drop, cost spike |
+### 8.4 Smart Document Extraction
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **PDF Processing** | Upload PO/Invoice → auto-extract data | `planned` |
+| **OCR** | Scan KTP, NPWP, dokumen lain | `planned` |
+| **Auto-validation** | Check completeness & accuracy | `planned` |
+| **Auto-entry** | Push ke system tanpa manual input | `planned` |
+
+### 8.5 AI Template Generator
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Contract Generator** | Input requirements → draft kontrak | `planned` |
+| **Job Description** | Generate JD dari role title | `planned` |
+| **Email Template** | Context-aware email draft | `planned` |
+| **Report Summary** | Auto-summarize long reports | `planned` |
+
+### 8.6 Anomaly Detection
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Fraud Detection** | Unusual transaction pattern | `planned` |
+| **Data Error** | Duplicate, mismatch, outlier | `planned` |
+| **Compliance Alert** | Regulatory deadline reminder | `planned` |
+| **Performance Anomaly** | Revenue drop, cost spike | `planned` |
 
 ---
 
@@ -469,56 +511,59 @@ Contoh queries:
 
 ### 9.1 Integration Dashboard
 
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Integration Hub** | Dashboard khusus untuk mengelola semua koneksi pihak ketiga |
-| **API Key Management** | Generate, rotate, revoke API keys |
-| **Connection Status** | Monitor status setiap integrasi |
-| **Error Logging** | Log error dan retry mechanism |
-| **Sandbox Mode** | Test integrasi sebelum production |
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Integration Hub** | Dashboard khusus untuk mengelola semua koneksi pihak ketiga | `production_ready` |
+| **Payment Gateway Config** | Midtrans & Xendit configuration di `/settings/integrations` | `production_ready` |
+| **Email/SMTP Config** | SMTP configuration — Real nodemailer transport, env-based config (SMTP_HOST, SMTP_PORT, etc.) | `production_ready` |
+| **API Key Management** | Generate, rotate, revoke API keys | `planned` |
+| **Connection Status** | Monitor status setiap integrasi | `planned` |
+| **Error Logging** | Log error dan retry mechanism | `planned` |
+| **Sandbox Mode** | Test integrasi sebelum production | `planned` |
 
 ### 9.2 Supported Integration Categories
 
-User dapat mengintegrasikan layanan berikut melalui dashboard:
-
-| Kategori | Contoh Layanan | Integration Method |
-|----------|---------------|-------------------|
-| **Messaging** | WhatsApp Business, Telegram | API Key + Webhook |
-| **Marketplace** | Tokopedia, Shopee, Bukalapak, Lazada | API Key |
-| **Payment Gateway** | Xendit, Midtrans, DOKU | API Key |
-| **E-wallet** | GoPay, OVO, Dana, ShopeePay | Via Payment Gateway |
-| **Banking** | BCA, Mandiri, BRI, BNI | API Key / CSV Import |
-| **Productivity** | Google Workspace, Microsoft 365 | OAuth 2.0 |
-| **Shipping** | JNE, J&T, SiCepat, Anteraja | API Key |
-| **CRM** | Salesforce, HubSpot | API Key |
-| **Accounting** | Jurnal.id, Mekari | API Key (migration) |
+| Kategori | Contoh Layanan | Integration Method | Status |
+|----------|---------------|-------------------|--------|
+| **Messaging** | WhatsApp Business, Telegram | API Key + Webhook | `planned` |
+| **Marketplace** | Tokopedia, Shopee, Bukalapak, Lazada | API Key | `planned` |
+| **Payment Gateway** | Xendit, Midtrans, DOKU | API Key | `partial` |
+| **E-wallet** | GoPay, OVO, Dana, ShopeePay | Via Payment Gateway | `planned` |
+| **Banking** | BCA, Mandiri, BRI, BNI | API Key / CSV Import | `planned` |
+| **Productivity** | Google Workspace, Microsoft 365 | OAuth 2.0 | `planned` |
+| **Shipping** | JNE, J&T, SiCepat, Anteraja | API Key | `planned` |
+| **CRM** | Salesforce, HubSpot | API Key | `planned` |
+| **Accounting** | Jurnal.id, Mekari | API Key (migration) | `planned` |
 
 ### 9.3 API & Webhook
-| Fitur | Deskripsi |
-|-------|-----------|
-| **REST API** | Full CRUD operations untuk semua data |
-| **GraphQL** | Flexible query (Phase 3) |
-| **Webhook** | Event-based notification ke URL user |
-| **API Documentation** | Interactive docs dengan sandbox |
-| **Rate Limiting** | Configurable per tenant |
-| **OAuth 2.0** | Standard authorization flow |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **REST API** | Full CRUD operations untuk semua data | `partial` |
+| **GraphQL** | Flexible query | `planned` |
+| **Webhook** | Event-based notification ke URL user | `planned` |
+| **API Documentation** | Interactive docs dengan sandbox | `planned` |
+| **Rate Limiting** | Configurable per tenant | `partial` |
+| **OAuth 2.0** | Standard authorization flow | `planned` |
 
 ### 9.4 Automation Connectors
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Zapier** | 5000+ app connections via Zapier |
-| **Make.com** | Advanced workflow automation |
-| **Custom Webhook** | Build own integration |
-| **n8n** | Self-hosted automation (open source) |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Zapier** | 5000+ app connections via Zapier | `planned` |
+| **Make.com** | Advanced workflow automation | `planned` |
+| **Custom Webhook** | Build own integration | `planned` |
+| **n8n** | Self-hosted automation (open source) | `planned` |
 
 ### 9.5 Import/Export
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Excel/CSV Import** | Bulk data upload dengan validasi |
-| **Excel/CSV Export** | Any report or data |
-| **Scheduled Export** | Auto-generate & send via email |
-| **Data Mapping** | Custom field mapping |
-| **Batch Processing** | Import/export ribuan data sekaligus |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Excel/CSV Import** | Bulk data upload dengan validasi | `partial` |
+| **Excel/CSV Export** | Any report or data | `production_ready` |
+| **Scheduled Export** | Auto-generate & send via email | `planned` |
+| **Data Mapping** | Custom field mapping | `planned` |
+| **Batch Processing** | Import/export ribuan data sekaligus | `planned` |
 
 ### 9.6 Integration Pricing
 
@@ -536,45 +581,51 @@ User dapat mengintegrasikan layanan berikut melalui dashboard:
 Enterprise-grade security untuk data protection.
 
 ### 10.1 Authentication
-| Fitur | Deskripsi |
-|-------|-----------|
-| **SSO** | SAML 2.0, OAuth 2.0 |
-| **2FA** | TOTP, SMS, Email |
-| **Password Policy** | Configurable rules |
-| **Session Management** | Multi-device control |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **NextAuth JWT** | CredentialsProvider with JWT strategy | `production_ready` |
+| **SSO** | SAML 2.0, OAuth 2.0 | `planned` |
+| **2FA** | TOTP, SMS, Email | `planned` |
+| **Password Policy** | Configurable rules | `partial` |
+| **Session Management** | Multi-device control | `partial` |
 
 ### 10.2 Access Control
-| Fitur | Deskripsi |
-|-------|-----------|
-| **RBAC** | Role-based, granular permission |
-| **IP Whitelisting** | Restrict access by IP |
-| **Data-level Security** | Field-level, record-level |
-| **Approval Workflow** | Multi-level, conditional |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **RBAC** | 4 roles: SUPERADMIN, ADMIN, MEMBER, VIEWER + defense-in-depth (middleware + API + UI) | `production_ready` |
+| **IP Whitelisting** | Restrict access by IP | `planned` |
+| **Data-level Security** | Field-level, record-level | `planned` |
+| **Approval Workflow** | Multi-level, conditional | `partial` |
 
 ### 10.3 Data Protection
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Encryption** | AES-256 at rest, TLS 1.3 in transit |
-| **Data Residency** | Server Indonesia |
-| **Backup** | Daily auto-backup, 30-day retention |
-| **Restore Point** | Manual & scheduled |
-| **Data Retention** | Configurable policy |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Encryption** | AES-256 at rest, TLS 1.3 in transit | `planned` |
+| **Data Residency** | Server Indonesia | `planned` |
+| **Backup** | Daily auto-backup, 30-day retention | `planned` |
+| **Restore Point** | Manual & scheduled | `planned` |
+| **Data Retention** | Configurable policy | `planned` |
 
 ### 10.4 Compliance
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Audit Trail** | Complete activity log |
-| **GDPR Ready** | Data export, deletion |
-| **Indonesian Regulation** | PDP Law compliance |
-| **SOC 2 Type II** | Target Phase 3 |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Audit Trail** | Complete activity log, 77 audit calls across 10 mutation endpoints | `production_ready` |
+| **GDPR Ready** | Data export, deletion | `planned` |
+| **Indonesian Regulation** | PDP Law compliance | `planned` |
+| **SOC 2 Type II** | Target Phase 3 | `planned` |
 
 ### 10.5 White-label
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Custom Branding** | Logo, colors, domain |
-| **Multi-tenant** | Separate data environment |
-| **Reseller Portal** | Manage client accounts |
-| **Revenue Share** | Configurable pricing |
+
+| Fitur | Deskripsi | Status |
+|-------|-----------|--------|
+| **Custom Branding** | Logo, colors, domain | `planned` |
+| **Multi-tenant** | Separate data environment | `production_ready` |
+| **Reseller Portal** | Manage client accounts | `planned` |
+| **Revenue Share** | Configurable pricing | `planned` |
 
 ---
 
@@ -582,94 +633,91 @@ Enterprise-grade security untuk data protection.
 
 ### Tier-based Pricing
 
-| Tier | Target | Harga | Modules |
-|------|--------|-------|---------|
-| **Starter** | UMKM 1-5 karyawan | Rp 299rb/bulan | Core + Finance + Sales dasar |
-| **Growth** | UKM 6-25 karyawan | Rp 799rb/bulan | + Inventory + HR dasar + AI basic |
-| **Business** | Mid-market 26-100 | Rp 1.999rb/bulan | + Full modules + Advanced AI |
-| **Enterprise** | 100+ karyawan | Custom | + Multi-entity + White-label + Dedicated support |
+| Tier | Target | Harga | Status |
+|------|--------|-------|--------|
+| **Starter** | UMKM 1-5 karyawan | Rp 299rb/bulan | `production_ready` |
+| **Growth** | UKM 6-25 karyawan | Rp 799rb/bulan | `production_ready` |
+| **Business** | Mid-market 26-100 | Rp 1.999rb/bulan | `production_ready` |
+| **Enterprise** | 100+ karyawan | Custom | `planned` |
 
 ### Add-on Modules
-| Module | Harga |
-|--------|-------|
-| Field Service | Rp 199rb/bulan |
-| Advanced AI Agent | Rp 299rb/bulan |
-| White-label | Rp 499rb/bulan |
-| Dedicated Support | Rp 399rb/bulan |
+
+| Module | Harga | Status |
+|--------|-------|--------|
+| Field Service | Rp 199rb/bulan | `planned` |
+| Advanced AI Agent | Rp 299rb/bulan | `planned` |
+| White-label | Rp 499rb/bulan | `planned` |
+| Dedicated Support | Rp 399rb/bulan | `planned` |
+
+### Billing & Subscription Management
+
+| Feature | Status | Location |
+|---------|--------|----------|
+| **Plan Selection** | `production_ready` | `/dashboard/settings/billing` — 3 paket |
+| **Manual Transfer Payment** | `production_ready` | Upload bukti transfer, 4 rekening bank |
+| **WhatsApp Confirmation** | `production_ready` | Link wa.me untuk konfirmasi |
+| **Superadmin Approval** | `production_ready` | `/dashboard/billing` — Approve/Reject |
+| **Notification Bell** | `production_ready` | Header bell icon dengan badge count |
+| **Email Notification** | `production_ready` | Auto-email ke info@qalcuity.com |
+| **Payment History** | `production_ready` | Tabel riwayat pembayaran |
+| **Subscription Status** | `production_ready` | Status badge: ACTIVE, TRIAL, PENDING, SUSPENDED |
 
 ### Free Trial
+
 - 14 hari free trial semua fitur
 - No credit card required
 - Dedicated onboarding support
 
 ---
 
-## 📊 Feature Priority Matrix
+## 📊 Feature Status Legend
 
-### MVP (Phase 1 - 2-3 bulan)
-- [x] Core Platform (Dashboard, Auth, Audit Trail, Dark Mode, Global Search)
-- [x] Finance & Accounting (Invoices, Quotations, Payments, Purchase Orders, Chart of Accounts)
-- [x] Sales & CRM (Leads, Contacts, Deals, Pipeline Board/List)
-- [x] Inventory (Products, Suppliers, Categories, Stock)
-- [x] HR (Employees, Attendance, Leaves, Payroll)
-- [x] Settings (Profile, Company, Team, Notifications, Security, Billing)
-- [x] i18n Support (Bahasa Indonesia + English)
-- [x] Lucide Icons (consistent icon system across all modules)
-- [x] Responsive Tables (mobile-friendly column hiding)
-- [x] Audit Trail (all mutations logged)
-- [x] Deploy Scripts (PM2, health check, configurable port)
-- [x] Mobile App (Basic screens)
-- [ ] Coretax Integration
-
-### Phase 2 (4-6 bulan)
-- [ ] Field Service Module
-- [ ] Advanced Reporting (Custom report builder, pivot table)
-- [ ] AI Basic Features (NLP query, document extraction)
-- [ ] Omnichannel Support
-- [ ] Bank Reconciliation (auto)
-
-### Phase 3 (7-12 bulan)
-- [ ] Full AI Agent Suite
-- [ ] Multi-entity Advanced
-- [ ] Marketplace Integration
-- [ ] White-label
-- [ ] Enterprise Features
-
----
-
-## 🎯 Pain Points yang Dijawab
-
-| Pain Point | Solution |
-|------------|----------|
-| **Integrasi buruk** | Open API, native integrations, Zapier/Make |
-| **Reporting lemah** | Custom report builder, AI insights |
-| **Mobile jelek** | Native mobile-first, offline mode |
-| **Data silo** | Unified platform, single source of truth |
-| **Compliance** | Audit trail, tax engine, data residency |
-| **Support menyebalkan** | Omnichannel, SLA tracking, knowledge base |
+| Status | Description |
+|--------|-------------|
+| `planned` | Fitur belum dikerjakan, baru direncanakan |
+| `in_progress` | Sedang dalam pengembangan aktif |
+| `partial` | Sebagian fitur sudah diimplementasi |
+| `implemented` | Sudah diimplementasi, belum diuji menyeluruh |
+| `verified` | Sudah diuji dan berfungsi sesuai期望 |
+| `production_ready` | Siap production, sudah diuji dan stabil |
+| `blocked` | Terhambat oleh dependency atau issue |
+| `deprecated` | Tidak lagi digunakan, akan dihapus |
 
 ---
 
 ## 📝 Changelog
 
+### v2.2.0 (August 29, 2026) — Quality & Security Hardening
+- **Zod Validation** — 14+ schemas, 19 API routes validated
+- **Audit Logging** — 77 audit calls across 10 mutation endpoints
+- **RBAC Defense-in-depth** — 3 layers: middleware + API route + UI visibility (35 routes + 22 pages)
+- **Responsive Tables** — Dual layout (mobile cards + desktop tables) on 17 pages
+- **i18n Expansion** — 20+ pages localized, 200+ new keys for reports
+- **Settings Pages** — 6 settings pages completed with full i18n
+- **Detail Pages** — 9 loading.tsx files, delete functionality on 6 detail pages
+- **Pipeline Fix** — Stage name mismatch fixed, CLOSED_WON/LOST stages added
+- **Sidebar Fix** — Navigation reorder, billing path fix
+
+### v2.1.0 (August 28, 2026) — Architecture Brief Compliance
+- Restructured all features with explicit `status` field format
+- Added 11 feature categories with comprehensive status tracking
+- Updated status values based on current implementation reality
+
+### v2.0.0 (August 28, 2026) — Batch 14-26
+- Role Superadmin, Advanced Reporting, Payment Gateway, Email, File Upload
+- Reconciliation, Desktop App, Billing & Subscription, AI Features
+
+### v1.2.0 (August 28, 2026)
+- Chart of Accounts (Full CRUD Tree View), Empty States, Toast Notifications
+- Confirmation Dialogs, Mobile Responsive, Navigation Links, Seed Data
+
 ### v1.1.0 (August 18, 2026)
-- ✅ i18n support: Bahasa Indonesia + English (custom lightweight i18n with React Context)
-- ✅ Lucide React icons: consistent icon system across all 40+ UI files
-- ✅ Responsive tables: mobile-friendly column hiding (CRM + Finance modules)
-- ✅ HR module: full i18n + Lucide (employees, attendance, leaves, payroll)
-- ✅ Inventory module: full i18n + Lucide (products, suppliers, categories, stock)
-- ✅ Finance module: full i18n + Lucide (invoices, payments, quotations, purchase orders)
-- ✅ CRM module: full i18n + Lucide (leads, contacts, deals, pipeline, overview)
-- ✅ Settings pages: profile, company, team, notifications, security, billing
-- ✅ API routes: DB transactions, validation, audit trail on all mutations
-- ✅ Deploy scripts: PM2 health check, configurable port, robust db:push
+- i18n support, Lucide icons, Responsive tables, All modules i18n'd
 
 ### v1.0.0 (August 2026)
-- Initial feature set documentation
-- MVP scope defined
-- Pricing model established
+- Initial feature set documentation, MVP scope defined, Pricing model established
 
 ---
 
-**Last Updated:** August 18, 2026
+**Last Updated:** August 29, 2026
 **Maintainer:** Qalcuity Product Team

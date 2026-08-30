@@ -2,23 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Trash2 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { useSession } from 'next-auth/react'
 
 type Deal = {
     id: string
-    name: string
-    company: string
+    title: string
     value: number
     stage: string
     probability: number
-    assignedTo: string
-    expectedCloseDate: string
-    source: string
-    notes: string
-    competitors: string[]
-    activities: Array<{ type: string; date: string; description: string }>
+    closeDate: string | null
+    notes: string | null
+    contactName?: string
     createdAt: string
 }
 
@@ -35,11 +32,21 @@ const filterStages = ['all', 'DISCOVERY', 'PROPOSAL', 'NEGOTIATION', 'CLOSING']
 
 export default function DealsPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [deals, setDeals] = useState<Deal[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filterStage, setFilterStage] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     useEffect(() => {
         fetchDeals()
@@ -65,10 +72,26 @@ export default function DealsPage() {
     const filtered = deals.filter((d) => {
         const matchStage = filterStage === 'all' || d.stage === filterStage
         const matchSearch = searchQuery === '' ||
-            d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            d.company.toLowerCase().includes(searchQuery.toLowerCase())
+            d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (d.contactName || '').toLowerCase().includes(searchQuery.toLowerCase())
         return matchStage && matchSearch
     })
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus deal ini?')) return
+        try {
+            const response = await fetch(`/api/crm/deals/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchDeals()
+                setToast({ message: 'Deal berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus deal', type: 'error' })
+        }
+    }
 
     const totalValue = deals.reduce((s, d) => s + d.value, 0)
     const weightedValue = deals.reduce((s, d) => s + (d.value * d.probability / 100), 0)
@@ -116,10 +139,12 @@ export default function DealsPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('crm.deals.title')}</h1>
                     <p className="text-gray-500">{deals.length} {t('crm.deals.subtitle')} · {t('crm.deals.totalValue')}: {formatCurrency(totalValue)}</p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                {canMutate && (
+                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                     <Plus className="h-4 w-4" />
                     {t('crm.deals.newDeal')}
-                </button>
+                    </button>
+                )}
             </div>
 
             {/* Stats */}
@@ -170,8 +195,62 @@ export default function DealsPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            {/* Kartu deal untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filtered.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-8 text-center text-gray-500 dark:text-gray-400">
+                        {t('crm.deals.empty')}
+                    </div>
+                ) : (
+                    filtered.map((deal) => (
+                        <div key={deal.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <Link href={`/dashboard/crm/deals/${deal.id}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                        {deal.title}
+                                    </Link>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{deal.contactName || '-'}</p>
+                                </div>
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stageStyles[deal.stage] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                    {getStageLabel(deal.stage)}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.value')}:</span>
+                                    <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.winProb')}:</span>
+                                    <span className="ml-1">{deal.probability}%</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.weighted')}:</span>
+                                    <span className="ml-1 font-medium text-green-600">{formatCurrency(deal.value * deal.probability / 100)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.expectedClose')}:</span>
+                                    <span className="ml-1">{deal.closeDate ? formatDate(deal.closeDate) : '-'}</span>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                                <Link href={`/dashboard/crm/deals/${deal.id}`} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                    {t('common.view') || 'Lihat'}
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(deal.id)}
+                                    className="text-sm text-red-600 hover:text-red-800 dark:text-red-400"
+                                >
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel deal untuk tampilan desktop */}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
@@ -183,12 +262,13 @@ export default function DealsPage() {
                                 <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.deals.table.winProb')}</th>
                                 <th className="hidden lg:table-cell px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{t('crm.deals.table.weighted')}</th>
                                 <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500 dark:text-gray-400">{t('crm.deals.table.expectedClose')}</th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                         {t('crm.deals.empty')}
                                     </td>
                                 </tr>
@@ -197,10 +277,10 @@ export default function DealsPage() {
                                     <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <Link href={`/dashboard/crm/deals/${deal.id}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                                                {deal.name}
+                                                {deal.title}
                                             </Link>
                                         </td>
-                                        <td className="hidden md:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">{deal.company}</td>
+                                        <td className="hidden md:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">{deal.contactName || '-'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stageStyles[deal.stage] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}`}>
@@ -221,7 +301,18 @@ export default function DealsPage() {
                                         <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
                                             {formatCurrency(deal.value * deal.probability / 100)}
                                         </td>
-                                        <td className="hidden md:table-cell whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{formatDate(deal.expectedCloseDate)}</td>
+                                        <td className="hidden md:table-cell whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{deal.closeDate ? formatDate(deal.closeDate) : '-'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-center">
+                                            {canMutate && (
+                                                <button
+                                                onClick={() => handleDelete(deal.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                                title="Hapus"
+                                                >
+                                                <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -229,6 +320,13 @@ export default function DealsPage() {
                     </table>
                 </div>
             </div>
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
         </div>
     )
 }

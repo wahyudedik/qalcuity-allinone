@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { QuotationForm } from '@/components/finance/quotation-form'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, ChevronRight } from 'lucide-react'
+import { Search, Plus, ChevronRight, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type Quotation = {
     id: string
@@ -31,12 +32,22 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export default function QuotationsPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [quotations, setQuotations] = useState<Quotation[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [statusFilter, setStatusFilter] = useState('all')
     const [search, setSearch] = useState('')
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     useEffect(() => {
         fetchQuotations()
@@ -85,11 +96,28 @@ export default function QuotationsPage() {
             if (result.success) {
                 setShowCreateModal(false)
                 fetchQuotations()
+                setToast({ message: 'Quotation berhasil dibuat', type: 'success' })
             } else {
-                alert(`${t('finance.quotations.createError')}: ${result.error}`)
+                setToast({ message: `${t('finance.quotations.createError')}: ${result.error}`, type: 'error' })
             }
         } catch {
-            alert(t('finance.quotations.createErrorGeneric'))
+            setToast({ message: t('finance.quotations.createErrorGeneric'), type: 'error' })
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus quotation ini?')) return
+        try {
+            const response = await fetch(`/api/finance/quotations/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchQuotations()
+                setToast({ message: 'Quotation berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus quotation', type: 'error' })
         }
     }
 
@@ -133,13 +161,15 @@ export default function QuotationsPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.quotations.title')}</h1>
                     <p className="text-gray-500">{t('finance.quotations.subtitle')}</p>
                 </div>
-                <button
+                {canMutate && (
+                    <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
+                    >
                     <Plus className="h-4 w-4" />
                     {t('finance.quotations.createQuotation')}
-                </button>
+                    </button>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -194,19 +224,70 @@ export default function QuotationsPage() {
                 </select>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-gray-200 bg-white">
+            {/* Kartu Quotation untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filteredQuotations.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                        {t('finance.quotations.empty')}
+                    </div>
+                ) : (
+                    filteredQuotations.map((quotation) => (
+                        <div key={quotation.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <Link href={`/dashboard/finance/quotations/${quotation.id}`} className="font-medium text-blue-600 hover:underline">
+                                        {quotation.quotationNumber}
+                                    </Link>
+                                    <p className="text-sm text-gray-500">{quotation.customerName}</p>
+                                </div>
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[quotation.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                    {statusConfig[quotation.status]?.label || quotation.status}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500">{t('finance.quotations.table.amount')}:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(quotation.total)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.quotations.table.items')}:</span>
+                                    <span className="ml-1">{quotation.items?.length || 0} item</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.quotations.table.validUntil')}:</span>
+                                    <span className="ml-1">{formatDate(quotation.validUntil)}</span>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex justify-end gap-3">
+                                <Link href={`/dashboard/finance/quotations/${quotation.id}`} className="text-sm text-blue-600 hover:text-blue-800">
+                                    {t('common.view') || 'Lihat'}
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(quotation.id)}
+                                    className="text-sm text-red-500 hover:text-red-700"
+                                >
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel Quotation untuk tampilan desktop */}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.number')}</th>
-                                <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.customer')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.customer')}</th>
                                 <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.items')}</th>
                                 <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.validUntil')}</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.amount')}</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.status')}</th>
-                                <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.action')}</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.quotations.table.action')}</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -224,7 +305,7 @@ export default function QuotationsPage() {
                                                 {quotation.quotationNumber}
                                             </Link>
                                         </td>
-                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-gray-900">{quotation.customerName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-gray-900">{quotation.customerName}</td>
                                         <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-gray-500">{quotation.items?.length || 0} item</td>
                                         <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-gray-500">{formatDate(quotation.validUntil)}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right font-medium">{formatCurrency(quotation.total)}</td>
@@ -233,10 +314,21 @@ export default function QuotationsPage() {
                                                 {statusConfig[quotation.status]?.label || quotation.status}
                                             </span>
                                         </td>
-                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-right">
+                                        <td className="whitespace-nowrap px-6 py-4 text-right">
                                             <Link href={`/dashboard/finance/quotations/${quotation.id}`} className="text-blue-600 hover:text-blue-800">
                                                 <ChevronRight className="h-4 w-4 inline" />
                                             </Link>
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-center">
+                                            {canMutate && (
+                                                <button
+                                                onClick={() => handleDelete(quotation.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                                title="Hapus"
+                                                >
+                                                <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -252,6 +344,13 @@ export default function QuotationsPage() {
                 onClose={() => setShowCreateModal(false)}
                 onSubmit={handleCreateQuotation}
             />
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
         </div>
     )
 }

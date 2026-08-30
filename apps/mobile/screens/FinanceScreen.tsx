@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,8 +12,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import { fetchInvoices, fetchPayments, formatCurrency, formatDate, InvoiceData, PaymentData } from '../lib/api';
 import LoadingView from '../components/LoadingView';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
+import SearchBar from '../components/SearchBar';
 
 type Tab = 'overview' | 'invoices' | 'payments';
 type FinanceScreenProp = NativeStackNavigationProp<RootStackParamList, 'Finance'>;
@@ -29,6 +31,8 @@ export default function FinanceScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
 
     const loadData = async () => {
         try {
@@ -66,6 +70,35 @@ export default function FinanceScreen({ navigation }: Props) {
         }
     };
 
+    // Filtered invoices
+    const filteredInvoices = useMemo(() => {
+        let result = invoices;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (inv) =>
+                    inv.customerName?.toLowerCase().includes(q) ||
+                    inv.invoiceNumber?.toLowerCase().includes(q)
+            );
+        }
+        if (statusFilter !== 'all') {
+            result = result.filter((inv) => inv.status === statusFilter);
+        }
+        return result;
+    }, [invoices, searchQuery, statusFilter]);
+
+    // Filtered payments
+    const filteredPayments = useMemo(() => {
+        if (!searchQuery) return payments;
+        const q = searchQuery.toLowerCase();
+        return payments.filter(
+            (p) =>
+                p.customerName?.toLowerCase().includes(q) ||
+                p.invoiceNumber?.toLowerCase().includes(q) ||
+                p.method?.toLowerCase().includes(q)
+        );
+    }, [payments, searchQuery]);
+
     // Calculate summary from real data
     const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
     const paidAmount = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0);
@@ -79,7 +112,15 @@ export default function FinanceScreen({ navigation }: Props) {
         { label: 'Overdue', value: formatCurrency(overdueAmount), color: '#DC2626', subtitle: `${invoices.filter(i => i.status === 'overdue').length} invoice` },
     ];
 
-    if (loading) return <LoadingView message="Memuat data keuangan..." />;
+    const statusFilters = [
+        { label: 'Semua', value: 'all' },
+        { label: 'Paid', value: 'paid' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Overdue', value: 'overdue' },
+        { label: 'Sent', value: 'sent' },
+    ];
+
+    if (loading) return <LoadingSkeleton variant="stats" />;
     if (error) return <ErrorView message={error} onRetry={loadData} />;
 
     const renderOverview = () => (
@@ -88,9 +129,9 @@ export default function FinanceScreen({ navigation }: Props) {
             <View style={styles.summaryGrid}>
                 {summaryCards.map((card, idx) => (
                     <View key={idx} style={[styles.summaryCard, { borderLeftColor: card.color }]}>
-                        <Text style={styles.summaryLabel}>{card.label}</Text>
-                        <Text style={styles.summaryValue}>{card.value}</Text>
-                        <Text style={styles.summaryChange}>{card.subtitle}</Text>
+                        <Text style={styles.summaryLabel} numberOfLines={1}>{card.label}</Text>
+                        <Text style={styles.summaryValue} numberOfLines={1}>{card.value}</Text>
+                        <Text style={styles.summaryChange} numberOfLines={1}>{card.subtitle}</Text>
                     </View>
                 ))}
             </View>
@@ -99,7 +140,7 @@ export default function FinanceScreen({ navigation }: Props) {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Invoice Terbaru</Text>
                 {invoices.length === 0 ? (
-                    <EmptyView icon="📄" title="Belum ada invoice" message="Invoice akan muncul di sini" />
+                    <EmptyView title="Belum ada invoice" message="Invoice akan muncul di sini" />
                 ) : (
                     invoices.slice(0, 3).map((invoice) => (
                         <TouchableOpacity
@@ -109,11 +150,11 @@ export default function FinanceScreen({ navigation }: Props) {
                             activeOpacity={0.7}
                         >
                             <View style={styles.listItemContent}>
-                                <Text style={styles.listItemTitle}>{invoice.customerName}</Text>
-                                <Text style={styles.listItemSubtitle}>{invoice.invoiceNumber} • {formatDate(invoice.createdAt)}</Text>
+                                <Text style={styles.listItemTitle} numberOfLines={1}>{invoice.customerName}</Text>
+                                <Text style={styles.listItemSubtitle} numberOfLines={1}>{invoice.invoiceNumber} · {formatDate(invoice.createdAt)}</Text>
                             </View>
                             <View style={styles.listItemRight}>
-                                <Text style={styles.listItemAmount}>{formatCurrency(invoice.amount)}</Text>
+                                <Text style={styles.listItemAmount} numberOfLines={1}>{formatCurrency(invoice.amount)}</Text>
                                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invoice.status) + '20' }]}>
                                     <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
                                         {invoice.status.toUpperCase()}
@@ -129,10 +170,18 @@ export default function FinanceScreen({ navigation }: Props) {
 
     const renderInvoices = () => (
         <View style={styles.section}>
-            {invoices.length === 0 ? (
-                <EmptyView icon="📄" title="Belum ada invoice" message="Invoice akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari invoice..."
+                filterOptions={statusFilters}
+                activeFilter={statusFilter}
+                onFilterChange={setStatusFilter}
+            />
+            {filteredInvoices.length === 0 ? (
+                <EmptyView title="Tidak ada invoice" message={searchQuery ? 'Tidak ditemukan invoice yang sesuai' : 'Invoice akan muncul di sini'} />
             ) : (
-                invoices.map((invoice) => (
+                filteredInvoices.map((invoice) => (
                     <TouchableOpacity
                         key={invoice.id}
                         style={styles.listItem}
@@ -140,11 +189,11 @@ export default function FinanceScreen({ navigation }: Props) {
                         activeOpacity={0.7}
                     >
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{invoice.customerName}</Text>
-                            <Text style={styles.listItemSubtitle}>{invoice.invoiceNumber} • {formatDate(invoice.createdAt)}</Text>
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{invoice.customerName}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{invoice.invoiceNumber} · {formatDate(invoice.createdAt)}</Text>
                         </View>
                         <View style={styles.listItemRight}>
-                            <Text style={styles.listItemAmount}>{formatCurrency(invoice.amount)}</Text>
+                            <Text style={styles.listItemAmount} numberOfLines={1}>{formatCurrency(invoice.amount)}</Text>
                             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(invoice.status) + '20' }]}>
                                 <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
                                     {invoice.status.toUpperCase()}
@@ -159,17 +208,22 @@ export default function FinanceScreen({ navigation }: Props) {
 
     const renderPayments = () => (
         <View style={styles.section}>
-            {payments.length === 0 ? (
-                <EmptyView icon="💳" title="Belum ada pembayaran" message="Pembayaran akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari pembayaran..."
+            />
+            {filteredPayments.length === 0 ? (
+                <EmptyView title="Tidak ada pembayaran" message={searchQuery ? 'Tidak ditemukan pembayaran yang sesuai' : 'Pembayaran akan muncul di sini'} />
             ) : (
-                payments.map((payment) => (
+                filteredPayments.map((payment) => (
                     <View key={payment.id} style={styles.listItem}>
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{payment.customerName}</Text>
-                            <Text style={styles.listItemSubtitle}>{payment.invoiceNumber} • {formatDate(payment.paymentDate)}</Text>
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{payment.customerName}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{payment.invoiceNumber} · {formatDate(payment.paymentDate)}</Text>
                         </View>
                         <View style={styles.listItemRight}>
-                            <Text style={[styles.listItemAmount, { color: '#059669' }]}>+{formatCurrency(payment.amount)}</Text>
+                            <Text style={[styles.listItemAmount, { color: '#059669' }]} numberOfLines={1}>+{formatCurrency(payment.amount)}</Text>
                             <Text style={styles.paymentMethod}>{payment.method}</Text>
                         </View>
                     </View>
@@ -186,10 +240,10 @@ export default function FinanceScreen({ navigation }: Props) {
                     <TouchableOpacity
                         key={tab}
                         style={[styles.tab, activeTab === tab && styles.activeTab]}
-                        onPress={() => setActiveTab(tab)}
+                        onPress={() => { setActiveTab(tab); setSearchQuery(''); setStatusFilter('all'); }}
                     >
                         <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                            {tab === 'overview' ? 'Overview' : tab === 'invoices' ? 'Invoices' : 'Payments'}
+                            {tab === 'overview' ? 'Ringkasan' : tab === 'invoices' ? 'Invoice' : 'Pembayaran'}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -197,7 +251,8 @@ export default function FinanceScreen({ navigation }: Props) {
 
             <ScrollView
                 style={styles.scrollView}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+                showsVerticalScrollIndicator={false}
             >
                 {activeTab === 'overview' && renderOverview()}
                 {activeTab === 'invoices' && renderInvoices()}
@@ -259,11 +314,11 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     summaryLabel: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#6B7280',
     },
     summaryValue: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: 'bold',
         color: '#111827',
         marginTop: 4,

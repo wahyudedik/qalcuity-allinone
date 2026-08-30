@@ -7,21 +7,22 @@ export default function HomePage() {
             <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
                 <div className="container mx-auto flex items-center justify-between px-4 py-4">
                     <div className="flex items-center gap-2">
+                        <img src="/logo.png" alt="Qalcuity" className="h-8 w-8 object-contain" />
                         <span className="text-2xl font-bold text-gray-900">Qalcuity</span>
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                             Beta
                         </span>
                     </div>
                     <div className="hidden items-center gap-8 md:flex">
-                        <a href="#features" className="text-sm text-gray-600 hover:text-gray-900">
+                        <Link href="#features" className="text-sm text-gray-600 hover:text-gray-900">
                             Fitur
-                        </a>
-                        <a href="#pricing" className="text-sm text-gray-600 hover:text-gray-900">
+                        </Link>
+                        <Link href="#pricing" className="text-sm text-gray-600 hover:text-gray-900">
                             Harga
-                        </a>
-                        <a href="#how-it-works" className="text-sm text-gray-600 hover:text-gray-900">
+                        </Link>
+                        <Link href="#how-it-works" className="text-sm text-gray-600 hover:text-gray-900">
                             Cara Kerja
-                        </a>
+                        </Link>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link
@@ -252,10 +253,10 @@ export default function HomePage() {
                         <div>
                             <h3 className="mb-4 text-sm font-semibold text-gray-900">Produk</h3>
                             <ul className="space-y-2 text-sm text-gray-500">
-                                <li><a href="#features" className="hover:text-gray-700">Fitur</a></li>
-                                <li><a href="#pricing" className="hover:text-gray-700">Harga</a></li>
-                                <li><a href="#" className="hover:text-gray-700">Integrasi</a></li>
-                                <li><a href="#" className="hover:text-gray-700">Changelog</a></li>
+                                <li><Link href="#features" className="hover:text-gray-700">Fitur</Link></li>
+                                <li><Link href="#pricing" className="hover:text-gray-700">Harga</Link></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Integrasi</span></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Changelog</span></li>
                             </ul>
                         </div>
                         <div>
@@ -270,18 +271,18 @@ export default function HomePage() {
                         <div>
                             <h3 className="mb-4 text-sm font-semibold text-gray-900">Perusahaan</h3>
                             <ul className="space-y-2 text-sm text-gray-500">
-                                <li><a href="#" className="hover:text-gray-700">Tentang Kami</a></li>
-                                <li><a href="#" className="hover:text-gray-700">Blog</a></li>
-                                <li><a href="#" className="hover:text-gray-700">Karir</a></li>
-                                <li><a href="#" className="hover:text-gray-700">Kontak</a></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Tentang Kami</span></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Blog</span></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Karir</span></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Kontak</span></li>
                             </ul>
                         </div>
                         <div>
                             <h3 className="mb-4 text-sm font-semibold text-gray-900">Legal</h3>
                             <ul className="space-y-2 text-sm text-gray-500">
-                                <li><a href="#" className="hover:text-gray-700">Privacy Policy</a></li>
-                                <li><a href="#" className="hover:text-gray-700">Terms of Service</a></li>
-                                <li><a href="#" className="hover:text-gray-700">SLA</a></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Privacy Policy</span></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">Terms of Service</span></li>
+                                <li><span className="text-gray-400 cursor-not-allowed">SLA</span></li>
                             </ul>
                         </div>
                     </div>
@@ -357,8 +358,8 @@ function PricingCard({
     return (
         <div
             className={`relative rounded-xl border-2 p-6 transition ${popular
-                    ? 'border-blue-600 shadow-lg'
-                    : 'border-gray-100 bg-white shadow-sm hover:shadow-md'
+                ? 'border-blue-600 shadow-lg'
+                : 'border-gray-100 bg-white shadow-sm hover:shadow-md'
                 }`}
         >
             {popular && (
@@ -383,8 +384,8 @@ function PricingCard({
             <Link
                 href="/register"
                 className={`mt-6 block w-full rounded-lg py-2.5 text-center text-sm font-semibold transition ${popular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
                     }`}
             >
                 {cta}

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updateLeadSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -40,12 +42,21 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
 
+        // Validasi input dengan Zod
+        const validation = updateLeadSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
         const existing = await prisma.lead.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -55,17 +66,20 @@ export async function PUT(
         const lead = await prisma.lead.update({
             where: { id },
             data: {
-                ...(typeof body.name === 'string' && { name: body.name }),
-                ...(typeof body.email === 'string' && { email: body.email }),
-                ...(typeof body.phone === 'string' && { phone: body.phone }),
-                ...(typeof body.company === 'string' && { company: body.company }),
-                ...(typeof body.source === 'string' && { source: body.source }),
-                ...(typeof body.status === 'string' && { status: body.status.toUpperCase() }),
-                ...(typeof body.value === 'number' && { value: body.value }),
-                ...(typeof body.notes === 'string' && { notes: body.notes }),
-                ...(typeof body.contactId === 'string' && { contactId: body.contactId }),
+                ...(typeof validation.data.name === 'string' && { name: validation.data.name }),
+                ...(typeof validation.data.email === 'string' && { email: validation.data.email }),
+                ...(typeof validation.data.phone === 'string' && { phone: validation.data.phone }),
+                ...(typeof validation.data.company === 'string' && { company: validation.data.company }),
+                ...(typeof validation.data.source === 'string' && { source: validation.data.source }),
+                ...(typeof validation.data.status === 'string' && { status: validation.data.status.toUpperCase() }),
+                ...(typeof validation.data.value === 'number' && { value: validation.data.value }),
+                ...(typeof validation.data.notes === 'string' && { notes: validation.data.notes }),
+                ...(typeof validation.data.contactId === 'string' && { contactId: validation.data.contactId }),
             },
         });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Lead', entityId: id, newValues: body as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: lead });
     } catch (error) {
@@ -82,11 +96,11 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.lead.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -94,6 +108,9 @@ export async function DELETE(
         }
 
         await prisma.lead.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Lead', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

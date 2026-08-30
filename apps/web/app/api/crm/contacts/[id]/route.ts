@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updateContactSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -45,12 +47,21 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
 
+        // Validasi input dengan Zod
+        const validation = updateContactSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
         const existing = await prisma.contact.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -60,16 +71,19 @@ export async function PUT(
         const contact = await prisma.contact.update({
             where: { id },
             data: {
-                ...(typeof body.name === 'string' && { name: body.name }),
-                ...(typeof body.email === 'string' && { email: body.email }),
-                ...(typeof body.phone === 'string' && { phone: body.phone }),
-                ...(typeof body.company === 'string' && { company: body.company }),
-                ...(typeof body.type === 'string' && { type: body.type.toUpperCase() }),
-                ...(typeof body.position === 'string' && { position: body.position }),
-                ...(typeof body.address === 'string' && { address: body.address }),
-                ...(typeof body.notes === 'string' && { notes: body.notes }),
+                ...(typeof validation.data.name === 'string' && { name: validation.data.name }),
+                ...(typeof validation.data.email === 'string' && { email: validation.data.email }),
+                ...(typeof validation.data.phone === 'string' && { phone: validation.data.phone }),
+                ...(typeof validation.data.company === 'string' && { company: validation.data.company }),
+                ...(typeof validation.data.type === 'string' && { type: validation.data.type.toUpperCase() }),
+                ...(typeof validation.data.position === 'string' && { position: validation.data.position }),
+                ...(typeof validation.data.address === 'string' && { address: validation.data.address }),
+                ...(typeof validation.data.notes === 'string' && { notes: validation.data.notes }),
             },
         });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Contact', entityId: id, newValues: body as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: contact });
     } catch (error) {
@@ -86,11 +100,11 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.contact.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -98,6 +112,9 @@ export async function DELETE(
         }
 
         await prisma.contact.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Contact', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

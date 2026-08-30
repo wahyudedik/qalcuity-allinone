@@ -1,79 +1,69 @@
 import { NextResponse } from 'next/server';
-
-const mockProductDetails: Record<string, {
-    id: string;
-    sku: string;
-    name: string;
-    description: string;
-    category: string;
-    price: number;
-    cost: number;
-    stock: number;
-    minStock: number;
-    unit: string;
-    supplier: string;
-    status: string;
-    createdAt: string;
-}> = {
-    'PRD-001': {
-        id: 'PRD-001',
-        sku: 'WDT-001',
-        name: 'Widget Premium',
-        description: 'Widget berkualitas tinggi untuk industri manufaktur',
-        category: 'Widget',
-        price: 150000,
-        cost: 75000,
-        stock: 250,
-        minStock: 50,
-        unit: 'pcs',
-        supplier: 'PT Supplier ABC',
-        status: 'active',
-        createdAt: '2026-01-15T10:00:00Z',
-    },
-    'PRD-002': {
-        id: 'PRD-002',
-        sku: 'CMP-001',
-        name: 'Component Kit',
-        description: 'Kit komponen untuk perakitan widget',
-        category: 'Component',
-        price: 50000,
-        cost: 25000,
-        stock: 120,
-        minStock: 30,
-        unit: 'kit',
-        supplier: 'CV Supplier XYZ',
-        status: 'active',
-        createdAt: '2026-02-20T10:00:00Z',
-    },
-    'PRD-003': {
-        id: 'PRD-003',
-        sku: 'SVC-001',
-        name: 'Service Maintenance',
-        description: 'Jasa maintenance bulanan untuk peralatan',
-        category: 'Service',
-        price: 5000000,
-        cost: 2000000,
-        stock: 999,
-        minStock: 0,
-        unit: 'paket',
-        supplier: '-',
-        status: 'active',
-        createdAt: '2026-03-10T10:00:00Z',
-    },
-};
+import { prisma } from '@/lib/db';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { sanitizeInput } from '@/lib/sanitize';
+import { logAudit } from '@/lib/audit';
+import { updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
-    const product = mockProductDetails[id];
+    try {
+        const { tenantId } = await requireAuth();
+        const { id } = params;
 
-    if (!product) {
-        return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+        const product = await prisma.product.findFirst({
+            where: { id, tenantId },
+            include: {
+                category: { select: { id: true, name: true } },
+                stockMovements: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 10,
+                },
+            },
+        });
+
+        if (!product) {
+            return NextResponse.json(
+                { success: false, error: 'Produk tidak ditemukan' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: product.id,
+            sku: product.sku,
+            name: product.name,
+            description: product.description || '',
+            unit: product.unit,
+            price: product.price,
+            cost: product.cost,
+            stock: product.stock,
+            minStock: product.minStock,
+            isActive: product.isActive,
+            categoryId: product.categoryId,
+            categoryName: product.category?.name || null,
+            isLowStock: product.stock <= product.minStock,
+            stockMovements: product.stockMovements.map((sm) => ({
+                id: sm.id,
+                type: sm.type,
+                quantity: sm.quantity,
+                reference: sm.reference || '',
+                notes: sm.notes || '',
+                createdAt: sm.createdAt.toISOString(),
+            })),
+            createdAt: product.createdAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, data: product });
 }
 
 export async function PUT(
@@ -81,18 +71,68 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
 
-        if (!mockProductDetails[id]) {
-            return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+        const existing = await prisma.product.findFirst({
+            where: { id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Produk tidak ditemukan' },
+                { status: 404 }
+            );
         }
 
-        mockProductDetails[id] = { ...mockProductDetails[id], ...body };
+        const validation = updateProductSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+        const validatedData = validation.data;
 
-        return NextResponse.json({ success: true, data: mockProductDetails[id] });
-    } catch {
-        return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+        // Sanitize text inputs
+        if (validatedData.name !== undefined) validatedData.name = sanitizeInput(validatedData.name);
+        if (validatedData.sku !== undefined) validatedData.sku = sanitizeInput(validatedData.sku);
+        if (validatedData.description !== undefined && validatedData.description !== null) validatedData.description = sanitizeInput(validatedData.description);
+
+        const data: Record<string, unknown> = {};
+        if (validatedData.sku !== undefined) data.sku = validatedData.sku;
+        if (validatedData.name !== undefined) data.name = validatedData.name;
+        if (validatedData.description !== undefined) data.description = validatedData.description;
+        if (validatedData.unit !== undefined) data.unit = validatedData.unit;
+        if (validatedData.price !== undefined) data.price = validatedData.price;
+        if (validatedData.cost !== undefined) data.cost = validatedData.cost;
+        if (validatedData.stock !== undefined) data.stock = validatedData.stock;
+        if (validatedData.minStock !== undefined) data.minStock = validatedData.minStock;
+        if (validatedData.categoryId !== undefined) data.categoryId = validatedData.categoryId;
+        if (validatedData.isActive !== undefined) data.isActive = validatedData.isActive;
+
+        const product = await prisma.product.update({
+            where: { id },
+            data,
+        });
+
+        // Log audit update
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Product', entityId: id, newValues: data as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: product });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        if (message.includes('Unique constraint')) {
+            return NextResponse.json(
+                { success: false, error: 'SKU sudah digunakan oleh produk lain' },
+                { status: 409 }
+            );
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
@@ -100,13 +140,52 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const { id } = params;
+    try {
+        const { userId, tenantId } = await requireMutateAuth();
+        const { id } = params;
 
-    if (!mockProductDetails[id]) {
-        return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
+        const existing = await prisma.product.findFirst({
+            where: { id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Produk tidak ditemukan' },
+                { status: 404 }
+            );
+        }
+
+        // Check if product has stock movements
+        const movementCount = await prisma.stockMovement.count({
+            where: { productId: id },
+        });
+
+        if (movementCount > 0) {
+            // Soft delete - deactivate instead
+            await prisma.product.update({
+                where: { id },
+                data: { isActive: false },
+            });
+            // Log audit soft delete
+            void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Product', entityId: id, oldValues: { isActive: true } as Record<string, unknown>, newValues: { isActive: false } as Record<string, unknown>, request });
+            return NextResponse.json({
+                success: true,
+                data: null,
+                message: 'Produk dinonaktifkan (memiliki riwayat pergerakan stok)',
+            });
+        }
+
+        await prisma.product.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Product', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: null });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
-
-    delete mockProductDetails[id];
-
-    return NextResponse.json({ success: true, data: null });
 }

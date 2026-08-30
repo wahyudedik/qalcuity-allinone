@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
+import { createContactSchema, updateContactSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:contacts:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requireAuth();
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type');
@@ -84,29 +96,43 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId: authTenantId } = await requireAuth();
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:contacts:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const { userId, tenantId: authTenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.name) {
+        // Validasi input dengan Zod
+        const validation = createContactSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Name is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
+        // Sanitize all text inputs
+        const sanitized = sanitizeObject(validation.data);
+
         const contact = await prisma.contact.create({
             data: {
                 tenantId: authTenantId,
-                name: body.name,
-                email: body.email || null,
-                phone: body.phone || null,
-                type: (body.type || 'CUSTOMER').toUpperCase(),
-                address: body.address || null,
-                city: body.city || null,
-                province: body.province || null,
-                postalCode: body.postalCode || null,
-                taxId: body.taxId || null,
-                notes: body.notes || null,
+                name: sanitized.name as string,
+                email: (sanitized.email as string) || null,
+                phone: (sanitized.phone as string) || null,
+                type: (validation.data.type || 'CUSTOMER').toUpperCase(),
+                address: (sanitized.address as string) || null,
+                city: (sanitized.city as string) || null,
+                province: (sanitized.province as string) || null,
+                postalCode: (sanitized.postalCode as string) || null,
+                taxId: (sanitized.taxId as string) || null,
+                notes: (sanitized.notes as string) || null,
             },
         });
 
@@ -124,13 +150,31 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId: authTenantId } = await requireAuth();
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:contacts:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const { userId, tenantId: authTenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
+                { status: 400 }
+            );
+        }
+
+        // Validasi input dengan Zod
+        const validation = updateContactSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
@@ -146,20 +190,23 @@ export async function PUT(request: Request) {
             );
         }
 
+        // Sanitize text fields
+        const sanitized = sanitizeObject(validation.data);
+
         const contact = await prisma.contact.update({
             where: { id },
             data: {
-                ...(typeof updateData.name === 'string' && { name: updateData.name }),
-                ...(typeof updateData.email === 'string' && { email: updateData.email }),
-                ...(typeof updateData.phone === 'string' && { phone: updateData.phone }),
-                ...(typeof updateData.type === 'string' && { type: updateData.type.toUpperCase() }),
-                ...(typeof updateData.address === 'string' && { address: updateData.address }),
-                ...(typeof updateData.city === 'string' && { city: updateData.city }),
-                ...(typeof updateData.province === 'string' && { province: updateData.province }),
-                ...(typeof updateData.postalCode === 'string' && { postalCode: updateData.postalCode }),
-                ...(typeof updateData.taxId === 'string' && { taxId: updateData.taxId }),
-                ...(typeof updateData.notes === 'string' && { notes: updateData.notes }),
-                ...(typeof updateData.isActive === 'boolean' && { isActive: updateData.isActive }),
+                ...(typeof sanitized.name === 'string' && { name: sanitized.name }),
+                ...(typeof sanitized.email === 'string' && { email: sanitized.email }),
+                ...(typeof sanitized.phone === 'string' && { phone: sanitized.phone }),
+                ...(typeof validation.data.type === 'string' && { type: validation.data.type.toUpperCase() }),
+                ...(typeof sanitized.address === 'string' && { address: sanitized.address }),
+                ...(typeof sanitized.city === 'string' && { city: sanitized.city }),
+                ...(typeof sanitized.province === 'string' && { province: sanitized.province }),
+                ...(typeof sanitized.postalCode === 'string' && { postalCode: sanitized.postalCode }),
+                ...(typeof sanitized.taxId === 'string' && { taxId: sanitized.taxId }),
+                ...(typeof sanitized.notes === 'string' && { notes: sanitized.notes }),
+                ...(typeof validation.data.isActive === 'boolean' && { isActive: validation.data.isActive }),
             },
         });
 
@@ -177,7 +224,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId: authTenantId } = await requireAuth();
+        const { userId, tenantId: authTenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

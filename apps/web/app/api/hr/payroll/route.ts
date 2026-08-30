@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { createPayrollSchema, updatePayrollSchema, approvePayrollSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -88,49 +90,55 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.employeeId || !body.period || !body.baseSalary) {
+        const validation = createPayrollSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Employee ID, period, and base salary are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
+        const validatedData = validation.data;
+
         // Validate employee belongs to tenant
         const employee = await prisma.employee.findFirst({
-            where: { id: body.employeeId, tenantId },
+            where: { id: validatedData.employeeId, tenantId },
         });
         if (!employee) {
             return NextResponse.json(
-                { success: false, error: 'Employee not found' },
+                { success: false, error: 'Karyawan tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        const baseSalary = parseFloat(String(body.baseSalary));
-        const allowances = parseFloat(String(body.allowances || 0));
-        const deductions = parseFloat(String(body.deductions || 0));
-        const bonus = parseFloat(String(body.bonus || 0));
+        const baseSalary = validatedData.baseSalary;
+        const allowances = validatedData.allowances || 0;
+        const deductions = validatedData.deductions || 0;
+        const bonus = validatedData.bonus || 0;
         const netSalary = baseSalary + allowances - deductions + bonus;
 
         const record = await prisma.payrollRecord.create({
             data: {
-                period: body.period,
+                period: validatedData.period,
                 baseSalary,
                 allowances,
                 deductions,
                 bonus,
                 netSalary,
-                notes: body.notes || '',
-                employeeId: body.employeeId,
+                notes: validatedData.notes || '',
+                employeeId: validatedData.employeeId,
                 tenantId,
             },
             include: {
                 employee: { select: { name: true, employeeId: true } },
             },
         });
+
+        // Log audit create
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'PayrollRecord', entityId: record.id, newValues: { period: record.period, baseSalary: record.baseSalary, employeeId: record.employeeId } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: record }, { status: 201 });
     } catch (error: unknown) {
@@ -151,32 +159,26 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireAuth();
         const body = await request.json();
-        const { id, status } = body;
 
-        if (!id || !status) {
+        const validation = approvePayrollSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'ID and status are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        const validStatuses = ['PENDING', 'PROCESSED', 'PAID'];
+        const { id, status } = validation.data;
         const newStatus = status.toUpperCase();
-        if (!validStatuses.includes(newStatus)) {
-            return NextResponse.json(
-                { success: false, error: 'Status must be PENDING, PROCESSED, or PAID' },
-                { status: 400 }
-            );
-        }
 
         const existing = await prisma.payrollRecord.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payroll record not found' },
+                { success: false, error: 'Payroll record tidak ditemukan' },
                 { status: 404 }
             );
         }
@@ -192,6 +194,9 @@ export async function PATCH(request: Request) {
             },
         });
 
+        // Log audit update status
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PayrollRecord', entityId: id, oldValues: { status: existing.status } as Record<string, unknown>, newValues: { status: newStatus } as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -204,49 +209,45 @@ export async function PATCH(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
+
+        const validation = updatePayrollSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.payrollRecord.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payroll record not found' },
+                { success: false, error: 'Payroll record tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         const data: Record<string, unknown> = {};
-        if (typeof updateData.period === 'string') {
-            data.period = updateData.period;
-        }
-        if (typeof updateData.baseSalary === 'number') {
-            data.baseSalary = updateData.baseSalary;
-        }
-        if (typeof updateData.allowances === 'number') {
-            data.allowances = updateData.allowances;
-        }
-        if (typeof updateData.deductions === 'number') {
-            data.deductions = updateData.deductions;
-        }
-        if (typeof updateData.bonus === 'number') {
-            data.bonus = updateData.bonus;
-        }
-        if (typeof updateData.status === 'string') {
-            data.status = updateData.status.toUpperCase();
-        }
-        if (typeof updateData.notes === 'string') {
-            data.notes = updateData.notes;
-        }
+        if (validatedData.period !== undefined) data.period = validatedData.period;
+        if (validatedData.baseSalary !== undefined) data.baseSalary = validatedData.baseSalary;
+        if (validatedData.allowances !== undefined) data.allowances = validatedData.allowances;
+        if (validatedData.deductions !== undefined) data.deductions = validatedData.deductions;
+        if (validatedData.bonus !== undefined) data.bonus = validatedData.bonus;
+        if (validatedData.status !== undefined) data.status = validatedData.status.toUpperCase();
+        if (validatedData.notes !== undefined) data.notes = validatedData.notes;
 
         // Recalculate netSalary if any compensation field changed
         if (data.baseSalary !== undefined || data.allowances !== undefined || data.deductions !== undefined || data.bonus !== undefined) {
@@ -265,6 +266,8 @@ export async function PUT(request: Request) {
             },
         });
 
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PayrollRecord', entityId: id, newValues: data as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -277,7 +280,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -299,6 +302,9 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.payrollRecord.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'PayrollRecord', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

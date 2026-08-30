@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updateDealSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -13,7 +15,7 @@ export async function GET(
         const deal = await prisma.deal.findFirst({
             where: { id, tenantId: auth.tenantId },
             include: {
-                contact: { select: { id: true, name: true, email: true, phone: true, address: true } },
+                contact: { select: { id: true, name: true, company: true, email: true, phone: true, address: true } },
                 lead: { select: { id: true, name: true, company: true, email: true, phone: true } },
             },
         });
@@ -22,7 +24,25 @@ export async function GET(
             return NextResponse.json({ success: false, error: 'Deal not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ success: true, data: deal });
+        // Map to frontend-compatible format
+        const data = {
+            id: deal.id,
+            name: deal.title,
+            company: (deal.contact as Record<string, unknown>)?.company || deal.lead?.company || '-',
+            contactName: deal.contact?.name || '-',
+            contactEmail: deal.contact?.email || '',
+            contactPhone: deal.contact?.phone || '',
+            value: deal.value,
+            currency: 'IDR',
+            stage: deal.stage,
+            probability: deal.probability,
+            expectedCloseDate: deal.closeDate?.toISOString().split('T')[0] || '',
+            createdAt: deal.createdAt.toISOString(),
+            notes: deal.notes || '',
+            activities: [],
+        };
+
+        return NextResponse.json({ success: true, data });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
         if (message === 'Unauthorized') {
@@ -37,31 +57,44 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
 
+        const validation = updateDealSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Deal not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'Deal tidak ditemukan' }, { status: 404 });
         }
 
         const deal = await prisma.deal.update({
             where: { id },
             data: {
-                ...(typeof body.title === 'string' && { title: body.title }),
-                ...(typeof body.value === 'number' && { value: body.value }),
-                ...(typeof body.stage === 'string' && { stage: body.stage.toUpperCase().replace(' ', '_') }),
-                ...(typeof body.probability === 'number' && { probability: body.probability }),
-                ...(body.closeDate && { closeDate: new Date(body.closeDate) }),
-                ...(typeof body.notes === 'string' && { notes: body.notes }),
-                ...(typeof body.contactId === 'string' && { contactId: body.contactId }),
-                ...(typeof body.leadId === 'string' && { leadId: body.leadId }),
+                ...(validatedData.title !== undefined && { title: validatedData.title }),
+                ...(validatedData.value !== undefined && { value: validatedData.value }),
+                ...(validatedData.stage !== undefined && { stage: validatedData.stage.toUpperCase().replace(' ', '_') }),
+                ...(validatedData.probability !== undefined && { probability: validatedData.probability }),
+                ...(validatedData.closeDate !== undefined && { closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null }),
+                ...(validatedData.notes !== undefined && { notes: validatedData.notes }),
+                ...(validatedData.contactId !== undefined && { contactId: validatedData.contactId }),
+                ...(validatedData.leadId !== undefined && { leadId: validatedData.leadId }),
             },
         });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: validatedData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: deal });
     } catch (error) {
@@ -78,11 +111,11 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -90,6 +123,9 @@ export async function DELETE(
         }
 
         await prisma.deal.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Deal', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

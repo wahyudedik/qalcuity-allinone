@@ -105,10 +105,12 @@ export default function RegisterPage() {
         <div className="space-y-6">
             {/* Logo mobile */}
             <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-bold text-xl">Q</span>
-                </div>
-                <span className="text-2xl font-bold text-gray-900">Qalcuity</span>
+                <img src="/logo.png" alt="Qalcuity" className="h-12 w-12 object-contain" />
+            </div>
+
+            {/* Logo desktop */}
+            <div className="hidden lg:flex items-center justify-center gap-3 mb-4">
+                <img src="/logo.png" alt="Qalcuity" className="h-12 w-12 object-contain" />
             </div>
 
             <div>

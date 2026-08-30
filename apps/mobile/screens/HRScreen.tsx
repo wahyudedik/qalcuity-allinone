@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -16,8 +16,10 @@ import {
     EmployeeData, AttendanceData, LeaveData, PayrollData,
 } from '../lib/api';
 import LoadingView from '../components/LoadingView';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
+import SearchBar from '../components/SearchBar';
 
 type Tab = 'employees' | 'attendance' | 'leaves' | 'payroll';
 type HRScreenProp = NativeStackNavigationProp<RootStackParamList, 'HR'>;
@@ -35,6 +37,8 @@ export default function HRScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
 
     const loadData = async () => {
         try {
@@ -90,15 +94,87 @@ export default function HRScreen({ navigation }: Props) {
         }
     };
 
-    if (loading) return <LoadingView message="Memuat data HR..." />;
+    // Filtered employees
+    const filteredEmployees = useMemo(() => {
+        let result = employees;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (e) =>
+                    e.name?.toLowerCase().includes(q) ||
+                    e.position?.toLowerCase().includes(q) ||
+                    e.department?.toLowerCase().includes(q)
+            );
+        }
+        if (statusFilter !== 'all') {
+            result = result.filter((e) => e.status === statusFilter);
+        }
+        return result;
+    }, [employees, searchQuery, statusFilter]);
+
+    // Filtered attendance
+    const filteredAttendance = useMemo(() => {
+        if (!searchQuery) return attendance;
+        const q = searchQuery.toLowerCase();
+        return attendance.filter(
+            (a) => a.employeeName?.toLowerCase().includes(q)
+        );
+    }, [attendance, searchQuery]);
+
+    // Filtered leaves
+    const filteredLeaves = useMemo(() => {
+        let result = leaves;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (l) => l.employeeName?.toLowerCase().includes(q) || l.type?.toLowerCase().includes(q)
+            );
+        }
+        if (statusFilter !== 'all') {
+            result = result.filter((l) => l.status === statusFilter);
+        }
+        return result;
+    }, [leaves, searchQuery, statusFilter]);
+
+    // Filtered payroll
+    const filteredPayroll = useMemo(() => {
+        if (!searchQuery) return payroll;
+        const q = searchQuery.toLowerCase();
+        return payroll.filter(
+            (p) => p.employeeName?.toLowerCase().includes(q)
+        );
+    }, [payroll, searchQuery]);
+
+    const employeeStatusFilters = [
+        { label: 'Semua', value: 'all' },
+        { label: 'Active', value: 'active' },
+        { label: 'On Leave', value: 'on_leave' },
+        { label: 'Inactive', value: 'inactive' },
+    ];
+
+    const leaveStatusFilters = [
+        { label: 'Semua', value: 'all' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Approved', value: 'approved' },
+    ];
+
+    if (loading) return <LoadingSkeleton variant="list" rows={5} />;
     if (error) return <ErrorView message={error} onRetry={loadData} />;
 
     const renderEmployees = () => (
         <View style={styles.section}>
-            {employees.length === 0 ? (
-                <EmptyView icon="👥" title="Belum ada karyawan" message="Data karyawan akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari karyawan..."
+                filterOptions={employeeStatusFilters}
+                activeFilter={statusFilter}
+                onFilterChange={setStatusFilter}
+            />
+            {filteredEmployees.length === 0 ? (
+                <EmptyView title="Tidak ada karyawan" message={searchQuery ? 'Tidak ditemukan karyawan yang sesuai' : 'Data karyawan akan muncul di sini'} />
             ) : (
-                employees.map((employee) => (
+                filteredEmployees.map((employee) => (
                     <TouchableOpacity
                         key={employee.id}
                         style={styles.listItem}
@@ -110,15 +186,15 @@ export default function HRScreen({ navigation }: Props) {
                         </View>
                         <View style={styles.listItemContent}>
                             <View style={styles.listItemHeader}>
-                                <Text style={styles.listItemTitle}>{employee.name}</Text>
+                                <Text style={styles.listItemTitle} numberOfLines={1}>{employee.name}</Text>
                                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(employee.status) + '20' }]}>
                                     <Text style={[styles.statusText, { color: getStatusColor(employee.status) }]}>
                                         {getStatusLabel(employee.status)}
                                     </Text>
                                 </View>
                             </View>
-                            <Text style={styles.listItemSubtitle}>{employee.position}</Text>
-                            <Text style={styles.listItemMeta}>{employee.department} • {employee.id}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{employee.position}</Text>
+                            <Text style={styles.listItemMeta} numberOfLines={1}>{employee.department} · {employee.id}</Text>
                         </View>
                     </TouchableOpacity>
                 ))
@@ -128,25 +204,30 @@ export default function HRScreen({ navigation }: Props) {
 
     const renderAttendance = () => (
         <View style={styles.section}>
-            {attendance.length === 0 ? (
-                <EmptyView icon="⏰" title="Belum ada data absensi" message="Data absensi akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari absensi..."
+            />
+            {filteredAttendance.length === 0 ? (
+                <EmptyView title="Tidak ada data absensi" message={searchQuery ? 'Tidak ditemukan data yang sesuai' : 'Data absensi akan muncul di sini'} />
             ) : (
-                attendance.map((item) => (
+                filteredAttendance.map((item) => (
                     <View key={item.id} style={styles.listItem}>
                         <View style={styles.avatar}>
                             <Text style={styles.avatarText}>{item.employeeName.charAt(0)}</Text>
                         </View>
                         <View style={styles.listItemContent}>
                             <View style={styles.listItemHeader}>
-                                <Text style={styles.listItemTitle}>{item.employeeName}</Text>
+                                <Text style={styles.listItemTitle} numberOfLines={1}>{item.employeeName}</Text>
                                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                                     <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                                         {getStatusLabel(item.status)}
                                     </Text>
                                 </View>
                             </View>
-                            <Text style={styles.listItemSubtitle}>Clock In: {item.clockIn} {item.clockOut ? `• Clock Out: ${item.clockOut}` : ''}</Text>
-                            <Text style={styles.listItemMeta}>{formatDate(item.date)} • {item.workHours} jam</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>Clock In: {item.clockIn} {item.clockOut ? `· Clock Out: ${item.clockOut}` : ''}</Text>
+                            <Text style={styles.listItemMeta} numberOfLines={1}>{formatDate(item.date)} · {item.workHours} jam</Text>
                         </View>
                     </View>
                 ))
@@ -156,23 +237,31 @@ export default function HRScreen({ navigation }: Props) {
 
     const renderLeaves = () => (
         <View style={styles.section}>
-            {leaves.length === 0 ? (
-                <EmptyView icon="🏖️" title="Belum ada pengajuan cuti" message="Pengajuan cuti akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari pengajuan cuti..."
+                filterOptions={leaveStatusFilters}
+                activeFilter={statusFilter}
+                onFilterChange={setStatusFilter}
+            />
+            {filteredLeaves.length === 0 ? (
+                <EmptyView title="Tidak ada pengajuan cuti" message={searchQuery ? 'Tidak ditemukan data yang sesuai' : 'Pengajuan cuti akan muncul di sini'} />
             ) : (
-                leaves.map((leave) => (
+                filteredLeaves.map((leave) => (
                     <View key={leave.id} style={styles.listItem}>
                         <View style={styles.listItemContent}>
                             <View style={styles.listItemHeader}>
-                                <Text style={styles.listItemTitle}>{leave.employeeName}</Text>
+                                <Text style={styles.listItemTitle} numberOfLines={1}>{leave.employeeName}</Text>
                                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(leave.status) + '20' }]}>
                                     <Text style={[styles.statusText, { color: getStatusColor(leave.status) }]}>
                                         {getStatusLabel(leave.status)}
                                     </Text>
                                 </View>
                             </View>
-                            <Text style={styles.listItemSubtitle}>{leave.type}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{leave.type}</Text>
                             <View style={styles.listItemFooter}>
-                                <Text style={styles.listItemMeta}>{formatDate(leave.startDate)} - {formatDate(leave.endDate)}</Text>
+                                <Text style={styles.listItemMeta} numberOfLines={1}>{formatDate(leave.startDate)} - {formatDate(leave.endDate)}</Text>
                                 <Text style={styles.leaveDays}>{leave.days} hari</Text>
                             </View>
                         </View>
@@ -184,21 +273,26 @@ export default function HRScreen({ navigation }: Props) {
 
     const renderPayroll = () => (
         <View style={styles.section}>
-            {payroll.length === 0 ? (
-                <EmptyView icon="💰" title="Belum ada data payroll" message="Data payroll akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari data payroll..."
+            />
+            {filteredPayroll.length === 0 ? (
+                <EmptyView title="Tidak ada data payroll" message={searchQuery ? 'Tidak ditemukan data yang sesuai' : 'Data payroll akan muncul di sini'} />
             ) : (
-                payroll.map((item) => (
+                filteredPayroll.map((item) => (
                     <View key={item.id} style={styles.listItem}>
                         <View style={styles.listItemContent}>
                             <View style={styles.listItemHeader}>
-                                <Text style={styles.listItemTitle}>{item.employeeName}</Text>
+                                <Text style={styles.listItemTitle} numberOfLines={1}>{item.employeeName}</Text>
                                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                                     <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                                         {getStatusLabel(item.status)}
                                     </Text>
                                 </View>
                             </View>
-                            <Text style={styles.listItemSubtitle}>{item.period}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{item.period}</Text>
                             <Text style={styles.listItemAmount}>{formatCurrency(item.netSalary)}</Text>
                         </View>
                     </View>
@@ -216,10 +310,10 @@ export default function HRScreen({ navigation }: Props) {
                         <TouchableOpacity
                             key={tab}
                             style={[styles.tab, activeTab === tab && styles.activeTab]}
-                            onPress={() => setActiveTab(tab)}
+                            onPress={() => { setActiveTab(tab); setSearchQuery(''); setStatusFilter('all'); }}
                         >
                             <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                {tab === 'employees' ? 'Karyawan' : tab === 'attendance' ? 'Absensi' : tab === 'leaves' ? 'Cuti' : 'Payroll'}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -228,7 +322,8 @@ export default function HRScreen({ navigation }: Props) {
 
             <ScrollView
                 style={styles.scrollView}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+                showsVerticalScrollIndicator={false}
             >
                 {activeTab === 'employees' && renderEmployees()}
                 {activeTab === 'attendance' && renderAttendance()}
@@ -245,7 +340,7 @@ const styles = StyleSheet.create({
     tabBar: { flexDirection: 'row', paddingHorizontal: 8 },
     tab: { paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
     activeTab: { borderBottomWidth: 2, borderBottomColor: '#2563EB' },
-    tabText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+    tabText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
     activeTabText: { color: '#2563EB', fontWeight: '600' },
     scrollView: { flex: 1 },
     section: { paddingHorizontal: 16, paddingTop: 16 },

@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
+import { Phone, Mail, Handshake, FileText, ClipboardList, ArrowLeft, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 interface LeadDetail {
     id: string
@@ -25,18 +29,23 @@ const statusConfig: Record<string, { label: string; color: string }> = {
     unqualified: { label: 'Tidak Kualifikasi', color: 'bg-red-100 text-red-800' },
 }
 
-const activityTypeIcons: Record<string, string> = {
-    call: '📞',
-    email: '📧',
-    meeting: '🤝',
-    note: '📝',
-    form: '📋',
+const activityTypeConfig: Record<string, { icon: typeof Phone; color: string }> = {
+    call: { icon: Phone, color: 'text-blue-600' },
+    email: { icon: Mail, color: 'text-purple-600' },
+    meeting: { icon: Handshake, color: 'text-green-600' },
+    note: { icon: FileText, color: 'text-gray-600' },
+    form: { icon: ClipboardList, color: 'text-orange-600' },
 }
 
 export default function LeadDetailPage({ params }: { params: { id: string } }) {
+    const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
+    const router = useRouter()
     const [lead, setLead] = useState<LeadDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
         const fetchLead = async () => {
@@ -46,16 +55,32 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                 if (data.success) {
                     setLead(data.data)
                 } else {
-                    setError('Lead tidak ditemukan')
+                    setError(t('crm.leadDetail.error'))
                 }
             } catch {
-                setError('Gagal memuat data lead')
+                setError(t('crm.leadDetail.errorLoad'))
             } finally {
                 setLoading(false)
             }
         }
         fetchLead()
-    }, [params.id])
+    }, [params.id, t])
+
+    const handleDelete = async () => {
+        if (!window.confirm(t('crm.leadDetail.confirmDelete'))) return
+        try {
+            const res = await fetch(`/api/crm/leads/${params.id}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('crm.leadDetail.deleteSuccess'), type: 'success' })
+                router.push('/dashboard/crm/leads')
+            } else {
+                setToast({ message: data.error || t('crm.leadDetail.deleteError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('crm.leadDetail.deleteError'), type: 'error' })
+        }
+    }
 
     if (loading) {
         return (
@@ -70,9 +95,9 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         return (
             <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
-                    <p className="text-lg text-gray-600">{error || 'Data tidak tersedia'}</p>
+                    <p className="text-lg text-gray-600">{error || t('crm.leadDetail.error')}</p>
                     <Link href="/dashboard/crm/leads" className="mt-4 inline-block text-blue-600 hover:text-blue-800">
-                        ← Kembali ke Leads
+                        ← {t('crm.leadDetail.backToLeads')}
                     </Link>
                 </div>
             </div>
@@ -86,7 +111,8 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
             {/* Header */}
             <div>
                 <Link href="/dashboard/crm/leads" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                    ← Kembali ke Leads
+                    <ArrowLeft className="h-4 w-4" />
+                    {t('crm.leadDetail.backToLeads')}
                 </Link>
                 <div className="mt-4 flex items-center justify-between">
                     <div>
@@ -98,9 +124,15 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                             {statusInfo.label}
                         </span>
                         <div className="text-right">
-                            <p className="text-sm text-gray-500">Skor</p>
+                            <p className="text-sm text-gray-500">{t('crm.leadDetail.score')}</p>
                             <p className="text-2xl font-bold text-gray-900">{lead.score}</p>
                         </div>
+                        {canMutate && (
+                            <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                            <Trash2 className="inline h-4 w-4 mr-1" />
+                            {t('crm.leadDetail.delete')}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -110,22 +142,22 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                 <div className="lg:col-span-2 space-y-6">
                     {/* Contact Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Informasi Kontak</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('crm.leadDetail.contactInfo')}</h3>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <p className="text-sm text-gray-500">Email</p>
+                                <p className="text-sm text-gray-500">{t('crm.leadDetail.email')}</p>
                                 <p className="font-medium text-gray-900">{lead.email}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Telepon</p>
+                                <p className="text-sm text-gray-500">{t('crm.leadDetail.phone')}</p>
                                 <p className="font-medium text-gray-900">{lead.phone}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Perusahaan</p>
+                                <p className="text-sm text-gray-500">{t('crm.leadDetail.company')}</p>
                                 <p className="font-medium text-gray-900">{lead.company}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Sumber</p>
+                                <p className="text-sm text-gray-500">{t('crm.leadDetail.source')}</p>
                                 <p className="font-medium text-gray-900">{lead.source}</p>
                             </div>
                         </div>
@@ -134,28 +166,34 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                     {/* Notes */}
                     {lead.notes && (
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="text-lg font-semibold text-gray-900">Catatan</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t('crm.leadDetail.notes')}</h3>
                             <p className="mt-4 text-sm text-gray-700">{lead.notes}</p>
                         </div>
                     )}
 
                     {/* Activities */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Aktivitas</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('crm.leadDetail.activities')}</h3>
                         {lead.activities.length > 0 ? (
                             <div className="mt-4 space-y-4">
-                                {lead.activities.map((activity, idx) => (
-                                    <div key={idx} className="flex items-start gap-3">
-                                        <span className="text-lg">{activityTypeIcons[activity.type] || '📝'}</span>
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                                            <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
+                                {lead.activities.map((activity, idx) => {
+                                    const config = activityTypeConfig[activity.type] || { icon: FileText, color: 'text-gray-600' }
+                                    const IconComp = config.icon
+                                    return (
+                                        <div key={idx} className="flex items-start gap-3">
+                                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                                                <IconComp className={`h-4 w-4 ${config.color}`} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                                                <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         ) : (
-                            <p className="mt-4 text-sm text-gray-500">Belum ada aktivitas</p>
+                            <p className="mt-4 text-sm text-gray-500">{t('crm.leadDetail.noActivities')}</p>
                         )}
                     </div>
                 </div>
@@ -164,18 +202,18 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                 <div className="space-y-6">
                     {/* Quick Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Detail</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('crm.leadDetail.detail')}</h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">ID Lead</span>
+                                <span className="text-sm text-gray-500">{t('crm.leadDetail.leadId')}</span>
                                 <span className="font-mono text-sm text-gray-900">{lead.id}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Tanggal Dibuat</span>
+                                <span className="text-sm text-gray-500">{t('crm.leadDetail.createdAt')}</span>
                                 <span className="text-sm text-gray-900">{formatDate(lead.createdAt)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Sumber</span>
+                                <span className="text-sm text-gray-500">{t('crm.leadDetail.source')}</span>
                                 <span className="text-sm text-gray-900">{lead.source}</span>
                             </div>
                         </div>
@@ -183,20 +221,27 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
 
                     {/* Actions */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Aksi</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('crm.leadDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                📞 Hubungi Lead
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                                <Phone className="h-4 w-4" />
+                                {t('crm.leadDetail.contactLead')}
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                📧 Kirim Email
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <Mail className="h-4 w-4" />
+                                {t('crm.leadDetail.sendEmail')}
                             </button>
-                            <button className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                🤝 Jadwalkan Meeting
+                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <Handshake className="h-4 w-4" />
+                                {t('crm.leadDetail.scheduleMeeting')}
                             </button>
-                            <button className="w-full rounded-lg border border-green-200 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-50">
-                                ✅ Konversi ke Deal
-                            </button>
+                            <Link
+                                href="/dashboard/crm/deals"
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-green-200 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50"
+                            >
+                                <ClipboardList className="h-4 w-4" />
+                                {t('crm.leadDetail.convertToDeal')}
+                            </Link>
                         </div>
                     </div>
                 </div>

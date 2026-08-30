@@ -9,26 +9,30 @@ import {
     Banknote,
     ShoppingCart,
     BookOpen,
+    ArrowUpDown,
     type LucideIcon,
 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface TabItem {
     href: string
-    label: string
+    labelKey: string
     icon: LucideIcon
 }
 
 const financeTabs: TabItem[] = [
-    { href: '/dashboard/finance', label: 'Ringkasan', icon: BarChart3 },
-    { href: '/dashboard/finance/invoices', label: 'Invoice', icon: FileText },
-    { href: '/dashboard/finance/quotations', label: 'Penawaran', icon: ClipboardList },
-    { href: '/dashboard/finance/payments', label: 'Pembayaran', icon: Banknote },
-    { href: '/dashboard/finance/purchase-orders', label: 'Purchase Order', icon: ShoppingCart },
-    { href: '/dashboard/finance/accounts', label: 'Akun', icon: BookOpen },
+    { href: '/dashboard/finance', labelKey: 'finance.layout.tabs.overview', icon: BarChart3 },
+    { href: '/dashboard/finance/invoices', labelKey: 'finance.layout.tabs.invoices', icon: FileText },
+    { href: '/dashboard/finance/quotations', labelKey: 'finance.layout.tabs.quotations', icon: ClipboardList },
+    { href: '/dashboard/finance/payments', labelKey: 'finance.layout.tabs.payments', icon: Banknote },
+    { href: '/dashboard/finance/purchase-orders', labelKey: 'finance.layout.tabs.purchaseOrders', icon: ShoppingCart },
+    { href: '/dashboard/finance/accounts', labelKey: 'finance.layout.tabs.accounts', icon: BookOpen },
+    { href: '/dashboard/finance/reconciliation', labelKey: 'finance.layout.tabs.reconciliation', icon: ArrowUpDown },
 ]
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const { t } = useTranslation()
 
     return (
         <div className="space-y-6">
@@ -48,7 +52,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
-                                {tab.label}
+                                {t(tab.labelKey)}
                             </Link>
                         )
                     })}

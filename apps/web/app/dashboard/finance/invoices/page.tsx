@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { InvoiceForm } from '@/components/finance/invoice-form'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, ChevronRight, FileText } from 'lucide-react'
+import { Search, Plus, ChevronRight, FileText, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type Invoice = {
     id: string
@@ -31,12 +32,22 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export default function InvoicesPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [statusFilter, setStatusFilter] = useState('all')
     const [search, setSearch] = useState('')
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     useEffect(() => {
         fetchInvoices()
@@ -85,11 +96,28 @@ export default function InvoicesPage() {
             if (result.success) {
                 setShowCreateModal(false)
                 fetchInvoices()
+                setToast({ message: 'Invoice berhasil dibuat', type: 'success' })
             } else {
-                alert(`${t('finance.invoices.createError')}: ${result.error}`)
+                setToast({ message: `${t('finance.invoices.createError')}: ${result.error}`, type: 'error' })
             }
         } catch {
-            alert(t('finance.invoices.createErrorGeneric'))
+            setToast({ message: t('finance.invoices.createErrorGeneric'), type: 'error' })
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus invoice ini?')) return
+        try {
+            const response = await fetch(`/api/finance/invoices/${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchInvoices()
+                setToast({ message: 'Invoice berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus invoice', type: 'error' })
         }
     }
 
@@ -133,13 +161,15 @@ export default function InvoicesPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.invoices.title')}</h1>
                     <p className="text-gray-500">{t('finance.invoices.subtitle')}</p>
                 </div>
-                <button
+                {canMutate && (
+                    <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
+                    >
                     <Plus className="h-4 w-4" />
                     {t('finance.invoices.createInvoice')}
-                </button>
+                    </button>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -195,8 +225,54 @@ export default function InvoicesPage() {
                 </select>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-gray-200 bg-white">
+            {/* Kartu invoice untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filteredInvoices.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                        {t('finance.invoices.empty')}
+                    </div>
+                ) : (
+                    filteredInvoices.map((invoice) => (
+                        <div key={invoice.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <Link href={`/dashboard/finance/invoices/${invoice.id}`} className="font-medium text-blue-600 hover:underline">
+                                        {invoice.invoiceNumber}
+                                    </Link>
+                                    <p className="text-sm text-gray-500">{invoice.customerName}</p>
+                                </div>
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[invoice.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                    {statusConfig[invoice.status]?.label || invoice.status}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500">{t('finance.invoices.table.amount')}:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(invoice.total)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('finance.invoices.table.dueDate')}:</span>
+                                    <span className="ml-1">{formatDate(invoice.dueDate)}</span>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                                <Link href={`/dashboard/finance/invoices/${invoice.id}`} className="text-sm text-blue-600 hover:text-blue-800">
+                                    {t('common.view') || 'Lihat'}
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(invoice.id)}
+                                    className="text-sm text-red-600 hover:text-red-800"
+                                >
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel invoice untuk tampilan desktop */}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
@@ -208,6 +284,7 @@ export default function InvoicesPage() {
                                 <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.amount')}</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.status')}</th>
                                 <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.invoices.table.action')}</th>
+                                <th className="hidden md:table-cell px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -239,6 +316,17 @@ export default function InvoicesPage() {
                                                 <ChevronRight className="h-4 w-4 inline" />
                                             </Link>
                                         </td>
+                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-right">
+                                            {canMutate && (
+                                                <button
+                                                onClick={() => handleDelete(invoice.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                                title="Hapus"
+                                                >
+                                                <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -253,6 +341,13 @@ export default function InvoicesPage() {
                 onClose={() => setShowCreateModal(false)}
                 onSubmit={handleCreateInvoice}
             />
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
         </div>
     )
 }

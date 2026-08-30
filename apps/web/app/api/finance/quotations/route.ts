@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { createQuotationSchema, updateQuotationSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -81,45 +83,40 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.contactId && !body.customerName) {
+        const validation = createQuotationSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Customer is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        if (!body.items || body.items.length === 0) {
-            return NextResponse.json(
-                { success: false, error: 'At least one item is required' },
-                { status: 400 }
-            );
-        }
+        const validatedData = validation.data;
 
         const count = await prisma.quotation.count({ where: { tenantId } });
         const quotationNumber = `QT-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
-        const subtotal = body.items.reduce(
-            (sum: number, item: { quantity: number; unitPrice: number }) =>
-                sum + item.quantity * item.unitPrice,
+        const subtotal = validatedData.items.reduce(
+            (sum, item) => sum + item.quantity * item.unitPrice,
             0
         );
-        const taxRate = body.taxRate || 11;
+        const taxRate = validatedData.taxRate || 11;
         const taxAmount = subtotal * (taxRate / 100);
-        const discount = body.discount || 0;
+        const discount = validatedData.discount || 0;
         const total = subtotal + taxAmount - discount;
 
-        let contactId = body.contactId;
-        if (!contactId && body.customerName) {
+        let contactId = validatedData.contactId;
+        if (!contactId && validatedData.customerName) {
             const contact = await prisma.contact.create({
                 data: {
-                    name: body.customerName,
+                    name: validatedData.customerName,
                     type: 'CUSTOMER',
-                    email: body.customerEmail || undefined,
-                    phone: body.customerPhone || undefined,
-                    address: body.customerAddress || undefined,
+                    email: validatedData.customerEmail || undefined,
+                    phone: validatedData.customerPhone || undefined,
+                    address: validatedData.customerAddress || undefined,
                     tenantId,
                 },
             });
@@ -130,9 +127,9 @@ export async function POST(request: Request) {
             data: {
                 quotationNumber,
                 status: 'DRAFT',
-                validUntil: new Date(body.validUntil || Date.now() + 30 * 24 * 60 * 60 * 1000),
-                notes: body.notes || '',
-                terms: body.terms || '',
+                validUntil: new Date(validatedData.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()),
+                notes: validatedData.notes || '',
+                terms: validatedData.terms || '',
                 subtotal,
                 taxRate,
                 taxAmount,
@@ -141,7 +138,7 @@ export async function POST(request: Request) {
                 tenantId,
                 contactId,
                 items: {
-                    create: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                    create: validatedData.items.map((item) => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -151,6 +148,8 @@ export async function POST(request: Request) {
             },
             include: { items: true, contact: true },
         });
+
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Quotation', entityId: quotation.id, newValues: { quotationNumber: quotation.quotationNumber, total: quotation.total, status: quotation.status } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: quotation }, { status: 201 });
     } catch (error: unknown) {
@@ -164,48 +163,70 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, items, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
 
+        const validation = updateQuotationSchema.safeParse({ ...updateData, items });
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
         const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Quotation not found' },
+                { success: false, error: 'Quotation tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        if (updateData.status) {
-            updateData.status = updateData.status.toUpperCase();
+        const data: Record<string, unknown> = {};
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
         }
-        if (updateData.validUntil) {
-            updateData.validUntil = new Date(updateData.validUntil);
+        if (validatedData.validUntil !== undefined) {
+            data.validUntil = validatedData.validUntil ? new Date(validatedData.validUntil) : null;
+        }
+        if (validatedData.taxRate !== undefined) {
+            data.taxRate = validatedData.taxRate;
+        }
+        if (validatedData.discount !== undefined) {
+            data.discount = validatedData.discount;
+        }
+        if (validatedData.notes !== undefined) {
+            data.notes = validatedData.notes;
+        }
+        if (validatedData.terms !== undefined) {
+            data.terms = validatedData.terms;
         }
 
-        if (items && items.length > 0) {
-            const subtotal = items.reduce(
-                (sum: number, item: { quantity: number; unitPrice: number }) =>
-                    sum + item.quantity * item.unitPrice,
+        if (validatedData.items && validatedData.items.length > 0) {
+            const subtotal = validatedData.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
                 0
             );
-            const taxRate = updateData.taxRate || existing.taxRate;
+            const taxRate = validatedData.taxRate || existing.taxRate;
             const taxAmount = subtotal * (taxRate / 100);
-            const discount = updateData.discount || existing.discount;
-            updateData.subtotal = subtotal;
-            updateData.taxAmount = taxAmount;
-            updateData.total = subtotal + taxAmount - discount;
+            const discount = validatedData.discount || existing.discount;
+            data.subtotal = subtotal;
+            data.taxAmount = taxAmount;
+            data.total = subtotal + taxAmount - discount;
 
             await prisma.quotationItem.deleteMany({ where: { quotationId: id } });
             await prisma.quotationItem.createMany({
-                data: items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                data: validatedData.items.map((item) => ({
                     quotationId: id,
                     description: item.description,
                     quantity: item.quantity,
@@ -217,9 +238,11 @@ export async function PUT(request: Request) {
 
         const quotation = await prisma.quotation.update({
             where: { id },
-            data: updateData,
+            data,
             include: { items: true, contact: true },
         });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Quotation', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: quotation });
     } catch (error: unknown) {
@@ -233,7 +256,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -253,6 +276,9 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.quotation.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Quotation', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

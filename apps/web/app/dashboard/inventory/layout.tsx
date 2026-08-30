@@ -10,23 +10,25 @@ import {
     Factory,
     type LucideIcon,
 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface TabItem {
     href: string
-    label: string
+    labelKey: string
     icon: LucideIcon
 }
 
 const inventoryTabs: TabItem[] = [
-    { href: '/dashboard/inventory', label: 'Ringkasan', icon: BarChart3 },
-    { href: '/dashboard/inventory/products', label: 'Produk', icon: Package },
-    { href: '/dashboard/inventory/stock', label: 'Stok', icon: ClipboardList },
-    { href: '/dashboard/inventory/categories', label: 'Kategori', icon: Tag },
-    { href: '/dashboard/inventory/suppliers', label: 'Supplier', icon: Factory },
+    { href: '/dashboard/inventory', labelKey: 'inventory.layout.tabs.overview', icon: BarChart3 },
+    { href: '/dashboard/inventory/products', labelKey: 'inventory.layout.tabs.products', icon: Package },
+    { href: '/dashboard/inventory/stock', labelKey: 'inventory.layout.tabs.stock', icon: ClipboardList },
+    { href: '/dashboard/inventory/categories', labelKey: 'inventory.layout.tabs.categories', icon: Tag },
+    { href: '/dashboard/inventory/suppliers', labelKey: 'inventory.layout.tabs.suppliers', icon: Factory },
 ]
 
 export default function InventoryLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const { t } = useTranslation()
 
     return (
         <div className="space-y-6">
@@ -45,7 +47,7 @@ export default function InventoryLayout({ children }: { children: React.ReactNod
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
-                                {tab.label}
+                                {t(tab.labelKey)}
                             </Link>
                         )
                     })}

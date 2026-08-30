@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
 
 export async function GET(request: Request) {
     try {
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { tenantId } = await requireMutateAuth();
         const body = await request.json();
 
         if (!body.employeeId || !body.date) {
@@ -222,7 +222,7 @@ export async function PATCH(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -285,7 +285,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

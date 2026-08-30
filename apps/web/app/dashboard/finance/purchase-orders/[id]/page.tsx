@@ -119,7 +119,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.purchaseOrdersDetail.supplierName')}</p>
-                                <p className="font-medium text-gray-900">{po.supplierName}</p>
+                                <Link href="/dashboard/inventory/suppliers" className="font-medium text-blue-600 hover:underline">{po.supplierName}</Link>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.purchaseOrdersDetail.email')}</p>

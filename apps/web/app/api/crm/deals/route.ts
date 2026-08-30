@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createDealSchema, updateDealSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:deals:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requireAuth();
         const { searchParams } = new URL(request.url);
         const stage = searchParams.get('stage');
@@ -78,27 +89,39 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:deals:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.title) {
+        const validation = createDealSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Deal title is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
+        const validatedData = validation.data;
+
         const deal = await prisma.deal.create({
             data: {
                 tenantId: tenantId,
-                title: body.title,
-                value: body.value || 0,
-                stage: (body.stage || 'DISCOVERY').toUpperCase().replace(' ', '_'),
-                probability: body.probability || 0,
-                closeDate: body.closeDate ? new Date(body.closeDate) : null,
-                notes: body.notes || null,
-                contactId: body.contactId || null,
-                leadId: body.leadId || null,
+                title: validatedData.title,
+                value: validatedData.value || 0,
+                stage: (validatedData.stage || 'DISCOVERY').toUpperCase().replace(' ', '_'),
+                probability: validatedData.probability || 0,
+                closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null,
+                notes: validatedData.notes || null,
+                contactId: validatedData.contactId || null,
+                leadId: validatedData.leadId || null,
             },
             include: {
                 contact: { select: { id: true, name: true } },
@@ -118,16 +141,26 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
+
+        const validation = updateDealSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const existing = await prisma.deal.findFirst({
             where: { id, tenantId: tenantId },
@@ -135,7 +168,7 @@ export async function PUT(request: Request) {
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Deal not found' },
+                { success: false, error: 'Deal tidak ditemukan' },
                 { status: 404 }
             );
         }
@@ -143,18 +176,18 @@ export async function PUT(request: Request) {
         const deal = await prisma.deal.update({
             where: { id },
             data: {
-                ...(typeof updateData.title === 'string' && { title: updateData.title }),
-                ...(typeof updateData.value === 'number' && { value: updateData.value }),
-                ...(typeof updateData.stage === 'string' && { stage: updateData.stage.toUpperCase().replace(' ', '_') }),
-                ...(typeof updateData.probability === 'number' && { probability: updateData.probability }),
-                ...(updateData.closeDate && { closeDate: new Date(updateData.closeDate) }),
-                ...(typeof updateData.notes === 'string' && { notes: updateData.notes }),
-                ...(typeof updateData.contactId === 'string' && { contactId: updateData.contactId }),
-                ...(typeof updateData.leadId === 'string' && { leadId: updateData.leadId }),
+                ...(validatedData.title !== undefined && { title: validatedData.title }),
+                ...(validatedData.value !== undefined && { value: validatedData.value }),
+                ...(validatedData.stage !== undefined && { stage: validatedData.stage.toUpperCase().replace(' ', '_') }),
+                ...(validatedData.probability !== undefined && { probability: validatedData.probability }),
+                ...(validatedData.closeDate !== undefined && { closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null }),
+                ...(validatedData.notes !== undefined && { notes: validatedData.notes }),
+                ...(validatedData.contactId !== undefined && { contactId: validatedData.contactId }),
+                ...(validatedData.leadId !== undefined && { leadId: validatedData.leadId }),
             },
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: updateData as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: validatedData as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: deal });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
@@ -167,7 +200,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

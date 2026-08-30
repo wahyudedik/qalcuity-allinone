@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
 
 export default function SettingsLayout({
@@ -10,7 +12,35 @@ export default function SettingsLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+    const router = useRouter()
+    const { data: session, status } = useSession()
     const { t } = useTranslation()
+
+    // ─── Role Check: Hanya ADMIN+ yang bisa mengakses Settings ────────────────
+    useEffect(() => {
+        if (status === 'loading') return
+        const role = session?.user?.role
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            router.push('/dashboard')
+        }
+    }, [session, status, router])
+
+    // Tampilkan loading sambil mengecek session
+    if (status === 'loading') {
+        return (
+            <div className="p-6">
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="h-64 bg-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        )
+    }
+
+    const role = session?.user?.role
+    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        return null
+    }
 
     const settingsTabs = [
         {

@@ -8,6 +8,7 @@ import { getInitials } from "@/lib/utils";
 import { SearchModal } from "@/components/ui/search-modal";
 import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 import { useTranslation } from "@/lib/i18n";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import {
     Menu,
     Search,
@@ -16,7 +17,21 @@ import {
     Bell,
     Settings,
     LogOut,
+    CreditCard,
+    X,
 } from "lucide-react";
+
+interface NotificationItem {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    tenant: { id: string; name: string; email: string };
+    plan: { name: string; price: number };
+    amount: number;
+    isRead: boolean;
+    createdAt: string;
+}
 
 interface HeaderProps {
     title?: string;
@@ -29,6 +44,34 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { isDark, toggleTheme, mounted } = useDarkMode();
     const { t } = useTranslation();
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
+
+    const userRole = session?.user?.role as string | undefined;
+    const isAdmin = userRole === "SUPERADMIN" || userRole === "ADMIN";
+
+    const fetchNotifications = useCallback(async () => {
+        if (!isAdmin) return;
+        try {
+            const [notifRes, statsRes] = await Promise.all([
+                fetch("/api/billing/admin/notifications"),
+                fetch("/api/billing/admin/stats"),
+            ]);
+            const notifData = await notifRes.json();
+            const statsData = await statsRes.json();
+            if (notifData.success) setNotifications(notifData.data);
+            if (statsData.success) setPendingCount(statsData.data.pendingCount);
+        } catch {
+            // Silently fail
+        }
+    }, [isAdmin]);
+
+    useEffect(() => {
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
 
     const handleSearchOpen = useCallback(() => {
         setIsSearchOpen(true);
@@ -117,11 +160,88 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                         )}
                     </button>
 
-                    {/* Notifications */}
-                    <button className="relative rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600">
-                        <Bell className="h-5 w-5" />
-                        <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500"></span>
-                    </button>
+                    {/* Notifications — SUPERADMIN/ADMIN only */}
+                    {isAdmin && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className="relative rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                            >
+                                <Bell className="h-5 w-5" />
+                                {pendingCount > 0 && (
+                                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                        {pendingCount > 9 ? "9+" : pendingCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Notification Dropdown */}
+                            {showNotifications && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setShowNotifications(false)}
+                                    />
+                                    <div className="absolute right-0 top-full mt-1 w-80 sm:w-96 rounded-xl border border-gray-200 bg-white shadow-xl z-50 dark:border-gray-700 dark:bg-gray-800">
+                                        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                                            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                Notifikasi Pembayaran
+                                            </h3>
+                                            <button
+                                                onClick={() => setShowNotifications(false)}
+                                                className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        <div className="max-h-80 overflow-y-auto">
+                                            {notifications.length === 0 ? (
+                                                <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                    <Bell className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+                                                    Tidak ada notifikasi baru
+                                                </div>
+                                            ) : (
+                                                notifications.map((notif) => (
+                                                    <Link
+                                                        key={notif.id}
+                                                        href="/dashboard/billing"
+                                                        className="flex items-start gap-3 border-b border-gray-100 px-4 py-3 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-750"
+                                                        onClick={() => setShowNotifications(false)}
+                                                    >
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                                                            <CreditCard className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                                                {notif.title}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                                {notif.message}
+                                                            </p>
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                                {formatDateTime(notif.createdAt)}
+                                                            </p>
+                                                        </div>
+                                                    </Link>
+                                                ))
+                                            )}
+                                        </div>
+                                        {notifications.length > 0 && (
+                                            <div className="border-t border-gray-200 px-4 py-2 dark:border-gray-700">
+                                                <Link
+                                                    href="/dashboard/billing"
+                                                    className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                                    onClick={() => setShowNotifications(false)}
+                                                >
+                                                    Lihat Semua Pembayaran
+                                                </Link>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     {/* User Menu */}
                     <div className="relative group">

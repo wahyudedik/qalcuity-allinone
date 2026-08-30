@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -86,30 +88,35 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.name || !body.sku) {
+        const validation = createProductSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Name and SKU are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
+        const validatedData = validation.data;
 
         const product = await prisma.product.create({
             data: {
-                tenantId: auth.tenantId,
-                sku: body.sku,
-                name: body.name,
-                description: body.description || null,
-                unit: body.unit || 'pcs',
-                price: body.price || 0,
-                cost: body.cost || 0,
-                stock: body.stock || 0,
-                minStock: body.minStock || 0,
-                categoryId: body.categoryId || null,
+                tenantId,
+                sku: validatedData.sku,
+                name: validatedData.name,
+                description: validatedData.description || null,
+                unit: validatedData.unit || 'pcs',
+                price: validatedData.price || 0,
+                cost: validatedData.cost || 0,
+                stock: validatedData.stock || 0,
+                minStock: validatedData.minStock || 0,
+                categoryId: validatedData.categoryId || null,
             },
         });
+
+        // Log audit create
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Product', entityId: product.id, newValues: { sku: product.sku, name: product.name } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: product }, { status: 201 });
     } catch (error) {
@@ -129,24 +136,33 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID harus diisi' },
                 { status: 400 }
             );
         }
 
+        const validation = updateProductSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+        const validatedData = validation.data;
+
         const existing = await prisma.product.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Product not found' },
+                { success: false, error: 'Produk tidak ditemukan' },
                 { status: 404 }
             );
         }
@@ -154,18 +170,21 @@ export async function PUT(request: Request) {
         const product = await prisma.product.update({
             where: { id },
             data: {
-                ...(typeof updateData.sku === 'string' && { sku: updateData.sku }),
-                ...(typeof updateData.name === 'string' && { name: updateData.name }),
-                ...(typeof updateData.description === 'string' && { description: updateData.description }),
-                ...(typeof updateData.unit === 'string' && { unit: updateData.unit }),
-                ...(typeof updateData.price === 'number' && { price: updateData.price }),
-                ...(typeof updateData.cost === 'number' && { cost: updateData.cost }),
-                ...(typeof updateData.stock === 'number' && { stock: updateData.stock }),
-                ...(typeof updateData.minStock === 'number' && { minStock: updateData.minStock }),
-                ...(typeof updateData.categoryId === 'string' && { categoryId: updateData.categoryId }),
-                ...(typeof updateData.isActive === 'boolean' && { isActive: updateData.isActive }),
+                ...(validatedData.sku !== undefined && { sku: validatedData.sku }),
+                ...(validatedData.name !== undefined && { name: validatedData.name }),
+                ...(validatedData.description !== undefined && { description: validatedData.description }),
+                ...(validatedData.unit !== undefined && { unit: validatedData.unit }),
+                ...(validatedData.price !== undefined && { price: validatedData.price }),
+                ...(validatedData.cost !== undefined && { cost: validatedData.cost }),
+                ...(validatedData.stock !== undefined && { stock: validatedData.stock }),
+                ...(validatedData.minStock !== undefined && { minStock: validatedData.minStock }),
+                ...(validatedData.categoryId !== undefined && { categoryId: validatedData.categoryId }),
+                ...(validatedData.isActive !== undefined && { isActive: validatedData.isActive }),
             },
         });
+
+        // Log audit update
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Product', entityId: id, newValues: updateData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: product });
     } catch (error) {
@@ -179,7 +198,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -191,7 +210,7 @@ export async function DELETE(request: Request) {
         }
 
         const existing = await prisma.product.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -202,6 +221,9 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.product.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Product', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

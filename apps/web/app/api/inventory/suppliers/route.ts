@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { createSupplierSchema, updateSupplierSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -75,29 +77,34 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.name) {
+        const validation = createSupplierSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Name is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
+        const validatedData = validation.data;
 
         const supplier = await prisma.supplier.create({
             data: {
                 tenantId,
-                name: body.name,
-                contactPerson: body.contactPerson || null,
-                email: body.email || null,
-                phone: body.phone || null,
-                address: body.address || null,
-                city: body.city || null,
-                rating: body.rating || 0,
-                notes: body.notes || null,
+                name: validatedData.name,
+                contactPerson: validatedData.contactPerson || null,
+                email: validatedData.email || null,
+                phone: validatedData.phone || null,
+                address: validatedData.address || null,
+                city: validatedData.city || null,
+                rating: validatedData.rating || 0,
+                notes: validatedData.notes || null,
             },
         });
+
+        // Log audit create
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Supplier', entityId: supplier.id, newValues: { name: supplier.name } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: supplier }, { status: 201 });
     } catch (error: unknown) {
@@ -111,42 +118,54 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID harus diisi' },
                 { status: 400 }
             );
         }
+
+        const validation = updateSupplierSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+        const validatedData = validation.data;
 
         const existing = await prisma.supplier.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Supplier not found' },
+                { success: false, error: 'Supplier tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         const data: Record<string, unknown> = {};
-        if (typeof updateData.name === 'string') data.name = updateData.name;
-        if (typeof updateData.contactPerson === 'string') data.contactPerson = updateData.contactPerson;
-        if (typeof updateData.email === 'string') data.email = updateData.email;
-        if (typeof updateData.phone === 'string') data.phone = updateData.phone;
-        if (typeof updateData.address === 'string') data.address = updateData.address;
-        if (typeof updateData.city === 'string') data.city = updateData.city;
-        if (typeof updateData.rating === 'number') data.rating = updateData.rating;
-        if (typeof updateData.notes === 'string') data.notes = updateData.notes;
-        if (typeof updateData.isActive === 'boolean') data.isActive = updateData.isActive;
+        if (validatedData.name !== undefined) data.name = validatedData.name;
+        if (validatedData.contactPerson !== undefined) data.contactPerson = validatedData.contactPerson;
+        if (validatedData.email !== undefined) data.email = validatedData.email;
+        if (validatedData.phone !== undefined) data.phone = validatedData.phone;
+        if (validatedData.address !== undefined) data.address = validatedData.address;
+        if (validatedData.city !== undefined) data.city = validatedData.city;
+        if (validatedData.rating !== undefined) data.rating = validatedData.rating;
+        if (validatedData.notes !== undefined) data.notes = validatedData.notes;
+        if (validatedData.isActive !== undefined) data.isActive = validatedData.isActive;
 
         const supplier = await prisma.supplier.update({
             where: { id },
             data,
         });
+
+        // Log audit update
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Supplier', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: supplier });
     } catch (error: unknown) {
@@ -160,7 +179,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -191,6 +210,8 @@ export async function DELETE(request: Request) {
                 where: { id },
                 data: { isActive: false },
             });
+            // Log audit soft delete
+            void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Supplier', entityId: id, oldValues: { isActive: true } as Record<string, unknown>, newValues: { isActive: false } as Record<string, unknown>, request });
             return NextResponse.json({
                 success: true,
                 data: null,
@@ -199,6 +220,9 @@ export async function DELETE(request: Request) {
         }
 
         await prisma.supplier.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Supplier', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

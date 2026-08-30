@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { updateSupplierSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(
     request: Request,
@@ -66,35 +68,47 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
+
+        const validation = updateSupplierSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+        const validatedData = validation.data;
 
         const existing = await prisma.supplier.findFirst({
             where: { id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Supplier not found' },
+                { success: false, error: 'Supplier tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         const data: Record<string, unknown> = {};
-        if (typeof body.name === 'string') data.name = body.name;
-        if (typeof body.contactPerson === 'string') data.contactPerson = body.contactPerson;
-        if (typeof body.email === 'string') data.email = body.email;
-        if (typeof body.phone === 'string') data.phone = body.phone;
-        if (typeof body.address === 'string') data.address = body.address;
-        if (typeof body.city === 'string') data.city = body.city;
-        if (typeof body.rating === 'number') data.rating = body.rating;
-        if (typeof body.notes === 'string') data.notes = body.notes;
-        if (typeof body.isActive === 'boolean') data.isActive = body.isActive;
+        if (validatedData.name !== undefined) data.name = validatedData.name;
+        if (validatedData.contactPerson !== undefined) data.contactPerson = validatedData.contactPerson;
+        if (validatedData.email !== undefined) data.email = validatedData.email;
+        if (validatedData.phone !== undefined) data.phone = validatedData.phone;
+        if (validatedData.address !== undefined) data.address = validatedData.address;
+        if (validatedData.city !== undefined) data.city = validatedData.city;
+        if (validatedData.rating !== undefined) data.rating = validatedData.rating;
+        if (validatedData.notes !== undefined) data.notes = validatedData.notes;
+        if (validatedData.isActive !== undefined) data.isActive = validatedData.isActive;
 
         const updated = await prisma.supplier.update({
             where: { id },
             data,
         });
+
+        // Log audit update
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Supplier', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
@@ -111,7 +125,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.supplier.findFirst({
@@ -133,6 +147,8 @@ export async function DELETE(
                 where: { id },
                 data: { isActive: false },
             });
+            // Log audit soft delete
+            void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Supplier', entityId: id, oldValues: { isActive: true } as Record<string, unknown>, newValues: { isActive: false } as Record<string, unknown>, request });
             return NextResponse.json({
                 success: true,
                 data: null,
@@ -141,6 +157,9 @@ export async function DELETE(
         }
 
         await prisma.supplier.delete({ where: { id } });
+
+        // Log audit delete
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Supplier', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:invoices:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const { tenantId } = await requireAuth();
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
@@ -86,30 +97,34 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:invoices:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.contactId && !body.customerName) {
+        const validation = createInvoiceSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Customer is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        if (!body.items || body.items.length === 0) {
-            return NextResponse.json(
-                { success: false, error: 'At least one item is required' },
-                { status: 400 }
-            );
-        }
+        const validatedData = validation.data;
 
         // Calculate totals
-        const subtotal = body.items.reduce(
-            (sum: number, item: { quantity: number; unitPrice: number }) =>
-                sum + item.quantity * item.unitPrice,
+        const subtotal = validatedData.items.reduce(
+            (sum, item) => sum + item.quantity * item.unitPrice,
             0
         );
-        const taxRate = body.taxRate || 11;
+        const taxRate = validatedData.taxRate || 11;
         const taxAmount = subtotal * (taxRate / 100);
         const total = subtotal + taxAmount;
 
@@ -120,15 +135,15 @@ export async function POST(request: Request) {
             const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
             // If no contactId but customerName provided, create contact first
-            let contactId = body.contactId;
-            if (!contactId && body.customerName) {
+            let contactId = validatedData.contactId;
+            if (!contactId && validatedData.customerName) {
                 const contact = await tx.contact.create({
                     data: {
-                        name: body.customerName,
+                        name: validatedData.customerName,
                         type: 'CUSTOMER',
-                        email: body.customerEmail || undefined,
-                        phone: body.customerPhone || undefined,
-                        address: body.customerAddress || undefined,
+                        email: validatedData.customerEmail || undefined,
+                        phone: validatedData.customerPhone || undefined,
+                        address: validatedData.customerAddress || undefined,
                         tenantId,
                     },
                 });
@@ -140,8 +155,8 @@ export async function POST(request: Request) {
                 data: {
                     invoiceNumber,
                     status: 'DRAFT',
-                    dueDate: new Date(body.dueDate || Date.now() + 30 * 24 * 60 * 60 * 1000),
-                    notes: body.notes || '',
+                    dueDate: new Date(validatedData.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()),
+                    notes: validatedData.notes || '',
                     subtotal,
                     taxRate,
                     taxAmount,
@@ -149,7 +164,7 @@ export async function POST(request: Request) {
                     tenantId,
                     contactId,
                     items: {
-                        create: body.items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                        create: validatedData.items.map((item) => ({
                             description: item.description,
                             quantity: item.quantity,
                             unitPrice: item.unitPrice,
@@ -175,52 +190,68 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, items, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
+
+        const validation = updateInvoiceSchema.safeParse({ ...updateData, items });
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         // Verify invoice belongs to tenant
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Invoice not found' },
+                { success: false, error: 'Invoice tidak ditemukan' },
                 { status: 404 }
             );
         }
 
-        // If status is provided, uppercase it
-        if (updateData.status) {
-            updateData.status = updateData.status.toUpperCase();
+        // Build safe update data
+        const data: Record<string, unknown> = {};
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
         }
-        if (updateData.dueDate) {
-            updateData.dueDate = new Date(updateData.dueDate);
+        if (validatedData.dueDate !== undefined) {
+            data.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
+        }
+        if (validatedData.taxRate !== undefined) {
+            data.taxRate = validatedData.taxRate;
+        }
+        if (validatedData.notes !== undefined) {
+            data.notes = validatedData.notes;
         }
 
         // If items changed, recalculate and use transaction for atomicity
-        if (items && items.length > 0) {
-            const subtotal = items.reduce(
-                (sum: number, item: { quantity: number; unitPrice: number }) =>
-                    sum + item.quantity * item.unitPrice,
+        if (validatedData.items && validatedData.items.length > 0) {
+            const subtotal = validatedData.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
                 0
             );
-            const taxRate = updateData.taxRate || existing.taxRate;
+            const taxRate = validatedData.taxRate || existing.taxRate;
             const taxAmount = subtotal * (taxRate / 100);
-            updateData.subtotal = subtotal;
-            updateData.taxAmount = taxAmount;
-            updateData.total = subtotal + taxAmount;
+            data.subtotal = subtotal;
+            data.taxAmount = taxAmount;
+            data.total = subtotal + taxAmount;
 
             // Delete old items and create new ones in transaction
             await prisma.$transaction(async (tx) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
-                    data: items.map((item: { description: string; quantity: number; unitPrice: number; total?: number }) => ({
+                    data: (validatedData.items ?? []).map((item) => ({
                         invoiceId: id,
                         description: item.description,
                         quantity: item.quantity,
@@ -233,11 +264,11 @@ export async function PUT(request: Request) {
 
         const invoice = await prisma.invoice.update({
             where: { id },
-            data: updateData,
+            data,
             include: { items: true, contact: true },
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: updateData as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: invoice });
     } catch (error: unknown) {
@@ -251,7 +282,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

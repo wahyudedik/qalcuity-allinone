@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 
 export async function GET() {
     try {
@@ -64,7 +65,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
     try {
-        const auth = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
         const updateData: Record<string, string> = {};
@@ -83,7 +84,7 @@ export async function PUT(request: Request) {
         }
 
         const user = await prisma.user.update({
-            where: { id: auth.userId },
+            where: { id: userId },
             data: updateData,
             select: {
                 id: true,
@@ -92,6 +93,9 @@ export async function PUT(request: Request) {
                 role: true,
             },
         });
+
+        // Log audit update profil
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'User', entityId: user.id, newValues: updateData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: user });
     } catch (error) {

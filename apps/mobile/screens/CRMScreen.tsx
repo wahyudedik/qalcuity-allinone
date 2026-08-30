@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,8 +12,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import { fetchLeads, fetchDeals, fetchContacts, formatCurrency, LeadData, DealData, ContactData } from '../lib/api';
 import LoadingView from '../components/LoadingView';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
+import SearchBar from '../components/SearchBar';
 
 type Tab = 'leads' | 'deals' | 'contacts';
 type CRMScreenProp = NativeStackNavigationProp<RootStackParamList, 'CRM'>;
@@ -30,6 +32,8 @@ export default function CRMScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
 
     const loadData = async () => {
         try {
@@ -71,15 +75,70 @@ export default function CRMScreen({ navigation }: Props) {
         }
     };
 
-    if (loading) return <LoadingView message="Memuat data CRM..." />;
+    // Filtered leads
+    const filteredLeads = useMemo(() => {
+        let result = leads;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (l) => l.name?.toLowerCase().includes(q) || l.source?.toLowerCase().includes(q)
+            );
+        }
+        if (statusFilter !== 'all') {
+            result = result.filter((l) => l.status === statusFilter);
+        }
+        return result;
+    }, [leads, searchQuery, statusFilter]);
+
+    // Filtered deals
+    const filteredDeals = useMemo(() => {
+        let result = deals;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (d) => d.name?.toLowerCase().includes(q) || d.stage?.toLowerCase().includes(q)
+            );
+        }
+        return result;
+    }, [deals, searchQuery]);
+
+    // Filtered contacts
+    const filteredContacts = useMemo(() => {
+        if (!searchQuery) return contacts;
+        const q = searchQuery.toLowerCase();
+        return contacts.filter(
+            (c) =>
+                c.name?.toLowerCase().includes(q) ||
+                c.company?.toLowerCase().includes(q) ||
+                c.position?.toLowerCase().includes(q)
+        );
+    }, [contacts, searchQuery]);
+
+    const leadStatusFilters = [
+        { label: 'Semua', value: 'all' },
+        { label: 'New', value: 'new' },
+        { label: 'Qualified', value: 'qualified' },
+        { label: 'Proposal', value: 'proposal' },
+        { label: 'Negotiation', value: 'negotiation' },
+    ];
+
+    if (loading) return <LoadingSkeleton variant="list" rows={5} />;
     if (error) return <ErrorView message={error} onRetry={loadData} />;
 
     const renderLeads = () => (
         <View style={styles.section}>
-            {leads.length === 0 ? (
-                <EmptyView icon="🎯" title="Belum ada leads" message="Leads akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari leads..."
+                filterOptions={leadStatusFilters}
+                activeFilter={statusFilter}
+                onFilterChange={setStatusFilter}
+            />
+            {filteredLeads.length === 0 ? (
+                <EmptyView title="Tidak ada leads" message={searchQuery ? 'Tidak ditemukan leads yang sesuai' : 'Leads akan muncul di sini'} />
             ) : (
-                leads.map((lead) => (
+                filteredLeads.map((lead) => (
                     <TouchableOpacity
                         key={lead.id}
                         style={styles.listItem}
@@ -87,8 +146,8 @@ export default function CRMScreen({ navigation }: Props) {
                         activeOpacity={0.7}
                     >
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{lead.name}</Text>
-                            <Text style={styles.listItemSubtitle}>{lead.source} • {formatCurrency(lead.value)}</Text>
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{lead.name}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{lead.source} · {formatCurrency(lead.value)}</Text>
                         </View>
                         <View style={styles.listItemRight}>
                             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(lead.status) + '20' }]}>
@@ -105,10 +164,15 @@ export default function CRMScreen({ navigation }: Props) {
 
     const renderDeals = () => (
         <View style={styles.section}>
-            {deals.length === 0 ? (
-                <EmptyView icon="🤝" title="Belum ada deals" message="Deals akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari deals..."
+            />
+            {filteredDeals.length === 0 ? (
+                <EmptyView title="Tidak ada deals" message={searchQuery ? 'Tidak ditemukan deals yang sesuai' : 'Deals akan muncul di sini'} />
             ) : (
-                deals.map((deal) => (
+                filteredDeals.map((deal) => (
                     <TouchableOpacity
                         key={deal.id}
                         style={styles.listItem}
@@ -116,11 +180,11 @@ export default function CRMScreen({ navigation }: Props) {
                         activeOpacity={0.7}
                     >
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{deal.name}</Text>
-                            <Text style={styles.listItemSubtitle}>{deal.stage} • Win Rate: {deal.probability}%</Text>
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{deal.name}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{deal.stage} · Win Rate: {deal.probability}%</Text>
                         </View>
                         <View style={styles.listItemRight}>
-                            <Text style={styles.listItemAmount}>{formatCurrency(deal.value)}</Text>
+                            <Text style={styles.listItemAmount} numberOfLines={1}>{formatCurrency(deal.value)}</Text>
                         </View>
                     </TouchableOpacity>
                 ))
@@ -130,10 +194,15 @@ export default function CRMScreen({ navigation }: Props) {
 
     const renderContacts = () => (
         <View style={styles.section}>
-            {contacts.length === 0 ? (
-                <EmptyView icon="👤" title="Belum ada kontak" message="Kontak akan muncul di sini" />
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Cari kontak..."
+            />
+            {filteredContacts.length === 0 ? (
+                <EmptyView title="Tidak ada kontak" message={searchQuery ? 'Tidak ditemukan kontak yang sesuai' : 'Kontak akan muncul di sini'} />
             ) : (
-                contacts.map((contact) => (
+                filteredContacts.map((contact) => (
                     <TouchableOpacity
                         key={contact.id}
                         style={styles.listItem}
@@ -144,8 +213,8 @@ export default function CRMScreen({ navigation }: Props) {
                             <Text style={styles.avatarText}>{contact.name.charAt(0)}</Text>
                         </View>
                         <View style={styles.listItemContent}>
-                            <Text style={styles.listItemTitle}>{contact.name}</Text>
-                            <Text style={styles.listItemSubtitle}>{contact.position || contact.type} • {contact.company}</Text>
+                            <Text style={styles.listItemTitle} numberOfLines={1}>{contact.name}</Text>
+                            <Text style={styles.listItemSubtitle} numberOfLines={1}>{contact.position || contact.type} · {contact.company}</Text>
                         </View>
                     </TouchableOpacity>
                 ))
@@ -161,7 +230,7 @@ export default function CRMScreen({ navigation }: Props) {
                     <TouchableOpacity
                         key={tab}
                         style={[styles.tab, activeTab === tab && styles.activeTab]}
-                        onPress={() => setActiveTab(tab)}
+                        onPress={() => { setActiveTab(tab); setSearchQuery(''); setStatusFilter('all'); }}
                     >
                         <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -172,7 +241,8 @@ export default function CRMScreen({ navigation }: Props) {
 
             <ScrollView
                 style={styles.scrollView}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+                showsVerticalScrollIndicator={false}
             >
                 {activeTab === 'leads' && renderLeads()}
                 {activeTab === 'deals' && renderDeals()}

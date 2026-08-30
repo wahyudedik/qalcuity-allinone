@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createPaymentSchema, updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:payments:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const { tenantId } = await requireAuth();
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
@@ -94,31 +105,29 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:payments:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
 
-        if (!body.amount || !body.method) {
+        const validation = createPaymentSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Amount and method are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        const amount = parseFloat(String(body.amount));
-        if (isNaN(amount) || amount <= 0) {
-            return NextResponse.json(
-                { success: false, error: 'Amount must be a positive number' },
-                { status: 400 }
-            );
-        }
-
-        const status = (body.status || 'PENDING').toUpperCase();
-        if (!['COMPLETED', 'PENDING', 'FAILED'].includes(status)) {
-            return NextResponse.json(
-                { success: false, error: 'Status must be COMPLETED, PENDING, or FAILED' },
-                { status: 400 }
-            );
-        }
+        const validatedData = validation.data;
+        const amount = validatedData.amount;
+        const status = (validatedData.status || 'PENDING').toUpperCase();
 
         const payment = await prisma.$transaction(async (tx) => {
             const count = await tx.payment.count({ where: { tenantId } });
@@ -128,13 +137,13 @@ export async function POST(request: Request) {
                 data: {
                     paymentNumber,
                     amount,
-                    paymentDate: body.date ? new Date(body.date) : new Date(),
-                    method: (body.method || 'BANK_TRANSFER').toUpperCase().replace('-', '_'),
+                    paymentDate: validatedData.date ? new Date(validatedData.date) : new Date(),
+                    method: validatedData.method.toUpperCase().replace('-', '_'),
                     status,
-                    type: (body.type || 'INCOME').toUpperCase(),
-                    reference: body.reference || '',
-                    notes: body.notes || '',
-                    invoiceId: body.invoiceId || undefined,
+                    type: (validatedData.type || 'INCOME').toUpperCase(),
+                    reference: validatedData.reference || '',
+                    notes: validatedData.notes || '',
+                    invoiceId: validatedData.invoiceId || undefined,
                     tenantId,
                 },
                 include: {
@@ -145,9 +154,9 @@ export async function POST(request: Request) {
             });
 
             // Update invoice status if payment is linked to an invoice and is COMPLETED
-            if (body.invoiceId && status === 'COMPLETED') {
+            if (validatedData.invoiceId && status === 'COMPLETED') {
                 const invoice = await tx.invoice.findUnique({
-                    where: { id: body.invoiceId },
+                    where: { id: validatedData.invoiceId },
                     include: { payments: { where: { status: 'COMPLETED' } } },
                 });
 
@@ -155,7 +164,7 @@ export async function POST(request: Request) {
                     const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0) + amount;
                     const newInvoiceStatus = totalPaid >= invoice.total ? 'PAID' : invoice.status;
                     await tx.invoice.update({
-                        where: { id: body.invoiceId },
+                        where: { id: validatedData.invoiceId },
                         data: { status: newInvoiceStatus },
                     });
                 }
@@ -178,47 +187,57 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const body = await request.json();
         const { id, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: 'ID wajib diisi' },
                 { status: 400 }
             );
         }
 
+        const validation = updatePaymentSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
         const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payment not found' },
+                { success: false, error: 'Payment tidak ditemukan' },
                 { status: 404 }
             );
         }
 
         // Build safe update data
         const data: Record<string, unknown> = {};
-        if (typeof updateData.status === 'string') {
-            data.status = updateData.status.toUpperCase();
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
         }
-        if (typeof updateData.method === 'string') {
-            data.method = updateData.method.toUpperCase().replace('-', '_');
+        if (validatedData.method) {
+            data.method = validatedData.method.toUpperCase().replace('-', '_');
         }
-        if (typeof updateData.amount === 'number') {
-            data.amount = updateData.amount;
+        if (validatedData.amount !== undefined) {
+            data.amount = validatedData.amount;
         }
-        if (typeof updateData.type === 'string') {
-            data.type = updateData.type.toUpperCase();
+        if (validatedData.type) {
+            data.type = validatedData.type.toUpperCase();
         }
-        if (typeof updateData.reference === 'string') {
-            data.reference = updateData.reference;
+        if (validatedData.reference !== undefined) {
+            data.reference = validatedData.reference;
         }
-        if (typeof updateData.notes === 'string') {
-            data.notes = updateData.notes;
+        if (validatedData.notes !== undefined) {
+            data.notes = validatedData.notes;
         }
-        if (updateData.date) {
-            data.paymentDate = new Date(String(updateData.date));
+        if (validatedData.date !== undefined) {
+            data.paymentDate = validatedData.date ? new Date(validatedData.date) : null;
         }
 
         const payment = await prisma.$transaction(async (tx) => {
@@ -268,7 +287,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth();
+        const { userId, tenantId } = await requireMutateAuth();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

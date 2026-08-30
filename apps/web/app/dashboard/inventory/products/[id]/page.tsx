@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
+import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 interface ProductDetail {
     id: string
@@ -21,16 +24,21 @@ interface ProductDetail {
     createdAt: string
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    active: { label: 'Aktif', color: 'bg-green-100 text-green-800' },
-    inactive: { label: 'Tidak Aktif', color: 'bg-red-100 text-red-800' },
-    draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
+const statusConfig: Record<string, { color: string }> = {
+    active: { color: 'bg-green-100 text-green-800' },
+    inactive: { color: 'bg-red-100 text-red-800' },
+    draft: { color: 'bg-gray-100 text-gray-800' },
 }
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
+    const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
+    const router = useRouter()
     const [product, setProduct] = useState<ProductDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -40,16 +48,32 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 if (data.success) {
                     setProduct(data.data)
                 } else {
-                    setError('Produk tidak ditemukan')
+                    setError(t('inventory.productDetail.error'))
                 }
             } catch {
-                setError('Gagal memuat data produk')
+                setError(t('inventory.productDetail.errorLoad'))
             } finally {
                 setLoading(false)
             }
         }
         fetchProduct()
-    }, [params.id])
+    }, [params.id, t])
+
+    const handleDelete = async () => {
+        if (!window.confirm(t('inventory.productDetail.confirmDelete'))) return
+        try {
+            const res = await fetch(`/api/inventory/products/${params.id}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('inventory.productDetail.deleteSuccess'), type: 'success' })
+                router.push('/dashboard/inventory/products')
+            } else {
+                setToast({ message: data.error || t('inventory.productDetail.deleteError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('inventory.productDetail.deleteError'), type: 'error' })
+        }
+    }
 
     if (loading) {
         return (
@@ -64,21 +88,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         return (
             <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
-                    <p className="text-lg text-gray-600">{error || 'Data tidak tersedia'}</p>
+                    <p className="text-lg text-gray-600">{error || t('inventory.productDetail.error')}</p>
                     <Link href="/dashboard/inventory/products" className="mt-4 inline-block text-blue-600 hover:text-blue-800">
-                        ← Kembali ke Produk
+                        ← {t('inventory.productDetail.backToProducts')}
                     </Link>
                 </div>
             </div>
         )
     }
 
-    const statusInfo = statusConfig[product.status] || { label: product.status, color: 'bg-gray-100 text-gray-800' }
+    const statusInfo = statusConfig[product.status] || { color: 'bg-gray-100 text-gray-800' }
     const stockStatus = product.stock <= 0
-        ? { label: 'Habis', color: 'text-red-600', bg: 'bg-red-50' }
+        ? { label: t('inventory.productDetail.stockOut'), color: 'text-red-600', bg: 'bg-red-50' }
         : product.stock <= product.minStock
-            ? { label: 'Menipis', color: 'text-yellow-600', bg: 'bg-yellow-50' }
-            : { label: 'Aman', color: 'text-green-600', bg: 'bg-green-50' }
+            ? { label: t('inventory.productDetail.stockLow'), color: 'text-yellow-600', bg: 'bg-yellow-50' }
+            : { label: t('inventory.productDetail.stockOk'), color: 'text-green-600', bg: 'bg-green-50' }
     const margin = product.price > 0 ? ((product.price - product.cost) / product.price * 100).toFixed(1) : '0'
 
     return (
@@ -87,16 +111,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <div>
                 <Link href="/dashboard/inventory/products" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                     <ArrowLeft className="h-4 w-4" />
-                    Kembali ke Produk
+                    {t('inventory.productDetail.backToProducts')}
                 </Link>
-                <div className="mt-4 flex items-center justify-between">
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
-                        <p className="text-sm text-gray-500">SKU: {product.sku} • {product.category}</p>
+                        <p className="text-sm text-gray-500">{t('inventory.productDetail.sku')}: {product.sku} • {product.category}</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${statusInfo.color}`}>
-                            {statusInfo.label}
+                            {t(`inventory.products.${product.status}`)}
                         </span>
                     </div>
                 </div>
@@ -107,28 +131,28 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 <div className="lg:col-span-2 space-y-6">
                     {/* Product Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Informasi Produk</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('inventory.productDetail.productInfo')}</h3>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <p className="text-sm text-gray-500">SKU</p>
+                                <p className="text-sm text-gray-500">{t('inventory.productDetail.sku')}</p>
                                 <p className="font-mono font-medium text-gray-900">{product.sku}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Kategori</p>
-                                <p className="font-medium text-gray-900">{product.category}</p>
+                                <p className="text-sm text-gray-500">{t('inventory.productDetail.category')}</p>
+                                <Link href="/dashboard/inventory/categories" className="font-medium text-blue-600 hover:underline">{product.category}</Link>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Satuan</p>
+                                <p className="text-sm text-gray-500">{t('inventory.productDetail.unit')}</p>
                                 <p className="font-medium text-gray-900">{product.unit}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Supplier</p>
-                                <p className="font-medium text-gray-900">{product.supplier}</p>
+                                <p className="text-sm text-gray-500">{t('inventory.productDetail.supplier')}</p>
+                                <Link href="/dashboard/inventory/suppliers" className="font-medium text-blue-600 hover:underline">{product.supplier}</Link>
                             </div>
                         </div>
                         {product.description && (
                             <div className="mt-4">
-                                <p className="text-sm text-gray-500">Deskripsi</p>
+                                <p className="text-sm text-gray-500">{t('inventory.productDetail.description')}</p>
                                 <p className="mt-1 text-sm text-gray-700">{product.description}</p>
                             </div>
                         )}
@@ -136,18 +160,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
                     {/* Pricing */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Harga & Biaya</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('inventory.productDetail.pricing')}</h3>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div className="rounded-lg bg-green-50 p-4">
-                                <p className="text-sm text-green-600">Harga Jual</p>
+                                <p className="text-sm text-green-600">{t('inventory.productDetail.sellPrice')}</p>
                                 <p className="text-xl font-bold text-green-700">{formatCurrency(product.price)}</p>
                             </div>
                             <div className="rounded-lg bg-blue-50 p-4">
-                                <p className="text-sm text-blue-600">Harga Beli</p>
+                                <p className="text-sm text-blue-600">{t('inventory.productDetail.buyPrice')}</p>
                                 <p className="text-xl font-bold text-blue-700">{formatCurrency(product.cost)}</p>
                             </div>
                             <div className="rounded-lg bg-purple-50 p-4">
-                                <p className="text-sm text-purple-600">Margin</p>
+                                <p className="text-sm text-purple-600">{t('inventory.productDetail.margin')}</p>
                                 <p className="text-xl font-bold text-purple-700">{margin}%</p>
                             </div>
                         </div>
@@ -158,16 +182,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 <div className="space-y-6">
                     {/* Stock Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Status Stok</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('inventory.productDetail.stockStatus')}</h3>
                         <div className="mt-4">
                             <div className={`rounded-lg p-4 ${stockStatus.bg}`}>
                                 <p className={`text-sm ${stockStatus.color}`}>{stockStatus.label}</p>
                                 <p className="text-3xl font-bold text-gray-900">{product.stock}</p>
-                                <p className="text-sm text-gray-500">{product.unit} tersedia</p>
+                                <p className="text-sm text-gray-500">{product.unit} {t('inventory.productDetail.available')}</p>
                             </div>
                             <div className="mt-4 space-y-2">
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-500">Minimum Stok</span>
+                                    <span className="text-gray-500">{t('inventory.productDetail.minStock')}</span>
                                     <span className="font-medium text-gray-900">{product.minStock} {product.unit}</span>
                                 </div>
                                 <div className="w-full rounded-full bg-gray-200 h-2">
@@ -183,14 +207,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
                     {/* Quick Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Detail</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('inventory.productDetail.detail')}</h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">ID Produk</span>
+                                <span className="text-sm text-gray-500">{t('inventory.productDetail.productId')}</span>
                                 <span className="font-mono text-sm text-gray-900">{product.id}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Tanggal Dibuat</span>
+                                <span className="text-sm text-gray-500">{t('inventory.productDetail.createdAt')}</span>
                                 <span className="text-sm text-gray-900">{formatDate(product.createdAt)}</span>
                             </div>
                         </div>
@@ -198,20 +222,26 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
                     {/* Actions */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Aksi</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('inventory.supplierDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
                             <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                                 <Pencil className="h-4 w-4" />
-                                Edit Produk
+                                {t('inventory.productDetail.edit')}
                             </button>
                             <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                 <Package className="h-4 w-4" />
-                                Restok
+                                {t('inventory.productDetail.restock')}
                             </button>
                             <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                 <ClipboardList className="h-4 w-4" />
-                                Riwayat Stok
+                                {t('inventory.productDetail.stockHistory')}
                             </button>
+                            {canMutate && (
+                                <button onClick={handleDelete} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                                <Trash2 className="h-4 w-4" />
+                                {t('inventory.productDetail.delete')}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

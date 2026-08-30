@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, requireMutateAuth } from '@/lib/session';
 
 export async function GET(
     request: Request,
@@ -57,7 +57,7 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { tenantId } = await requireMutateAuth();
         const { id } = params;
         const body = await request.json();
 
@@ -108,7 +108,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const { tenantId } = await requireMutateAuth();
         const { id } = params;
 
         const existing = await prisma.attendanceRecord.findFirst({

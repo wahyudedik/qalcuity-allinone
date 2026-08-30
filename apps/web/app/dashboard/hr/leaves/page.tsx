@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -19,7 +19,10 @@ import {
     Home,
     Baby,
     Wallet,
+    Trash2,
+    Loader2,
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 interface LeaveRequest {
     id: string
@@ -34,8 +37,61 @@ interface LeaveRequest {
     approvedBy?: string
 }
 
+interface LeaveFormData {
+    type: string
+    startDate: string
+    endDate: string
+    reason: string
+}
+
+interface FormErrors {
+    type?: string
+    startDate?: string
+    endDate?: string
+    reason?: string
+}
+
+function validateLeaveForm(data: LeaveFormData): FormErrors {
+    const errors: FormErrors = {}
+
+    if (!data.type) {
+        errors.type = 'Tipe cuti wajib dipilih'
+    }
+
+    if (!data.startDate) {
+        errors.startDate = 'Tanggal mulai wajib diisi'
+    }
+
+    if (!data.endDate) {
+        errors.endDate = 'Tanggal selesai wajib diisi'
+    } else if (data.startDate && data.endDate) {
+        const start = new Date(data.startDate)
+        const end = new Date(data.endDate)
+        if (end < start) {
+            errors.endDate = 'Tanggal selesai harus setelah tanggal mulai'
+        }
+    }
+
+    if (!data.reason || data.reason.trim().length < 10) {
+        errors.reason = 'Alasan cuti harus minimal 10 karakter'
+    }
+
+    return errors
+}
+
+function calculateDays(start: string, end: string): number {
+    if (!start || !end) return 0
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    const diffTime = endDate.getTime() - startDate.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+    return diffDays > 0 ? diffDays : 0
+}
+
 export default function LeavesPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -43,6 +99,25 @@ export default function LeavesPage() {
     const [filterStatus, setFilterStatus] = useState('all')
     const [filterType, setFilterType] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    // Form modal state
+    const [showForm, setShowForm] = useState(false)
+    const [formData, setFormData] = useState<LeaveFormData>({
+        type: '',
+        startDate: '',
+        endDate: '',
+        reason: '',
+    })
+    const [formErrors, setFormErrors] = useState<FormErrors>({})
+    const [submitting, setSubmitting] = useState(false)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     const leaveTypeConfig = {
         annual: { label: t('hr.leaves.annual') || 'Cuti Tahunan', color: 'bg-blue-100 text-blue-700', icon: Palmtree },
@@ -58,9 +133,10 @@ export default function LeavesPage() {
         rejected: { label: t('hr.leaves.rejected') || 'Ditolak', color: 'bg-red-100 text-red-700' },
     }
 
-    const fetchLeaves = async () => {
+    const fetchLeaves = useCallback(async () => {
         try {
             setLoading(true)
+            setError(null)
             const params = new URLSearchParams()
             if (searchQuery) params.set('search', searchQuery)
             if (filterStatus !== 'all') params.set('status', filterStatus)
@@ -71,17 +147,19 @@ export default function LeavesPage() {
 
             if (data.success) {
                 setLeaveRequests(data.data)
+            } else {
+                setError(data.error || 'Gagal memuat data cuti')
             }
         } catch {
-            setError('Gagal memuat data cuti')
+            setError('Gagal memuat data cuti. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
-    }
+    }, [searchQuery, filterStatus, filterType])
 
     useEffect(() => {
         fetchLeaves()
-    }, [searchQuery, filterStatus, filterType])
+    }, [fetchLeaves])
 
     const filteredRequests = leaveRequests.filter(req => {
         const matchesSearch = req.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,6 +167,63 @@ export default function LeavesPage() {
         const matchesType = filterType === 'all' || req.type === filterType
         return matchesSearch && matchesStatus && matchesType
     })
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus permohonan cuti ini?')) return
+        try {
+            const response = await fetch(`/api/hr/leaves?id=${id}`, { method: 'DELETE' })
+            const result = await response.json()
+            if (result.success) {
+                fetchLeaves()
+                setToast({ message: 'Permohonan cuti berhasil dihapus', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus permohonan cuti', type: 'error' })
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const errors = validateLeaveForm(formData)
+        setFormErrors(errors)
+
+        if (Object.keys(errors).length > 0) return
+
+        setSubmitting(true)
+        try {
+            const res = await fetch('/api/hr/leaves', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...formData,
+                    days: calculateDays(formData.startDate, formData.endDate),
+                }),
+            })
+            const result = await res.json()
+
+            if (result.success) {
+                setShowForm(false)
+                setFormData({ type: '', startDate: '', endDate: '', reason: '' })
+                fetchLeaves()
+                setToast({ message: 'Permohonan cuti berhasil diajukan', type: 'success' })
+            } else {
+                setToast({ message: result.error || 'Gagal mengajukan cuti', type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal mengajukan permohonan cuti', type: 'error' })
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleFormChange = (field: keyof LeaveFormData, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }))
+        if (formErrors[field]) {
+            setFormErrors((prev) => ({ ...prev, [field]: undefined }))
+        }
+    }
 
     const pendingCount = leaveRequests.filter(r => r.status === 'pending').length
     const approvedCount = leaveRequests.filter(r => r.status === 'approved').length
@@ -133,10 +268,19 @@ export default function LeavesPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('hr.leaves.title') || 'Cuti'}</h1>
                     <p className="text-gray-500">{t('hr.leaves.subtitle') || 'Kelola permohonan dan jatah cuti karyawan'}</p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                    <Plus className="h-4 w-4" />
-                    {t('hr.leaves.requestLeave') || 'Ajukan Cuti'}
-                </button>
+                {canMutate && (
+                    <button
+                        onClick={() => {
+                            setFormData({ type: '', startDate: '', endDate: '', reason: '' })
+                            setFormErrors({})
+                            setShowForm(true)
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                        <Plus className="h-4 w-4" />
+                        {t('hr.leaves.requestLeave') || 'Ajukan Cuti'}
+                    </button>
+                )}
             </div>
 
             {/* Stats */}
@@ -162,36 +306,23 @@ export default function LeavesPage() {
             {/* Tabs */}
             <div className="border-b border-gray-200">
                 <nav className="-mb-px flex space-x-1">
-                    <button
-                        onClick={() => setActiveTab('requests')}
-                        className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === 'requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        <span className="flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4" />
-                            {t('hr.leaves.requestsTab') || 'Permohonan Cuti'}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('balance')}
-                        className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === 'balance' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        <span className="flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4" />
-                            {t('hr.leaves.balanceTab') || 'Saldo Cuti'}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('calendar')}
-                        className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === 'calendar' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            {t('hr.leaves.calendarTab') || 'Kalender Cuti'}
-                        </span>
-                    </button>
+                    {[
+                        { key: 'requests' as const, label: t('hr.leaves.requestsTab') || 'Permohonan Cuti', icon: ClipboardList },
+                        { key: 'balance' as const, label: t('hr.leaves.balanceTab') || 'Saldo Cuti', icon: BarChart3 },
+                        { key: 'calendar' as const, label: t('hr.leaves.calendarTab') || 'Kalender Cuti', icon: Calendar },
+                    ].map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <tab.icon className="h-4 w-4" />
+                                {tab.label}
+                            </span>
+                        </button>
+                    ))}
                 </nav>
             </div>
 
@@ -237,7 +368,7 @@ export default function LeavesPage() {
                     {/* Leave Requests List */}
                     <div className="space-y-4">
                         {filteredRequests.map((request) => {
-                            const typeConfig = leaveTypeConfig[request.type]
+                            const typeConfig = leaveTypeConfig[request.type] || leaveTypeConfig.annual
                             const TypeIcon = typeConfig.icon
                             return (
                                 <div key={request.id} className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow">
@@ -257,8 +388,8 @@ export default function LeavesPage() {
                                                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${typeConfig.color}`}>
                                                         {typeConfig.label}
                                                     </span>
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[request.status].color}`}>
-                                                        {statusConfig[request.status].label}
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[request.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                                        {statusConfig[request.status]?.label || request.status}
                                                     </span>
                                                 </div>
                                                 <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
@@ -280,18 +411,26 @@ export default function LeavesPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        {request.status === 'pending' && (
-                                            <div className="flex gap-2 md:flex-col">
-                                                <button className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
-                                                    <Check className="h-4 w-4" />
-                                                    {t('hr.leaves.approve') || 'Setujui'}
+                                        <div className="flex gap-2 md:flex-col">
+                                            {request.status === 'pending' && (
+                                                <>
+                                                    <button className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                                                        <Check className="h-4 w-4" />
+                                                        {t('hr.leaves.approve') || 'Setujui'}
+                                                    </button>
+                                                    <button className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                                                        <X className="h-4 w-4" />
+                                                        {t('hr.leaves.reject') || 'Tolak'}
+                                                    </button>
+                                                </>
+                                            )}
+                                            {canMutate && (
+                                                <button onClick={() => handleDelete(request.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                                                    <Trash2 className="h-4 w-4" />
+                                                    {t('hr.leaves.delete') || 'Hapus'}
                                                 </button>
-                                                <button className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
-                                                    <X className="h-4 w-4" />
-                                                    {t('hr.leaves.reject') || 'Tolak'}
-                                                </button>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )
@@ -324,7 +463,7 @@ export default function LeavesPage() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-gray-900">{config.label}</h3>
-                                            <p className="text-sm text-gray-500">Tahun 2026</p>
+                                            <p className="text-sm text-gray-500">Tahun {new Date().getFullYear()}</p>
                                         </div>
                                     </div>
                                     <div className="space-y-3">
@@ -333,10 +472,7 @@ export default function LeavesPage() {
                                             <span className="font-medium text-gray-900">{balance.used} dari {balance.total} hari</span>
                                         </div>
                                         <div className="h-2 w-full rounded-full bg-gray-100">
-                                            <div
-                                                className="h-2 rounded-full bg-blue-600"
-                                                style={{ width: `${percentage}%` }}
-                                            />
+                                            <div className="h-2 rounded-full bg-blue-600" style={{ width: `${percentage}%` }} />
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-500">Sisa</span>
@@ -347,48 +483,6 @@ export default function LeavesPage() {
                             )
                         })}
                     </div>
-
-                    {/* Summary */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
-                            <BarChart3 className="h-5 w-5 text-blue-600" />
-                            Ringkasan Saldo Semua Karyawan
-                        </h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="border-b border-gray-200">
-                                    <tr>
-                                        <th className="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
-                                        <th className="pb-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hr.leaves.annual') || 'Cuti Tahunan'}</th>
-                                        <th className="pb-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hr.leaves.sick') || 'Sakit'}</th>
-                                        <th className="pb-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hr.leaves.personal') || 'Pribadi'}</th>
-                                        <th className="pb-3 text-center text-xs font-medium text-gray-500 uppercase">Total Sisa</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {['Ahmad Rizky', 'Siti Nurhaliza', 'Budi Santoso', 'Dewi Lestari', 'Eko Prasetyo', 'Fitri Handayani', 'Hana Permata'].map((name, idx) => (
-                                        <tr key={name} className="hover:bg-gray-50">
-                                            <td className="py-3 font-medium text-gray-900">{name}</td>
-                                            <td className="py-3 text-center text-sm">
-                                                <span className="text-green-600">{7 - idx}</span> / 12
-                                            </td>
-                                            <td className="py-3 text-center text-sm">
-                                                <span className="text-green-600">{10 - idx}</span> / 12
-                                            </td>
-                                            <td className="py-3 text-center text-sm">
-                                                <span className="text-green-600">{2 - (idx % 2)}</span> / 3
-                                            </td>
-                                            <td className="py-3 text-center">
-                                                <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-                                                    {19 - idx * 2} hari
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             )}
 
@@ -398,68 +492,137 @@ export default function LeavesPage() {
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                             <Calendar className="h-5 w-5 text-blue-600" />
-                            Agustus 2026
+                            {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                         </h3>
-                        <div className="flex gap-2">
-                            <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">← Prev</button>
-                            <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">Next →</button>
-                        </div>
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                        {/* Day headers */}
                         {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(day => (
                             <div key={day} className="py-2 font-medium text-gray-500">{day}</div>
                         ))}
-
-                        {/* Calendar days */}
                         {Array.from({ length: 35 }, (_, i) => {
                             const day = i - 0 + 1
                             const isCurrentMonth = day >= 1 && day <= 31
-                            const isToday = day === 4
-
-                            const hasLeave = [3, 4, 5, 6, 7, 10, 11, 15, 16].includes(day)
-                            const leaveNames: Record<number, string> = {
-                                3: 'Budi',
-                                4: 'Budi',
-                                5: 'Budi',
-                                6: 'Budi',
-                                7: 'Budi',
-                                10: 'Hana',
-                                11: 'Hana',
-                                15: 'Eko',
-                                16: 'Eko',
-                            }
-
+                            const isToday = day === new Date().getDate()
                             return (
                                 <div
                                     key={i}
-                                    className={`min-h-[60px] rounded-lg border p-1 ${isCurrentMonth ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'
-                                        } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                                    className={`min-h-[60px] rounded-lg border p-1 ${isCurrentMonth ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'} ${isToday ? 'ring-2 ring-blue-500' : ''}`}
                                 >
                                     <div className={`text-right p-1 ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
                                         {isCurrentMonth ? day : ''}
                                     </div>
-                                    {isCurrentMonth && hasLeave && (
-                                        <div className="rounded bg-blue-100 px-1 py-0.5 text-[10px] text-blue-700 truncate">
-                                            {leaveNames[day]}
-                                        </div>
-                                    )}
                                 </div>
                             )
                         })}
                     </div>
+                </div>
+            )}
 
-                    <div className="mt-6 flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded bg-blue-100 border border-blue-200" />
-                            <span>{t('hr.leaves.title') || 'Cuti'}</span>
+            {/* Form Modal */}
+            {showForm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                            <h2 className="text-lg font-semibold text-gray-900">Ajukan Cuti Baru</h2>
+                            <button onClick={() => setShowForm(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded ring-2 ring-blue-500" />
-                            <span>{t('hr.attendance.today') || 'Hari Ini'}</span>
-                        </div>
+                        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+                            {/* Leave Type */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tipe Cuti <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    value={formData.type}
+                                    onChange={(e) => handleFormChange('type', e.target.value)}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.type ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                                        }`}
+                                >
+                                    <option value="">Pilih tipe cuti</option>
+                                    <option value="annual">Cuti Tahunan</option>
+                                    <option value="sick">Sakit</option>
+                                    <option value="personal">Cuti Pribadi</option>
+                                    <option value="maternity">Cuti Melahirkan</option>
+                                    <option value="unpaid">Cuti Tanpa Gaji</option>
+                                </select>
+                                {formErrors.type && <p className="mt-1 text-xs text-red-600">{formErrors.type}</p>}
+                            </div>
+
+                            {/* Start Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tanggal Mulai <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={formData.startDate}
+                                    onChange={(e) => handleFormChange('startDate', e.target.value)}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.startDate ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                                        }`}
+                                />
+                                {formErrors.startDate && <p className="mt-1 text-xs text-red-600">{formErrors.startDate}</p>}
+                            </div>
+
+                            {/* End Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tanggal Selesai <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={formData.endDate}
+                                    onChange={(e) => handleFormChange('endDate', e.target.value)}
+                                    min={formData.startDate || undefined}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.endDate ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                                        }`}
+                                />
+                                {formErrors.endDate && <p className="mt-1 text-xs text-red-600">{formErrors.endDate}</p>}
+                                {formData.startDate && formData.endDate && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Total: {calculateDays(formData.startDate, formData.endDate)} hari
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Reason */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Alasan <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={formData.reason}
+                                    onChange={(e) => handleFormChange('reason', e.target.value)}
+                                    rows={3}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.reason ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                                        }`}
+                                    placeholder="Jelaskan alasan cuti Anda (minimal 10 karakter)"
+                                />
+                                {formErrors.reason && <p className="mt-1 text-xs text-red-600">{formErrors.reason}</p>}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" disabled={submitting}>
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {submitting ? 'Mengirim...' : 'Ajukan Cuti'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
+                </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
                 </div>
             )}
         </div>

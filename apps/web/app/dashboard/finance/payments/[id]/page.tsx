@@ -10,6 +10,7 @@ interface PaymentDetail {
     id: string
     paymentNumber: string
     invoiceNumber: string
+    invoiceId: string
     customerName: string
     amount: number
     method: string
@@ -117,7 +118,7 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.paymentDetail.invoice')}</p>
-                                <Link href={`/dashboard/finance/invoices/${payment.invoiceNumber}`} className="font-medium text-blue-600 hover:underline">
+                                <Link href={`/dashboard/finance/invoices/${payment.invoiceId}`} className="font-medium text-blue-600 hover:underline">
                                     {payment.invoiceNumber}
                                 </Link>
                             </div>

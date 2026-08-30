@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,7 +12,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import { fetchDashboardStats, formatCurrency, formatDate, DashboardStats } from '../lib/api';
 import LoadingView from '../components/LoadingView';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorView from '../components/ErrorView';
+import EmptyView from '../components/EmptyView';
 
 type DashboardScreenProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -55,7 +57,7 @@ export default function DashboardScreen({ navigation }: Props) {
         setRefreshing(false);
     }, []);
 
-    if (loading) return <LoadingView message="Memuat dashboard..." />;
+    if (loading) return <LoadingSkeleton variant="stats" />;
     if (error) return <ErrorView message={error} onRetry={loadData} />;
 
     const statCards = [
@@ -72,14 +74,15 @@ export default function DashboardScreen({ navigation }: Props) {
         <SafeAreaView style={styles.container}>
             <ScrollView
                 style={styles.scrollView}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+                showsVerticalScrollIndicator={false}
             >
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
                     {statCards.map((stat) => (
                         <View key={stat.id} style={styles.statCard}>
-                            <Text style={styles.statTitle}>{stat.title}</Text>
-                            <Text style={styles.statValue}>{stat.value}</Text>
+                            <Text style={styles.statTitle} numberOfLines={1}>{stat.title}</Text>
+                            <Text style={styles.statValue} numberOfLines={1}>{stat.value}</Text>
                             <Text style={[styles.statChange, stat.positive ? styles.positive : styles.negative]}>
                                 {stat.change}
                             </Text>
@@ -99,7 +102,7 @@ export default function DashboardScreen({ navigation }: Props) {
                                 activeOpacity={0.7}
                             >
                                 <Text style={styles.actionIcon}>{action.icon}</Text>
-                                <Text style={styles.actionTitle}>{action.title}</Text>
+                                <Text style={styles.actionTitle} numberOfLines={1}>{action.title}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -116,12 +119,14 @@ export default function DashboardScreen({ navigation }: Props) {
                                 onPress={() => navigation.navigate('InvoiceDetail', { id: invoice.id })}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.activityIcon}>📄</Text>
-                                <View style={styles.activityContent}>
-                                    <Text style={styles.activityTitle}>{invoice.customerName}</Text>
-                                    <Text style={styles.activityTime}>{invoice.invoiceNumber} • {formatDate(invoice.createdAt)}</Text>
+                                <View style={styles.activityIconBadge}>
+                                    <Text style={styles.activityIconText}>📄</Text>
                                 </View>
-                                <Text style={styles.activityAmount}>{formatCurrency(invoice.amount)}</Text>
+                                <View style={styles.activityContent}>
+                                    <Text style={styles.activityTitle} numberOfLines={1}>{invoice.customerName}</Text>
+                                    <Text style={styles.activityTime} numberOfLines={1}>{invoice.invoiceNumber} · {formatDate(invoice.createdAt)}</Text>
+                                </View>
+                                <Text style={styles.activityAmount} numberOfLines={1}>{formatCurrency(invoice.amount)}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -133,14 +138,23 @@ export default function DashboardScreen({ navigation }: Props) {
                         <Text style={styles.sectionTitle}>Pembayaran Terbaru</Text>
                         {recentPayments.slice(0, 3).map((payment) => (
                             <View key={payment.id} style={styles.activityItem}>
-                                <Text style={styles.activityIcon}>💳</Text>
-                                <View style={styles.activityContent}>
-                                    <Text style={styles.activityTitle}>{payment.customerName}</Text>
-                                    <Text style={styles.activityTime}>{payment.invoiceNumber} • {formatDate(payment.paymentDate)}</Text>
+                                <View style={[styles.activityIconBadge, styles.paymentBadge]}>
+                                    <Text style={styles.activityIconText}>💳</Text>
                                 </View>
-                                <Text style={styles.activityAmount}>+{formatCurrency(payment.amount)}</Text>
+                                <View style={styles.activityContent}>
+                                    <Text style={styles.activityTitle} numberOfLines={1}>{payment.customerName}</Text>
+                                    <Text style={styles.activityTime} numberOfLines={1}>{payment.invoiceNumber} · {formatDate(payment.paymentDate)}</Text>
+                                </View>
+                                <Text style={[styles.activityAmount, { color: '#059669' }]} numberOfLines={1}>+{formatCurrency(payment.amount)}</Text>
                             </View>
                         ))}
+                    </View>
+                )}
+
+                {/* Empty state if no data at all */}
+                {recentInvoices.length === 0 && recentPayments.length === 0 && (
+                    <View style={styles.section}>
+                        <EmptyView title="Belum ada aktivitas" message="Aktivitas terbaru akan muncul di sini" />
                     </View>
                 )}
 
@@ -163,7 +177,7 @@ const styles = StyleSheet.create({
         shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2,
     },
     statTitle: { fontSize: 12, color: '#6B7280', marginBottom: 4 },
-    statValue: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
+    statValue: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
     statChange: { fontSize: 12, marginTop: 4 },
     positive: { color: '#059669' },
     negative: { color: '#DC2626' },
@@ -174,13 +188,18 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, width: '48%', marginBottom: 12, alignItems: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
     },
-    actionIcon: { fontSize: 32, marginBottom: 8 },
+    actionIcon: { fontSize: 28, marginBottom: 8 },
     actionTitle: { fontSize: 13, fontWeight: '500', color: '#111827', textAlign: 'center' },
     activityItem: {
         backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
     },
-    activityIcon: { fontSize: 24, marginRight: 12 },
+    activityIconBadge: {
+        width: 40, height: 40, borderRadius: 10, backgroundColor: '#EFF6FF',
+        justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    },
+    paymentBadge: { backgroundColor: '#ECFDF5' },
+    activityIconText: { fontSize: 18 },
     activityContent: { flex: 1 },
     activityTitle: { fontSize: 13, fontWeight: '600', color: '#111827' },
     activityTime: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },

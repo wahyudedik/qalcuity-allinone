@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, Package, AlertTriangle } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 type StockItem = {
     id: string
@@ -37,6 +38,8 @@ const statusStyles: Record<string, string> = {
 
 export default function StockPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    const canMutate = session?.user?.role !== 'VIEWER'
     const [stock, setStock] = useState<StockItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -137,14 +140,16 @@ export default function StockPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('inventory.stock.title')}</h1>
                     <p className="text-gray-500">{t('inventory.stock.subtitle')}</p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                {canMutate && (
+                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                     <Plus className="h-4 w-4" />
                     {t('inventory.stock.adjustStok')}
-                </button>
+                    </button>
+                )}
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <p className="text-sm text-gray-500">{t('inventory.stock.totalItems')}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -181,8 +186,8 @@ export default function StockPage() {
                             key={s}
                             onClick={() => setFilterStatus(s)}
                             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filterStatus === s
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
                             {s === 'all' ? t('inventory.stock.allStatuses') : statusLabels[s] || s}
@@ -191,8 +196,52 @@ export default function StockPage() {
                 </div>
             </div>
 
-            {/* Stock Table */}
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            {/* Kartu Stock untuk tampilan mobile */}
+            <div className="md:hidden space-y-3">
+                {filtered.length === 0 ? (
+                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                        <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                        {t('inventory.stock.noData')}
+                    </div>
+                ) : (
+                    filtered.map((item) => (
+                        <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <div className="font-medium text-gray-900">{item.name}</div>
+                                    <div className="font-mono text-xs text-gray-500">{item.sku}</div>
+                                </div>
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                                    {statusLabels[item.status] || item.status}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-gray-500">{t('inventory.stock.category')}:</span>
+                                    <span className="ml-1 inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{item.category}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('inventory.stock.currentStock')}:</span>
+                                    <span className={`ml-1 font-bold ${item.status === 'out' ? 'text-red-600' : item.status === 'low' ? 'text-yellow-600' : 'text-gray-900'}`}>
+                                        {item.stock} {item.unit}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('inventory.stock.minStock')}:</span>
+                                    <span className="ml-1">{item.minStock} {item.unit}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">{t('inventory.stock.stockValue')}:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(item.unitPrice * item.stock)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Tabel Stock untuk tampilan desktop */}
+            <div className="hidden md:block overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
