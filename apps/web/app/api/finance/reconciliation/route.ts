@@ -78,7 +78,7 @@ export async function GET(request: Request) {
                 success: true,
                 data: bankTransactions,
                 meta: {
-                    bankAccount: bankAccounts.find((a) => a.id === accountId) || bankAccounts[0],
+                    bankAccount: bankAccounts.find((a: any) => a.id === accountId) || bankAccounts[0],
                     summary: {
                         matchedCount,
                         unmatchedCount,
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
             success: true,
             data: {
                 bankAccounts,
-                selectedBankAccount: bankAccounts.find((a) => a.id === accountId) || bankAccounts[0],
+                selectedBankAccount: bankAccounts.find((a: any) => a.id === accountId) || bankAccounts[0],
                 bankTransactions,
                 bookTransactions,
                 summary: {

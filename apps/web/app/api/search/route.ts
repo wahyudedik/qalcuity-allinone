@@ -111,7 +111,7 @@ export async function GET(request: Request) {
 
         const results: SearchResult[] = [];
 
-        invoices.forEach((inv) => {
+        invoices.forEach((inv: any) => {
             results.push({
                 id: inv.id,
                 title: inv.invoiceNumber,
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
             });
         });
 
-        deals.forEach((deal) => {
+        deals.forEach((deal: any) => {
             results.push({
                 id: deal.id,
                 title: deal.title,
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
             });
         });
 
-        leads.forEach((lead) => {
+        leads.forEach((lead: any) => {
             results.push({
                 id: lead.id,
                 title: lead.name,
@@ -144,7 +144,7 @@ export async function GET(request: Request) {
             });
         });
 
-        contacts.forEach((contact) => {
+        contacts.forEach((contact: any) => {
             results.push({
                 id: contact.id,
                 title: contact.name,
@@ -155,7 +155,7 @@ export async function GET(request: Request) {
             });
         });
 
-        products.forEach((product) => {
+        products.forEach((product: any) => {
             results.push({
                 id: product.id,
                 title: product.name,
@@ -166,7 +166,7 @@ export async function GET(request: Request) {
             });
         });
 
-        employees.forEach((emp) => {
+        employees.forEach((emp: any) => {
             results.push({
                 id: emp.id,
                 title: emp.name,
