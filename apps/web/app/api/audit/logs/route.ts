@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/session';
+import type { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
     try {
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
             prisma.auditLog.count({ where }),
         ]);
 
-        const data = logs.map((log) => ({
+        const data = logs.map((log: Prisma.AuditLogGetPayload<{ include: { user: { select: { id: true; name: true; email: true } } } }>) => ({
             id: log.id,
             userId: log.userId,
             userName: log.user?.name || 'System',
