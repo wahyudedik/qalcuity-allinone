@@ -5,7 +5,7 @@
   "description": "All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia",
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "turbo build --filter=!qalcuity-desktop",
     "lint": "turbo lint",
     "clean": "turbo clean",
     "db:generate": "pnpm --filter @qalcuity/db generate",
