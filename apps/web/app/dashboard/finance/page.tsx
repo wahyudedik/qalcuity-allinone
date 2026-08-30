@@ -1,7 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import {
     FileText,
     CheckCircle,
@@ -10,61 +12,148 @@ import {
     ClipboardList,
     Banknote,
     ShoppingCart,
-    type LucideIcon,
+    Loader2,
+    AlertCircle,
+    Inbox,
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+
+interface Invoice {
+    id: string
+    invoiceNumber: string
+    customerName: string
+    total: number
+    status: string
+    dueDate: string
+    createdAt: string
+    paidAmount: number
+}
+
+interface Payment {
+    id: string
+    paymentNumber: string
+    invoiceNumber: string
+    customerName: string
+    amount: number
+    method: string
+    status: string
+    type: string
+    date: string
+    reference: string
+    notes: string
+}
 
 export default function FinancePage() {
     const { t } = useTranslation()
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [invoices, setInvoices] = useState<Invoice[]>([])
+    const [payments, setPayments] = useState<Payment[]>([])
+    const [invoiceTotal, setInvoiceTotal] = useState(0)
+
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [invoicesRes, paymentsRes] = await Promise.all([
+                    fetch('/api/finance/invoices?limit=100'),
+                    fetch('/api/finance/payments?limit=100'),
+                ])
+
+                if (!invoicesRes.ok || !paymentsRes.ok) {
+                    throw new Error('Gagal memuat data keuangan')
+                }
+
+                const invoicesJson = await invoicesRes.json()
+                const paymentsJson = await paymentsRes.json()
+
+                setInvoices(
+                    invoicesJson.success && Array.isArray(invoicesJson.data)
+                        ? invoicesJson.data
+                        : []
+                )
+                setInvoiceTotal(invoicesJson.total || 0)
+                setPayments(
+                    paymentsJson.success && Array.isArray(paymentsJson.data)
+                        ? paymentsJson.data
+                        : []
+                )
+            } catch (err) {
+                setError(
+                    err instanceof Error ? err.message : 'Gagal memuat data'
+                )
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchData()
+    }, [])
+
+    // Hitung summary dari data real
+    const totalRevenue = payments
+        .filter((p) => p.type === 'INCOME' && p.status === 'completed')
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+
+    const paidInvoices = invoices.filter((i) => i.status === 'paid')
+    const totalPaid = paidInvoices.reduce(
+        (sum, i) => sum + (Number(i.total) || 0),
+        0
+    )
+
+    const outstandingInvoices = invoices.filter(
+        (i) => i.status === 'pending' || i.status === 'overdue'
+    )
+    const totalOutstanding = outstandingInvoices.reduce(
+        (sum, i) => sum + (Number(i.total) || 0) - (Number(i.paidAmount) || 0),
+        0
+    )
+
+    const overdueInvoices = invoices.filter((i) => i.status === 'overdue')
+    const totalOverdue = overdueInvoices.reduce(
+        (sum, i) => sum + (Number(i.total) || 0) - (Number(i.paidAmount) || 0),
+        0
+    )
+
+    // Cash flow dari payments
+    const totalIncome = payments
+        .filter((p) => p.type === 'INCOME' && p.status === 'completed')
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+
+    const totalExpense = payments
+        .filter((p) => p.type === 'EXPENSE' && p.status === 'completed')
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+
+    const netCashFlow = totalIncome - totalExpense
+
+    // Recent invoices (5 terbaru)
+    const recentInvoices = invoices.slice(0, 5)
+
+    // Recent payments (5 terbaru)
+    const recentPayments = payments.slice(0, 5)
 
     const summaryCards = [
         {
             title: t('finance.overview.totalInvoice'),
-            value: 'Rp 856.750.000',
-            change: '+12.5%',
-            changeType: 'positive',
+            value: formatCurrency(invoiceTotal > 0 ? totalPaid + totalOutstanding : 0),
             icon: FileText,
             href: '/dashboard/finance/invoices',
         },
         {
             title: t('finance.overview.invoiceDibayar'),
-            value: 'Rp 625.000.000',
-            change: '+8.3%',
-            changeType: 'positive',
+            value: formatCurrency(totalPaid),
             icon: CheckCircle,
             href: '/dashboard/finance/invoices',
         },
         {
             title: t('finance.overview.outstanding'),
-            value: 'Rp 231.750.000',
-            change: '+22.1%',
-            changeType: 'negative',
+            value: formatCurrency(totalOutstanding),
             icon: Clock,
             href: '/dashboard/finance/invoices',
         },
         {
             title: t('finance.overview.overdue'),
-            value: 'Rp 47.000.000',
-            change: '+15.0%',
-            changeType: 'negative',
+            value: formatCurrency(totalOverdue),
             icon: AlertTriangle,
             href: '/dashboard/finance/invoices',
         },
-    ]
-
-    const recentInvoices = [
-        { id: 'INV-2026-001', customer: 'PT Maju Jaya', amount: 15500000, status: 'paid', date: '3 Agt 2026' },
-        { id: 'INV-2026-002', customer: 'CV Berkah', amount: 8250000, status: 'paid', date: '2 Agt 2026' },
-        { id: 'INV-2026-003', customer: 'PT Sejahtera', amount: 23000000, status: 'overdue', date: '1 Agt 2026' },
-        { id: 'INV-2026-004', customer: 'PT Abadi Sentosa', amount: 7500000, status: 'pending', date: '31 Jul 2026' },
-        { id: 'INV-2026-005', customer: 'CV Berkah Jaya', amount: 32000000, status: 'paid', date: '29 Jul 2026' },
-    ]
-
-    const recentPayments = [
-        { id: 'PAY-001', description: 'Pembayaran dari PT Maju Jaya', amount: 15500000, type: 'income', date: '3 Agt 2026' },
-        { id: 'PAY-002', description: 'Pembayaran dari CV Berkah', amount: 8250000, type: 'income', date: '2 Agt 2026' },
-        { id: 'PAY-003', description: 'Pembayaran ke PT Supplier ABC', amount: 25000000, type: 'expense', date: '1 Agt 2026' },
-        { id: 'PAY-004', description: 'Pembayaran dari PT Sejahtera', amount: 5000000, type: 'income', date: '31 Jul 2026' },
     ]
 
     const quickActions = [
@@ -78,12 +167,67 @@ export default function FinancePage() {
         paid: 'bg-green-100 text-green-800',
         pending: 'bg-yellow-100 text-yellow-800',
         overdue: 'bg-red-100 text-red-800',
+        draft: 'bg-gray-100 text-gray-800',
     }
 
     const statusLabels: Record<string, string> = {
         paid: t('finance.overview.statusPaid'),
         pending: t('finance.overview.statusPending'),
         overdue: t('finance.overview.statusOverdue'),
+        draft: 'Draft',
+    }
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                            <div className="h-7 w-32 bg-gray-200 rounded animate-pulse mt-2" />
+                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                            <div className="p-4">
+                                <div className="h-5 w-32 bg-gray-200 rounded animate-pulse mb-4" />
+                                {Array.from({ length: 5 }).map((_, j) => (
+                                    <div key={j} className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('finance.overview.title')}</h1>
+                    <p className="text-gray-500 dark:text-gray-400">{t('finance.overview.subtitle')}</p>
+                </div>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -109,9 +253,6 @@ export default function FinancePage() {
                                 <Icon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
                             </div>
                             <p className="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
-                            <p className={`mt-1 text-sm font-medium ${card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
-                                {card.change} {t('finance.overview.fromLastMonth')}
-                            </p>
                         </Link>
                     )
                 })}
@@ -147,20 +288,27 @@ export default function FinancePage() {
                         </Link>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {recentInvoices.map((inv) => (
-                            <div key={inv.id} className="flex items-center justify-between px-4 py-3">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{inv.id}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{inv.customer} · {inv.date}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(inv.amount)}</p>
-                                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[inv.status]}`}>
-                                        {statusLabels[inv.status]}
-                                    </span>
-                                </div>
+                        {recentInvoices.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">
+                                <Inbox className="h-8 w-8 mb-2" />
+                                <p className="text-sm">Belum ada invoice</p>
                             </div>
-                        ))}
+                        ) : (
+                            recentInvoices.map((inv) => (
+                                <div key={inv.id} className="flex items-center justify-between px-4 py-3">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{inv.invoiceNumber}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{inv.customerName} · {formatDate(inv.createdAt)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(inv.total))}</p>
+                                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[inv.status] || 'bg-gray-100 text-gray-800'}`}>
+                                            {statusLabels[inv.status] || inv.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -173,19 +321,28 @@ export default function FinancePage() {
                         </Link>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {recentPayments.map((pay) => (
-                            <div key={pay.id} className="flex items-center justify-between px-4 py-3">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{pay.description}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{pay.id} · {pay.date}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`text-sm font-semibold ${pay.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {pay.type === 'income' ? '+' : '-'} {formatCurrency(pay.amount)}
-                                    </p>
-                                </div>
+                        {recentPayments.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">
+                                <Inbox className="h-8 w-8 mb-2" />
+                                <p className="text-sm">Belum ada pembayaran</p>
                             </div>
-                        ))}
+                        ) : (
+                            recentPayments.map((pay) => (
+                                <div key={pay.id} className="flex items-center justify-between px-4 py-3">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {pay.invoiceNumber !== '-' ? `Pembayaran ${pay.invoiceNumber}` : pay.reference || pay.paymentNumber}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{pay.customerName} · {formatDate(pay.date)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className={`text-sm font-semibold ${pay.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
+                                            {pay.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(pay.amount))}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
@@ -196,15 +353,17 @@ export default function FinancePage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
                         <p className="text-sm text-green-700 dark:text-green-400">{t('finance.overview.totalIncome')}</p>
-                        <p className="mt-1 text-2xl font-bold text-green-800 dark:text-green-300">Rp 72.750.000</p>
+                        <p className="mt-1 text-2xl font-bold text-green-800 dark:text-green-300">{formatCurrency(totalIncome)}</p>
                     </div>
                     <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
                         <p className="text-sm text-red-700 dark:text-red-400">{t('finance.overview.totalExpense')}</p>
-                        <p className="mt-1 text-2xl font-bold text-red-800 dark:text-red-300">Rp 45.500.000</p>
+                        <p className="mt-1 text-2xl font-bold text-red-800 dark:text-red-300">{formatCurrency(totalExpense)}</p>
                     </div>
                     <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
                         <p className="text-sm text-blue-700 dark:text-blue-400">{t('finance.overview.netCashFlow')}</p>
-                        <p className="mt-1 text-2xl font-bold text-blue-800 dark:text-blue-300">Rp 27.250.000</p>
+                        <p className={`mt-1 text-2xl font-bold ${netCashFlow >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-red-800 dark:text-red-300'}`}>
+                            {formatCurrency(netCashFlow)}
+                        </p>
                     </div>
                 </div>
             </div>

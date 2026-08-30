@@ -92,6 +92,14 @@ export default function BillingManagementPage() {
     const [rejectModal, setRejectModal] = useState<PaymentWithDetails | null>(null)
     const [rejectReason, setRejectReason] = useState('')
     const [proofModal, setProofModal] = useState<PaymentWithDetails | null>(null)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     // Auth check
     useEffect(() => {
@@ -151,10 +159,10 @@ export default function BillingManagementPage() {
                 fetchPayments()
                 fetchStats()
             } else {
-                alert(data.error || 'Gagal memverifikasi pembayaran')
+                setToast({ message: data.error || 'Gagal memverifikasi pembayaran', type: 'error' })
             }
         } catch {
-            alert('Gagal memverifikasi pembayaran')
+            setToast({ message: 'Gagal memverifikasi pembayaran', type: 'error' })
         } finally {
             setProcessingId(null)
         }
@@ -162,7 +170,7 @@ export default function BillingManagementPage() {
 
     const handleReject = async (payment: PaymentWithDetails) => {
         if (!rejectReason.trim()) {
-            alert('Alasan penolakan wajib diisi')
+            setToast({ message: 'Alasan penolakan wajib diisi', type: 'error' })
             return
         }
         try {
@@ -179,10 +187,10 @@ export default function BillingManagementPage() {
                 fetchPayments()
                 fetchStats()
             } else {
-                alert(data.error || 'Gagal menolak pembayaran')
+                setToast({ message: data.error || 'Gagal menolak pembayaran', type: 'error' })
             }
         } catch {
-            alert('Gagal menolak pembayaran')
+            setToast({ message: 'Gagal menolak pembayaran', type: 'error' })
         } finally {
             setProcessingId(null)
         }
@@ -239,7 +247,7 @@ export default function BillingManagementPage() {
                         </div>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Total: {formatCurrency(stats?.pendingTotal || 0)}
+                        Total: {formatCurrency(Number(stats?.pendingTotal || 0))}
                     </p>
                 </div>
 
@@ -256,7 +264,7 @@ export default function BillingManagementPage() {
                         </div>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Total: {formatCurrency(stats?.monthlyTotal || 0)}
+                        Total: {formatCurrency(Number(stats?.monthlyTotal || 0))}
                     </p>
                 </div>
 
@@ -282,7 +290,7 @@ export default function BillingManagementPage() {
                         <div>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Revenue Bulan Ini</p>
                             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                {formatCurrency(stats?.monthlyRevenue || 0)}
+                                {formatCurrency(Number(stats?.monthlyRevenue || 0))}
                             </p>
                         </div>
                     </div>
@@ -296,8 +304,8 @@ export default function BillingManagementPage() {
                         key={tab}
                         onClick={() => { setFilter(tab); setPage(1) }}
                         className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${filter === tab
-                                ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                            ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                             }`}
                     >
                         {tab === 'ALL' && 'Semua'}
@@ -353,7 +361,7 @@ export default function BillingManagementPage() {
                                                 {payment.subscription.plan.name}
                                             </td>
                                             <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                {formatCurrency(payment.amount)}
+                                                {formatCurrency(Number(payment.amount))}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                                                 {payment.bankName || '-'}
@@ -498,7 +506,7 @@ export default function BillingManagementPage() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400">Harga/Bulan</p>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(detailModal.subscription.plan.price)}</p>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Number(detailModal.subscription.plan.price))}</p>
                                     </div>
                                 </div>
                             </div>
@@ -512,7 +520,7 @@ export default function BillingManagementPage() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <p className="text-xs text-gray-400">Jumlah</p>
-                                        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(detailModal.amount)}</p>
+                                        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Number(detailModal.amount))}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400">Tanggal</p>
@@ -620,7 +628,7 @@ export default function BillingManagementPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-gray-500">Jumlah</span>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(approveModal.amount)}</span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Number(approveModal.amount))}</span>
                                 </div>
                             </div>
                         </div>
@@ -686,7 +694,7 @@ export default function BillingManagementPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-sm text-gray-500">Jumlah</span>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(rejectModal.amount)}</span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Number(rejectModal.amount))}</span>
                                 </div>
                             </div>
                         </div>
@@ -786,6 +794,13 @@ export default function BillingManagementPage() {
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {toast.message}
                 </div>
             )}
         </div>

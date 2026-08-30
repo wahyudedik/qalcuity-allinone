@@ -103,7 +103,7 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
         )
     }
 
-    const weightedValue = deal.value * (deal.probability / 100)
+    const weightedValue = Number(deal.value) * (deal.probability / 100)
 
     return (
         <div className="space-y-6">
@@ -130,8 +130,8 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                     </button>
                     {canMutate && (
                         <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
-                        <Trash2 className="inline h-4 w-4 mr-1" />
-                        {t('crm.dealDetail.delete')}
+                            <Trash2 className="inline h-4 w-4 mr-1" />
+                            {t('crm.dealDetail.delete')}
                         </button>
                     )}
                     <button className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
@@ -147,7 +147,7 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                         <div className="rounded-xl border border-gray-200 bg-white p-4">
                             <div className="text-sm text-gray-500">{t('crm.dealDetail.value')}</div>
-                            <div className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(deal.value)}</div>
+                            <div className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(Number(deal.value))}</div>
                         </div>
                         <div className="rounded-xl border border-gray-200 bg-white p-4">
                             <div className="text-sm text-gray-500">{t('crm.dealDetail.probability')}</div>
@@ -231,7 +231,7 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <span className="text-sm text-gray-600">{t('crm.dealDetail.value')}</span>
-                                <span className="text-sm font-medium text-gray-900">{formatCurrency(deal.value)}</span>
+                                <span className="text-sm font-medium text-gray-900">{formatCurrency(Number(deal.value))}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-sm text-gray-600">{t('crm.dealDetail.probability')}</span>

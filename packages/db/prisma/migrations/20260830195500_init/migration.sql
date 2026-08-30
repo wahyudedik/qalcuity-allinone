@@ -434,6 +434,41 @@ CREATE TABLE "BillingPayment" (
     CONSTRAINT "BillingPayment_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "CoAAccount" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
+    "parentId" TEXT,
+    "balance" DECIMAL(15,2) NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CoAAccount_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "BankTransaction" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "description" TEXT NOT NULL,
+    "amount" DECIMAL(15,2) NOT NULL,
+    "type" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'unmatched',
+    "matchedAccountId" TEXT,
+    "bankReference" TEXT,
+    "discrepancyNote" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "BankTransaction_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Tenant_slug_key" ON "Tenant"("slug");
 
@@ -459,6 +494,9 @@ CREATE INDEX "Invoice_status_idx" ON "Invoice"("status");
 CREATE INDEX "Invoice_contactId_idx" ON "Invoice"("contactId");
 
 -- CreateIndex
+CREATE INDEX "Invoice_createdAt_idx" ON "Invoice"("createdAt");
+
+-- CreateIndex
 CREATE INDEX "InvoiceItem_invoiceId_idx" ON "InvoiceItem"("invoiceId");
 
 -- CreateIndex
@@ -466,6 +504,15 @@ CREATE INDEX "Payment_tenantId_idx" ON "Payment"("tenantId");
 
 -- CreateIndex
 CREATE INDEX "Payment_invoiceId_idx" ON "Payment"("invoiceId");
+
+-- CreateIndex
+CREATE INDEX "Payment_status_idx" ON "Payment"("status");
+
+-- CreateIndex
+CREATE INDEX "Payment_type_idx" ON "Payment"("type");
+
+-- CreateIndex
+CREATE INDEX "Payment_paymentDate_idx" ON "Payment"("paymentDate");
 
 -- CreateIndex
 CREATE INDEX "PurchaseOrder_tenantId_idx" ON "PurchaseOrder"("tenantId");
@@ -498,10 +545,16 @@ CREATE INDEX "Lead_tenantId_idx" ON "Lead"("tenantId");
 CREATE INDEX "Lead_status_idx" ON "Lead"("status");
 
 -- CreateIndex
+CREATE INDEX "Lead_contactId_idx" ON "Lead"("contactId");
+
+-- CreateIndex
 CREATE INDEX "Deal_tenantId_idx" ON "Deal"("tenantId");
 
 -- CreateIndex
 CREATE INDEX "Deal_stage_idx" ON "Deal"("stage");
+
+-- CreateIndex
+CREATE INDEX "Deal_contactId_idx" ON "Deal"("contactId");
 
 -- CreateIndex
 CREATE INDEX "Category_tenantId_idx" ON "Category"("tenantId");
@@ -532,6 +585,9 @@ CREATE INDEX "StockMovement_type_idx" ON "StockMovement"("type");
 
 -- CreateIndex
 CREATE INDEX "Employee_tenantId_idx" ON "Employee"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "Employee_status_idx" ON "Employee"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Employee_employeeId_tenantId_key" ON "Employee"("employeeId", "tenantId");
@@ -595,6 +651,21 @@ CREATE INDEX "BillingPayment_status_idx" ON "BillingPayment"("status");
 
 -- CreateIndex
 CREATE INDEX "BillingPayment_subscriptionId_idx" ON "BillingPayment"("subscriptionId");
+
+-- CreateIndex
+CREATE INDEX "CoAAccount_tenantId_idx" ON "CoAAccount"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "CoAAccount_parentId_idx" ON "CoAAccount"("parentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CoAAccount_tenantId_code_key" ON "CoAAccount"("tenantId", "code");
+
+-- CreateIndex
+CREATE INDEX "BankTransaction_tenantId_status_idx" ON "BankTransaction"("tenantId", "status");
+
+-- CreateIndex
+CREATE INDEX "BankTransaction_matchedAccountId_idx" ON "BankTransaction"("matchedAccountId");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -706,3 +777,15 @@ ALTER TABLE "BillingPayment" ADD CONSTRAINT "BillingPayment_subscriptionId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "BillingPayment" ADD CONSTRAINT "BillingPayment_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CoAAccount" ADD CONSTRAINT "CoAAccount_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CoAAccount" ADD CONSTRAINT "CoAAccount_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "CoAAccount"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BankTransaction" ADD CONSTRAINT "BankTransaction_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BankTransaction" ADD CONSTRAINT "BankTransaction_matchedAccountId_fkey" FOREIGN KEY ("matchedAccountId") REFERENCES "CoAAccount"("id") ON DELETE SET NULL ON UPDATE CASCADE;

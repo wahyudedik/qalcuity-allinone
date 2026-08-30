@@ -326,7 +326,7 @@ export default function CompanySettingsPage() {
               accept="image/svg+xml,image/png,image/jpeg"
               maxSize={2}
               onUpload={(file) => {
-                console.log('Logo uploaded:', file.name);
+                // File uploaded successfully
               }}
             />
             <p className="text-xs text-gray-500 mt-2">

@@ -1,21 +1,20 @@
-# DATABASE
+# 🗄️ Qalcuity — Database Architecture
 
-> Dokumentasi database schema Qalcuity — Prisma ORM dengan 26 models.
-> Last Updated: 2026-08-29
+> **Last Updated:** 30 Agustus 2026
+> **Current Version:** v1.0.0-beta.1
 
 ---
 
-## Table of Contents
+## 📋 Daftar Isi
 
 1. [Overview](#1-overview)
-2. [Entity Relationship Diagram](#2-entity-relationship-diagram)
-3. [Model Reference](#3-model-reference)
-4. [Relationships](#4-relationships)
-5. [Tenant Isolation Rules](#5-tenant-isolation-rules)
-6. [Indexes & Constraints](#6-indexes--constraints)
-7. [Soft Delete Policy](#7-soft-delete-policy)
-8. [Audit Fields](#8-audit-fields)
-9. [Migration Rules](#9-migration-rules)
+2. [Schema Overview](#2-schema-overview)
+3. [Key Models](#3-key-models)
+4. [Multi-tenant Pattern](#4-multi-tenant-pattern)
+5. [Index Strategy](#5-index-strategy)
+6. [Design Principles](#6-design-principles)
+7. [Seed Data](#7-seed-data)
+8. [Migration Rules](#8-migration-rules)
 
 ---
 
@@ -23,48 +22,45 @@
 
 | Property | Value |
 |----------|-------|
-| **ORM** | Prisma 5.15+ |
-| **Database** | PostgreSQL |
+| **ORM** | Prisma 5.22 |
+| **Database** | PostgreSQL 18.4 (DBngin local) |
 | **Schema Location** | [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) |
 | **Total Models** | 26 |
+| **Total Indexes** | 57 |
+| **Migrations** | 1 (clean init) |
 | **Generator** | `prisma-client-js` |
+| **Auth** | Trust authentication (no password for local dev) |
 
-### Design Principles
+### Connection
 
-1. **Multi-tenant** — Every business entity has `tenantId` field
-2. **Soft delete** — Critical entities use `deletedAt` instead of hard delete
-3. **Audit fields** — `createdAt`, `updatedAt` on all mutable entities
-4. **CUID IDs** — All primary keys use `@default(cuid())`
-5. **String enums** — Status/type fields use String with comments (not Prisma enums)
-6. **Decimal types** — Monetary fields use native `Decimal @db.Decimal(15, 2)` for exact arithmetic
-7. **JSON type** — Settings field uses native PostgreSQL `Json` type
+```
+postgresql://postgres@localhost:5432/qalcuity?schema=public
+```
 
 ---
 
-## 2. Entity Relationship Diagram
+## 2. Schema Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           TENANT & AUTH                                      │
 │                                                                             │
-│  ┌──────────────┐         ┌──────────────┐                                 │
-│  │    Tenant     │ 1────* │     User     │                                 │
-│  │              │         │              │                                 │
-│  │ id (PK)      │         │ id (PK)      │                                 │
-│  │ name         │         │ email (UQ)   │                                 │
-│  │ slug (UQ)    │         │ name         │                                 │
-│  │ logo         │         │ passwordHash │                                 │
-│  │ address      │         │ role         │                                 │
-│  │ phone        │         │ isActive     │                                 │
-│  │ email        │         │ tenantId(FK) │                                 │
-│  │ website      │         └──────────────┘                                 │
-│  │ settings     │                                                          │
-│  │ subscription │                                                          │
-│  │ Status       │                                                          │
-│  └──────┬───────┘                                                          │
-│         │                                                                   │
-│         │ Has many (all business entities)                                 │
-│         │                                                                   │
+│  ┌──────────────┐         ┌──────────────┐                                  │
+│  │    Tenant     │ 1────* │     User     │                                  │
+│  │              │         │              │                                  │
+│  │ id (PK)      │         │ id (PK)      │                                  │
+│  │ name         │         │ email (UQ)   │                                  │
+│  │ slug (UQ)    │         │ name         │                                  │
+│  │ logo         │         │ passwordHash │                                  │
+│  │ address      │         │ role         │                                  │
+│  │ phone        │         │ isActive     │                                  │
+│  │ email        │         │ tenantId(FK) │                                  │
+│  │ website      │         └──────────────┘                                  │
+│  │ settings     │                                                           │
+│  │ subscription │                                                           │
+│  │ Status       │                                                           │
+│  └──────┬───────┘                                                           │
+│         │ Has many (all business entities)                                  │
 └─────────┼───────────────────────────────────────────────────────────────────┘
           │
           ▼
@@ -82,11 +78,9 @@
 │  │ phone        │         │ contactId*   │         │ contactId*   │        │
 │  │ tenantId(FK) │         │ tenantId(FK) │         │ leadId*      │        │
 │  └──────────────┘         └──────────────┘         │ tenantId(FK) │        │
-│         │                                           └──────────────┘        │
-│         │ Has many: Invoice[], Quotation[]                                 │
-└─────────┼───────────────────────────────────────────────────────────────────┘
-          │
-          ▼
+│                                                    └──────────────┘        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           FINANCE                                           │
 │                                                                             │
@@ -125,6 +119,18 @@
 │  │ contactId*   │         │ total        │                                 │
 │  │ tenantId(FK) │         │ quotId (FK)  │                                 │
 │  └──────────────┘         └──────────────┘                                 │
+│                                                                             │
+│  ┌──────────────┐         ┌──────────────┐                                 │
+│  │  CoAAccount   │         │BankTransaction│                                │
+│  │              │         │              │                                 │
+│  │ id (PK)      │         │ id (PK)      │                                 │
+│  │ code (UQ/T)  │         │ date         │                                 │
+│  │ name         │         │ description  │                                 │
+│  │ type         │         │ amount       │                                 │
+│  │ parentId*    │         │ type         │                                 │
+│  │ tenantId(FK) │         │ reconciled   │                                 │
+│  └──────────────┘         │ tenantId(FK) │                                 │
+│                           └──────────────┘                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -144,7 +150,6 @@
 │                           │ tenantId(FK) │                                  │
 │                           └──────┬───────┘                                  │
 │                                  │ 1                                        │
-│                                  │                                          │
 │                                  │ *                                        │
 │                           ┌──────────────┐                                 │
 │                           │StockMovement │                                 │
@@ -172,7 +177,6 @@
 │  │ status       │                                       │                   │
 │  │ tenantId(FK) │                                       │                   │
 │  └──────────────┘                                       │                   │
-│         │                                               │                   │
 │         │ 1────*          1────*               1────*   │                   │
 │  ┌──────────────┐ ┌──────────────┐  ┌──────────────┐   │                   │
 │  │AttendanceRec │ │ LeaveRequest │  │PayrollRecord │   │                   │
@@ -198,853 +202,303 @@
 │  │ action       │  │ name         │  │ tenantId(FK) │  │                   │
 │  │ entity       │  │ slug (UQ)    │  │ planId (FK)  │  │                   │
 │  │ entityId     │  │ price        │  │ status       │  │                   │
-│  │ userId (FK)  │  │ maxUsers     │  │ startDate    │  │                   │
-│  │ tenantId(FK) │  │ features     │  │ endDate      │  │                   │
-│  └──────────────┘  └──────────────┘  └──────┬───────┘  │                   │
-│                                              │ 1        │                   │
-│                                              │          │                   │
-│                                              │ *        │                   │
-│                                       ┌──────────────┐  │                   │
-│                                       │BillingPayment│  │                   │
-│                                       │              │  │                   │
-│                                       │ id (PK)      │  │                   │
-│                                       │ subscription │  │                   │
-│                                       │   Id (FK)    │  │                   │
-│                                       │ tenantId(FK) │  │                   │
-│                                       │ amount       │  │                   │
-│                                       │ status       │  │                   │
-│                                       └──────────────┘  │                   │
-└─────────────────────────────────────────────────────────┴───────────────────┘
+│  │ oldValue     │  │ interval     │  │ startDate    │  │                   │
+│  │ newValue     │  │ features     │  │ endDate      │  │                   │
+│  │ userId(FK)   │  │ tenantId(FK) │  │ tenantId(FK) │  │                   │
+│  │ tenantId(FK) │  └──────────────┘  └──────────────┘  │                   │
+│  └──────────────┘                                       │                   │
+│  ┌──────────────┐                                       │                   │
+│  │BillingPayment│                                       │                   │
+│  │              │                                       │                   │
+│  │ id (PK)      │                                       │                   │
+│  │ amount       │                                       │                   │
+│  │ method       │                                       │                   │
+│  │ status       │                                       │                   │
+│  │ proofUrl     │                                       │                   │
+│  │ tenantId(FK) │                                       │                   │
+│  │ subscription │                                       │                   │
+│  └──────────────┘                                       │                   │
+└─────────────────────────────────────────────────────────┼───────────────────┘
 ```
 
-### Legend
+---
 
-| Symbol | Meaning |
-|--------|---------|
-| `PK` | Primary Key |
-| `FK` | Foreign Key |
-| `UQ` | Unique constraint |
-| `UQ/T` | Unique per tenant (compound unique) |
-| `UQ/E` | Unique per entity per tenant |
-| `1────*` | One-to-many relationship |
-| `*────1` | Many-to-one relationship |
-| `*` | Optional FK (nullable) |
+## 3. Key Models
+
+### Core SaaS
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Tenant` | Company/workspace | name, slug (UQ), logo, settings (JSON), subscription |
+| `User` | User account | email (UQ), passwordHash, role, isActive, tenantId (FK) |
+
+### Finance
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Invoice` | Customer invoice | invoiceNumber, status, dueDate, subtotal, taxAmount, total, contactId, tenantId |
+| `InvoiceItem` | Invoice line item | description, quantity, unitPrice, total, invoiceId (FK) |
+| `Payment` | Payment record | paymentNumber, amount, method, status, type, invoiceId, tenantId |
+| `PurchaseOrder` | Supplier PO | poNumber, status, supplierId, tenantId |
+| `Quotation` | Customer quote | quotNumber, status, validUntil, contactId, tenantId |
+| `QuotationItem` | Quotation line item | description, quantity, unitPrice, total, quotId (FK) |
+| `CoAAccount` | Chart of accounts | code (UQ/tenant), name, type, parentId, tenantId |
+| `BankTransaction` | Bank statement | date, description, amount, type, reconciled, tenantId |
+
+### CRM
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Contact` | Business contact | name, type, company, email, phone, tenantId |
+| `Lead` | Sales lead | name, company, status, value, contactId, tenantId |
+| `Deal` | Sales opportunity | title, value, stage, probability, contactId, leadId, tenantId |
+
+### Inventory
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Product` | Product catalog | sku (UQ/tenant), name, price, cost, stock, minStock, categoryId, tenantId |
+| `Category` | Product category | name (UQ/tenant), description, tenantId |
+| `Supplier` | Supplier info | name, contactPerson, email, phone, rating, tenantId |
+| `StockMovement` | Stock history | type, quantity, productId, tenantId |
+
+### HR
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Employee` | Employee record | employeeId, name, position, department, salary, status, tenantId |
+| `AttendanceRecord` | Daily attendance | date (UQ/employee), clockIn, clockOut, status, workHours, employeeId, tenantId |
+| `LeaveRequest` | Leave application | type, startDate, endDate, days, status, employeeId, tenantId |
+| `PayrollRecord` | Payroll record | period (UQ/employee), baseSalary, netSalary, status, employeeId, tenantId |
+
+### System
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `AuditLog` | Audit trail | action, entity, entityId, oldValue, newValue, userId, tenantId |
+| `SubscriptionPlan` | Billing plans | name, slug (UQ), price, interval, features, tenantId |
+| `TenantSubscription` | Tenant subscription | tenantId, planId, status, startDate, endDate |
+| `BillingPayment` | Payment proof | amount, method, status, proofUrl, tenantId, subscriptionId |
 
 ---
 
-## 3. Model Reference
+## 4. Multi-tenant Pattern
 
-### 3.1 Tenant & Auth
+### Tenant Isolation Rule
 
-#### Tenant
-
-> Root entity. Every other business entity belongs to a Tenant.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `name` | String | — | Company/tenant name |
-| `slug` | String | `@unique` | URL-friendly identifier |
-| `logo` | String? | — | Logo URL/path |
-| `address` | String? | — | Company address |
-| `phone` | String? | — | Company phone |
-| `email` | String? | — | Company email |
-| `website` | String? | — | Company website |
-| `settings` | Json | `"{}"` | JSON object for tenant settings |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `deletedAt` | DateTime? | — | Soft delete timestamp |
-| `subscriptionStatus` | String | `"TRIAL"` | TRIAL, ACTIVE, PENDING_PAYMENT, SUSPENDED, CANCELLED |
-| `trialEndsAt` | DateTime? | — | Trial expiration date |
-| `currentPlanSlug` | String? | — | starter, growth, business |
-
-**Relations:** Has many → User, Contact, Product, Category, Supplier, StockMovement, Invoice, Payment, PurchaseOrder, Quotation, Lead, Deal, Employee, AttendanceRecord, LeaveRequest, PayrollRecord, AuditLog, TenantSubscription, BillingPayment
-
----
-
-#### User
-
-> System user with role-based access within a Tenant.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `email` | String | `@unique` | Login email (global unique) |
-| `name` | String | — | Display name |
-| `passwordHash` | String | — | bcrypt hashed password |
-| `avatar` | String? | — | Avatar URL |
-| `phone` | String? | — | Phone number |
-| `role` | String | `"USER"` | SUPERADMIN, ADMIN, MEMBER, VIEWER |
-| `isActive` | Boolean | `true` | Account active status |
-| `lastLoginAt` | DateTime? | — | Last login timestamp |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `deletedAt` | DateTime? | — | Soft delete timestamp |
-| `tenantId` | String | — | FK → Tenant |
-
-**Relations:** Belongs to → Tenant; Has many → AuditLog
-
-**Indexes:** `[tenantId]`
-
----
-
-### 3.2 CRM
-
-#### Contact
-
-> Customer or supplier contact record.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `name` | String | — | Contact name |
-| `type` | String | `"CUSTOMER"` | CUSTOMER, SUPPLIER, BOTH |
-| `company` | String? | — | Company name |
-| `email` | String? | — | Email address |
-| `phone` | String? | — | Phone number |
-| `address` | String? | — | Full address |
-| `city` | String? | — | City |
-| `province` | String? | — | Province |
-| `postalCode` | String? | — | Postal code |
-| `taxId` | String? | — | NPWP (tax ID) |
-| `notes` | String? | — | Additional notes |
-| `isActive` | Boolean | `true` | Active status |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `deletedAt` | DateTime? | — | Soft delete timestamp |
-| `tenantId` | String | — | FK → Tenant |
-
-**Relations:** Belongs to → Tenant; Has many → Invoice, Lead, Deal, Quotation
-
-**Indexes:** `[tenantId]`, `[type]`
-
----
-
-#### Lead
-
-> Potential customer or sales opportunity.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `name` | String | — | Lead name |
-| `company` | String? | — | Company name |
-| `email` | String? | — | Email |
-| `phone` | String? | — | Phone |
-| `source` | String? | — | WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER |
-| `status` | String | `"NEW"` | NEW, CONTACTED, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST |
-| `value` | Decimal | `0` | Estimated value |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `contactId` | String? | — | FK → Contact (optional) |
-
-**Relations:** Belongs to → Tenant, Contact (optional); Has many → Deal
-
-**Indexes:** `[tenantId]`, `[status]`
-
----
-
-#### Deal
-
-> Sales deal in the pipeline.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `title` | String | — | Deal title |
-| `value` | Decimal | `0` | Deal value |
-| `stage` | String | `"DISCOVERY"` | DISCOVERY, PROPOSAL, NEGOTIATION, CLOSING, CLOSED_WON, CLOSED_LOST |
-| `probability` | Int | `0` | Win probability (0-100) |
-| `closeDate` | DateTime? | — | Expected close date |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `contactId` | String? | — | FK → Contact (optional) |
-| `leadId` | String? | — | FK → Lead (optional) |
-
-**Relations:** Belongs to → Tenant, Contact (optional), Lead (optional)
-
-**Indexes:** `[tenantId]`, `[stage]`
-
----
-
-### 3.3 Finance
-
-#### Invoice
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `invoiceNumber` | String | — | Unique invoice number |
-| `status` | String | `"DRAFT"` | DRAFT, SENT, PAID, OVERDUE, CANCELLED |
-| `dueDate` | DateTime | — | Payment due date |
-| `notes` | String? | — | Notes |
-| `subtotal` | Decimal | `0` | Subtotal before tax |
-| `taxRate` | Decimal | `11` | Tax rate (default 11% PPN) |
-| `taxAmount` | Decimal | `0` | Calculated tax |
-| `total` | Decimal | `0` | Total amount |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `contactId` | String? | — | FK → Contact (customer) |
-
-**Relations:** Belongs to → Tenant, Contact; Has many → InvoiceItem, Payment
-
-**Indexes:** `[tenantId]`, `[status]`, `[contactId]`
-
----
-
-#### InvoiceItem
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `description` | String | — | Item description |
-| `quantity` | Decimal | `1` | Quantity |
-| `unitPrice` | Decimal | `0` | Unit price |
-| `total` | Decimal | `0` | Line total |
-| `invoiceId` | String | — | FK → Invoice (cascade delete) |
-
-**Relations:** Belongs to → Invoice
-
-**Indexes:** `[invoiceId]`
-
----
-
-#### Payment
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `paymentNumber` | String | — | Unique payment number |
-| `amount` | Decimal | — | Payment amount |
-| `paymentDate` | DateTime | — | Payment date |
-| `method` | String | `"BANK_TRANSFER"` | BANK_TRANSFER, CASH, CREDIT_CARD, E_WALLET |
-| `status` | String | `"COMPLETED"` | COMPLETED, PENDING, FAILED |
-| `notes` | String? | — | Notes |
-| `reference` | String? | — | Reference number |
-| `type` | String | `"INCOME"` | INCOME, EXPENSE |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `invoiceId` | String? | — | FK → Invoice (optional) |
-
-**Relations:** Belongs to → Tenant, Invoice (optional)
-
-**Indexes:** `[tenantId]`, `[invoiceId]`
-
----
-
-#### PurchaseOrder
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `poNumber` | String | — | PO number |
-| `status` | String | `"DRAFT"` | DRAFT, SENT, RECEIVED, CANCELLED |
-| `orderDate` | DateTime | — | Order date |
-| `deliveryDate` | DateTime? | — | Expected delivery |
-| `notes` | String? | — | Notes |
-| `subtotal` | Decimal | `0` | Subtotal |
-| `taxRate` | Decimal | `11` | Tax rate |
-| `taxAmount` | Decimal | `0` | Tax amount |
-| `total` | Decimal | `0` | Total |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `supplierId` | String? | — | FK → Supplier (optional) |
-
-**Relations:** Belongs to → Tenant, Supplier (optional); Has many → PurchaseOrderItem
-
-**Indexes:** `[tenantId]`, `[status]`, `[supplierId]`
-
----
-
-#### PurchaseOrderItem
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `description` | String | — | Item description |
-| `quantity` | Decimal | `1` | Quantity |
-| `unitPrice` | Decimal | `0` | Unit price |
-| `total` | Decimal | `0` | Line total |
-| `purchaseOrderId` | String | — | FK → PurchaseOrder (cascade delete) |
-
-**Relations:** Belongs to → PurchaseOrder
-
-**Indexes:** `[purchaseOrderId]`
-
----
-
-#### Quotation
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `quotationNumber` | String | — | Quotation number |
-| `status` | String | `"DRAFT"` | DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED |
-| `validUntil` | DateTime | — | Valid until date |
-| `notes` | String? | — | Notes |
-| `terms` | String? | — | Terms & conditions |
-| `subtotal` | Decimal | `0` | Subtotal |
-| `taxRate` | Decimal | `11` | Tax rate |
-| `taxAmount` | Decimal | `0` | Tax amount |
-| `discount` | Decimal | `0` | Discount amount |
-| `total` | Decimal | `0` | Total |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `contactId` | String? | — | FK → Contact (optional) |
-
-**Relations:** Belongs to → Tenant, Contact (optional); Has many → QuotationItem
-
-**Indexes:** `[tenantId]`, `[status]`, `[contactId]`
-
----
-
-#### QuotationItem
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `description` | String | — | Item description |
-| `quantity` | Decimal | `1` | Quantity |
-| `unitPrice` | Decimal | `0` | Unit price |
-| `total` | Decimal | `0` | Line total |
-| `quotationId` | String | — | FK → Quotation (cascade delete) |
-
-**Relations:** Belongs to → Quotation
-
-**Indexes:** `[quotationId]`
-
----
-
-### 3.4 Inventory
-
-#### Category
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `name` | String | — | Category name |
-| `description` | String? | — | Description |
-| `isActive` | Boolean | `true` | Active status |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-
-**Unique:** `[name, tenantId]`
-
-**Relations:** Belongs to → Tenant; Has many → Product
-
-**Indexes:** `[tenantId]`
-
----
-
-#### Supplier
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `name` | String | — | Supplier name |
-| `contactPerson` | String? | — | Contact person |
-| `email` | String? | — | Email |
-| `phone` | String? | — | Phone |
-| `address` | String? | — | Address |
-| `city` | String? | — | City |
-| `rating` | Decimal | `0` | Supplier rating (0-5) |
-| `notes` | String? | — | Notes |
-| `isActive` | Boolean | `true` | Active status |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-
-**Relations:** Belongs to → Tenant; Has many → PurchaseOrder
-
-**Indexes:** `[tenantId]`
-
----
-
-#### Product
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `sku` | String | — | Stock keeping unit |
-| `name` | String | — | Product name |
-| `description` | String? | — | Description |
-| `unit` | String | `"pcs"` | Unit of measure |
-| `price` | Decimal | `0` | Selling price |
-| `cost` | Decimal | `0` | Cost price |
-| `stock` | Int | `0` | Current stock |
-| `minStock` | Int | `0` | Minimum stock alert |
-| `isActive` | Boolean | `true` | Active status |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `deletedAt` | DateTime? | — | Soft delete |
-| `tenantId` | String | — | FK → Tenant |
-| `categoryId` | String? | — | FK → Category (optional) |
-
-**Unique:** `[sku, tenantId]`
-
-**Relations:** Belongs to → Tenant, Category (optional); Has many → StockMovement
-
-**Indexes:** `[tenantId]`, `[categoryId]`
-
----
-
-#### StockMovement
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `type` | String | — | IN, OUT, ADJUSTMENT |
-| `quantity` | Int | — | Movement quantity |
-| `reference` | String? | — | PO number, Invoice number, etc. |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `productId` | String | — | FK → Product |
-
-**Relations:** Belongs to → Tenant, Product
-
-**Indexes:** `[tenantId]`, `[productId]`, `[type]`
-
----
-
-### 3.5 HR
-
-#### Employee
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `employeeId` | String | — | Employee ID (per-tenant unique) |
-| `name` | String | — | Full name |
-| `email` | String | — | Email |
-| `phone` | String? | — | Phone |
-| `position` | String | — | Job position |
-| `department` | String? | — | Department |
-| `joinDate` | DateTime | — | Join date |
-| `salary` | Decimal | `0` | Monthly salary |
-| `status` | String | `"ACTIVE"` | ACTIVE, INACTIVE, TERMINATED |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `deletedAt` | DateTime? | — | Soft delete |
-| `tenantId` | String | — | FK → Tenant |
-
-**Unique:** `[employeeId, tenantId]`
-
-**Relations:** Belongs to → Tenant; Has many → AttendanceRecord, LeaveRequest, PayrollRecord
-
-**Indexes:** `[tenantId]`
-
----
-
-#### AttendanceRecord
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `date` | DateTime | — | Attendance date |
-| `clockIn` | DateTime? | — | Clock in time |
-| `clockOut` | DateTime? | — | Clock out time |
-| `status` | String | `"PRESENT"` | PRESENT, LATE, ABSENT, LEAVE, WFH |
-| `workHours` | Decimal | `0` | Total work hours |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `employeeId` | String | — | FK → Employee |
-
-**Unique:** `[employeeId, date, tenantId]`
-
-**Relations:** Belongs to → Tenant, Employee
-
-**Indexes:** `[tenantId]`, `[employeeId]`, `[date]`
-
----
-
-#### LeaveRequest
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `type` | String | `"ANNUAL"` | ANNUAL, SICK, PERSONAL, MATERNITY, UNPAID |
-| `startDate` | DateTime | — | Leave start date |
-| `endDate` | DateTime | — | Leave end date |
-| `days` | Int | — | Number of days |
-| `reason` | String? | — | Reason |
-| `status` | String | `"PENDING"` | PENDING, APPROVED, REJECTED |
-| `appliedDate` | DateTime | `@default(now())` | Application date |
-| `approvedBy` | String? | — | Approver name |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `employeeId` | String | — | FK → Employee |
-
-**Relations:** Belongs to → Tenant, Employee
-
-**Indexes:** `[tenantId]`, `[employeeId]`, `[status]`
-
----
-
-#### PayrollRecord
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `period` | String | — | Period (e.g., "2026-08") |
-| `baseSalary` | Decimal | — | Base salary |
-| `allowances` | Decimal | `0` | Allowances |
-| `deductions` | Decimal | `0` | Deductions |
-| `bonus` | Decimal | `0` | Bonus |
-| `netSalary` | Decimal | — | Net salary |
-| `status` | String | `"PENDING"` | PENDING, PROCESSED, PAID |
-| `paidAt` | DateTime? | — | Payment timestamp |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-| `tenantId` | String | — | FK → Tenant |
-| `employeeId` | String | — | FK → Employee |
-
-**Unique:** `[employeeId, period, tenantId]`
-
-**Relations:** Belongs to → Tenant, Employee
-
-**Indexes:** `[tenantId]`, `[employeeId]`, `[period]`
-
----
-
-### 3.6 Audit & Billing
-
-#### AuditLog
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `action` | String | — | CREATE, UPDATE, DELETE |
-| `entity` | String | — | Model name (e.g., Invoice, Deal) |
-| `entityId` | String? | — | ID of affected record |
-| `oldValues` | String? | — | JSON string of old values |
-| `newValues` | String? | — | JSON string of new values |
-| `ipAddress` | String? | — | Client IP address |
-| `userAgent` | String? | — | Client user agent |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `userId` | String | — | FK → User |
-| `tenantId` | String | — | FK → Tenant |
-
-**Relations:** Belongs to → User, Tenant
-
-**Indexes:** `[userId]`, `[tenantId]`, `[entity]`
-
----
-
-#### SubscriptionPlan
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `name` | String | — | Plan name (Starter, Growth, Business) |
-| `slug` | String | `@unique` | URL-friendly slug |
-| `description` | String? | — | Plan description |
-| `price` | Int | — | Price in Rupiah |
-| `billingPeriod` | String | `"monthly"` | monthly, yearly |
-| `maxUsers` | Int | `5` | Maximum users |
-| `maxProducts` | Int | `100` | Maximum products |
-| `maxStorage` | String? | — | Storage limit (e.g., "5GB") |
-| `features` | String? | — | JSON string array of features |
-| `isActive` | Boolean | `true` | Active status |
-| `sortOrder` | Int | `0` | Display order |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-
-**Relations:** Has many → TenantSubscription
-
----
-
-#### TenantSubscription
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `tenantId` | String | — | FK → Tenant (cascade delete) |
-| `planId` | String | — | FK → SubscriptionPlan |
-| `status` | String | `"TRIAL"` | TRIAL, ACTIVE, PENDING_PAYMENT, SUSPENDED, CANCELLED |
-| `startDate` | DateTime | `@default(now())` | Subscription start |
-| `endDate` | DateTime? | — | Subscription end |
-| `nextBillingDate` | DateTime? | — | Next billing date |
-| `paymentMethod` | String? | — | manual_transfer |
-| `notes` | String? | — | Notes |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-
-**Relations:** Belongs to → Tenant, SubscriptionPlan; Has many → BillingPayment
-
-**Indexes:** `[tenantId]`, `[status]`
-
----
-
-#### BillingPayment
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | String (cuid) | `@default(cuid())` | Primary key |
-| `subscriptionId` | String | — | FK → TenantSubscription (cascade delete) |
-| `tenantId` | String | — | FK → Tenant (cascade delete) |
-| `amount` | Int | — | Amount in Rupiah |
-| `paymentMethod` | String | — | manual_transfer |
-| `bankName` | String? | — | Bank name (BRI, JAGO, BTN, BSI) |
-| `accountNumber` | String? | — | Sender account number |
-| `accountName` | String? | — | Sender account name |
-| `proofFileUrl` | String? | — | Proof file URL/path |
-| `proofFileName` | String? | — | Original filename |
-| `reference` | String? | — | Reference number |
-| `status` | String | `"PENDING"` | PENDING, VERIFIED, REJECTED |
-| `verifiedById` | String? | — | userId of admin who verified |
-| `verifiedAt` | DateTime? | — | Verification timestamp |
-| `rejectReason` | String? | — | Rejection reason |
-| `notes` | String? | — | Notes |
-| `waConfirmed` | Boolean | `false` | WhatsApp confirmation flag |
-| `createdAt` | DateTime | `@default(now())` | Creation timestamp |
-| `updatedAt` | DateTime | `@updatedAt` | Last update timestamp |
-
-**Relations:** Belongs to → TenantSubscription, Tenant
-
-**Indexes:** `[tenantId]`, `[status]`, `[subscriptionId]`
-
----
-
-## 4. Relationships
-
-### Summary
-
-| Parent | Child | Type | Cascade |
-|--------|-------|------|---------|
-| Tenant | User | 1:N | — |
-| Tenant | Contact | 1:N | — |
-| Tenant | Product | 1:N | — |
-| Tenant | Category | 1:N | — |
-| Tenant | Supplier | 1:N | — |
-| Tenant | Invoice | 1:N | — |
-| Tenant | Payment | 1:N | — |
-| Tenant | PurchaseOrder | 1:N | — |
-| Tenant | Quotation | 1:N | — |
-| Tenant | Lead | 1:N | — |
-| Tenant | Deal | 1:N | — |
-| Tenant | Employee | 1:N | — |
-| Tenant | AuditLog | 1:N | — |
-| Tenant | TenantSubscription | 1:N | Cascade |
-| Tenant | BillingPayment | 1:N | Cascade |
-| Contact | Invoice | 1:N | — |
-| Contact | Lead | 1:N | — |
-| Contact | Deal | 1:N | — |
-| Contact | Quotation | 1:N | — |
-| Invoice | InvoiceItem | 1:N | Cascade |
-| Invoice | Payment | 1:N | — |
-| PurchaseOrder | PurchaseOrderItem | 1:N | Cascade |
-| Quotation | QuotationItem | 1:N | Cascade |
-| Category | Product | 1:N | — |
-| Product | StockMovement | 1:N | — |
-| Supplier | PurchaseOrder | 1:N | — |
-| Employee | AttendanceRecord | 1:N | — |
-| Employee | LeaveRequest | 1:N | — |
-| Employee | PayrollRecord | 1:N | — |
-| User | AuditLog | 1:N | — |
-| SubscriptionPlan | TenantSubscription | 1:N | — |
-| TenantSubscription | BillingPayment | 1:N | Cascade |
-
----
-
-## 5. Tenant Isolation Rules
-
-### Rule 1: Every Query Must Filter by tenantId
+> **Setiap query database WAJIB filter berdasarkan `tenantId`. Tidak ada exception.**
 
 ```typescript
-// ✅ CORRECT
-const invoices = await prisma.invoice.findMany({
-  where: { tenantId: session.user.tenantId }
+// ✅ CORRECT — Always filter by tenantId
+const data = await prisma.invoice.findMany({
+  where: { tenantId }
 });
 
-// ❌ WRONG — leaks data across tenants
-const invoices = await prisma.invoice.findMany();
+// ❌ WRONG — Missing tenantId filter (cross-tenant leak!)
+const data = await prisma.invoice.findMany({});
 ```
 
-### Rule 2: tenantId Comes from JWT Session
+### Implementation Pattern
 
 ```typescript
+// Every API route extracts tenantId from session
 const session = await getServerSession(authOptions);
 const tenantId = session?.user?.tenantId;
-// Never accept tenantId from client request body
-```
 
-### Rule 3: Registration Creates Tenant + User
+// Every query includes tenantId filter
+const invoices = await prisma.invoice.findMany({
+  where: { tenantId },
+  include: { items: true, payments: true }
+});
 
-```typescript
-// POST /api/auth/register
-const tenant = await prisma.tenant.create({ data: { name, slug } });
-const user = await prisma.user.create({
-  data: { email, passwordHash, role: "SUPERADMIN", tenantId: tenant.id }
+// Every mutation includes tenantId in where clause
+await prisma.invoice.update({
+  where: { id, tenantId },  // ← Include tenantId in where
+  data: { status: 'PAID' }
 });
 ```
 
-### Rule 4: No Cross-Tenant Queries
+### Unique Constraints (Per-Tenant)
 
-Even SUPERADMIN cannot query across tenants in normal API routes. Cross-tenant operations are only available through admin-level system routes (not yet implemented).
+Some unique constraints are scoped per-tenant using composite unique:
 
----
-
-## 6. Indexes & Constraints
-
-### Indexes Summary
-
-| Model | Indexes |
-|-------|---------|
-| User | `[tenantId]` |
-| Contact | `[tenantId]`, `[type]` |
-| Invoice | `[tenantId]`, `[status]`, `[contactId]` |
-| InvoiceItem | `[invoiceId]` |
-| Payment | `[tenantId]`, `[invoiceId]` |
-| PurchaseOrder | `[tenantId]`, `[status]`, `[supplierId]` |
-| PurchaseOrderItem | `[purchaseOrderId]` |
-| Quotation | `[tenantId]`, `[status]`, `[contactId]` |
-| QuotationItem | `[quotationId]` |
-| Category | `[tenantId]` + unique `[name, tenantId]` |
-| Supplier | `[tenantId]` |
-| Product | `[tenantId]`, `[categoryId]` + unique `[sku, tenantId]` |
-| StockMovement | `[tenantId]`, `[productId]`, `[type]` |
-| Employee | `[tenantId]` + unique `[employeeId, tenantId]` |
-| AttendanceRecord | `[tenantId]`, `[employeeId]`, `[date]` + unique `[employeeId, date, tenantId]` |
-| LeaveRequest | `[tenantId]`, `[employeeId]`, `[status]` |
-| PayrollRecord | `[tenantId]`, `[employeeId]`, `[period]` + unique `[employeeId, period, tenantId]` |
-| AuditLog | `[userId]`, `[tenantId]`, `[entity]` |
-| TenantSubscription | `[tenantId]`, `[status]` |
-| BillingPayment | `[tenantId]`, `[status]`, `[subscriptionId]` |
-
-### Constraints
-
-| Constraint | Models | Fields |
-|------------|--------|--------|
-| **Global Unique** | User | `email` |
-| **Global Unique** | SubscriptionPlan | `slug` |
-| **Global Unique** | Tenant | `slug` |
-| **Tenant Unique** | Category | `[name, tenantId]` |
-| **Tenant Unique** | Product | `[sku, tenantId]` |
-| **Tenant Unique** | Employee | `[employeeId, tenantId]` |
-| **Tenant Unique** | AttendanceRecord | `[employeeId, date, tenantId]` |
-| **Tenant Unique** | PayrollRecord | `[employeeId, period, tenantId]` |
+- `CoAAccount`: `@@unique([tenantId, code])`
+- `Category`: `@@unique([tenantId, name])`
+- `Product`: `@@unique([tenantId, sku])`
+- `AttendanceRecord`: `@@unique([employeeId, date])`
+- `PayrollRecord`: `@@unique([employeeId, period])`
 
 ---
 
-## 7. Soft Delete Policy
+## 5. Index Strategy
 
-### Entities with Soft Delete (`deletedAt`)
+### Total: 57 Indexes
 
-| Model | Field | Notes |
-|-------|-------|-------|
-| Tenant | `deletedAt` | Tenant-level soft delete |
-| User | `deletedAt` | User account deactivation |
-| Contact | `deletedAt` | Contact archival |
-| Product | `deletedAt` | Product archival |
-| Employee | `deletedAt` | Employee record archival |
+#### Auth & Tenant (5 indexes)
 
-### Pattern
+| Model | Index | Type | Purpose |
+|-------|-------|------|---------|
+| `User` | `email` | Unique | Login lookup |
+| `User` | `tenantId` | Normal | Tenant scoping |
+| `Tenant` | `slug` | Unique | URL-friendly lookup |
+| `Tenant` | `name` | Normal | Search |
+| `AuditLog` | `tenantId` | Normal | Tenant scoping |
 
-```typescript
-// Soft delete
-await prisma.contact.update({
-  where: { id },
-  data: { deletedAt: new Date() }
-});
+#### Finance (18 indexes)
 
-// Query (exclude soft-deleted)
-const contacts = await prisma.contact.findMany({
-  where: { tenantId, deletedAt: null }
-});
-```
+| Model | Index | Type | Purpose |
+|-------|-------|------|---------|
+| `Invoice` | `tenantId` | Normal | Tenant scoping |
+| `Invoice` | `invoiceNumber` | Normal | Unique lookup |
+| `Invoice` | `status` | Normal | Filter by status |
+| `Invoice` | `contactId` | Normal | Contact lookup |
+| `InvoiceItem` | `invoiceId` | Normal | Invoice items |
+| `Payment` | `tenantId` | Normal | Tenant scoping |
+| `Payment` | `paymentNumber` | Normal | Unique lookup |
+| `Payment` | `invoiceId` | Normal | Invoice payments |
+| `PurchaseOrder` | `tenantId` | Normal | Tenant scoping |
+| `PurchaseOrder` | `poNumber` | Normal | Unique lookup |
+| `PurchaseOrder` | `supplierId` | Normal | Supplier lookup |
+| `Quotation` | `tenantId` | Normal | Tenant scoping |
+| `Quotation` | `quotNumber` | Normal | Unique lookup |
+| `Quotation` | `contactId` | Normal | Contact lookup |
+| `QuotationItem` | `quotId` | Normal | Quotation items |
+| `CoAAccount` | `tenantId_code` | Unique | Per-tenant code |
+| `BankTransaction` | `tenantId` | Normal | Tenant scoping |
+| `BankTransaction` | `date` | Normal | Date range queries |
 
-### Note
+#### CRM (9 indexes)
 
-Soft-deleted records are **not** automatically excluded by Prisma. All queries must explicitly filter `deletedAt: null`.
+| Model | Index | Type | Purpose |
+|-------|-------|------|---------|
+| `Contact` | `tenantId` | Normal | Tenant scoping |
+| `Lead` | `tenantId` | Normal | Tenant scoping |
+| `Lead` | `contactId` | Normal | Contact lookup |
+| `Lead` | `status` | Normal | Filter by status |
+| `Deal` | `tenantId` | Normal | Tenant scoping |
+| `Deal` | `contactId` | Normal | Contact lookup |
+| `Deal` | `leadId` | Normal | Lead lookup |
+| `Deal` | `stage` | Normal | Pipeline filtering |
+| `Deal` | `status` | Normal | Filter by status |
 
----
+#### Inventory (10 indexes)
 
-## 8. Audit Fields
+| Model | Index | Type | Purpose |
+|-------|-------|------|---------|
+| `Product` | `tenantId` | Normal | Tenant scoping |
+| `Product` | `sku` | Normal | SKU lookup |
+| `Product` | `categoryId` | Normal | Category filtering |
+| `Category` | `tenantId_name` | Unique | Per-tenant name |
+| `Supplier` | `tenantId` | Normal | Tenant scoping |
+| `StockMovement` | `tenantId` | Normal | Tenant scoping |
+| `StockMovement` | `productId` | Normal | Product history |
+| `StockMovement` | `type` | Normal | Movement type filter |
+| `StockMovement` | `date` | Normal | Date range queries |
+| `StockMovement` | `createdAt` | Normal | Chronological ordering |
 
-### Standard Audit Fields
+#### HR (10 indexes)
 
-| Field | Type | Present On | Description |
-|-------|------|-----------|-------------|
-| `createdAt` | DateTime | All mutable entities | Auto-set on creation |
-| `updatedAt` | DateTime | All mutable entities | Auto-updated on modification |
-| `deletedAt` | DateTime? | Soft-deletable entities | Set on soft delete |
+| Model | Index | Type | Purpose |
+|-------|-------|------|---------|
+| `Employee` | `tenantId` | Normal | Tenant scoping |
+| `Employee` | `employeeId` | Normal | Employee lookup |
+| `Employee` | `department` | Normal | Department filtering |
+| `Employee` | `status` | Normal | Active/inactive filter |
+| `AttendanceRecord` | `employeeId_date` | Unique | Per-employee date |
+| `AttendanceRecord` | `tenantId` | Normal | Tenant scoping |
+| `LeaveRequest` | `tenantId` | Normal | Tenant scoping |
+| `LeaveRequest` | `employeeId` | Normal | Employee lookup |
+| `PayrollRecord` | `employeeId_period` | Unique | Per-employee period |
+| `PayrollRecord` | `tenantId` | Normal | Tenant scoping |
 
-### Audit Trail (Separate Model)
+#### System (5 indexes)
 
-The `AuditLog` model captures mutation history:
-
-```typescript
-// Logged via apps/web/lib/audit.ts
-await logAudit({
-  userId: session.user.id,
-  tenantId: session.user.tenantId,
-  action: "CREATE",     // CREATE | UPDATE | DELETE
-  entity: "Invoice",
-  entityId: invoice.id,
-  oldValues: oldData,    // Only for UPDATE/DELETE
-  newValues: newData,    // Only for CREATE/UPDATE
-  request: request,      // Auto-extracts IP + User-Agent
-});
-```
-
----
-
-## 9. Migration Rules
-
-### Development Workflow
-
-```bash
-# 1. Edit schema.prisma
-# 2. Push changes to dev database
-pnpm db:push
-
-# 3. Generate Prisma client
-pnpm db:generate
-
-# 4. Seed demo data
-pnpm db:seed
-
-# 5. Open Prisma Studio (visual DB browser)
-pnpm db:studio
-```
-
-### Production Migration Rules
-
-1. **Never** modify production schema without a migration plan
-2. **Always** test migrations on staging first
-3. **Use** `prisma migrate dev` for development migrations
-4. **Use** `prisma migrate deploy` for production deployments
-5. **Backup** database before any migration
-6. **Decimal fields** — Monetary fields use `Decimal @db.Decimal(15, 2)` for exact arithmetic
-
-### Naming Convention
-
-- Models: PascalCase (`InvoiceItem`)
-- Fields: camelCase (`invoiceNumber`)
-- Tables: PascalCase (Prisma default, matches model name)
-- Indexes: Auto-generated by Prisma
+| Model | Index | Type | Purpose |
+|-------|-------|------|---------|
+| `AuditLog` | `action` | Normal | Action filtering |
+| `AuditLog` | `entity` | Normal | Entity filtering |
+| `AuditLog` | `createdAt` | Normal | Chronological ordering |
+| `SubscriptionPlan` | `slug` | Unique | Plan lookup |
+| `TenantSubscription` | `tenantId` | Normal | Tenant scoping |
 
 ---
 
-## File Reference
+## 6. Design Principles
+
+| # | Principle | Description |
+|---|-----------|-------------|
+| 1 | **Multi-tenant** | Every business entity has `tenantId` field |
+| 2 | **Soft delete** | Critical entities use `deletedAt` instead of hard delete |
+| 3 | **Audit fields** | `createdAt`, `updatedAt` on all mutable entities |
+| 4 | **CUID IDs** | All primary keys use `@default(cuid())` |
+| 5 | **String enums** | Status/type fields use String with comments (not Prisma enums) |
+| 6 | **Decimal types** | Monetary fields use native `Decimal @db.Decimal(15, 2)` for exact arithmetic |
+| 7 | **JSON type** | Settings field uses native PostgreSQL `Json` type |
+
+---
+
+## 7. Seed Data
+
+### 3-Layer Demo Data Strategy
+
+| Layer | Purpose | Trigger |
+|-------|---------|---------|
+| **Demo Login** | Pre-loaded demo tenant for instant access | `/api/demo/login` |
+| **Onboarding** | Load demo data for new tenants | Onboarding modal |
+| **Settings** | Manual data load from settings page | Settings → Data |
+
+### Demo Data Coverage
+
+| Module | Records |
+|--------|---------|
+| **Finance** | Invoices, payments, POs, quotations, CoA accounts, bank transactions |
+| **CRM** | Contacts, leads, deals |
+| **Inventory** | Products, categories, suppliers, stock movements |
+| **HR** | Employees, attendance records, leave requests, payroll records |
+| **Billing** | Subscription plans, tenant subscriptions |
+
+### Seed Files
 
 | File | Purpose |
 |------|---------|
-| [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) | Prisma schema (source of truth) |
-| [`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts) | Database seeder |
-| [`packages/db/src/index.ts`](packages/db/src/index.ts) | Package entry point |
-| [`apps/web/lib/db.ts`](apps/web/lib/db.ts) | Prisma client singleton |
-| [`apps/web/lib/audit.ts`](apps/web/lib/audit.ts) | Audit trail logging |
+| [`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts) | Main seeder |
+| [`apps/web/lib/seed-data/demo.ts`](apps/web/lib/seed-data/demo.ts) | Demo data generator |
+| [`apps/web/lib/seed-data/coa.ts`](apps/web/lib/seed-data/coa.ts) | Chart of Accounts data |
+| [`apps/web/lib/seed-data/reconciliation.ts`](apps/web/lib/seed-data/reconciliation.ts) | Reconciliation data |
+
+---
+
+## 8. Migration Rules
+
+### Do Not Touch
+
+> ⛔ **Prisma schema requires approval before modification.**
+
+- Schema changes require new migration
+- Never modify existing migrations
+- Always test migration on development first
+- Back up production data before applying
+
+### Migration Commands
+
+```bash
+# Create new migration
+cd packages/db && npx prisma migrate dev --name <migration_name>
+
+# Apply pending migrations
+cd packages/db && npx prisma migrate deploy
+
+# Check migration status
+cd packages/db && npx prisma migrate status
+
+# Reset database (development only!)
+cd packages/db && npx prisma migrate reset
+
+# Generate Prisma Client
+cd packages/db && npx prisma generate
+```
+
+---
+
+**Last Updated:** August 30, 2026
+**Maintainer:** Qalcuity Engineering Team

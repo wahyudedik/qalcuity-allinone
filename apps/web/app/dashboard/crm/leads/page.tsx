@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Plus, Search, Trash2 } from 'lucide-react'
+import { Download, Plus, Search, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 type Lead = {
@@ -111,7 +111,7 @@ export default function LeadsPage() {
         new: leads.filter((l) => l.status === 'new').length,
         contacted: leads.filter((l) => l.status === 'contacted').length,
         qualified: leads.filter((l) => l.status === 'qualified').length,
-        totalValue: leads.reduce((sum, l) => sum + (l.value || 0), 0),
+        totalValue: leads.reduce((sum, l) => sum + Number(l.value || 0), 0),
     }
 
     if (loading) {
@@ -161,8 +161,8 @@ export default function LeadsPage() {
                     </button>
                     {canMutate && (
                         <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        <Plus className="h-4 w-4" />
-                        {t('crm.leads.addLead')}
+                            <Plus className="h-4 w-4" />
+                            {t('crm.leads.addLead')}
                         </button>
                     )}
                 </div>
@@ -259,7 +259,7 @@ export default function LeadsPage() {
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('crm.leads.table.value')}:</span>
-                                    <span className="ml-1 font-medium">{formatCurrency(lead.value || 0)}</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(Number(lead.value || 0))}</span>
                                 </div>
                             </div>
                             <div className="mt-3 flex gap-2">
@@ -317,7 +317,7 @@ export default function LeadsPage() {
                                                 {lead.source}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(lead.value || 0)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(Number(lead.value || 0))}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[lead.status] || 'bg-gray-100 text-gray-700'}`}>
                                                 {statusLabels[lead.status] || lead.status}
@@ -326,11 +326,11 @@ export default function LeadsPage() {
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             {canMutate && (
                                                 <button
-                                                onClick={() => handleDelete(lead.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                                title="Hapus"
+                                                    onClick={() => handleDelete(lead.id)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                    title="Hapus"
                                                 >
-                                                <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -346,7 +346,10 @@ export default function LeadsPage() {
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
-                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
                 </div>
             )}
         </div>

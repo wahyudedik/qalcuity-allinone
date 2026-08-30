@@ -217,9 +217,9 @@ export async function PUT(request: Request) {
                 (sum, item) => sum + item.quantity * item.unitPrice,
                 0
             );
-            const taxRate = validatedData.taxRate || existing.taxRate;
+            const taxRate = Number(validatedData.taxRate || existing.taxRate);
             const taxAmount = subtotal * (taxRate / 100);
-            const discount = validatedData.discount || existing.discount;
+            const discount = Number(validatedData.discount || existing.discount);
             data.subtotal = subtotal;
             data.taxAmount = taxAmount;
             data.total = subtotal + taxAmount - discount;

@@ -32,6 +32,12 @@ export function StatsCardsSkeleton({ count = 4 }: { count?: number }) {
 }
 
 export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
+    // Deterministic widths based on row/col index to avoid hydration mismatch
+    const getDeterministicWidth = (row: number, col: number): string => {
+        const widths = [65, 72, 80, 88, 95, 70, 85, 75, 92, 68]
+        return `${widths[(row * cols + col) % widths.length]}%`
+    }
+
     return (
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
             <div className="overflow-x-auto">
@@ -50,7 +56,7 @@ export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: nu
                             <tr key={i}>
                                 {Array.from({ length: cols }).map((_, j) => (
                                     <td key={j} className="px-6 py-4">
-                                        <div className="h-4 bg-gray-200 rounded animate-pulse" style={{ width: `${60 + Math.random() * 40}%` }} />
+                                        <div className="h-4 bg-gray-200 rounded animate-pulse" style={{ width: getDeterministicWidth(i, j) }} />
                                     </td>
                                 ))}
                             </tr>
@@ -102,10 +108,13 @@ export function PageLoadingSkeleton() {
 }
 
 export function LoadingSkeleton({ lines = 3 }: { lines?: number }) {
+    // Deterministic widths based on index to avoid hydration mismatch
+    const widths = [92, 78, 85, 95, 70, 88, 75]
+
     return (
         <div className="space-y-3">
             {Array.from({ length: lines }).map((_, i) => (
-                <div key={i} className="h-4 animate-pulse rounded bg-gray-200" style={{ width: `${70 + Math.random() * 30}%` }} />
+                <div key={i} className="h-4 animate-pulse rounded bg-gray-200" style={{ width: `${widths[i % widths.length]}%` }} />
             ))}
         </div>
     )

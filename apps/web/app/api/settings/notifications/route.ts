@@ -55,7 +55,7 @@ export async function GET() {
 
         let settings: Record<string, unknown> = {}
         try {
-            settings = JSON.parse(tenant.settings)
+            settings = JSON.parse(String(tenant.settings || '{}'))
         } catch {
             settings = {}
         }
@@ -88,7 +88,7 @@ export async function PUT(request: Request) {
 
         let currentSettings: Record<string, unknown> = {}
         try {
-            currentSettings = JSON.parse(tenant?.settings || '{}')
+            currentSettings = JSON.parse(String(tenant?.settings || '{}'))
         } catch {
             currentSettings = {}
         }
@@ -120,7 +120,7 @@ export async function PUT(request: Request) {
 
         let updatedSettings: Record<string, unknown> = {}
         try {
-            updatedSettings = JSON.parse(updatedTenant.settings)
+            updatedSettings = JSON.parse(String(updatedTenant.settings || '{}'))
         } catch {
             updatedSettings = {}
         }

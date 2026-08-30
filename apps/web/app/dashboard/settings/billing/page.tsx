@@ -296,7 +296,7 @@ export default function BillingSettingsPage() {
                     </div>
                     <div>
                         <div className="text-sm text-gray-600">{t('settings.monthlyBilling')}</div>
-                        <div className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(subscription?.plan?.price || 0)}</div>
+                        <div className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(Number(subscription?.plan?.price || 0))}</div>
                     </div>
                     <div>
                         <div className="text-sm text-gray-600">{t('settings.billing.maxUsers')}</div>
@@ -357,7 +357,7 @@ export default function BillingSettingsPage() {
                                 <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                                 <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
                                 <div className="mt-3">
-                                    <span className="text-3xl font-bold text-gray-900">{formatCurrency(plan.price)}</span>
+                                    <span className="text-3xl font-bold text-gray-900">{formatCurrency(Number(plan.price))}</span>
                                     <span className="text-gray-600">{t('settings.billing.perMonth')}</span>
                                 </div>
 
@@ -422,7 +422,7 @@ export default function BillingSettingsPage() {
                             {t('settings.billing.accountHolder')} <span className="font-medium text-gray-900">WAHYU DEDIK DWI ASTONO</span>
                         </div>
                         <div className="mt-2 text-lg font-bold text-blue-600">
-                            {t('settings.billing.nominal')} {formatCurrency(selectedPlan.price)}
+                            {t('settings.billing.nominal')} {formatCurrency(Number(selectedPlan.price))}
                         </div>
                     </div>
 
@@ -582,7 +582,7 @@ export default function BillingSettingsPage() {
                                             {STATUS_CONFIG[payment.status]?.label}
                                         </span>
                                         <span className="text-sm text-gray-600">
-                                            {formatCurrency(payment.amount)} · {payment.bankName || '-'} · {formatDate(payment.createdAt)}
+                                            {formatCurrency(Number(payment.amount))} · {payment.bankName || '-'} · {formatDate(payment.createdAt)}
                                         </span>
                                     </div>
                                 </div>
@@ -645,7 +645,7 @@ export default function BillingSettingsPage() {
                                 {payments.map((payment) => (
                                     <tr key={payment.id}>
                                         <td className="py-3 px-4 text-sm text-gray-900">{formatDate(payment.createdAt)}</td>
-                                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">{formatCurrency(payment.amount)}</td>
+                                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">{formatCurrency(Number(payment.amount))}</td>
                                         <td className="py-3 px-4 text-sm text-gray-600">{payment.bankName || '-'}</td>
                                         <td className="py-3 px-4">
                                             <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[payment.status]?.color || 'bg-gray-100 text-gray-700'}`}>

@@ -1140,7 +1140,15 @@
             "delete": "Hapus Karyawan",
             "confirmDelete": "Apakah Anda yakin ingin menghapus karyawan ini?",
             "deleteSuccess": "Karyawan berhasil dihapus",
-            "deleteError": "Gagal menghapus karyawan"
+            "deleteError": "Gagal menghapus karyawan",
+            "date": "Tanggal",
+            "leaves": "Cuti",
+            "type": "Tipe",
+            "startDate": "Tanggal Mulai",
+            "endDate": "Tanggal Selesai",
+            "days": "Hari",
+            "payroll": "Payroll",
+            "netSalary": "Gaji Bersih"
         }
     },
     "settings": {

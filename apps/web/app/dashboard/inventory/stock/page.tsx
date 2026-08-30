@@ -91,7 +91,7 @@ export default function StockPage() {
         ok: stock.filter(s => s.status === 'ok').length,
         low: stock.filter(s => s.status === 'low').length,
         out: stock.filter(s => s.status === 'out').length,
-        totalValue: stock.reduce((sum, s) => sum + (s.unitPrice * s.stock), 0),
+        totalValue: stock.reduce((sum, s) => sum + (Number(s.unitPrice) * s.stock), 0),
     }
 
     const statusLabels: Record<string, string> = {
@@ -142,8 +142,8 @@ export default function StockPage() {
                 </div>
                 {canMutate && (
                     <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                    <Plus className="h-4 w-4" />
-                    {t('inventory.stock.adjustStok')}
+                        <Plus className="h-4 w-4" />
+                        {t('inventory.stock.adjustStok')}
                     </button>
                 )}
             </div>
@@ -232,7 +232,7 @@ export default function StockPage() {
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('inventory.stock.stockValue')}:</span>
-                                    <span className="ml-1 font-medium">{formatCurrency(item.unitPrice * item.stock)}</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(Number(item.unitPrice) * item.stock)}</span>
                                 </div>
                             </div>
                         </div>
@@ -280,7 +280,7 @@ export default function StockPage() {
                                             <span className="text-gray-500 ml-1">{item.unit}</span>
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-gray-500">{item.minStock} {item.unit}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(item.unitPrice * item.stock)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(Number(item.unitPrice) * item.stock)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[item.status] || 'bg-gray-100 text-gray-700'}`}>
                                                 {statusLabels[item.status] || item.status}

@@ -161,8 +161,8 @@ export async function POST(request: Request) {
                 });
 
                 if (invoice) {
-                    const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0) + amount;
-                    const newInvoiceStatus = totalPaid >= invoice.total ? 'PAID' : invoice.status;
+                    const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0) + Number(amount);
+                    const newInvoiceStatus = Number(totalPaid) >= Number(invoice.total) ? 'PAID' : invoice.status;
                     await tx.invoice.update({
                         where: { id: validatedData.invoiceId },
                         data: { status: newInvoiceStatus },
@@ -261,8 +261,8 @@ export async function PUT(request: Request) {
                 if (invoice) {
                     const totalPaid = invoice.payments
                         .filter((p) => p.id !== id && p.status === 'COMPLETED')
-                        .reduce((sum, p) => sum + p.amount, 0) + (data.status === 'COMPLETED' ? updated.amount : 0);
-                    const newInvoiceStatus = totalPaid >= invoice.total ? 'PAID' : 'SENT';
+                        .reduce((sum, p) => sum + Number(p.amount), 0) + (data.status === 'COMPLETED' ? Number(updated.amount) : 0);
+                    const newInvoiceStatus = Number(totalPaid) >= Number(invoice.total) ? 'PAID' : 'SENT';
                     await tx.invoice.update({
                         where: { id: updated.invoiceId },
                         data: { status: newInvoiceStatus },

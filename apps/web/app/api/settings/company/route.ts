@@ -37,7 +37,7 @@ export async function GET() {
         const tenant = user.tenant
         let settings: Record<string, unknown> = {}
         try {
-            settings = JSON.parse(tenant.settings)
+            settings = JSON.parse(String(tenant.settings || '{}'))
         } catch {
             settings = {}
         }
@@ -105,7 +105,7 @@ export async function PUT(request: Request) {
         // Parse and update settings JSON for npwp, city, province, postalCode, country, branding
         let currentSettings: Record<string, unknown> = {}
         try {
-            currentSettings = JSON.parse(currentTenant?.settings || '{}')
+            currentSettings = JSON.parse(String(currentTenant?.settings || '{}'))
         } catch {
             currentSettings = {}
         }
@@ -159,7 +159,7 @@ export async function PUT(request: Request) {
             success: true,
             data: {
                 ...updatedTenant,
-                settings: JSON.parse(updatedTenant.settings),
+                settings: JSON.parse(String(updatedTenant.settings || '{}')),
             },
         })
     } catch (error) {

@@ -13,7 +13,7 @@ interface ContactDetail {
     email: string
     phone: string
     company: string
-    position: string
+    position?: string
     type: string
     address: string
     notes: string
@@ -21,10 +21,17 @@ interface ContactDetail {
 }
 
 const typeConfig: Record<string, { color: string }> = {
-    customer: { color: 'bg-blue-100 text-blue-700' },
-    supplier: { color: 'bg-green-100 text-green-700' },
-    partner: { color: 'bg-purple-100 text-purple-700' },
-    lead: { color: 'bg-yellow-100 text-yellow-700' },
+    CUSTOMER: { color: 'bg-blue-100 text-blue-700' },
+    SUPPLIER: { color: 'bg-green-100 text-green-700' },
+    PARTNER: { color: 'bg-purple-100 text-purple-700' },
+    LEAD: { color: 'bg-yellow-100 text-yellow-700' },
+    BOTH: { color: 'bg-indigo-100 text-indigo-700' },
+}
+
+function getTypeColor(type: string | undefined | null): string {
+    if (!type) return 'bg-gray-100 text-gray-700'
+    const config = typeConfig[type] || typeConfig[type.toUpperCase()]
+    return config?.color ?? 'bg-gray-100 text-gray-700'
 }
 
 export default function ContactDetailPage({ params }: { params: { id: string } }) {
@@ -38,10 +45,13 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
+        const contactId = params?.id
+        if (!contactId) return
+
         const fetchContact = async () => {
             try {
                 setLoading(true)
-                const res = await fetch(`/api/crm/contacts/${params.id}`)
+                const res = await fetch(`/api/crm/contacts/${contactId}`)
                 const data = await res.json()
                 if (data.success) {
                     setContact(data.data)
@@ -55,7 +65,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
             }
         }
         fetchContact()
-    }, [params.id, t])
+    }, [params?.id, t])
 
     const handleDelete = async () => {
         if (!window.confirm(t('crm.contactDetail.confirmDelete'))) return
@@ -109,10 +119,12 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">{contact.name}</h1>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${typeConfig[contact.type].color}`}>
-                                {t(`crm.contactDetail.${contact.type}`)}
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getTypeColor(contact.type)}`}>
+                                {t(`crm.contactDetail.${(contact.type || 'customer').toLowerCase()}`)}
                             </span>
-                            <span className="text-sm text-gray-500">• {contact.position}</span>
+                            {contact.position && (
+                                <span className="text-sm text-gray-500">• {contact.position}</span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -122,8 +134,8 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                     </button>
                     {canMutate && (
                         <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
-                        <Trash2 className="inline h-4 w-4 mr-1" />
-                        {t('crm.contactDetail.delete')}
+                            <Trash2 className="inline h-4 w-4 mr-1" />
+                            {t('crm.contactDetail.delete')}
                         </button>
                     )}
                     <Link href="/dashboard/crm/deals" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
@@ -153,7 +165,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">{t('crm.contactDetail.type')}</p>
-                                <p className="font-medium text-gray-900">{t(`crm.contactDetail.${contact.type}`)}</p>
+                                <p className="font-medium text-gray-900">{t(`crm.contactDetail.${(contact.type || 'customer').toLowerCase()}`)}</p>
                             </div>
                         </div>
                     </div>

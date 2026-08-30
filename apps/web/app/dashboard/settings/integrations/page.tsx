@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from '@/lib/i18n'
 import {
     MessageSquare,
@@ -33,15 +33,23 @@ interface Integration {
     category: string
 }
 
+// Default connection statuses — all false until API confirms otherwise
+const defaultConnectionStatuses: Record<string, boolean> = {
+    whatsapp: false,
+    email: false,
+    midtrans: false,
+    xendit: false,
+}
+
 const integrationData: Omit<Integration, 'description' | 'category'>[] = [
-    { id: 'whatsapp', name: 'WhatsApp Business', icon: MessageSquare, color: 'bg-green-500', connected: true },
-    { id: 'email', name: 'Email (SMTP)', icon: Mail, color: 'bg-blue-500', connected: true },
+    { id: 'whatsapp', name: 'WhatsApp Business', icon: MessageSquare, color: 'bg-green-500', connected: false },
+    { id: 'email', name: 'Email (SMTP)', icon: Mail, color: 'bg-blue-500', connected: false },
     { id: 'google-calendar', name: 'Google Calendar', icon: Calendar, color: 'bg-red-500', connected: false },
     { id: 'shopee', name: 'Shopee', icon: ShoppingBag, color: 'bg-orange-500', connected: false },
     { id: 'tokopedia', name: 'Tokopedia', icon: Store, color: 'bg-green-600', connected: false },
     { id: 'bank-bca', name: 'Bank BCA', icon: Landmark, color: 'bg-blue-700', connected: false },
     { id: 'bank-mandiri', name: 'Bank Mandiri', icon: Landmark, color: 'bg-blue-800', connected: false },
-    { id: 'midtrans', name: 'Midtrans', icon: CreditCard, color: 'bg-purple-600', connected: true },
+    { id: 'midtrans', name: 'Midtrans', icon: CreditCard, color: 'bg-purple-600', connected: false },
     { id: 'xendit', name: 'Xendit', icon: CreditCard, color: 'bg-indigo-600', connected: false },
     { id: 'google-sheets', name: 'Google Sheets', icon: BarChart3, color: 'bg-green-500', connected: false },
     { id: 'jne', name: 'JNE', icon: Package, color: 'bg-red-600', connected: false },
@@ -76,12 +84,28 @@ export default function IntegrationsSettingsPage() {
     const [showServerKey, setShowServerKey] = useState(false)
     const [pgSaving, setPgSaving] = useState(false)
     const [pgSaved, setPgSaved] = useState(false)
+    const [connectionStatuses, setConnectionStatuses] = useState<Record<string, boolean>>(defaultConnectionStatuses)
 
-    // Bangun array integrasi dengan deskripsi dari i18n
+    // Fetch real integration status from API (based on env vars server-side)
+    useEffect(() => {
+        fetch('/api/settings/integrations')
+            .then(res => res.json())
+            .then(data => {
+                if (data.integrations) {
+                    setConnectionStatuses(data.integrations)
+                }
+            })
+            .catch(() => {
+                // Silently keep default statuses on fetch error
+            })
+    }, [])
+
+    // Bangun array integrasi dengan deskripsi dari i18n + dynamic connection status
     const integrations: Integration[] = integrationData.map(item => ({
         ...item,
         description: t(integrationI18n[item.id].descKey),
         category: t(integrationI18n[item.id].catKey),
+        connected: connectionStatuses[item.id] ?? false,
     }))
 
     const categoryKeys = ['all', 'communication', 'productivity', 'marketplace', 'payment', 'logistics'] as const

@@ -169,8 +169,8 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                         <tr key={idx}>
                                             <td className="py-4 px-6 text-sm text-gray-900">{item.name} - {item.description}</td>
                                             <td className="py-4 px-6 text-sm text-gray-600 text-center">{item.quantity}</td>
-                                            <td className="py-4 px-6 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice)}</td>
-                                            <td className="py-4 px-6 text-sm text-gray-900 text-right font-medium">{formatCurrency(item.total)}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-600 text-right">{formatCurrency(Number(item.unitPrice))}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-900 text-right font-medium">{formatCurrency(Number(item.total))}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -183,15 +183,15 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                 <div className="w-64 space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">{t('finance.invoiceDetail.subtotal')}</span>
-                                        <span className="text-gray-900">{formatCurrency(invoice.subtotal)}</span>
+                                        <span className="text-gray-900">{formatCurrency(Number(invoice.subtotal))}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">{t('finance.invoiceDetail.tax')}</span>
-                                        <span className="text-gray-900">{formatCurrency(invoice.tax)}</span>
+                                        <span className="text-gray-900">{formatCurrency(Number(invoice.tax))}</span>
                                     </div>
                                     <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
                                         <span className="text-gray-900">{t('finance.invoiceDetail.grandTotal')}</span>
-                                        <span className="text-blue-600">{formatCurrency(invoice.total)}</span>
+                                        <span className="text-blue-600">{formatCurrency(Number(invoice.total))}</span>
                                     </div>
                                 </div>
                             </div>

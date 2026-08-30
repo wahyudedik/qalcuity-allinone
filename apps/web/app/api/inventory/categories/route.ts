@@ -33,7 +33,7 @@ export async function GET() {
             description: category.description || '',
             productCount: category.products.length,
             totalValue: category.products.reduce(
-                (sum, product) => sum + (product.price || 0) * (product.stock || 0),
+                (sum, product) => sum + Number(product.price || 0) * (product.stock || 0),
                 0
             ),
         }))
@@ -119,6 +119,65 @@ export async function POST(request: Request) {
         const message = error instanceof Error ? error.message : 'Internal server error'
         if (message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: message }, { status: 401 })
+        }
+        return NextResponse.json({ success: false, error: message }, { status: 500 })
+    }
+}
+
+// DELETE /api/inventory/categories?id=xxx — Delete a category
+export async function DELETE(request: Request) {
+    try {
+        const { userId, tenantId } = await requireMutateAuth()
+
+        const { searchParams } = new URL(request.url)
+        const id = searchParams.get('id')
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID kategori diperlukan' },
+                { status: 400 }
+            )
+        }
+
+        // Verify the category belongs to this tenant
+        const existing = await prisma.category.findFirst({
+            where: { id, tenantId, isActive: true },
+            select: { id: true, name: true },
+        })
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: 'Kategori tidak ditemukan' },
+                { status: 404 }
+            )
+        }
+
+        // Soft-delete by setting isActive to false
+        await prisma.category.update({
+            where: { id },
+            data: { isActive: false },
+        })
+
+        // Non-blocking audit log
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'DELETE',
+            entity: 'Category',
+            entityId: id,
+            oldValues: { name: existing.name },
+        })
+
+        return NextResponse.json({
+            success: true,
+            message: 'Kategori berhasil dihapus',
+        })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error'
+        if (message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: message }, { status: 401 })
+        }
+        if (message.startsWith('Forbidden')) {
+            return NextResponse.json({ success: false, error: message }, { status: 403 })
         }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }

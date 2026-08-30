@@ -1,7 +1,31 @@
-# 🚀 Qalcuity All-in-One — Feature Set Lengkap
+# 🚀 Qalcuity All-in-One — Product Source of Truth
 
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
+
+**Last Updated:** August 30, 2026
+**Maintainer:** Qalcuity Product Team
+**Document Version:** 3.0 — Audit-Based Status Labels
+
+---
+
+## 🏷️ Status Legend
+
+> **Setiap fitur diberi label status berdasarkan bukti kode dan pengujian aktual.**
+> Label ini adalah **single source of truth** — tidak ada `[x]`/`[ ]` yang ambigu.
+
+| Status | Icon | Arti |
+|--------|------|------|
+| `planned` | 📋 | Belum ada kode sama sekali — baru direncanakan |
+| `in_progress` | 🔨 | Mulai ditulis tapi belum fungsional |
+| `partial` | 🔄 | Ada kode tapi tidak lengkap (placeholder/mock/incomplete) |
+| `implemented` | ✅ | Kode lengkap dan kompilasi, tapi belum verified secara menyeluruh |
+| `verified` | ✔️ | Sudah di-test dan berfungsi sesuai harapan |
+| `production_ready` | 🚀 | Sudah verified + security + audit + tenant isolation — siap deploy |
+| `blocked` | 🚫 | Ada dependency yang belum selesai / blocker |
+| `deprecated` | ⛔ | Sudah tidak digunakan, akan dihapus |
+
+---
 
 ### 📌 Business Model
 
@@ -9,11 +33,11 @@
 
 ### 🖥️ Platform Availability
 
-| Platform | Description | Status |
-|----------|-------------|--------|
-| **Web App** | Core utama, full feature, admin panel | `production_ready` |
-| **Desktop App** | Electron-based, offline capable | `partial` |
-| **Mobile App** | iOS & Android, field-ready | `partial` |
+| Platform | Description | Status | Last Verified | Notes |
+|----------|-------------|--------|---------------|-------|
+| **Web App** | Core utama, full feature, admin panel | 🚀 `production_ready` | 2026-08-30 | Next.js 14 App Router, 35 API routes |
+| **Desktop App** | Electron-based, offline capable | 🔄 `partial` | — | Electron wrapper only, belum ada auth/offline |
+| **Mobile App** | iOS & Android, field-ready | 🔄 `partial` | — | 12 screens, API client partial, no auth flow |
 
 ### 💰 Yang Qalcuity Sediakan
 
@@ -40,46 +64,57 @@
 
 ## 📋 Daftar Isi
 
-1. [Core Platform](#1-core-platform)
+1. [Core Platform & SaaS](#1-core-platform--saas)
 2. [Finance & Accounting](#2-finance--accounting)
 3. [Sales & CRM](#3-sales--crm)
 4. [Inventory & Supply Chain](#4-inventory--supply-chain)
 5. [HR & People Ops](#5-hr--people-ops)
 6. [Operations & Project](#6-operations--project)
 7. [Customer Support & Communication](#7-customer-support--communication)
-8. [AI Features](#8-ai-features)
-9. [Integration & Ecosystem](#9-integration--ecosystem)
-10. [Admin & Security](#10-admin--security)
-11. [Pricing Model](#11-pricing-model)
+8. [Reports & Analytics](#8-reports--analytics)
+9. [AI Features](#9-ai-features)
+10. [Integration & Ecosystem](#10-integration--ecosystem)
+11. [Admin & Security](#11-admin--security)
+12. [Control Center & Workflow](#12-control-center--workflow)
+13. [Mobile](#13-mobile)
+14. [Desktop](#14-desktop)
+15. [Pricing Model](#15-pricing-model)
 
 ---
 
-## 1. Core Platform
+## 1. Core Platform & SaaS
 
 Foundation yang menjadi tulang punggung seluruh modul.
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Unified Dashboard** | Satu tampilan real-time untuk Finance, Sales, Operations, HR, Inventory | `production_ready` |
-| **Multi-platform** | Web (core utama), Desktop, Mobile (iOS + Android) | `partial` |
-| **Multi-entity & Multi-currency** | Support cabang, anak perusahaan, multi-negara dengan base currency | `planned` |
-| **Role-based Access + Approval Workflow** | Custom approval chain multi-level, delegation, conditional routing | `production_ready` |
-| **Audit Trail Lengkap** | Semua aksi tercatat dengan timestamp, user, IP, dan perubahan data | `production_ready` |
-| **Dark Mode** | Tema gelap untuk kenyamanan penggunaan malam hari | `production_ready` |
-| **Global Search** | Pencarian lintas modul dengan Ctrl+K shortcut | `production_ready` |
-| **i18n Support** | Bahasa Indonesia + English, custom lightweight i18n provider, 20+ pages localized | `production_ready` |
-| **Responsive Design** | Mobile-first, 44x44px touch targets, responsive tables | `production_ready` |
-| **Responsive Tables** | Dual layout (mobile cards + desktop tables) di 17 halaman | `production_ready` |
-| **Zod Validation** | 14+ schemas di `validation-schemas.ts`, 19 API routes | `production_ready` |
-| **RBAC Defense-in-depth** | 3 lapisan: middleware + API route + UI visibility, 35 API routes + 22 pages | `production_ready` |
-| **Lucide Icons** | Consistent icon system across all modules | `production_ready` |
-| **Empty States** | All CRUD pages have empty state components | `production_ready` |
-| **Toast Notifications** | CRUD operation success/error feedback | `production_ready` |
-| **Confirmation Dialogs** | Delete confirmation on 14+ CRUD pages | `production_ready` |
-| **Navigation Links** | Cross-entity navigation (e.g., Invoice → Contact) | `production_ready` |
-| **Loading States** | 9 loading.tsx files untuk detail pages | `production_ready` |
-| **Seed Data** | Comprehensive demo data for all modules | `production_ready` |
-| **Deploy Scripts** | PM2 health check, configurable port, robust db:push | `production_ready` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Tenant Management** | 🚀 `production_ready` | 2026-08-30 | Multi-tenant isolation, tenantId on all queries |
+| **User Management** | 🚀 `production_ready` | 2026-08-30 | CRUD, role assignment, tenant-scoped |
+| **Auth (NextAuth.js)** | 🚀 `production_ready` | 2026-08-30 | JWT + CredentialsProvider, password bcryptjs |
+| **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN, ADMIN, MEMBER, VIEWER — 3 layers |
+| **Audit Trail** | 🚀 `production_ready` | 2026-08-30 | 77 audit calls across 10 mutation endpoints |
+| **Settings (6 Pages)** | 🚀 `production_ready` | 2026-08-30 | Company, Profile, Security, Team, Notifications, Billing |
+| **Demo Data** | 🚀 `production_ready` | 2026-08-30 | Comprehensive seed data for all modules |
+| **Dark Mode** | 🚀 `production_ready` | 2026-08-30 | Tailwind dark theme support |
+| **Global Search** | 🚀 `production_ready` | 2026-08-30 | Ctrl+K shortcut, cross-module search |
+| **i18n (ID/EN)** | 🚀 `production_ready` | 2026-08-30 | Custom provider, 200+ keys, 20+ pages localized |
+| **Responsive Design** | 🚀 `production_ready` | 2026-08-30 | Mobile-first, 44x44px touch targets |
+| **Responsive Tables** | 🚀 `production_ready` | 2026-08-30 | Dual layout: mobile cards + desktop tables |
+| **Zod Validation** | 🚀 `production_ready` | 2026-08-30 | 14+ schemas, all mutation routes validated |
+| **RBAC Defense-in-depth** | 🚀 `production_ready` | 2026-08-30 | Middleware + API route + UI visibility |
+| **Lucide Icons** | 🚀 `production_ready` | 2026-08-30 | Consistent icon system across all modules |
+| **Empty States** | 🚀 `production_ready` | 2026-08-30 | All CRUD pages have empty state components |
+| **Toast Notifications** | 🚀 `production_ready` | 2026-08-30 | CRUD operation success/error feedback — Lucide Check/X icons |
+| **Confirmation Dialogs** | 🚀 `production_ready` | 2026-08-30 | Delete confirmation on 14+ CRUD pages |
+| **Navigation Links** | 🚀 `production_ready` | 2026-08-30 | Cross-entity navigation (e.g., Invoice → Contact) |
+| **Loading States** | 🚀 `production_ready` | 2026-08-30 | 12 loading.tsx files for detail pages |
+| **Deploy Scripts** | 🚀 `production_ready` | 2026-08-30 | PM2 health check, configurable port, robust db:push |
+| **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |
+| **Performance Indexes** | 🚀 `production_ready` | 2026-08-30 | 57 database indexes across frequently queried fields |
+| **Subscription** | ✅ `implemented` | — | Basic subscription model, belum verified end-to-end |
+| **Billing** | ✅ `implemented` | — | Plan selection, manual transfer, belum verified end-to-end |
+| **Notification** | 🔄 `partial` | — | Notification bell ada, tapi belum real-time push |
+| **Multi-entity & Multi-currency** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
@@ -89,79 +124,61 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 
 ### 2.1 Core Accounting
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Chart of Account** | Template CoA industri + custom, multi-level grouping, full CRUD tree view — **Migrated to Prisma DB** | `production_ready` |
-| **General Ledger** | Otomatis dari semua transaksi, real-time posting | `partial` |
-| **Journal Entry** | Manual & auto-generated, supporting multi-currency | `partial` |
-| **Trial Balance** | Real-time, drill-down ke detail transaksi | `planned` |
-| **Financial Statements** | Balance Sheet, Income Statement, Cash Flow, Equity Statement | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Chart of Account** | 🚀 `production_ready` | 2026-08-30 | Template CoA + custom, multi-level grouping, Prisma DB |
+| **General Ledger** | 📋 `planned` | — | Belum ada kode |
+| **Journal Entry** | 📋 `planned` | — | Belum ada kode |
+| **Trial Balance** | 📋 `planned` | — | Belum ada kode |
+| **Financial Statements** | 📋 `planned` | — | Belum ada kode (Balance Sheet, Income Statement, Cash Flow) |
 
 ### 2.2 Accounts Receivable
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Invoice** | Custom template, recurring invoice, batch generation | `production_ready` |
-| **Quotation** | Convert to invoice, version tracking | `production_ready` |
-| **Payment Tracking** | Multi-payment method, partial payment, auto-reconciliation | `production_ready` |
-| **Aging Report** | 30/60/90 day buckets, automated reminder | `partial` |
-| **Credit Limit Management** | Auto-block order jika melebihi limit | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Invoices** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, custom template, Zod validation, audit trail |
+| **Quotations** | 🚀 `production_ready` | 2026-08-30 | Convert to invoice, version tracking, Prisma DB |
+| **Payments** | 🚀 `production_ready` | 2026-08-30 | Multi-payment method, partial payment, process endpoint |
+| **Aging Report** | 🔄 `partial` | — | Basic report ada, belum 30/60/90 day buckets lengkap |
+| **Credit Limit Management** | 📋 `planned` | — | Belum ada kode |
 
 ### 2.3 Accounts Payable
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Purchase Order** | Approval workflow, 3-way matching | `production_ready` |
-| **Bills & Expenses** | Upload receipt, auto-categorize dengan AI | `partial` |
-| **Payment Processing** | Batch payment, scheduled payment | `partial` |
-| **Supplier Management** | Rating, performance tracking, payment terms | `production_ready` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Purchase Orders** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, approval workflow, Zod validation |
+| **Bills & Expenses** | 🔄 `partial` | — | Basic expense tracking, belum AI categorization |
+| **Payment Processing** | 🔄 `partial` | — | Basic payment processing, belum batch/scheduled |
+| **Supplier Management** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, rating, performance tracking |
 
 ### 2.4 Bank & Cash
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Bank Reconciliation** | Manual reconciliation page dengan API route — **Migrated to Prisma DB** (CoAAccount + BankTransaction models) | `production_ready` |
-| **Multi-bank Account** | Support unlimited rekening | `planned` |
-| **Petty Cash** | Approval workflow, auto-replenishment | `planned` |
-| **Bank Feed** | Auto-import transaksi dari bank | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Bank Reconciliation** | 🚀 `production_ready` | 2026-08-30 | Manual reconciliation page, CoAAccount + BankTransaction models |
+| **Multi-bank Account** | 📋 `planned` | — | Belum ada kode |
+| **Petty Cash** | 📋 `planned` | — | Belum ada kode |
+| **Bank Feed** | 📋 `planned` | — | Belum ada kode |
 
 ### 2.5 Tax Engine
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Coretax-ready** | Siap integrasi dengan sistem pajak terbaru | `planned` |
-| **e-Faktur** | Generate & report Faktur Pajak elektronik | `planned` |
-| **PPh 21** | Kalkulasi otomatis gaji karyawan | `planned` |
-| **PPh 23** | Withholding tax untuk service | `planned` |
-| **PPN** | Auto perhitungan PPN masukan & keluaran | `planned` |
-| **Tax Report** | SPT Masa, recap pajak bulanan/tahunan | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Coretax-ready** | 📋 `planned` | — | Belum ada kode |
+| **e-Faktur** | 📋 `planned` | — | Belum ada kode |
+| **PPh 21** | 📋 `planned` | — | Belum ada kode |
+| **PPh 23** | 📋 `planned` | — | Belum ada kode |
+| **PPN** | 📋 `planned` | — | Belum ada kode |
+| **Tax Report** | 📋 `planned` | — | Belum ada kode |
 
 ### 2.6 Revenue Recognition
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **ASC 606 / IFRS 15** | Compliance standar internasional | `planned` |
-| **Subscription Revenue** | Recognition berdasarkan periode | `planned` |
-| **Milestone-based** | Recognition berdasarkan pencapaian project | `planned` |
-| **Multi-element** | Bundle product/service dengan different recognition | `planned` |
-
-### 2.7 Reporting
-
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Standard Reports** | 12 report types (Finance, Sales, HR, Inventory) | `production_ready` |
-| **Custom Report Builder** | Drag & drop, pivot table, chart | `planned` |
-| **Scheduled Reports** | Auto-send via email | `planned` |
-| **Export** | CSV, Excel, Print — built-in export utilities | `production_ready` |
-| **Chart Components** | Bar, Pie, Line charts — custom implementation | `production_ready` |
-
-### 2.8 Cash Flow Forecasting (AI)
-
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Prediction** | 30/60/90 hari ke depan | `planned` |
-| **Scenario Analysis** | Best/worst case modeling | `planned` |
-| **Alert** | Prediksi cash shortfall | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **ASC 606 / IFRS 15** | 📋 `planned` | — | Belum ada kode |
+| **Subscription Revenue** | 📋 `planned` | — | Belum ada kode |
+| **Milestone-based** | 📋 `planned` | — | Belum ada kode |
+| **Multi-element** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
@@ -169,59 +186,64 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 
 Pipeline yang powerful dengan AI untuk meningkatkan konversi.
 
-### 3.1 Pipeline Management
+### 3.1 Contacts
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Kanban View** | Drag & drop cards antar stage (6 stages: DISCOVERY → CLOSED_LOST) | `production_ready` |
-| **List View** | Table dengan sorting & filtering | `production_ready` |
-| **Multiple Pipelines** | Berbagai jenis penjualan (direct, reseller, enterprise) | `planned` |
-| **Custom Stages** | 6 stages: DISCOVERY, QUALIFICATION, PROPOSAL, NEGOTIATION, CLOSED_WON, CLOSED_LOST | `production_ready` |
-| **Deal Value Forecasting** | Weighted pipeline berdasarkan probability | `partial` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Contacts (CRM)** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, cross-entity navigation, tenant-scoped |
 
-### 3.2 Lead Management
+### 3.2 Pipeline Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Lead Capture** | Website form, WhatsApp, marketplace, manual | `production_ready` |
-| **Lead Scoring** | AI-based scoring berdasarkan engagement | `planned` |
-| **Lead Assignment** | Round-robin, territory-based, manual | `planned` |
-| **Lead Source Tracking** | Attribution multi-touch | `partial` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Deals (Kanban)** | 🚀 `production_ready` | 2026-08-30 | 6 stages: DISCOVERY → CLOSED_LOST, drag & drop |
+| **Pipeline View** | 🚀 `production_ready` | 2026-08-30 | List view + Kanban view, sorting & filtering |
+| **Custom Stages** | 🚀 `production_ready` | 2026-08-30 | 6 predefined stages with Prisma enum |
+| **Deal Value Forecasting** | 🔄 `partial` | — | Basic weighted pipeline, belum AI prediction |
+| **Multiple Pipelines** | 📋 `planned` | — | Belum ada kode |
 
-### 3.3 Quote to Order
+### 3.3 Lead Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Quote Builder** | Custom template, terms & conditions | `production_ready` |
-| **Approval Workflow** | Discount approval, credit check | `planned` |
-| **Convert to Order** | Seamless, auto-populate data | `partial` |
-| **Convert to Invoice** | Trigger fulfillment process | `partial` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Leads** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, tenant-scoped, audit trail |
+| **Lead Scoring** | 📋 `planned` | — | Belum ada kode |
+| **Lead Assignment** | 📋 `planned` | — | Belum ada kode |
+| **Lead Source Tracking** | 🔄 `partial` | — | Basic source field, belum attribution multi-touch |
 
-### 3.4 Customer 360°
+### 3.4 Quote to Order
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Unified Profile** | Semua data customer di satu tempat | `production_ready` |
-| **Transaction History** | Invoice, payment, order history | `partial` |
-| **Interaction Timeline** | Email, chat, call, meeting notes | `planned` |
-| **Segmentation** | RFM analysis, custom segment | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Quote Builder** | 🚀 `production_ready` | 2026-08-30 | Custom template, convert to invoice |
+| **Convert to Order** | 🔄 `partial` | — | Basic conversion, belum seamless |
+| **Approval Workflow** | 📋 `planned` | — | Belum ada kode |
 
-### 3.5 Sales Intelligence (AI)
+### 3.5 Customer 360°
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Win Probability** | Predict likelihood menang deal | `planned` |
-| **Next Best Action** | Suggest follow-up yang tepat | `planned` |
-| **Sales Forecasting** | Pipeline-based & historical prediction | `planned` |
-| **Competitor Analysis** | Win/loss tracking vs competitor | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Unified Profile** | 🔄 `partial` | — | Basic contact detail page, belum unified view |
+| **Transaction History** | 🔄 `partial` | — | Invoice history ada, belum payment/order history |
+| **Interaction Timeline** | 📋 `planned` | — | Belum ada kode |
+| **Segmentation** | 📋 `planned` | — | Belum ada kode |
 
-### 3.6 Commission Calculator
+### 3.6 Sales Intelligence (AI)
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Flexible Rules** | Tiered, flat, hybrid | `planned` |
-| **Real-time Calculation** | Live commission preview | `planned` |
-| **Disbursement** | Auto-create payable saat closing | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Win Probability** | 📋 `planned` | — | Belum ada kode |
+| **Next Best Action** | 📋 `planned` | — | Belum ada kode |
+| **Sales Forecasting** | 📋 `planned` | — | Belum ada kode |
+| **Competitor Analysis** | 📋 `planned` | — | Belum ada kode |
+
+### 3.7 Commission Calculator
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Flexible Rules** | 📋 `planned` | — | Belum ada kode |
+| **Real-time Calculation** | 📋 `planned` | — | Belum ada kode |
+| **Disbursement** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
@@ -229,50 +251,52 @@ Pipeline yang powerful dengan AI untuk meningkatkan konversi.
 
 Real-time visibility dan kontrol penuh atas inventaris.
 
-### 4.1 Stock Management
+### 4.1 Product Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Multi-warehouse** | Unlimited lokasi, inter-warehouse transfer | `planned` |
-| **Real-time Stock** | Live update setiap transaksi | `production_ready` |
-| **Stock Opname** | Physical count dengan variance report | `planned` |
-| **Unit of Measure** | Multi-UoM, conversion rate | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Products** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, variants, Prisma model |
+| **Categories** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, hierarchical, DELETE handler via API |
+| **Batch/Lot Tracking** | 📋 `planned` | — | Belum ada kode |
+| **Serial Number** | 📋 `planned` | — | Belum ada kode |
+| **Bill of Materials** | 📋 `planned` | — | Belum ada kode |
 
-### 4.2 Product Management
+### 4.2 Stock Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Product Catalog** | Variants, attributes, images | `production_ready` |
-| **Batch/Lot Tracking** | Expiry date, manufacturing date | `planned` |
-| **Serial Number** | Individual item tracking | `planned` |
-| **Bill of Materials** | Untuk manufacturing/assembly | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Stock Management** | 🚀 `production_ready` | 2026-08-30 | Real-time stock tracking, tenant-scoped |
+| **Stock Movements** | 🚀 `production_ready` | 2026-08-30 | In/out tracking, movement history |
+| **Multi-warehouse** | 📋 `planned` | — | Belum ada kode |
+| **Stock Opname** | 📋 `planned` | — | Belum ada kode |
+| **Unit of Measure** | 📋 `planned` | — | Belum ada kode |
 
 ### 4.3 Procurement
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Purchase Order** | Auto-generated dari reorder point | `production_ready` |
-| **Supplier Management** | Performance score, lead time tracking | `production_ready` |
-| **Goods Receipt** | QC check, GRN process | `planned` |
-| **Supplier Price Monitoring** | Bandingkan harga real-time | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Suppliers** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, rating, performance tracking |
+| **Purchase Order (Auto)** | 📋 `planned` | — | PO manual ada (di Finance), auto-generated belum |
+| **Goods Receipt** | 📋 `planned` | — | Belum ada kode |
+| **Supplier Price Monitoring** | 📋 `planned` | — | Belum ada kode |
 
 ### 4.4 Warehouse Operations
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Putaway Rules** | Auto-assign lokasi penyimpanan | `planned` |
-| **Picking Strategy** | FIFO, FEFO, LIFO | `planned` |
-| **Barcode/QR Scanning** | Mobile scanning untuk receiving, picking, packing | `planned` |
-| **Shipping Integration** | JNE, J&T, SiCepat, Grab Express | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Putaway Rules** | 📋 `planned` | — | Belum ada kode |
+| **Picking Strategy** | 📋 `planned` | — | Belum ada kode |
+| **Barcode/QR Scanning** | 📋 `planned` | — | Belum ada kode |
+| **Shipping Integration** | 📋 `planned` | — | Belum ada kode |
 
 ### 4.5 Inventory Intelligence (AI)
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Low-stock Alert** | Predictive notification | `planned` |
-| **Auto-reorder Suggestion** | Based on demand pattern | `planned` |
-| **Demand Forecasting** | Seasonal & trend analysis | `planned` |
-| **Dead Stock Detection** | Identify slow-moving inventory | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Low-stock Alert** | 📋 `planned` | — | Belum ada kode |
+| **Auto-reorder Suggestion** | 📋 `planned` | — | Belum ada kode |
+| **Demand Forecasting** | 📋 `planned` | — | Belum ada kode |
+| **Dead Stock Detection** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
@@ -282,64 +306,60 @@ HR yang efisien dengan automation untuk fokus pada people.
 
 ### 5.1 Employee Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Employee Database** | Comprehensive profile, documents, history | `production_ready` |
-| **Digital Onboarding** | Checklist-based, document upload | `planned` |
-| **Org Chart** | Visual hierarchy, reporting line | `planned` |
-| **Employee Self-Service** | Profile update, document request | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Employees** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, comprehensive profile, tenant-scoped |
+| **Digital Onboarding** | 📋 `planned` | — | Belum ada kode |
+| **Org Chart** | 📋 `planned` | — | Belum ada kode |
+| **Employee Self-Service** | 📋 `planned` | — | Belum ada kode |
 
-### 5.2 Template Builder (Pain Point Solution)
+### 5.2 Attendance & Time
 
-> 🎯 **Fitur unggulan** — Template Builder cerdas untuk HR documents
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Attendance** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, check-in/check-out, tenant-scoped |
+| **GPS Check-in** | 🔄 `partial` | — | Basic check-in, belum geofencing |
+| **Face Recognition** | 📋 `planned` | — | Belum ada kode |
+| **Flexible Schedule** | 📋 `planned` | — | Belum ada kode |
 
-| Template | Deskripsi | Status |
-|----------|-----------|--------|
-| **Offer Letter** | Auto-fill dari data kandidat | `planned` |
-| **Kontrak Kerja** | PKWT, PKWTT, dengan auto-renewal reminder | `planned` |
-| **Warning Letter** | Level 1, 2, 3 dengan progressive tracking | `planned` |
-| **Performance Review** | Custom form, rating scale | `planned` |
-| **Termination Letter** | Dengan reason tracking & checklist | `planned` |
-| **Surat Keterangan** | Keterangan kerja, domisili, dll | `planned` |
+### 5.3 Leave Management
 
-### 5.3 Attendance & Time
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Leaves** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, approval workflow, tenant-scoped |
+| **Leave Balance** | 🔄 `partial` | — | Basic balance tracking, belum real-time |
+| **Leave Calendar** | 📋 `planned` | — | Belum ada kode |
+| **Public Holiday** | 📋 `planned` | — | Belum ada kode |
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **GPS Check-in** | Geofencing untuk area kantor | `partial` |
-| **Face Recognition** | Anti-fake attendance | `planned` |
-| **WhatsApp Check-in** | Via chat command | `planned` |
-| **Flexible Schedule** | Shift, flex time, compressed week | `planned` |
-| **Overtime Management** | Auto-calculate sesuai regulasi | `planned` |
+### 5.4 Payroll
 
-### 5.4 Leave Management
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Payroll** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, auto calculation, tenant-scoped |
+| **PPh 21** | 🔄 `partial` | — | Basic calculation, belum complete |
+| **BPJS** | 🔄 `partial` | — | Basic calculation, belum complete |
+| **THR** | 📋 `planned` | — | Belum ada kode |
+| **Payroll Report** | 🔄 `partial` | — | Basic report, belum SPT format |
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Leave Types** | Annual, sick, maternity, unpaid, custom | `production_ready` |
-| **Approval Workflow** | Multi-level, delegation | `production_ready` |
-| **Leave Balance** | Real-time tracking | `partial` |
-| **Leave Calendar** | Team availability view | `planned` |
-| **Public Holiday** | Indonesian & custom holidays | `planned` |
+### 5.5 Template Builder (Pain Point Solution)
 
-### 5.5 Payroll
-
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Auto Calculation** | Gaji, tunjangan, potongan | `production_ready` |
-| **PPh 21** | Perhitungan pajak otomatis | `partial` |
-| **BPJS** | Kesehatan & Ketenagakerjaan | `partial` |
-| **THR** | Tunjangan hari raya calculation | `planned` |
-| **Payroll Report** | Slip gaji, recap, SPT | `partial` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Offer Letter** | 📋 `planned` | — | Belum ada kode |
+| **Kontrak Kerja** | 📋 `planned` | — | Belum ada kode |
+| **Warning Letter** | 📋 `planned` | — | Belum ada kode |
+| **Performance Review** | 📋 `planned` | — | Belum ada kode |
+| **Termination Letter** | 📋 `planned` | — | Belum ada kode |
+| **Surat Keterangan** | 📋 `planned` | — | Belum ada kode |
 
 ### 5.6 Performance & OKR
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **OKR Setting** | Company → Team → Individual | `planned` |
-| **Regular Check-in** | 1-on-1 meeting notes | `planned` |
-| **360° Feedback** | Multi-rater assessment | `planned` |
-| **Performance Review** | Periodic, project-based | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **OKR Setting** | 📋 `planned` | — | Belum ada kode |
+| **Regular Check-in** | 📋 `planned` | — | Belum ada kode |
+| **360° Feedback** | 📋 `planned` | — | Belum ada kode |
+| **Performance Review** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
@@ -349,44 +369,42 @@ Manage projects dan field operations dengan efisien.
 
 ### 6.1 Project Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Project Types** | Fixed price, time & material, retainer | `planned` |
-| **Gantt Chart** | Visual timeline, dependencies | `planned` |
-| **Kanban Board** | Task management | `planned` |
-| **Resource Allocation** | Capacity planning | `planned` |
-| **Budget Tracking** | Cost vs revenue monitoring | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Project Types** | 📋 `planned` | — | Belum ada kode |
+| **Gantt Chart** | 📋 `planned` | — | Belum ada kode |
+| **Kanban Board** | 📋 `planned` | — | Belum ada kode |
+| **Resource Allocation** | 📋 `planned` | — | Belum ada kode |
+| **Budget Tracking** | 📋 `planned` | — | Belum ada kode |
 
 ### 6.2 Task & Time Tracking
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Task Assignment** | Assignee, deadline, priority | `planned` |
-| **Time Logging** | Manual & timer-based | `planned` |
-| **Timesheet** | Weekly/monthly approval | `planned` |
-| **Productivity Report** | Per person, per project | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Task Assignment** | 📋 `planned` | — | Belum ada kode |
+| **Time Logging** | 📋 `planned` | — | Belum ada kode |
+| **Timesheet** | 📋 `planned` | — | Belum ada kode |
+| **Productivity Report** | 📋 `planned` | — | Belum ada kode |
 
 ### 6.3 Field Service Module
 
-> 🎯 **Fitur khusus** untuk industri lapangan (konstruksi, serviced, maintenance)
-
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Job Scheduling** | Drag & drop calendar | `planned` |
-| **Technician Assignment** | Based on skill, location, availability | `planned` |
-| **Mobile Checklist** | Custom form, photo upload | `planned` |
-| **Before-After Photos** | Geo-tagged, timestamped | `planned` |
-| **Digital Signature** | Customer sign-off di mobile | `planned` |
-| **Job Status Update** | Real-time ke customer | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Job Scheduling** | 📋 `planned` | — | Belum ada kode |
+| **Technician Assignment** | 📋 `planned` | — | Belum ada kode |
+| **Mobile Checklist** | 📋 `planned` | — | Belum ada kode |
+| **Before-After Photos** | 📋 `planned` | — | Belum ada kode |
+| **Digital Signature** | 📋 `planned` | — | Belum ada kode |
+| **Job Status Update** | 📋 `planned` | — | Belum ada kode |
 
 ### 6.4 Quality & Compliance
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Quality Checklist** | Custom templates per job type | `planned` |
-| **Non-conformance** | Log & track issues | `planned` |
-| **Corrective Action** | CAPA workflow | `planned` |
-| **Compliance Form** | Regulatory checklist | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Quality Checklist** | 📋 `planned` | — | Belum ada kode |
+| **Non-conformance** | 📋 `planned` | — | Belum ada kode |
+| **Corrective Action** | 📋 `planned` | — | Belum ada kode |
+| **Compliance Form** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
@@ -396,271 +414,489 @@ Omnichannel support yang terintegrasi.
 
 ### 7.1 Omnichannel Inbox
 
-| Channel | Integrasi | Status |
-|---------|-----------|--------|
-| **Email** | IMAP/SMTP — Real SMTP transport via nodemailer, console fallback | `production_ready` |
-| **WhatsApp Business** | Official API | `planned` |
-| **Instagram** | DM & comment | `planned` |
-| **Live Chat** | Website widget | `planned` |
-| **Facebook** | Messenger | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Email (SMTP)** | ✅ `implemented` | — | Real SMTP via Nodemailer, env-based config, console fallback |
+| **WhatsApp Business** | 📋 `planned` | — | Belum ada kode |
+| **Instagram** | 📋 `planned` | — | Belum ada kode |
+| **Live Chat** | 📋 `planned` | — | Belum ada kode |
+| **Facebook** | 📋 `planned` | — | Belum ada kode |
 
 ### 7.2 Ticket Management
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Ticket System** | Auto-create dari channel manapun | `planned` |
-| **Priority & Category** | Custom fields, auto-routing | `planned` |
-| **SLA Tracking** | Response time, resolution time | `planned` |
-| **Escalation** | Auto-escalate jika SLA terancam | `planned` |
-| **Internal Note** | Private note antar agent | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Ticket System** | 📋 `planned` | — | Belum ada kode |
+| **Priority & Category** | 📋 `planned` | — | Belum ada kode |
+| **SLA Tracking** | 📋 `planned` | — | Belum ada kode |
+| **Escalation** | 📋 `planned` | — | Belum ada kode |
 
 ### 7.3 Knowledge Base
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Article Editor** | Rich text, video embed | `planned` |
-| **Categories** | Hierarchical organization | `planned` |
-| **Search** | Full-text search | `planned` |
-| **AI Suggestion** | Auto-suggest article saat agent reply | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Article Editor** | 📋 `planned` | — | Belum ada kode |
+| **Categories** | 📋 `planned` | — | Belum ada kode |
+| **Search** | 📋 `planned` | — | Belum ada kode |
 
 ### 7.4 AI Chatbot
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Automated Reply** | Jawaban pertanyaan umum | `planned` |
-| **Handoff to Human** | Seamless escalation | `planned` |
-| **Learning** | Improve dari interaction history | `planned` |
-| **Multi-language** | ID & EN | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Automated Reply** | 📋 `planned` | — | Belum ada kode |
+| **Handoff to Human** | 📋 `planned` | — | Belum ada kode |
 
 ### 7.5 Customer Portal
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Invoice View** | Download, pay online | `planned` |
-| **Order Status** | Real-time tracking | `planned` |
-| **Support Ticket** | Submit & track | `planned` |
-| **Knowledge Base** | Self-service | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Invoice View** | 📋 `planned` | — | Belum ada kode |
+| **Order Status** | 📋 `planned` | — | Belum ada kode |
+| **Support Ticket** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
-## 8. AI Features
+## 8. Reports & Analytics
+
+Reporting yang comprehensive untuk semua modul.
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Dashboard Stats** | ✔️ `verified` | 2026-08-30 | Real-time stats from dynamic API |
+| **Standard Reports (12 types)** | 🚀 `production_ready` | 2026-08-30 | Finance, Sales, HR, Inventory reports |
+| **Chart Components** | 🚀 `production_ready` | 2026-08-30 | Bar, Pie, Line charts — custom implementation |
+| **Export (CSV/Excel/Print)** | 🚀 `production_ready` | 2026-08-30 | Built-in export utilities |
+| **Custom Report Builder** | 📋 `planned` | — | Belum ada kode |
+| **Scheduled Reports** | 📋 `planned` | — | Belum ada kode |
+
+---
+
+## 9. AI Features
 
 AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam biaya sewa — tidak ada biaya tambahan ke provider AI.**
 
-### 8.1 AI Hub & Chat
+### 9.1 AI Hub & Chat
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **AI Chat** | Floating button chat assistant — OpenAI provider + Mock fallback, API route at `/api/ai/chat` | `production_ready` |
-| **AI Hub** | Centralized page `/dashboard/ai` untuk semua AI features | `partial` |
-| **AI Insights** | Dashboard cards dengan AI-generated business insights | `partial` |
-| **AI Menu** | Sidebar menu AI Features untuk akses cepat | `production_ready` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **AI Chat** | 🔄 `partial` | — | Floating button + OpenAI provider + Mock fallback — mock responses, belum real AI |
+| **AI Provider (OpenAI/Mock)** | ✅ `implemented` | — | API route `/api/ai/chat`, OpenAI + mock fallback |
+| **AI Hub Page** | 📋 `planned` | — | `/dashboard/ai` belum ada |
+| **AI Insights** | 📋 `planned` | — | Belum ada kode |
 
-### 8.2 AI Agent Capabilities
+### 9.2 AI Agent Capabilities
 
-| Agent | Fungsi | Status |
-|-------|--------|--------|
-| **Finance Agent** | Auto-generate invoice, detect anomalies, suggest payment | `planned` |
-| **Sales Agent** | Win probability, next best action, follow-up reminder | `planned` |
-| **Inventory Agent** | Stockout prediction, reorder suggestion, dead stock alert | `planned` |
-| **HR Agent** | Contract generation, leave prediction, attrition risk | `planned` |
-| **Support Agent** | Auto-categorize ticket, suggest reply, sentiment analysis | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Finance Agent** | 📋 `planned` | — | Belum ada kode |
+| **Sales Agent** | 📋 `planned` | — | Belum ada kode |
+| **Inventory Agent** | 📋 `planned` | — | Belum ada kode |
+| **HR Agent** | 📋 `planned` | — | Belum ada kode |
+| **Support Agent** | 📋 `planned` | — | Belum ada kode |
 
-### 8.3 Natural Language Query
+### 9.3 Natural Language Query
 
-| Contoh Query | Response | Status |
-|--------------|----------|--------|
-| "Tampilkan penjualan produk X bulan ini vs bulan lalu" | Tabel perbandingan + chart | `planned` |
-| "Siapa sales terbaik Q2 2026?" | Ranked list + metrics | `planned` |
-| "Berapa total outstanding invoice?" | Jumlah + aging breakdown | `planned` |
-| "Prediksi cash flow 30 hari ke depan" | Line chart + scenario analysis | `planned` |
-| "Generate laporan PPh 21 bulan Juni" | Formatted report | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **NLP Query** | 📋 `planned` | — | Belum ada kode |
 
-### 8.4 Smart Document Extraction
+### 9.4 Smart Document Extraction
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **PDF Processing** | Upload PO/Invoice → auto-extract data | `planned` |
-| **OCR** | Scan KTP, NPWP, dokumen lain | `planned` |
-| **Auto-validation** | Check completeness & accuracy | `planned` |
-| **Auto-entry** | Push ke system tanpa manual input | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **PDF Processing** | 📋 `planned` | — | Belum ada kode |
+| **OCR** | 📋 `planned` | — | Belum ada kode |
+| **Auto-validation** | 📋 `planned` | — | Belum ada kode |
+| **Auto-entry** | 📋 `planned` | — | Belum ada kode |
 
-### 8.5 AI Template Generator
+### 9.5 AI Template Generator
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Contract Generator** | Input requirements → draft kontrak | `planned` |
-| **Job Description** | Generate JD dari role title | `planned` |
-| **Email Template** | Context-aware email draft | `planned` |
-| **Report Summary** | Auto-summarize long reports | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Contract Generator** | 📋 `planned` | — | Belum ada kode |
+| **Job Description** | 📋 `planned` | — | Belum ada kode |
+| **Email Template** | 📋 `planned` | — | Belum ada kode |
+| **Report Summary** | 📋 `planned` | — | Belum ada kode |
 
-### 8.6 Anomaly Detection
+### 9.6 Anomaly Detection
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Fraud Detection** | Unusual transaction pattern | `planned` |
-| **Data Error** | Duplicate, mismatch, outlier | `planned` |
-| **Compliance Alert** | Regulatory deadline reminder | `planned` |
-| **Performance Anomaly** | Revenue drop, cost spike | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Fraud Detection** | 📋 `planned` | — | Belum ada kode |
+| **Data Error** | 📋 `planned` | — | Belum ada kode |
+| **Compliance Alert** | 📋 `planned` | — | Belum ada kode |
+| **Performance Anomaly** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
-## 9. Integration Hub (User-Managed)
+## 10. Integration & Ecosystem
 
 > **Qalcuity menyediakan API & Webhook. User mengelola integrasi pihak ketiga sendiri melalui dashboard integrasi.**
 
-### 9.1 Integration Dashboard
+### 10.1 Integration Dashboard
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Integration Hub** | Dashboard khusus untuk mengelola semua koneksi pihak ketiga | `production_ready` |
-| **Payment Gateway Config** | Midtrans & Xendit configuration di `/settings/integrations` | `production_ready` |
-| **Email/SMTP Config** | SMTP configuration — Real nodemailer transport, env-based config (SMTP_HOST, SMTP_PORT, etc.) | `production_ready` |
-| **API Key Management** | Generate, rotate, revoke API keys | `planned` |
-| **Connection Status** | Monitor status setiap integrasi | `planned` |
-| **Error Logging** | Log error dan retry mechanism | `planned` |
-| **Sandbox Mode** | Test integrasi sebelum production | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Email/SMTP Config** | ✅ `implemented` | — | Real Nodemailer transport, env-based config |
+| **Payment Gateway Config** | 🔄 `partial` | — | Settings page ada, Midtrans partial, Xendit belum |
+| **API Key Management** | 📋 `planned` | — | Belum ada kode |
+| **Connection Status** | ✅ `implemented` | 2026-08-30 | Dynamic fetch from `/api/settings/integrations` |
+| **Error Logging** | 📋 `planned` | — | Belum ada kode |
 
-### 9.2 Supported Integration Categories
+### 10.2 Payment Gateway
 
-| Kategori | Contoh Layanan | Integration Method | Status |
-|----------|---------------|-------------------|--------|
-| **Messaging** | WhatsApp Business, Telegram | API Key + Webhook | `planned` |
-| **Marketplace** | Tokopedia, Shopee, Bukalapak, Lazada | API Key | `planned` |
-| **Payment Gateway** | Xendit, Midtrans, DOKU | API Key | `partial` |
-| **E-wallet** | GoPay, OVO, Dana, ShopeePay | Via Payment Gateway | `planned` |
-| **Banking** | BCA, Mandiri, BRI, BNI | API Key / CSV Import | `planned` |
-| **Productivity** | Google Workspace, Microsoft 365 | OAuth 2.0 | `planned` |
-| **Shipping** | JNE, J&T, SiCepat, Anteraja | API Key | `planned` |
-| **CRM** | Salesforce, HubSpot | API Key | `planned` |
-| **Accounting** | Jurnal.id, Mekari | API Key (migration) | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Midtrans** | 🔄 `partial` | — | Settings config ada, belum integrated end-to-end |
+| **Xendit** | 📋 `planned` | — | Belum ada kode |
 
-### 9.3 API & Webhook
+### 10.3 Rate Limiter & Security
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **REST API** | Full CRUD operations untuk semua data | `partial` |
-| **GraphQL** | Flexible query | `planned` |
-| **Webhook** | Event-based notification ke URL user | `planned` |
-| **API Documentation** | Interactive docs dengan sandbox | `planned` |
-| **Rate Limiting** | Configurable per tenant | `partial` |
-| **OAuth 2.0** | Standard authorization flow | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Rate Limiter (Redis)** | 🚀 `production_ready` | 2026-08-30 | Per-IP rate limiting, Redis-backed |
 
-### 9.4 Automation Connectors
+### 10.4 Import/Export
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Zapier** | 5000+ app connections via Zapier | `planned` |
-| **Make.com** | Advanced workflow automation | `planned` |
-| **Custom Webhook** | Build own integration | `planned` |
-| **n8n** | Self-hosted automation (open source) | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Excel/CSV Export** | 🚀 `production_ready` | 2026-08-30 | Any report or data |
+| **Excel/CSV Import** | 🔄 `partial` | — | Basic import, belum bulk validation |
 
-### 9.5 Import/Export
+### 10.5 API & Webhook
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Excel/CSV Import** | Bulk data upload dengan validasi | `partial` |
-| **Excel/CSV Export** | Any report or data | `production_ready` |
-| **Scheduled Export** | Auto-generate & send via email | `planned` |
-| **Data Mapping** | Custom field mapping | `planned` |
-| **Batch Processing** | Import/export ribuan data sekaligus | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **REST API** | 🔄 `partial` | — | 35 routes, belum public API documentation |
+| **GraphQL** | 📋 `planned` | — | Belum ada kode |
+| **Webhook** | 📋 `planned` | — | Belum ada kode |
+| **API Documentation** | 📋 `planned` | — | Belum ada kode |
+| **OAuth 2.0** | 📋 `planned` | — | Belum ada kode |
 
-### 9.6 Integration Pricing
+### 10.6 Automation Connectors
 
-| Plan | API Calls | Webhooks | Connections |
-|------|-----------|----------|-------------|
-| **Starter** | 10,000/bulan | 5 | 3 integrations |
-| **Growth** | 50,000/bulan | 20 | 10 integrations |
-| **Business** | 200,000/bulan | Unlimited | Unlimited |
-| **Enterprise** | Unlimited | Unlimited | Unlimited + custom |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Zapier** | 📋 `planned` | — | Belum ada kode |
+| **Make.com** | 📋 `planned` | — | Belum ada kode |
+| **Custom Webhook** | 📋 `planned` | — | Belum ada kode |
+| **n8n** | 📋 `planned` | — | Belum ada kode |
+
+### 10.7 Supported Integration Categories
+
+| Kategori | Contoh Layanan | Status | Notes |
+|----------|---------------|--------|-------|
+| **Messaging** | WhatsApp Business, Telegram | 📋 `planned` | Belum ada kode |
+| **Marketplace** | Tokopedia, Shopee, Bukalapak | 📋 `planned` | Belum ada kode |
+| **Payment Gateway** | Midtrans, Xendit, DOKU | 🔄 `partial` | Midtrans partial |
+| **E-wallet** | GoPay, OVO, Dana | 📋 `planned` | Via Payment Gateway |
+| **Banking** | BCA, Mandiri, BRI, BNI | 📋 `planned` | Belum ada kode |
+| **Productivity** | Google Workspace, Microsoft 365 | 📋 `planned` | Belum ada kode |
+| **Shipping** | JNE, J&T, SiCepat | 📋 `planned` | Belum ada kode |
+| **CRM** | Salesforce, HubSpot | 📋 `planned` | Belum ada kode |
 
 ---
 
-## 10. Admin & Security
+## 11. Admin & Security
 
 Enterprise-grade security untuk data protection.
 
-### 10.1 Authentication
+### 11.1 Authentication
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **NextAuth JWT** | CredentialsProvider with JWT strategy | `production_ready` |
-| **SSO** | SAML 2.0, OAuth 2.0 | `planned` |
-| **2FA** | TOTP, SMS, Email | `planned` |
-| **Password Policy** | Configurable rules | `partial` |
-| **Session Management** | Multi-device control | `partial` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **NextAuth JWT** | 🚀 `production_ready` | 2026-08-30 | CredentialsProvider, JWT strategy, bcryptjs |
+| **SSO** | 📋 `planned` | — | Belum ada kode |
+| **2FA** | 📋 `planned` | — | Belum ada kode |
+| **Password Policy** | 🔄 `partial` | — | Basic validation, belum configurable rules |
+| **Session Management** | 🔄 `partial` | — | JWT-based, belum multi-device control |
 
-### 10.2 Access Control
+### 11.2 Access Control
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **RBAC** | 4 roles: SUPERADMIN, ADMIN, MEMBER, VIEWER + defense-in-depth (middleware + API + UI) | `production_ready` |
-| **IP Whitelisting** | Restrict access by IP | `planned` |
-| **Data-level Security** | Field-level, record-level | `planned` |
-| **Approval Workflow** | Multi-level, conditional | `partial` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN, ADMIN, MEMBER, VIEWER — defense-in-depth |
+| **IP Whitelisting** | 📋 `planned` | — | Belum ada kode |
+| **Data-level Security** | 📋 `planned` | — | Belum ada kode |
+| **Approval Workflow** | 🔄 `partial` | — | Basic approval, belum multi-level conditional |
 
-### 10.3 Data Protection
+### 11.3 Data Protection
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Encryption** | AES-256 at rest, TLS 1.3 in transit | `planned` |
-| **Data Residency** | Server Indonesia | `planned` |
-| **Backup** | Daily auto-backup, 30-day retention | `planned` |
-| **Restore Point** | Manual & scheduled | `planned` |
-| **Data Retention** | Configurable policy | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Encryption** | 📋 `planned` | — | Belum ada explicit AES-256/TLS config |
+| **Data Residency** | 📋 `planned` | — | Server config belum ada |
+| **Backup** | 📋 `planned` | — | Belum ada auto-backup |
+| **Data Retention** | 📋 `planned` | — | Belum ada kode |
 
-### 10.4 Compliance
+### 11.4 Compliance
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Audit Trail** | Complete activity log, 77 audit calls across 10 mutation endpoints | `production_ready` |
-| **GDPR Ready** | Data export, deletion | `planned` |
-| **Indonesian Regulation** | PDP Law compliance | `planned` |
-| **SOC 2 Type II** | Target Phase 3 | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Audit Trail** | 🚀 `production_ready` | 2026-08-30 | 77 audit calls across 10 mutation endpoints |
+| **GDPR Ready** | 📋 `planned` | — | Belum ada kode |
+| **Indonesian Regulation (PDP)** | 📋 `planned` | — | Belum ada kode |
+| **SOC 2 Type II** | 📋 `planned` | — | Target Phase 3 |
 
-### 10.5 White-label
+### 11.5 White-label
 
-| Fitur | Deskripsi | Status |
-|-------|-----------|--------|
-| **Custom Branding** | Logo, colors, domain | `planned` |
-| **Multi-tenant** | Separate data environment | `production_ready` |
-| **Reseller Portal** | Manage client accounts | `planned` |
-| **Revenue Share** | Configurable pricing | `planned` |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Multi-tenant** | 🚀 `production_ready` | 2026-08-30 | Separate data environment, tenantId isolation |
+| **Custom Branding** | 📋 `planned` | — | Belum ada kode |
+| **Reseller Portal** | 📋 `planned` | — | Belum ada kode |
 
 ---
 
-## 11. Pricing Model
+## 12. Unified Control Engine & Workflow
+
+Modul fundamental — **Unified Control Engine** dengan 14 sub-komponen yang memastikan pekerjaan selesai, keputusan memiliki penanggung jawab, keterlambatan naik ke level yang tepat, dan transaksi yang sudah ditutup tidak bisa sembarangan diubah.
+Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](docs/DECISIONS.md#adr-023-control-dashboard-tiers).
+
+### 12.1 Unified Pipeline
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Unified Control Engine** | 📋 `planned` | — | Satu engine terpadu: Transaction → Policy → Workflow → Approval → Escalation → Notification → Locking → Audit |
+| **Centralized State Model** | 📋 `planned` | — | Satu state management untuk semua sub-engine |
+| **Pipeline Traceability** | 📋 `planned` | — | Full trace dari awal sampai akhir pipeline |
+
+### 12.2 Policy Engine
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Policy Engine** | 📋 `planned` | — | Rules bisnis konfigurabel: WHEN condition THEN action [ADR-018] |
+| **WHEN-THEN Rules** | 📋 `planned` | — | Conditions: amount, department, branch, type, vendor/category |
+| **Action Types** | 📋 `planned` | — | require_approval, auto_approve, block, flag_for_review, notify |
+| **Policy Versioning** | 📋 `planned` | — | Rules berlaku sejak tanggal tertentu, histori tetap ada |
+| **Policy Configuration UI** | 📋 `planned` | — | Per-company rule management interface |
+| **Amount Threshold Approvals** | 📋 `planned` | — | Tiered approval: <10jt auto, 10-50jt Manager, 50-200jt Director, >200jt Board |
+| **Threshold per Department** | 📋 `planned` | — | Threshold bisa dikonfigurasi per departemen/jenis transaksi |
+
+### 12.3 Transaction Lifecycle
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Transaction Lifecycle** | 📋 `planned` | — | DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED → POSTED → COMPLETED → LOCKED |
+| **Status Transitions** | 📋 `planned` | — | Configurable workflow per transaction type |
+| **Immutable Transactions** | 📋 `planned` | — | No physical delete, corrections via Adjustment entries |
+
+### 12.4 Approval Engine
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Approval Engine** | 📋 `planned` | — | Multi-level approval chains [ADR-015] |
+| **Approval Routing** | 📋 `planned` | — | Configurable approval flow per module |
+| **Amount-based Routing** | 📋 `planned` | — | Route ke approver berdasarkan nominal transaksi |
+| **Delegation** | 📋 `planned` | — | Delegate approval to another user [ADR-020] |
+
+### 12.5 Segregation of Duties (SoD)
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **SoD Engine** | 📋 `planned` | — | Mencegah konflik kepentingan dalam proses bisnis [ADR-019] |
+| **SoD Matrix** | 📋 `planned` | — | Conflict pairs: Create ≠ Receive ≠ Approve ≠ Pay |
+| **Conflict Detection** | 📋 `planned` | — | Real-time check saat role/assignment |
+| **SoD Exception Workflow** | 📋 `planned` | — | Override dengan Director approval + audit trail |
+| **SoD Configuration** | 📋 `planned` | — | Per-company configurable SoD rules |
+
+### 12.6 SLA & Escalation
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **SLA Engine** | 📋 `planned` | — | Service level tracking per transaction type [ADR-020] |
+| **SLA Color Coding** | 📋 `planned` | — | 🟢 0-50%, 🟡 50-100%, 🔴 >100% SLA |
+| **SLA Breach Escalation** | 📋 `planned` | — | Auto-escalate saat SLA breach |
+| **SLA Metrics** | 📋 `planned` | — | Average completion time, compliance rate, escalation rate |
+| **Escalation Engine** | 📋 `planned` | — | Deadline-based: PIC → Supervisor → Manager → Director |
+| **Escalation Rules** | 📋 `planned` | — | Configurable escalation timeline per transaction type |
+| **Escalation Notification** | 📋 `planned` | — | Real-time notification on escalation |
+
+### 12.7 Delegation
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Delegation Framework** | 📋 `planned` | — | Manager delegate approval authority saat absent [ADR-020] |
+| **Delegation Scope** | 📋 `planned` | — | Siapa → ke siapa, periode, scope |
+| **Delegation Auto-expire** | 📋 `planned` | — | Otomatis berakhir setelah periode selesai |
+| **Delegation Audit Trail** | 📋 `planned` | — | Delegator, delegatee, period, reason |
+| **Delegated Work Inbox** | 📋 `planned` | — | Delegatee melihat delegated items di Work Inbox |
+
+### 12.8 Work Inbox
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **My Work Inbox** | 📋 `planned` | — | Personal dashboard untuk setiap user [ADR-023] |
+| **Overdue Tasks** | 📋 `planned` | — | Tasks yang sudah melewati deadline |
+| **Approval Required** | 📋 `planned` | — | Transaksi menunggu approval user ini |
+| **Awaiting My Action** | 📋 `planned` | — | Transaksi yang perlu input dari user |
+| **Assigned to Me** | 📋 `planned` | — | Task yang ditugaskan ke user |
+| **Escalated to Me** | 📋 `planned` | — | Transaksi yang di-escalate ke user |
+| **Recently Completed** | 📋 `planned` | — | Aktivitas terakhir yang sudah selesai |
+| **Filter & Sorting** | 📋 `planned` | — | Filter dan sorting lanjutan |
+
+### 12.9 Locking Engine
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Locking Engine** | 📋 `planned` | — | Hierarchical: Transaction → Day → Month → Quarter → Year [ADR-016] |
+| **Lock Policy** | 📋 `planned` | — | Per-company configurable lock policy |
+| **Locked Edit** | 📋 `planned` | — | Edit locked transaction requires approval |
+| **Backdated Transaction** | 📋 `planned` | — | Backdated transaction requires approval |
+
+### 12.10 Unlock as Exception Workflow
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Unlock Request** | 📋 `planned` | — | User request unlock dengan reason [ADR-021] |
+| **Unlock Approval** | 📋 `planned` | — | Manager approval untuk unlock |
+| **Temporary Unlock** | 📋 `planned` | — | Unlock dengan waktu timeout (misal 2 jam) |
+| **Re-approval Flow** | 📋 `planned` | — | Edit → Re-submit → Re-approval → Re-lock |
+| **Unlock Audit Trail** | 📋 `planned` | — | Setiap step ada audit trail |
+| **Unlock Permission** | 📋 `planned` | — | Hanya role ADMIN+ yang bisa unlock |
+
+### 12.11 Exception Center
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Exception Center** | 📋 `planned` | — | Dashboard terpusat untuk semua anomali [ADR-021] |
+| **Overdue Transactions** | 📋 `planned` | — | Transaksi yang sudah melewati deadline |
+| **SLA Breach View** | 📋 `planned` | — | Transaksi yang sudah breach SLA |
+| **SoD Conflict View** | 📋 `planned` | — | Konflik Segregation of Duties |
+| **Negative Stock Alerts** | 📋 `planned` | — | Stok negatif detection |
+| **Unreconciled Payments** | 📋 `planned` | — | Pembayaran belum reconcile |
+| **Policy Violations** | 📋 `planned` | — | Pelanggaran kebijakan |
+| **Exception Severity** | 📋 `planned` | — | Critical, High, Medium, Low |
+| **Exception Assignment** | 📋 `planned` | — | Assigned person + suggested action |
+
+### 12.12 Reason & Timeline
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Reason Required** | 📋 `planned` | — | WAJIB isi reason untuk edit/delete/override transaksi submitted |
+| **Reason + Attachment** | 📋 `planned` | — | Reason field mandatory + optional attachment |
+| **Reason in Audit Trail** | 📋 `planned` | — | Reason disimpan di audit trail |
+| **Transaction Timeline** | 📋 `planned` | — | Full history: Who, When, What, Status, Approval chain, Comments |
+| **Visual Timeline** | 📋 `planned` | — | Timeline visual di halaman detail transaksi |
+| **"Why am I seeing this?"** | 📋 `planned` | — | Contextual help: kenapa tidak bisa edit, kenapa perlu approval, dll |
+
+### 12.13 Adjustment Entries
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Adjustment Entries** | 📋 `planned` | — | Immutable corrections with reference to original |
+| **Adjustment Approval** | 📋 `planned` | — | Approval required for adjustments |
+| **Adjustment Audit** | 📋 `planned` | — | Full audit trail for all adjustments |
+
+### 12.14 Access Review & Emergency Access
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Access Review** | 📋 `planned` | — | Periodic permission review oleh managers [ADR-021] |
+| **Review Scheduling** | 📋 `planned` | — | Quarterly review dengan status: reviewed, pending, overdue |
+| **Permission Audit** | 📋 `planned` | — | Audit siapa yang punya akses ke apa |
+| **Emergency Access** | 📋 `planned` | — | Temporary elevated permission untuk situasi darurat [ADR-021] |
+| **Emergency Access Flow** | 📋 `planned` | — | Request → Reason → Director Approval → Temporary Grant → Auto-revoke |
+| **Emergency Access Audit** | 📋 `planned` | — | Full trail: who requested, who approved, what access, when |
+| **Security Alert** | 📋 `planned` | — | Alert ke security team saat emergency access digunakan |
+
+### 12.15 Control Dashboard (3 Tiers)
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **My Dashboard (Tier 1)** | 📋 `planned` | — | Personal work inbox, pending approvals, overdue items [ADR-023] |
+| **Management Dashboard (Tier 2)** | 📋 `planned` | — | Team workload, SLA compliance, escalation alerts [ADR-023] |
+| **Control Center (Tier 3)** | 📋 `planned` | — | Organization-wide: policy violations, SoD conflicts, compliance metrics [ADR-023] |
+| **Role-based Views** | 📋 `planned` | — | Access control per tier: User → Manager → Admin/Auditor |
+
+### 12.16 Period Closing Wizard
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Period Closing Wizard** | 📋 `planned` | — | Step-by-step wizard untuk menutup periode akuntansi [ADR-022] |
+| **Pre-checks** | 📋 `planned` | — | Validate unposted, pending, unreconciled transactions |
+| **Exception Resolution** | 📋 `planned` | — | Resolve atau exception approval sebelum closing |
+| **Final Review Summary** | 📋 `planned` | — | Ringkasan lengkap periode ini |
+| **Closing Approval** | 📋 `planned` | — | Director/Finance Manager approve closing |
+| **Period Lock** | 📋 `planned` | — | Auto-lock setelah closing approval |
+| **Period Report** | 📋 `planned` | — | Generate period summary report |
+| **Monthly Closing** | 📋 `planned` | — | Penutupan bulanan dengan approval Finance Manager |
+| **Quarterly Closing** | 📋 `planned` | — | Penutupan kuartalan dengan approval Director |
+| **Yearly Closing** | 📋 `planned` | — | Penutupan tahunan dengan approval Board/Director |
+
+### 12.17 Permissions
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **transaction.lock** | 📋 `planned` | — | Very sensitive — lock transactions |
+| **transaction.unlock** | 📋 `planned` | — | Very sensitive — unlock transactions |
+| **transaction.adjust** | 📋 `planned` | — | Very sensitive — create adjustments |
+| **transaction.submit** | 📋 `planned` | — | Submit for approval |
+| **transaction.approve** | 📋 `planned` | — | Approve transactions |
+| **policy.manage** | 📋 `planned` | — | Manage policy rules |
+| **sod.override** | 📋 `planned` | — | Override SoD conflicts (Director+) |
+| **emergency_access.grant** | 📋 `planned` | — | Grant emergency access (Director+) |
+| **access_review.manage** | 📋 `planned` | — | Manage access reviews (Admin+) |
+| **period.close** | 📋 `planned` | — | Close accounting period (Director+) |
+
+---
+
+## 13. Mobile
+
+React Native / Expo mobile app untuk field operations.
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **12 Screens** | 🔄 `partial` | — | Dashboard, Home, Finance, CRM, HR, Inventory screens |
+| **API Client** | 🔄 `partial` | — | Basic API client, belum error handling lengkap |
+| **Auth Flow** | 📋 `planned` | — | Belum ada login/register flow |
+| **Offline Support** | 📋 `planned` | — | Belum ada kode |
+
+---
+
+## 14. Desktop
+
+Electron-based desktop application.
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Electron Wrapper** | 🔄 `partial` | — | Basic Electron shell, belum auth integration |
+| **Offline Support** | 📋 `planned` | — | Belum ada kode |
+
+---
+
+## 15. Pricing Model
 
 ### Tier-based Pricing
 
-| Tier | Target | Harga | Status |
-|------|--------|-------|--------|
-| **Starter** | UMKM 1-5 karyawan | Rp 299rb/bulan | `production_ready` |
-| **Growth** | UKM 6-25 karyawan | Rp 799rb/bulan | `production_ready` |
-| **Business** | Mid-market 26-100 | Rp 1.999rb/bulan | `production_ready` |
-| **Enterprise** | 100+ karyawan | Custom | `planned` |
-
-### Add-on Modules
-
-| Module | Harga | Status |
-|--------|-------|--------|
-| Field Service | Rp 199rb/bulan | `planned` |
-| Advanced AI Agent | Rp 299rb/bulan | `planned` |
-| White-label | Rp 499rb/bulan | `planned` |
-| Dedicated Support | Rp 399rb/bulan | `planned` |
+| Tier | Target | Harga | Status | Notes |
+|------|--------|-------|--------|-------|
+| **Starter** | UMKM 1-5 karyawan | Rp 299rb/bulan | ✅ `implemented` | Billing page ada |
+| **Growth** | UKM 6-25 karyawan | Rp 799rb/bulan | ✅ `implemented` | Billing page ada |
+| **Business** | Mid-market 26-100 | Rp 1.999rb/bulan | ✅ `implemented` | Billing page ada |
+| **Enterprise** | 100+ karyawan | Custom | 📋 `planned` | Belum ada kode |
 
 ### Billing & Subscription Management
 
-| Feature | Status | Location |
-|---------|--------|----------|
-| **Plan Selection** | `production_ready` | `/dashboard/settings/billing` — 3 paket |
-| **Manual Transfer Payment** | `production_ready` | Upload bukti transfer, 4 rekening bank |
-| **WhatsApp Confirmation** | `production_ready` | Link wa.me untuk konfirmasi |
-| **Superadmin Approval** | `production_ready` | `/dashboard/billing` — Approve/Reject |
-| **Notification Bell** | `production_ready` | Header bell icon dengan badge count |
-| **Email Notification** | `production_ready` | Auto-email ke info@qalcuity.com |
-| **Payment History** | `production_ready` | Tabel riwayat pembayaran |
-| **Subscription Status** | `production_ready` | Status badge: ACTIVE, TRIAL, PENDING, SUSPENDED |
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Plan Selection** | ✅ `implemented` | — | `/dashboard/settings/billing` — 3 paket |
+| **Manual Transfer Payment** | ✅ `implemented` | — | Upload bukti transfer, 4 rekening bank |
+| **WhatsApp Confirmation** | ✅ `implemented` | — | Link wa.me untuk konfirmasi |
+| **Superadmin Approval** | ✅ `implemented` | — | `/dashboard/billing` — Approve/Reject |
+| **Notification Bell** | ✅ `implemented` | — | Header bell icon dengan badge count |
+| **Email Notification** | ✅ `implemented` | — | Auto-email ke info@qalcuity.com |
+| **Payment History** | ✅ `implemented` | — | Tabel riwayat pembayaran |
+| **Subscription Status** | ✅ `implemented` | — | Status badge: ACTIVE, TRIAL, PENDING, SUSPENDED |
+
+### Add-on Modules
+
+| Module | Harga | Status | Notes |
+|--------|-------|--------|-------|
+| Field Service | Rp 199rb/bulan | 📋 `planned` | Belum ada kode |
+| Advanced AI Agent | Rp 299rb/bulan | 📋 `planned` | Belum ada kode |
+| White-label | Rp 499rb/bulan | 📋 `planned` | Belum ada kode |
+| Dedicated Support | Rp 399rb/bulan | 📋 `planned` | Belum ada kode |
 
 ### Free Trial
 
@@ -670,38 +906,65 @@ Enterprise-grade security untuk data protection.
 
 ---
 
-## 📊 Feature Status Legend
+## 📊 Status Summary
 
-| Status | Description |
-|--------|-------------|
-| `planned` | Fitur belum dikerjakan, baru direncanakan |
-| `in_progress` | Sedang dalam pengembangan aktif |
-| `partial` | Sebagian fitur sudah diimplementasi |
-| `implemented` | Sudah diimplementasi, belum diuji menyeluruh |
-| `verified` | Sudah diuji dan berfungsi sesuai期望 |
-| `production_ready` | Siap production, sudah diuji dan stabil |
-| `blocked` | Terhambat oleh dependency atau issue |
-| `deprecated` | Tidak lagi digunakan, akan dihapus |
+| Status | Icon | Count | Percentage |
+|--------|------|-------|------------|
+| `production_ready` | 🚀 | ~48 | ~32% |
+| `implemented` | ✅ | ~17 | ~11% |
+| `verified` | ✔️ | 1 | ~1% |
+| `partial` | 🔄 | ~18 | ~12% |
+| `in_progress` | 🔨 | 0 | 0% |
+| `planned` | 📋 | ~92 | ~51% |
+| `blocked` | 🚫 | 0 | 0% |
+| `deprecated` | ⛔ | 0 | 0% |
+| **Total** | | **~176** | **100%** |
 
 ---
 
 ## 📝 Changelog
 
+### v3.2.0 (August 30, 2026) — Code Quality & Dynamic Data Sprint
+- **Dynamic Overview Pages** — 5 halaman di-rewrite dari hardcoded ke dynamic API (Finance, HR, Inventory, CRM, Dashboard)
+- **Categories DELETE** — DELETE handler added to API + page connected to API
+- **New API Route** — `/api/settings/integrations` for dynamic connection status
+- **Integrations Page** — Hardcoded status → dynamic fetch from API
+- **Emoji Cleanup** — All emoji replaced with Lucide icons (dashboard stats, audit page, landing page)
+- **Alert → Toast** — 11 `alert()` instances replaced with toast notifications
+- **Toast Icons** — ✓/✕ characters replaced with Lucide Check/X icons in 14 files
+- **Loading States** — 3 new loading.tsx files (total: 12)
+- **Error Boundaries** — 3 new error.tsx files (audit, billing, reports)
+- **Security Fix** — Hardcoded NEXTAUTH_SECRET fallback removed, env var mandatory
+- **Env Configuration** — Complete .env.example, .env.local, .env.production templates
+- **Code Cleanup** — console.log removed from company settings page
+
+### v3.1.0 (August 30, 2026) — Unified Control Engine (16 Recommendations)
+- **Major expansion** — Control Center evolved from 6 engines to Unified Control Engine with 14 sub-components
+- Added ADR-017 through ADR-023 (7 new architectural decisions)
+- Added 30+ new planned features across 17 subsections (12.1 s/d 12.17)
+- New modules: Policy Engine, SoD, SLA, Delegation, Work Inbox, Exception Center, Period Closing, Emergency Access, Access Review
+- Section 12 renamed from "Control Center & Workflow" to "Unified Control Engine & Workflow"
+
+### v3.0.0 (August 30, 2026) — Audit-Based Status Labels
+- **Major rewrite** — FEATURES.md becomes Product Source of Truth
+- Replaced ambiguous `[x]`/`[ ]` with strict status labels
+- Added `Last Verified` and `Notes` columns for traceability
+- Added Status Summary table with counts and percentages
+- All statuses verified against actual codebase audit (30 August 2026)
+- Restructured modules to match actual implementation
+
 ### v2.2.0 (August 29, 2026) — Quality & Security Hardening
-- **Zod Validation** — 14+ schemas, 19 API routes validated
-- **Audit Logging** — 77 audit calls across 10 mutation endpoints
-- **RBAC Defense-in-depth** — 3 layers: middleware + API route + UI visibility (35 routes + 22 pages)
-- **Responsive Tables** — Dual layout (mobile cards + desktop tables) on 17 pages
-- **i18n Expansion** — 20+ pages localized, 200+ new keys for reports
-- **Settings Pages** — 6 settings pages completed with full i18n
-- **Detail Pages** — 9 loading.tsx files, delete functionality on 6 detail pages
-- **Pipeline Fix** — Stage name mismatch fixed, CLOSED_WON/LOST stages added
-- **Sidebar Fix** — Navigation reorder, billing path fix
+- Zod Validation — 14+ schemas, 19 API routes validated
+- Audit Logging — 77 audit calls across 10 mutation endpoints
+- RBAC Defense-in-depth — 3 layers: middleware + API route + UI visibility
+- Responsive Tables — Dual layout on 17 pages
+- i18n Expansion — 20+ pages localized, 200+ new keys
+- Settings Pages — 6 settings pages completed
+- Detail Pages — 9 loading.tsx files, delete functionality on 6 detail pages
 
 ### v2.1.0 (August 28, 2026) — Architecture Brief Compliance
 - Restructured all features with explicit `status` field format
 - Added 11 feature categories with comprehensive status tracking
-- Updated status values based on current implementation reality
 
 ### v2.0.0 (August 28, 2026) — Batch 14-26
 - Role Superadmin, Advanced Reporting, Payment Gateway, Email, File Upload
@@ -719,5 +982,6 @@ Enterprise-grade security untuk data protection.
 
 ---
 
-**Last Updated:** August 29, 2026
+**Last Updated:** August 30, 2026
 **Maintainer:** Qalcuity Product Team
+**Document Version:** 3.2 — Code Quality & Dynamic Data Sprint

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Download, Package, AlertTriangle, Trash2, X, Loader2 } from 'lucide-react'
+import { Search, Plus, Download, Package, AlertTriangle, Trash2, Check, X, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 type Product = {
@@ -268,7 +268,7 @@ export default function ProductsPage() {
         active: products.filter(p => p.isActive).length,
         lowStock: products.filter(p => p.stock <= p.minStock && p.stock > 0).length,
         outOfStock: products.filter(p => p.stock === 0).length,
-        totalValue: products.reduce((sum, p) => sum + (p.price * p.stock), 0),
+        totalValue: products.reduce((sum, p) => sum + (Number(p.price) * p.stock), 0),
     }
 
     if (loading) {
@@ -318,11 +318,11 @@ export default function ProductsPage() {
                     </button>
                     {canMutate && (
                         <button
-                        onClick={openCreateForm}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                            onClick={openCreateForm}
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                         >
-                        <Plus className="h-4 w-4" />
-                        {t('inventory.products.addProduct') || 'Tambah Produk'}
+                            <Plus className="h-4 w-4" />
+                            {t('inventory.products.addProduct') || 'Tambah Produk'}
                         </button>
                     )}
                 </div>
@@ -420,11 +420,11 @@ export default function ProductsPage() {
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('inventory.products.sellPrice') || 'Harga Jual'}:</span>
-                                    <span className="ml-1 font-medium">{formatCurrency(product.price)}</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(Number(product.price))}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('inventory.products.buyPrice') || 'Harga Beli'}:</span>
-                                    <span className="ml-1">{formatCurrency(product.cost)}</span>
+                                    <span className="ml-1">{formatCurrency(Number(product.cost))}</span>
                                 </div>
                             </div>
                             <div className="mt-3 flex gap-3">
@@ -488,8 +488,8 @@ export default function ProductsPage() {
                                                 {product.categoryName || 'Uncategorized'}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right">{formatCurrency(product.price)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right text-gray-500">{formatCurrency(product.cost)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right">{formatCurrency(Number(product.price))}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right text-gray-500">{formatCurrency(Number(product.cost))}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <span className={`font-medium ${product.stock <= product.minStock ? (product.stock === 0 ? 'text-red-600' : 'text-yellow-600') : 'text-gray-900'}`}>
                                                 {product.stock}
@@ -512,11 +512,11 @@ export default function ProductsPage() {
                                                 </button>
                                                 {canMutate && (
                                                     <button
-                                                    onClick={() => handleDelete(product.id)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                        onClick={() => handleDelete(product.id)}
+                                                        className="text-red-500 hover:text-red-700"
+                                                        title="Hapus"
                                                     >
-                                                    <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>
@@ -701,7 +701,10 @@ export default function ProductsPage() {
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
-                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
                 </div>
             )}
         </div>

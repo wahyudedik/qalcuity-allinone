@@ -95,27 +95,27 @@ export async function GET() {
         ]);
 
         // Calculate revenue
-        const currentRevenue = paidInvoices._sum.total || 0;
-        const totalRevenue = totalInvoices._sum.total || 0;
+        const currentRevenue = Number(paidInvoices._sum.total || 0);
+        const totalRevenue = Number(totalInvoices._sum.total || 0);
 
         // Build recent activities from audit logs
         const recentActivities = recentAuditLogs.map((log) => {
             const entityIcons: Record<string, string> = {
-                Invoice: '💰',
-                Deal: '📈',
-                Contact: '👥',
-                Product: '📦',
-                Employee: '👤',
-                Lead: '🎯',
-                Payment: '💳',
-                Quotation: '📄',
-                PurchaseOrder: '🛒',
-                StockMovement: '📦',
+                Invoice: 'dollar-sign',
+                Deal: 'trending-up',
+                Contact: 'users',
+                Product: 'package',
+                Employee: 'user',
+                Lead: 'target',
+                Payment: 'credit-card',
+                Quotation: 'file-text',
+                PurchaseOrder: 'shopping-cart',
+                StockMovement: 'package',
             };
 
             return {
                 id: log.id,
-                icon: entityIcons[log.entity] || '📋',
+                icon: entityIcons[log.entity] || 'clipboard-list',
                 title: `${log.action} ${log.entity}`,
                 description: `${log.user?.name || 'User'} melakukan ${log.action.toLowerCase()} pada ${log.entity}`,
                 amount: log.newValues || '',
@@ -132,7 +132,7 @@ export async function GET() {
                 id: `overdue-${inv.id}`,
                 type: 'danger',
                 title: 'Invoice Overdue',
-                message: `Invoice ${inv.invoiceNumber} sudah overdue - ${inv.contact?.name || 'Customer'} - Rp ${(inv.total || 0).toLocaleString('id-ID')}`,
+                message: `Invoice ${inv.invoiceNumber} sudah overdue - ${inv.contact?.name || 'Customer'} - Rp ${Number(inv.total || 0).toLocaleString('id-ID')}`,
                 moduleId: 'finance',
             });
         });

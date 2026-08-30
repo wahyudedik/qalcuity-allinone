@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { getPaymentProvider } from '@/lib/payment/provider';
 
 // ============================================================
 // Payment Gateway Process API
-// Placeholder untuk integrasi Midtrans/Xendit
-// Di production, ini akan melakukan integrasi langsung dengan
-// API Midtrans atau Xendit
+// Menggunakan Payment Provider abstraction layer.
+// Mendukung Midtrans, Xendit, dan Mock (development).
 // ============================================================
 
 interface PaymentProcessRequest {
@@ -21,93 +21,9 @@ interface PaymentProcessRequest {
   customerPhone?: string;
 }
 
-interface PaymentGatewayResponse {
-  success: boolean;
-  paymentId: string;
-  status: string;
-  vaNumber?: string;
-  redirectUrl?: string;
-  qrCode?: string;
-  expiryTime?: string;
-  error?: string;
-}
-
-/**
- * Generate mock payment response dari payment gateway
- * Di production, ini akan diganti dengan panggilan API Midtrans/Xendit
- */
-function generateMockGatewayResponse(
-  provider: string,
-  method: string,
-  amount: number,
-  invoiceId: string
-): PaymentGatewayResponse {
-  const paymentId = `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-  // Simulate different payment method responses
-  const methodUpper = method.toUpperCase();
-
-  if (methodUpper.includes('VA') || methodUpper.includes('BANK_TRANSFER')) {
-    // Virtual Account response
-    const bankCode = methodUpper.includes('BCA') ? '014'
-      : methodUpper.includes('MANDIRI') ? '008'
-      : methodUpper.includes('BNI') ? '009'
-      : methodUpper.includes('BRI') ? '012'
-      : '014';
-
-    return {
-      success: true,
-      paymentId,
-      status: 'PENDING',
-      vaNumber: `${bankCode}${Math.random().toString().substring(2, 14)}`,
-      expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    };
-  }
-
-  if (methodUpper.includes('CREDIT_CARD') || methodUpper.includes('CARD')) {
-    // Credit Card response
-    return {
-      success: true,
-      paymentId,
-      status: 'PENDING',
-      redirectUrl: `https://${provider === 'midtrans' ? 'app.sandbox.midtrans.com' : 'checkout.xendit.co'}/payment/${paymentId}`,
-    };
-  }
-
-  if (methodUpper.includes('QRIS') || methodUpper.includes('QR')) {
-    // QRIS response
-    return {
-      success: true,
-      paymentId,
-      status: 'PENDING',
-      qrCode: `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==`,
-      expiryTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-    };
-  }
-
-  if (methodUpper.includes('EWALLET') || methodUpper.includes('GOPAY') ||
-      methodUpper.includes('OVO') || methodUpper.includes('DANA') ||
-      methodUpper.includes('SHOPEEPAY')) {
-    // E-Wallet response
-    return {
-      success: true,
-      paymentId,
-      status: 'PENDING',
-      redirectUrl: `https://${provider === 'midtrans' ? 'app.sandbox.midtrans.com' : 'checkout.xendit.co'}/ewallet/${paymentId}`,
-    };
-  }
-
-  // Default response
-  return {
-    success: true,
-    paymentId,
-    status: 'PENDING',
-    redirectUrl: `https://${provider === 'midtrans' ? 'app.sandbox.midtrans.com' : 'checkout.xendit.co'}/payment/${paymentId}`,
-  };
-}
-
 export async function POST(request: Request) {
   try {
+    // Rate limit check
     const ip = getClientIp(request);
     const rateLimitResult = checkRateLimit(`api:payments:process:${ip}`, 10, 60000);
     if (!rateLimitResult.success) {
@@ -117,6 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auth check (require ADMIN or SUPERADMIN)
     const { userId, tenantId } = await requireMutateAuth();
     const body: PaymentProcessRequest = await request.json();
 
@@ -146,7 +63,7 @@ export async function POST(request: Request) {
     const invoice = await prisma.invoice.findFirst({
       where: { id: body.invoiceId, tenantId },
       include: {
-        contact: { select: { name: true, email: true } },
+        contact: { select: { name: true, email: true, phone: true } },
         payments: { where: { status: 'COMPLETED' } },
       },
     });
@@ -159,8 +76,8 @@ export async function POST(request: Request) {
     }
 
     // Calculate remaining amount
-    const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-    const remainingAmount = invoice.total - totalPaid;
+    const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const remainingAmount = Number(invoice.total) - Number(totalPaid);
 
     if (body.amount > remainingAmount) {
       return NextResponse.json(
@@ -169,36 +86,38 @@ export async function POST(request: Request) {
       );
     }
 
-    const provider = body.provider || 'midtrans';
+    // Determine provider from request or env
+    const providerName = body.provider || process.env.PAYMENT_PROVIDER || 'mock';
 
-    // TODO: Replace with actual Midtrans/Xendit API call
-    // Contoh integrasi Midtrans:
-    //
-    // const midtrans = new MidtransClient({
-    //   serverKey: process.env.MIDTRANS_SERVER_KEY,
-    //   clientKey: process.env.MIDTRANS_CLIENT_KEY,
-    //   isProduction: process.env.MIDTRANS_ENVIRONMENT === 'production',
-    // });
-    //
-    // const transaction = await midtrans.createTransaction({
-    //   transaction_details: {
-    //     order_id: paymentId,
-    //     gross_amount: body.amount,
-    //   },
-    //   customer_details: {
-    //     first_name: body.customerName,
-    //     email: body.customerEmail,
-    //     phone: body.customerPhone,
-    //   },
-    //   payment_type: mapMethodToMidtransType(body.method),
-    // });
+    // Create order ID
+    const orderId = `ORD-${invoice.invoiceNumber}-${Date.now()}`;
 
-    // Generate mock gateway response
-    const gatewayResponse = generateMockGatewayResponse(provider, body.method, body.amount, body.invoiceId);
+    // Use Payment Provider abstraction
+    const paymentProvider = getPaymentProvider();
+    const customerName = body.customerName || invoice.contact?.name || 'Customer';
+    const customerEmail = body.customerEmail || invoice.contact?.email || '';
+    const customerPhone = body.customerPhone || invoice.contact?.phone || undefined;
 
-    if (!gatewayResponse.success) {
+    const gatewayResult = await paymentProvider.createPayment({
+      orderId,
+      amount: body.amount,
+      currency: 'IDR',
+      customerName,
+      customerEmail,
+      customerPhone,
+      items: [
+        {
+          name: `Payment for ${invoice.invoiceNumber}`,
+          price: body.amount,
+          quantity: 1,
+        },
+      ],
+      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/finance/invoices/${invoice.id}`,
+    });
+
+    if (!gatewayResult.success) {
       return NextResponse.json(
-        { success: false, error: gatewayResponse.error || 'Gagal memproses pembayaran ke gateway' },
+        { success: false, error: gatewayResult.error || 'Gagal memproses pembayaran ke gateway' },
         { status: 500 }
       );
     }
@@ -206,14 +125,14 @@ export async function POST(request: Request) {
     // Create payment record in database
     const payment = await prisma.payment.create({
       data: {
-        paymentNumber: gatewayResponse.paymentId,
+        paymentNumber: gatewayResult.paymentToken || `PAY-${Date.now()}`,
         amount: body.amount,
         paymentDate: new Date(),
         method: body.method.toUpperCase().replace('-', '_'),
         status: 'PENDING',
         type: 'INCOME',
-        reference: gatewayResponse.vaNumber || gatewayResponse.redirectUrl || '',
-        notes: `Payment via ${provider} - ${body.method}`,
+        reference: gatewayResult.paymentUrl || gatewayResult.paymentToken || '',
+        notes: `Payment via ${providerName} - ${body.method} | OrderID: ${orderId}`,
         invoiceId: body.invoiceId,
         tenantId,
       },
@@ -228,6 +147,7 @@ export async function POST(request: Request) {
       },
     });
 
+    // Audit trail
     void logAudit({
       userId,
       tenantId,
@@ -236,8 +156,8 @@ export async function POST(request: Request) {
       entityId: payment.id,
       newValues: {
         ...payment as unknown as Record<string, unknown>,
-        gateway: provider,
-        gatewayPaymentId: gatewayResponse.paymentId,
+        gateway: providerName,
+        orderId,
       },
       request,
     });
@@ -247,15 +167,13 @@ export async function POST(request: Request) {
       data: {
         paymentId: payment.id,
         paymentNumber: payment.paymentNumber,
-        gatewayPaymentId: gatewayResponse.paymentId,
-        status: gatewayResponse.status,
-        vaNumber: gatewayResponse.vaNumber,
-        redirectUrl: gatewayResponse.redirectUrl,
-        qrCode: gatewayResponse.qrCode,
-        expiryTime: gatewayResponse.expiryTime,
+        orderId,
+        status: 'PENDING',
+        paymentUrl: gatewayResult.paymentUrl,
+        paymentToken: gatewayResult.paymentToken,
         amount: body.amount,
         method: body.method,
-        provider,
+        provider: providerName,
       },
     }, { status: 201 });
   } catch (error: unknown) {

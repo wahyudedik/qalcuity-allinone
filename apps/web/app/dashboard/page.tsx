@@ -15,6 +15,9 @@ import {
     Package,
     Banknote,
     Sparkles,
+    TrendingUp,
+    TrendingDown,
+    Loader2,
     type LucideIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -43,6 +46,30 @@ interface DashboardStats {
     }>
 }
 
+interface PaymentData {
+    id: string
+    amount: number | string
+    type: string
+    date: string
+    status: string
+}
+
+interface InvoiceData {
+    id: string
+    invoiceNumber: string
+    status: string
+    dueDate: string
+    total: number | string
+}
+
+interface ProductData {
+    id: string
+    name: string
+    sku: string
+    stock: number
+    minStock: number
+}
+
 const alertIconMap: Record<string, LucideIcon> = {
     danger: AlertCircle,
     warning: AlertTriangle,
@@ -64,22 +91,108 @@ const quickActionIcons: Record<string, LucideIcon> = {
     payment: Banknote,
 }
 
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
+    const [revenueChartData, setRevenueChartData] = useState<number[]>([])
+    const [revenueChartLabels, setRevenueChartLabels] = useState<string[]>([])
+    const [overdueCount, setOverdueCount] = useState(0)
+    const [overdueTotal, setOverdueTotal] = useState(0)
+    const [lowStockCount, setLowStockCount] = useState(0)
+    const [lowStockNames, setLowStockNames] = useState<string[]>([])
+    const [revenueChangePercent, setRevenueChangePercent] = useState(0)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { t } = useTranslation()
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchAllData = async () => {
             try {
                 setLoading(true)
-                const response = await fetch('/api/dashboard/stats')
-                const data = await response.json()
-                if (data.success) {
-                    setStats(data.data)
-                } else {
-                    setError(t('dashboard.failedToLoad'))
+                setError(null)
+
+                // Fetch dashboard stats + supporting data in parallel
+                const [statsRes, paymentsRes, invoicesRes, productsRes] = await Promise.all([
+                    fetch('/api/dashboard/stats'),
+                    fetch('/api/finance/payments?limit=1000&type=INCOME'),
+                    fetch('/api/finance/invoices?limit=1000'),
+                    fetch('/api/inventory/products?limit=1000'),
+                ])
+
+                const [statsJson, paymentsJson, invoicesJson, productsJson] = await Promise.all([
+                    statsRes.json(),
+                    paymentsRes.json(),
+                    invoicesRes.json(),
+                    productsRes.json(),
+                ])
+
+                if (statsJson.success) {
+                    setStats(statsJson.data)
+                }
+
+                // Process payments for revenue chart (last 6 months)
+                if (paymentsJson.success) {
+                    const payments: PaymentData[] = paymentsJson.data
+                    const now = new Date()
+                    const chartData: number[] = []
+                    const chartLabels: string[] = []
+
+                    for (let i = 5; i >= 0; i--) {
+                        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+                        const month = monthDate.getMonth()
+                        const year = monthDate.getFullYear()
+
+                        const monthTotal = payments
+                            .filter((p) => {
+                                const pDate = new Date(p.date)
+                                return pDate.getMonth() === month && pDate.getFullYear() === year && p.status === 'completed'
+                            })
+                            .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+                        chartData.push(monthTotal)
+                        chartLabels.push(MONTH_LABELS[month])
+                    }
+
+                    setRevenueChartData(chartData)
+                    setRevenueChartLabels(chartLabels)
+
+                    // Calculate revenue change (this month vs last month)
+                    const thisMonth = payments.filter((p) => {
+                        const pDate = new Date(p.date)
+                        return pDate.getMonth() === now.getMonth() && pDate.getFullYear() === now.getFullYear() && p.status === 'completed'
+                    }).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+                    const lastMonth = payments.filter((p) => {
+                        const pDate = new Date(p.date)
+                        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+                        return pDate.getMonth() === lastMonthDate.getMonth() && pDate.getFullYear() === lastMonthDate.getFullYear() && p.status === 'completed'
+                    }).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+                    if (lastMonth > 0) {
+                        setRevenueChangePercent(Math.round(((thisMonth - lastMonth) / lastMonth) * 100))
+                    } else if (thisMonth > 0) {
+                        setRevenueChangePercent(100)
+                    }
+                }
+
+                // Process invoices for overdue count
+                if (invoicesJson.success) {
+                    const invoices: InvoiceData[] = invoicesJson.data
+                    const now = new Date()
+                    const overdue = invoices.filter((inv) =>
+                        ['sent', 'overdue'].includes(inv.status) && new Date(inv.dueDate) < now
+                    )
+                    setOverdueCount(overdue.length)
+                    setOverdueTotal(overdue.reduce((sum, inv) => sum + Number(inv.total || 0), 0))
+                }
+
+                // Process products for low stock
+                if (productsJson.success) {
+                    const products: ProductData[] = productsJson.data
+                    const lowStock = products.filter((p) => p.stock <= p.minStock)
+                    setLowStockCount(lowStock.length)
+                    setLowStockNames(lowStock.slice(0, 3).map((p) => p.name))
                 }
             } catch {
                 setError(t('dashboard.failedToLoad'))
@@ -87,7 +200,7 @@ export default function DashboardPage() {
                 setLoading(false)
             }
         }
-        fetchStats()
+        fetchAllData()
     }, [])
 
     if (loading) {
@@ -106,6 +219,10 @@ export default function DashboardPage() {
                         </div>
                     ))}
                 </div>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="h-64 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800" />
+                    <div className="h-64 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800" />
+                </div>
             </div>
         )
     }
@@ -114,7 +231,8 @@ export default function DashboardPage() {
         return (
             <div className="flex h-64 items-center justify-center">
                 <div className="text-center">
-                    <p className="text-lg text-gray-600">{error || t('common.noData')}</p>
+                    <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
+                    <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">{error || t('common.noData')}</p>
                     <button
                         onClick={() => window.location.reload()}
                         className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
@@ -146,6 +264,33 @@ export default function DashboardPage() {
         { href: '/dashboard/inventory/products', iconKey: 'product', label: t('dashboard.manageProducts') },
         { href: '/dashboard/finance/payments', iconKey: 'payment', label: t('dashboard.recordPayment') },
     ]
+
+    // Calculate max value for chart scaling
+    const maxChartValue = Math.max(...revenueChartData, 1)
+
+    // AI Insights from real data
+    const revenueInsightText = revenueChangePercent >= 0
+        ? `↑ ${revenueChangePercent}% dari bulan lalu`
+        : `↓ ${Math.abs(revenueChangePercent)}% dari bulan lalu`
+    const revenueInsightDesc = revenueChangePercent >= 10
+        ? 'Pertumbuhan kuat. Pertahankan momentum ini.'
+        : revenueChangePercent >= 0
+            ? 'Pertumbuhan stabil. Pertimbangkan promosi untuk mencapai target Q3.'
+            : 'Revenue menurun. Perlu evaluasi strategi penjualan.'
+
+    const cashFlowInsightText = overdueCount > 0
+        ? `${overdueCount} invoice overdue`
+        : 'Tidak ada invoice overdue'
+    const cashFlowInsightDesc = overdueCount > 0
+        ? `Total ${formatCurrency(overdueTotal)} perlu follow up segera.`
+        : 'Semua invoice sudah sesuai jadwal.'
+
+    const stockInsightText = lowStockCount > 0
+        ? `${lowStockCount} produk low stock`
+        : 'Semua stok produk aman'
+    const stockInsightDesc = lowStockCount > 0
+        ? `${lowStockNames.join(', ')}${lowStockCount > 3 ? ` dan ${lowStockCount - 3} lainnya` : ''} perlu restock.`
+        : 'Tidak ada produk yang perlu restock saat ini.'
 
     return (
         <div className="space-y-6">
@@ -217,22 +362,30 @@ export default function DashboardPage() {
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Revenue Chart */}
+                {/* Revenue Chart — Dynamic from payments data */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.revenue')}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.lastSixMonths')}</p>
                     <div className="mt-4 flex h-48 items-end gap-2">
-                        {[40, 65, 45, 80, 60, 95].map((height, i) => (
-                            <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                                <div
-                                    className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-600"
-                                    style={{ height: `${height}%` }}
-                                />
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {["Jan", "Feb", "Mar", "Apr", "Mei", "Jun"][i]}
-                                </span>
+                        {revenueChartData.length > 0 ? revenueChartData.map((value, i) => {
+                            const heightPercent = maxChartValue > 0 ? (value / maxChartValue) * 100 : 0
+                            return (
+                                <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                                    <div
+                                        className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-600"
+                                        style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                                        title={formatCurrency(value)}
+                                    />
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                                        {revenueChartLabels[i]}
+                                    </span>
+                                </div>
+                            )
+                        }) : (
+                            <div className="flex w-full items-center justify-center">
+                                <p className="text-sm text-gray-400 dark:text-gray-500">{t('common.noData') || 'Belum ada data'}</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
 
@@ -271,7 +424,7 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* AI Insights */}
+            {/* AI Insights — Dynamic from real data */}
             <div className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
                 <div className="mb-4 flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
@@ -281,25 +434,38 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-lg bg-white/10 p-4">
                         <p className="text-sm opacity-80">Revenue Insight</p>
-                        <p className="font-semibold">↑ 12.5% dari bulan lalu</p>
+                        <div className="flex items-center gap-1 font-semibold">
+                            {revenueChangePercent >= 0 ? (
+                                <TrendingUp className="h-4 w-4" />
+                            ) : (
+                                <TrendingDown className="h-4 w-4" />
+                            )}
+                            {revenueInsightText}
+                        </div>
                         <p className="mt-1 text-xs opacity-70">
-                            Pertumbuhan stabil. Pertimbangkan promosi untuk mencapai target Q3.
+                            {revenueInsightDesc}
                         </p>
                     </div>
 
                     <div className="rounded-lg bg-white/10 p-4">
                         <p className="text-sm opacity-80">Cash Flow Alert</p>
-                        <p className="font-semibold">⚠️ 2 invoice overdue</p>
+                        <div className="flex items-center gap-1 font-semibold">
+                            {overdueCount > 0 && <AlertCircle className="h-4 w-4" />}
+                            {cashFlowInsightText}
+                        </div>
                         <p className="mt-1 text-xs opacity-70">
-                            Total Rp 2.000.000 perlu follow up segera.
+                            {cashFlowInsightDesc}
                         </p>
                     </div>
 
                     <div className="rounded-lg bg-white/10 p-4">
                         <p className="text-sm opacity-80">Stock Warning</p>
-                        <p className="font-semibold">3 produk low stock</p>
+                        <div className="flex items-center gap-1 font-semibold">
+                            {lowStockCount > 0 && <Package className="h-4 w-4" />}
+                            {stockInsightText}
+                        </div>
                         <p className="mt-1 text-xs opacity-70">
-                            Widget A, Part B, dan Service C perlu restock.
+                            {stockInsightDesc}
                         </p>
                     </div>
                 </div>

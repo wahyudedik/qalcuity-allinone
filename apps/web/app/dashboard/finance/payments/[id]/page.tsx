@@ -128,7 +128,7 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.paymentDetail.amount')}</p>
-                                <p className="text-xl font-bold text-green-600">{formatCurrency(payment.amount)}</p>
+                                <p className="text-xl font-bold text-green-600">{formatCurrency(Number(payment.amount))}</p>
                             </div>
                         </div>
                     </div>

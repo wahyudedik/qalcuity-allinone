@@ -2,6 +2,7 @@
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AIChat } from "@/components/ai/ai-chat";
+import OnboardingModal from "@/components/ui/onboarding-modal";
 
 export default function DashboardRootLayout({
     children,
@@ -12,6 +13,7 @@ export default function DashboardRootLayout({
         <DashboardLayout>
             {children}
             <AIChat />
+            <OnboardingModal />
         </DashboardLayout>
     );
 }

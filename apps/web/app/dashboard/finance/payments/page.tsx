@@ -63,9 +63,9 @@ export default function PaymentsPage() {
         return matchStatus && matchSearch
     })
 
-    const totalIncome = payments.filter((p) => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0)
-    const pendingAmount = payments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0)
-    const failedAmount = payments.filter((p) => p.status === 'failed').reduce((sum, p) => sum + p.amount, 0)
+    const totalIncome = payments.filter((p) => p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0)
+    const pendingAmount = payments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + Number(p.amount), 0)
+    const failedAmount = payments.filter((p) => p.status === 'failed').reduce((sum, p) => sum + Number(p.amount), 0)
 
     const stats = [
         { label: t('finance.payments.stats.totalPayment'), value: formatCurrency(totalIncome), icon: <DollarSign className="h-6 w-6" />, color: 'text-green-600' },
@@ -139,8 +139,8 @@ export default function PaymentsPage() {
                 </div>
                 {canMutate && (
                     <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    <Plus className="h-4 w-4" />
-                    {t('finance.payments.recordPayment')}
+                        <Plus className="h-4 w-4" />
+                        {t('finance.payments.recordPayment')}
                     </button>
                 )}
             </div>
@@ -216,7 +216,7 @@ export default function PaymentsPage() {
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <span className="text-gray-500">{t('finance.payments.table.amount')}:</span>
-                                    <span className="ml-1 font-medium">{formatCurrency(payment.amount)}</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(Number(payment.amount))}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('finance.payments.table.date')}:</span>
@@ -282,7 +282,7 @@ export default function PaymentsPage() {
                                                 {payment.invoiceNumber}
                                             </Link>
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(payment.amount)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(Number(payment.amount))}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">{getStatusBadge(payment.status)}</td>
                                     </tr>
                                 ))

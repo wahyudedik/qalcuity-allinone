@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { Plus, Search, Trash2, Check, X } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
@@ -93,8 +93,8 @@ export default function DealsPage() {
         }
     }
 
-    const totalValue = deals.reduce((s, d) => s + d.value, 0)
-    const weightedValue = deals.reduce((s, d) => s + (d.value * d.probability / 100), 0)
+    const totalValue = deals.reduce((s, d) => s + Number(d.value), 0)
+    const weightedValue = deals.reduce((s, d) => s + (Number(d.value) * d.probability / 100), 0)
     const avgWinProb = deals.length > 0 ? Math.round(deals.reduce((s, d) => s + d.probability, 0) / deals.length) : 0
 
     const getStageLabel = (stage: string) => t(`crm.deals.stages.${stage}`)
@@ -141,8 +141,8 @@ export default function DealsPage() {
                 </div>
                 {canMutate && (
                     <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                    <Plus className="h-4 w-4" />
-                    {t('crm.deals.newDeal')}
+                        <Plus className="h-4 w-4" />
+                        {t('crm.deals.newDeal')}
                     </button>
                 )}
             </div>
@@ -218,7 +218,7 @@ export default function DealsPage() {
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.value')}:</span>
-                                    <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</span>
+                                    <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatCurrency(Number(deal.value))}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.winProb')}:</span>
@@ -226,7 +226,7 @@ export default function DealsPage() {
                                 </div>
                                 <div>
                                     <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.weighted')}:</span>
-                                    <span className="ml-1 font-medium text-green-600">{formatCurrency(deal.value * deal.probability / 100)}</span>
+                                    <span className="ml-1 font-medium text-green-600">{formatCurrency(Number(deal.value) * deal.probability / 100)}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500 dark:text-gray-400">{t('crm.deals.table.expectedClose')}:</span>
@@ -281,7 +281,7 @@ export default function DealsPage() {
                                             </Link>
                                         </td>
                                         <td className="hidden md:table-cell px-4 py-3 text-gray-600 dark:text-gray-400">{deal.contactName || '-'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(Number(deal.value))}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stageStyles[deal.stage] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}`}>
                                                 {getStageLabel(deal.stage)}
@@ -299,17 +299,17 @@ export default function DealsPage() {
                                             </div>
                                         </td>
                                         <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
-                                            {formatCurrency(deal.value * deal.probability / 100)}
+                                            {formatCurrency(Number(deal.value) * deal.probability / 100)}
                                         </td>
                                         <td className="hidden md:table-cell whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{deal.closeDate ? formatDate(deal.closeDate) : '-'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             {canMutate && (
                                                 <button
-                                                onClick={() => handleDelete(deal.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                                title="Hapus"
+                                                    onClick={() => handleDelete(deal.id)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                    title="Hapus"
                                                 >
-                                                <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -324,7 +324,10 @@ export default function DealsPage() {
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
-                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
                 </div>
             )}
         </div>

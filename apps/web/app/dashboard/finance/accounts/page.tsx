@@ -92,7 +92,7 @@ function flattenTree(nodes: Account[]): Account[] {
 
 function sumBalanceRecursive(account: Account, allAccounts: Account[]): number {
     const children = allAccounts.filter((a) => a.parentId === account.id)
-    if (children.length === 0) return account.balance
+    if (children.length === 0) return Number(account.balance)
     return children.reduce((sum, child) => sum + sumBalanceRecursive(child, allAccounts), 0)
 }
 
@@ -373,7 +373,7 @@ export default function ChartOfAccountsPage() {
             // Only count leaf accounts (no children) to avoid double-counting
             const hasChildren = accounts.some((c) => c.parentId === a.id)
             if (!hasChildren) {
-                totals[a.type] += a.balance
+                totals[a.type] += Number(a.balance)
             }
         })
         return totals
@@ -875,7 +875,7 @@ export default function ChartOfAccountsPage() {
                                 {deleteTarget.code} — {deleteTarget.name}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {TYPE_CONFIG[deleteTarget.type].label} · {formatCurrency(deleteTarget.balance)}
+                                {TYPE_CONFIG[deleteTarget.type].label} · {formatCurrency(Number(deleteTarget.balance))}
                             </p>
                         </div>
                         <div className="flex justify-end gap-2">

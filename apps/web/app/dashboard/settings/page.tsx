@@ -4,18 +4,31 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { getInitials } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { useSearchParams } from 'next/navigation'
+import { Check, X } from 'lucide-react'
 
 export default function ProfileSettingsPage() {
     const { t } = useTranslation()
     const { update: updateSession } = useSession()
+    const searchParams = useSearchParams()
     const [isSaving, setIsSaving] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+    const [demoLoading, setDemoLoading] = useState(false)
+    const [demoStatus, setDemoStatus] = useState<string | null>(null)
+    const [showDemoConfirm, setShowDemoConfirm] = useState(false)
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         phone: '',
     })
+
+    // Auto-open demo section if navigated from onboarding
+    useEffect(() => {
+        if (searchParams?.get('demo') === 'true') {
+            setShowDemoConfirm(true)
+        }
+    }, [searchParams])
 
     const fetchProfile = useCallback(async () => {
         try {
@@ -78,6 +91,43 @@ export default function ProfileSettingsPage() {
         }
     }
 
+    const handleLoadDemoData = async () => {
+        setDemoLoading(true)
+        setDemoStatus(null)
+
+        try {
+            const res = await fetch('/api/demo/load', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ force: false }),
+            })
+
+            const data = await res.json()
+
+            if (data.success) {
+                const counts = data.data
+                const summary = [
+                    counts.categories > 0 ? `${counts.categories} kategori` : '',
+                    counts.suppliers > 0 ? `${counts.suppliers} supplier` : '',
+                    counts.contacts > 0 ? `${counts.contacts} kontak` : '',
+                    counts.products > 0 ? `${counts.products} produk` : '',
+                    counts.invoices > 0 ? `${counts.invoices} invoice` : '',
+                    counts.employees > 0 ? `${counts.employees} karyawan` : '',
+                ].filter(Boolean).join(', ')
+                setDemoStatus(`Berhasil! ${summary}`)
+            } else if (data.skipped) {
+                setDemoStatus('Data sudah ada. Gunakan "force: true" untuk memuat ulang.')
+            } else {
+                setDemoStatus('Gagal: ' + (data.error || 'Unknown error'))
+            }
+        } catch {
+            setDemoStatus('Terjadi kesalahan. Silakan coba lagi.')
+        } finally {
+            setDemoLoading(false)
+            setTimeout(() => setDemoStatus(null), 8000)
+        }
+    }
+
     const initials = formData.name ? getInitials(formData.name) : 'U'
 
     if (loading) {
@@ -99,7 +149,10 @@ export default function ProfileSettingsPage() {
                     ? 'bg-green-50 text-green-700 border border-green-200'
                     : 'bg-red-50 text-red-700 border border-red-200'
                     }`}>
-                    {saveMessage.type === 'success' ? '✓ ' : '✕ '}{saveMessage.text}
+                    <span className="inline-flex items-center gap-1.5">
+                        {saveMessage.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {saveMessage.text}
+                    </span>
                 </div>
             )}
 
@@ -221,6 +274,54 @@ export default function ProfileSettingsPage() {
                     </button>
                 </div>
             </form>
+
+            {/* Demo Data Section */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Data Demo</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                    Muat data demo untuk menjelajahi fitur Qalcuity. Data termasuk produk, kontak, invoice, karyawan, dan lainnya.
+                </p>
+
+                {demoStatus && (
+                    <div className={`rounded-lg px-4 py-3 text-sm font-medium mb-4 ${demoStatus.startsWith('Berhasil')
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                        }`}>
+                        {demoStatus}
+                    </div>
+                )}
+
+                {!showDemoConfirm ? (
+                    <button
+                        onClick={() => setShowDemoConfirm(true)}
+                        className="px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                        Muat Data Demo
+                    </button>
+                ) : (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-sm text-blue-800 mb-3">
+                            <strong>Perhatian:</strong> Data demo hanya akan dimuat jika workspace Anda masih kosong.
+                            Jika sudah ada data, muatan demo akan dilewati.
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleLoadDemoData}
+                                disabled={demoLoading}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                {demoLoading ? 'Memuat...' : 'Ya, Muat Data Demo'}
+                            </button>
+                            <button
+                                onClick={() => setShowDemoConfirm(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Batal
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Danger Zone */}
             <div className="bg-white rounded-xl border border-red-200 p-6">

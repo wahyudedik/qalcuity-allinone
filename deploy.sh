@@ -12,7 +12,8 @@ set -e
 # --- Konfigurasi ---
 APP_NAME="qalcuity"
 APP_DIR="/www/wwwroot/qalcuity"
-REPO_URL="https://github.com/username/qalcuity-allinone.git"  # GANTI dengan repo GitHub Anda
+# ⚠️ GANTI URL INI dengan repository GitHub Anda sebelum deploy!
+REPO_URL="https://github.com/wahyudedik/qalcuity-allinone.git"
 NODE_VERSION="18"  # Minimum Node.js 18
 PM2_APP_NAME="qalcuity-web"
 DOMAIN=""  # Isi domain Anda, contoh: qalcuity.com (opsional)
@@ -20,7 +21,7 @@ APP_PORT=3000
 DB_TYPE="sqlite"  # sqlite atau postgresql
 
 # --- Warna untuk output ---
-RED='\033[0;31m'
+RED='\033[0;31m' 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'

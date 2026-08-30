@@ -103,7 +103,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         : product.stock <= product.minStock
             ? { label: t('inventory.productDetail.stockLow'), color: 'text-yellow-600', bg: 'bg-yellow-50' }
             : { label: t('inventory.productDetail.stockOk'), color: 'text-green-600', bg: 'bg-green-50' }
-    const margin = product.price > 0 ? ((product.price - product.cost) / product.price * 100).toFixed(1) : '0'
+    const price = Number(product.price);
+    const cost = Number(product.cost);
+    const margin = price > 0 ? ((price - cost) / price * 100).toFixed(1) : '0'
 
     return (
         <div className="space-y-6 p-6">
@@ -164,11 +166,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div className="rounded-lg bg-green-50 p-4">
                                 <p className="text-sm text-green-600">{t('inventory.productDetail.sellPrice')}</p>
-                                <p className="text-xl font-bold text-green-700">{formatCurrency(product.price)}</p>
+                                <p className="text-xl font-bold text-green-700">{formatCurrency(Number(product.price))}</p>
                             </div>
                             <div className="rounded-lg bg-blue-50 p-4">
                                 <p className="text-sm text-blue-600">{t('inventory.productDetail.buyPrice')}</p>
-                                <p className="text-xl font-bold text-blue-700">{formatCurrency(product.cost)}</p>
+                                <p className="text-xl font-bold text-blue-700">{formatCurrency(Number(product.cost))}</p>
                             </div>
                             <div className="rounded-lg bg-purple-50 p-4">
                                 <p className="text-sm text-purple-600">{t('inventory.productDetail.margin')}</p>
@@ -238,8 +240,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                             </button>
                             {canMutate && (
                                 <button onClick={handleDelete} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
-                                <Trash2 className="h-4 w-4" />
-                                {t('inventory.productDetail.delete')}
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('inventory.productDetail.delete')}
                                 </button>
                             )}
                         </div>
