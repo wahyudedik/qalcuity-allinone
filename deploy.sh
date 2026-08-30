@@ -9,6 +9,11 @@
 
 set -e
 
+# --- Prisma Engine Configuration ---
+# VPS ini tidak bisa download Prisma engine binary dari binaries.prisma.sh
+# Gunakan library engine sebagai workaround
+export PRISMA_QUERY_ENGINE_TYPE=library
+
 # --- Konfigurasi ---
 APP_NAME="qalcuity"
 APP_DIR="/www/wwwroot/qalcuity"
