@@ -41,7 +41,7 @@ export async function GET(request: Request) {
             prisma.purchaseOrder.count({ where }),
         ]);
 
-        const data = purchaseOrders.map((po) => ({
+        const data = purchaseOrders.map((po: any) => ({
             id: po.id,
             poNumber: po.poNumber,
             supplierName: po.supplier?.name || '-',
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
             expectedDelivery: po.deliveryDate?.toISOString().split('T')[0] || null,
             createdAt: po.createdAt.toISOString(),
             notes: po.notes || '',
-            items: po.items.map((item) => ({
+            items: po.items.map((item: any) => ({
                 id: item.id,
                 description: item.description,
                 quantity: item.quantity,
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
                 tenantId,
                 supplierId,
                 items: {
-                    create: validatedData.items.map((item) => ({
+                    create: validatedData.items.map((item: any) => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -215,7 +215,7 @@ export async function PUT(request: Request) {
 
             await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
             await prisma.purchaseOrderItem.createMany({
-                data: validatedData.items.map((item) => ({
+                data: validatedData.items.map((item: any) => ({
                     purchaseOrderId: id,
                     description: item.description,
                     quantity: item.quantity,

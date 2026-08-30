@@ -10,7 +10,7 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            data: plans.map((plan) => ({
+            data: plans.map((plan: any) => ({
                 ...plan,
                 features: plan.features ? JSON.parse(plan.features) : [],
             })),

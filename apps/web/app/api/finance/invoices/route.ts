@@ -53,7 +53,7 @@ export async function GET(request: Request) {
         ]);
 
         // Map to frontend-compatible format
-        const data = invoices.map((inv) => ({
+        const data = invoices.map((inv: any) => ({
             id: inv.id,
             invoiceNumber: inv.invoiceNumber,
             customerName: inv.contact?.name || '-',
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
             dueDate: inv.dueDate.toISOString().split('T')[0],
             createdAt: inv.createdAt.toISOString(),
             notes: inv.notes,
-            items: inv.items.map((item) => ({
+            items: inv.items.map((item: any) => ({
                 id: item.id,
                 description: item.description,
                 quantity: item.quantity,
@@ -74,8 +74,8 @@ export async function GET(request: Request) {
                 total: item.total,
             })),
             paidAmount: inv.payments
-                .filter((p) => p.status === 'COMPLETED')
-                .reduce((sum, p) => sum + Number(p.amount), 0),
+                .filter((p: any) => p.status === 'COMPLETED')
+                .reduce((sum: any, p: any) => sum + Number(p.amount), 0),
         }));
 
         return NextResponse.json({
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
                     tenantId,
                     contactId,
                     items: {
-                        create: validatedData.items.map((item) => ({
+                        create: validatedData.items.map((item: any) => ({
                             description: item.description,
                             quantity: item.quantity,
                             unitPrice: item.unitPrice,
@@ -251,7 +251,7 @@ export async function PUT(request: Request) {
             await prisma.$transaction(async (tx: any) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
-                    data: (validatedData.items ?? []).map((item) => ({
+                    data: (validatedData.items ?? []).map((item: any) => ({
                         invoiceId: id,
                         description: item.description,
                         quantity: item.quantity,

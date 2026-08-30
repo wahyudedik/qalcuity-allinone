@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     }
 
     // Calculate remaining amount
-    const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const totalPaid = invoice.payments.reduce((sum: any, p: any) => sum + Number(p.amount), 0);
     const remainingAmount = Number(invoice.total) - Number(totalPaid);
 
     if (body.amount > remainingAmount) {

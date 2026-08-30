@@ -70,9 +70,9 @@ export async function GET(request: Request) {
 
         if (type === 'transactions') {
             // Hitung ringkasan
-            const matchedCount = bankTransactions.filter((t) => t.status === 'matched').length;
-            const unmatchedCount = bankTransactions.filter((t) => t.status === 'unmatched').length;
-            const discrepancyCount = bankTransactions.filter((t) => t.status === 'discrepancy').length;
+            const matchedCount = bankTransactions.filter((t: any) => t.status === 'matched').length;
+            const unmatchedCount = bankTransactions.filter((t: any) => t.status === 'unmatched').length;
+            const discrepancyCount = bankTransactions.filter((t: any) => t.status === 'discrepancy').length;
 
             return NextResponse.json({
                 success: true,
@@ -89,9 +89,9 @@ export async function GET(request: Request) {
         }
 
         if (type === 'summary') {
-            const matchedCount = bankTransactions.filter((t) => t.status === 'matched').length;
-            const unmatchedCount = bankTransactions.filter((t) => t.status === 'unmatched').length;
-            const discrepancyCount = bankTransactions.filter((t) => t.status === 'discrepancy').length;
+            const matchedCount = bankTransactions.filter((t: any) => t.status === 'matched').length;
+            const unmatchedCount = bankTransactions.filter((t: any) => t.status === 'unmatched').length;
+            const discrepancyCount = bankTransactions.filter((t: any) => t.status === 'discrepancy').length;
 
             // Hitung total saldo bank dari CoA
             const bankBalance = bankAccounts.reduce(
@@ -113,9 +113,9 @@ export async function GET(request: Request) {
         }
 
         // Default: return semua data
-        const matchedCount = bankTransactions.filter((t) => t.status === 'matched').length;
-        const unmatchedCount = bankTransactions.filter((t) => t.status === 'unmatched').length;
-        const discrepancyCount = bankTransactions.filter((t) => t.status === 'discrepancy').length;
+        const matchedCount = bankTransactions.filter((t: any) => t.status === 'matched').length;
+        const unmatchedCount = bankTransactions.filter((t: any) => t.status === 'unmatched').length;
+        const discrepancyCount = bankTransactions.filter((t: any) => t.status === 'discrepancy').length;
 
         const bankBalance = bankAccounts.reduce(
             (sum, a) => sum + Number(a.balance),

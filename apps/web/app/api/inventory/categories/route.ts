@@ -27,13 +27,13 @@ export async function GET() {
             orderBy: { name: 'asc' },
         })
 
-        const data = categories.map((category) => ({
+        const data = categories.map((category: any) => ({
             id: category.id,
             name: category.name,
             description: category.description || '',
             productCount: category.products.length,
             totalValue: category.products.reduce(
-                (sum, product) => sum + Number(product.price || 0) * (product.stock || 0),
+                (sum: number, product: { price?: unknown; stock?: number }) => sum + Number(product.price || 0) * (product.stock || 0),
                 0
             ),
         }))

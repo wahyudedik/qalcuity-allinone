@@ -25,7 +25,7 @@ export async function GET() {
             orderBy: { createdAt: 'asc' },
         })
 
-        const data = members.map((member) => ({
+        const data = members.map((member: any) => ({
             id: member.id,
             name: member.name,
             email: member.email,

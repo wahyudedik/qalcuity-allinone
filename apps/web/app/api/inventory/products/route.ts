@@ -49,7 +49,7 @@ export async function GET(request: Request) {
             prisma.product.count({ where }),
         ]);
 
-        const allData = products.map((p) => ({
+        const allData = products.map((p: any) => ({
             id: p.id,
             sku: p.sku,
             name: p.name,
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
         }));
 
         // Post-process: filter lowStock in memory (Prisma can't compare fields)
-        const data = lowStock === 'true' ? allData.filter((p) => p.isLowStock) : allData;
+        const data = lowStock === 'true' ? allData.filter((p: any) => p.isLowStock) : allData;
 
         return NextResponse.json({
             success: true,

@@ -58,7 +58,7 @@ export async function GET(request: Request) {
             prisma.attendanceRecord.count({ where }),
         ]);
 
-        const data = records.map((r) => ({
+        const data = records.map((r: any) => ({
             id: r.id,
             employeeName: r.employee.name,
             employeeId: r.employee.employeeId,

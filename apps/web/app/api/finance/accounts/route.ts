@@ -47,7 +47,7 @@ export async function GET(request: Request) {
             orderBy: { code: 'asc' },
         });
 
-        const activeCount = accounts.filter((a) => a.isActive).length;
+        const activeCount = accounts.filter((a: any) => a.isActive).length;
 
         return NextResponse.json({
             success: true,

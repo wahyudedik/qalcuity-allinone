@@ -41,7 +41,7 @@ export async function GET(request: Request) {
             prisma.quotation.count({ where }),
         ]);
 
-        const data = quotations.map((q) => ({
+        const data = quotations.map((q: any) => ({
             id: q.id,
             quotationNumber: q.quotationNumber,
             customerName: q.contact?.name || '-',
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
             validUntil: q.validUntil.toISOString().split('T')[0],
             notes: q.notes || '',
             terms: q.terms || '',
-            items: q.items.map((item) => ({
+            items: q.items.map((item: any) => ({
                 id: item.id,
                 description: item.description,
                 quantity: item.quantity,
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
                 tenantId,
                 contactId,
                 items: {
-                    create: validatedData.items.map((item) => ({
+                    create: validatedData.items.map((item: any) => ({
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
@@ -226,7 +226,7 @@ export async function PUT(request: Request) {
 
             await prisma.quotationItem.deleteMany({ where: { quotationId: id } });
             await prisma.quotationItem.createMany({
-                data: validatedData.items.map((item) => ({
+                data: validatedData.items.map((item: any) => ({
                     quotationId: id,
                     description: item.description,
                     quantity: item.quantity,
