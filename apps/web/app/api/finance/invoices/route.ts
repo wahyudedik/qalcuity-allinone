@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         const total = subtotal + taxAmount;
 
         // Use transaction for atomicity: contact creation + invoice + items
-        const invoice = await prisma.$transaction(async (tx) => {
+        const invoice = await prisma.$transaction(async (tx: any) => {
             // Generate invoice number with lock to prevent race condition
             const count = await tx.invoice.count({ where: { tenantId } });
             const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
@@ -248,7 +248,7 @@ export async function PUT(request: Request) {
             data.total = subtotal + taxAmount;
 
             // Delete old items and create new ones in transaction
-            await prisma.$transaction(async (tx) => {
+            await prisma.$transaction(async (tx: any) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
                     data: (validatedData.items ?? []).map((item) => ({

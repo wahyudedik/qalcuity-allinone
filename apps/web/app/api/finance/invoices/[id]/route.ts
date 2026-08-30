@@ -131,7 +131,7 @@ export async function PUT(
             updateData.taxAmount = taxAmount;
             updateData.total = subtotal + taxAmount;
 
-            await prisma.$transaction(async (tx) => {
+            await prisma.$transaction(async (tx: any) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
                     data: (validatedData.items ?? []).map((item) => ({

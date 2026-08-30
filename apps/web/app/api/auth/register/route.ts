@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             .replace(/^-|-$/g, "");
 
         // Gunakan transaction untuk memastikan atomicitas
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             // Buat tenant
             const tenant = await tx.tenant.create({
                 data: {
