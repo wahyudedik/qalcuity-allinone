@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         const amount = validatedData.amount;
         const status = (validatedData.status || 'PENDING').toUpperCase();
 
-        const payment = await prisma.$transaction(async (tx) => {
+        const payment = await prisma.$transaction(async (tx: any) => {
             const count = await tx.payment.count({ where: { tenantId } });
             const paymentNumber = `PAY-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
                 });
 
                 if (invoice) {
-                    const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0) + Number(amount);
+                    const totalPaid = invoice.payments.reduce((sum: number, p: { amount: unknown }) => sum + Number(p.amount), 0) + Number(amount);
                     const newInvoiceStatus = Number(totalPaid) >= Number(invoice.total) ? 'PAID' : invoice.status;
                     await tx.invoice.update({
                         where: { id: validatedData.invoiceId },
@@ -240,7 +240,7 @@ export async function PUT(request: Request) {
             data.paymentDate = validatedData.date ? new Date(validatedData.date) : null;
         }
 
-        const payment = await prisma.$transaction(async (tx) => {
+        const payment = await prisma.$transaction(async (tx: any) => {
             const updated = await tx.payment.update({
                 where: { id },
                 data,
@@ -260,8 +260,8 @@ export async function PUT(request: Request) {
 
                 if (invoice) {
                     const totalPaid = invoice.payments
-                        .filter((p) => p.id !== id && p.status === 'COMPLETED')
-                        .reduce((sum, p) => sum + Number(p.amount), 0) + (data.status === 'COMPLETED' ? Number(updated.amount) : 0);
+                        .filter((p: { id: string; status: string }) => p.id !== id && p.status === 'COMPLETED')
+                        .reduce((sum: number, p: { amount: unknown }) => sum + Number(p.amount), 0) + (data.status === 'COMPLETED' ? Number(updated.amount) : 0);
                     const newInvoiceStatus = Number(totalPaid) >= Number(invoice.total) ? 'PAID' : 'SENT';
                     await tx.invoice.update({
                         where: { id: updated.invoiceId },
