@@ -192,7 +192,7 @@ apt-get install -y git build-essential python3 make gcc g++ autoconf automake zl
 mkdir -p /www/wwwroot
 
 # Clone repository
-git clone https://github.com/username/qalcuity-allinone.git /www/wwwroot/qalcuity
+git clone https://github.com/wahyudedik/qalcuity-allinone.git /www/wwwroot/qalcuity
 
 # Masuk ke direktori
 cd /www/wwwroot/qalcuity
