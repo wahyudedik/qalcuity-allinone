@@ -362,3 +362,208 @@ export async function notifySuperadminPayment(paymentId: string): Promise<SendEm
         return { success: false, error: `Gagal mengirim notifikasi: ${message}` };
     }
 }
+
+// ---------------------------------------------------------------------------
+// Business event email triggers
+// ---------------------------------------------------------------------------
+
+/**
+ * Send email when a new invoice is created.
+ * Graceful — logs warning if SMTP is not configured, never throws.
+ */
+export async function sendInvoiceCreatedEmail(
+    invoice: {
+        id: string;
+        invoiceNumber: string;
+        total: number | unknown;
+        dueDate: Date | string | null;
+        contact?: { name?: string | null; email?: string | null } | null;
+    },
+    tenant: { name: string; id: string }
+): Promise<SendEmailResult> {
+    try {
+        const customerEmail = invoice.contact?.email;
+        if (!customerEmail) {
+            console.warn('[Email] sendInvoiceCreatedEmail: no customer email, skipping');
+            return { success: false, error: 'No customer email address' };
+        }
+
+        const template = emailTemplates.invoice;
+        const dueDateStr = invoice.dueDate
+            ? new Date(invoice.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+            : '-';
+
+        const htmlBody = renderTemplate(template.body, {
+            invoiceNumber: invoice.invoiceNumber,
+            companyName: tenant.name,
+            customerName: invoice.contact?.name || 'Pelanggan',
+            date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+            dueDate: dueDateStr,
+            total: `Rp ${Number(invoice.total).toLocaleString('id-ID')}`,
+        });
+
+        const html = generateEmailHtml(htmlBody, { companyName: tenant.name });
+
+        const result = await sendEmail({
+            to: customerEmail,
+            subject: renderTemplate(template.subject, {
+                invoiceNumber: invoice.invoiceNumber,
+                companyName: tenant.name,
+            }),
+            html,
+        });
+
+        console.log(`[Email] sendInvoiceCreatedEmail: ${invoice.invoiceNumber}`, result);
+        return result;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Email] Failed to send invoice created email:', message);
+        return { success: false, error: message };
+    }
+}
+
+/**
+ * Send email when a payment is received.
+ * Graceful — logs warning if SMTP is not configured, never throws.
+ */
+export async function sendPaymentReceivedEmail(
+    payment: {
+        id: string;
+        paymentNumber: string;
+        amount: number | unknown;
+        invoice?: {
+            invoiceNumber?: string | null;
+            contact?: { name?: string | null; email?: string | null } | null;
+        } | null;
+    },
+    tenant: { name: string; id: string }
+): Promise<SendEmailResult> {
+    try {
+        const customerEmail = payment.invoice?.contact?.email;
+        if (!customerEmail) {
+            console.warn('[Email] sendPaymentReceivedEmail: no customer email, skipping');
+            return { success: false, error: 'No customer email address' };
+        }
+
+        const template = emailTemplates.paymentConfirmation;
+        const invoiceNumber = payment.invoice?.invoiceNumber || '-';
+
+        const htmlBody = renderTemplate(template.body, {
+            invoiceNumber,
+            companyName: tenant.name,
+            customerName: payment.invoice?.contact?.name || 'Pelanggan',
+            total: `Rp ${Number(payment.amount).toLocaleString('id-ID')}`,
+        });
+
+        const html = generateEmailHtml(htmlBody, { companyName: tenant.name });
+
+        const result = await sendEmail({
+            to: customerEmail,
+            subject: renderTemplate(template.subject, {
+                invoiceNumber,
+                companyName: tenant.name,
+            }),
+            html,
+        });
+
+        console.log(`[Email] sendPaymentReceivedEmail: ${payment.paymentNumber}`, result);
+        return result;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Email] Failed to send payment received email:', message);
+        return { success: false, error: message };
+    }
+}
+
+/**
+ * Send welcome email after user registration.
+ * Graceful — logs warning if SMTP is not configured, never throws.
+ */
+export async function sendWelcomeEmail(
+    user: { name: string; email: string },
+    tenant: { name: string; id: string }
+): Promise<SendEmailResult> {
+    try {
+        if (!user.email) {
+            console.warn('[Email] sendWelcomeEmail: no user email, skipping');
+            return { success: false, error: 'No user email address' };
+        }
+
+        const template = emailTemplates.welcome;
+
+        const htmlBody = renderTemplate(template.body, {
+            companyName: tenant.name,
+            customerName: user.name,
+        });
+
+        const html = generateEmailHtml(htmlBody, { companyName: tenant.name });
+
+        const result = await sendEmail({
+            to: user.email,
+            subject: renderTemplate(template.subject, {
+                companyName: tenant.name,
+            }),
+            html,
+        });
+
+        console.log(`[Email] sendWelcomeEmail: ${user.email}`, result);
+        return result;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Email] Failed to send welcome email:', message);
+        return { success: false, error: message };
+    }
+}
+
+/**
+ * Send payment reminder for overdue invoices.
+ * Graceful — logs warning if SMTP is not configured, never throws.
+ */
+export async function sendPaymentReminderEmail(
+    invoice: {
+        id: string;
+        invoiceNumber: string;
+        total: number | unknown;
+        dueDate: Date | string | null;
+        contact?: { name?: string | null; email?: string | null } | null;
+    },
+    tenant: { name: string; id: string }
+): Promise<SendEmailResult> {
+    try {
+        const customerEmail = invoice.contact?.email;
+        if (!customerEmail) {
+            console.warn('[Email] sendPaymentReminderEmail: no customer email, skipping');
+            return { success: false, error: 'No customer email address' };
+        }
+
+        const template = emailTemplates.paymentReminder;
+        const dueDateStr = invoice.dueDate
+            ? new Date(invoice.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+            : '-';
+
+        const htmlBody = renderTemplate(template.body, {
+            invoiceNumber: invoice.invoiceNumber,
+            companyName: tenant.name,
+            customerName: invoice.contact?.name || 'Pelanggan',
+            total: `Rp ${Number(invoice.total).toLocaleString('id-ID')}`,
+            dueDate: dueDateStr,
+        });
+
+        const html = generateEmailHtml(htmlBody, { companyName: tenant.name });
+
+        const result = await sendEmail({
+            to: customerEmail,
+            subject: renderTemplate(template.subject, {
+                invoiceNumber: invoice.invoiceNumber,
+            }),
+            html,
+        });
+
+        console.log(`[Email] sendPaymentReminderEmail: ${invoice.invoiceNumber}`, result);
+        return result;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Email] Failed to send payment reminder email:', message);
+        return { success: false, error: message };
+    }
+}

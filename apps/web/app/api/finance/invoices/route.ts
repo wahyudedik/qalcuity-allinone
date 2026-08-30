@@ -4,6 +4,7 @@ import { requireAuth, requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
+import { sendInvoiceCreatedEmail } from '@/lib/email';
 
 export async function GET(request: Request) {
     try {
@@ -177,6 +178,21 @@ export async function POST(request: Request) {
         });
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Invoice', entityId: invoice.id, newValues: invoice as unknown as Record<string, unknown>, request });
+
+        // Fire-and-forget email notification (graceful — never crashes)
+        const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, id: true } });
+        if (tenant) {
+            void sendInvoiceCreatedEmail(
+                {
+                    id: invoice.id,
+                    invoiceNumber: invoice.invoiceNumber,
+                    total: invoice.total,
+                    dueDate: invoice.dueDate,
+                    contact: invoice.contact,
+                },
+                tenant
+            );
+        }
 
         return NextResponse.json({ success: true, data: invoice }, { status: 201 });
     } catch (error: unknown) {

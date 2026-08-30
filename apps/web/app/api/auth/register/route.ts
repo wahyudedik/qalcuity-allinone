@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeInput, isValidEmail } from "@/lib/sanitize";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
     try {
@@ -93,6 +94,12 @@ export async function POST(request: Request) {
 
         // Return success tanpa password
         const { passwordHash: _, ...userWithoutPassword } = result.user;
+
+        // Fire-and-forget welcome email (graceful — never crashes)
+        void sendWelcomeEmail(
+            { name: result.user.name, email: result.user.email },
+            { name: result.tenant.name, id: result.tenant.id }
+        );
 
         return NextResponse.json(
             {

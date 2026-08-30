@@ -4,6 +4,7 @@ import { requireAuth, requireMutateAuth } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createPaymentSchema, updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { sendPaymentReceivedEmail } from '@/lib/email';
 
 export async function GET(request: Request) {
     try {
@@ -174,6 +175,37 @@ export async function POST(request: Request) {
         });
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Payment', entityId: payment.id, newValues: payment as unknown as Record<string, unknown>, request });
+
+        // Fire-and-forget email notification for completed payments (graceful — never crashes)
+        if (status === 'COMPLETED') {
+            const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, id: true } });
+            if (tenant) {
+                // Fetch full payment with contact email for the email
+                const fullPayment = await prisma.payment.findUnique({
+                    where: { id: payment.id },
+                    include: {
+                        invoice: {
+                            select: {
+                                invoiceNumber: true,
+                                total: true,
+                                contact: { select: { name: true, email: true } },
+                            },
+                        },
+                    },
+                });
+                if (fullPayment) {
+                    void sendPaymentReceivedEmail(
+                        {
+                            id: fullPayment.id,
+                            paymentNumber: fullPayment.paymentNumber,
+                            amount: fullPayment.amount,
+                            invoice: fullPayment.invoice,
+                        },
+                        tenant
+                    );
+                }
+            }
+        }
 
         return NextResponse.json({ success: true, data: payment }, { status: 201 });
     } catch (error: unknown) {
