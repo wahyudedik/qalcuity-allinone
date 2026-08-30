@@ -1,290 +1,352 @@
-# 🗺️ Qalcuity All-in-One — Product Roadmap
+# 🗺️ Qalcuity Development Roadmap
 
-> **Vision:** Menjadi B2B Operating System #1 untuk UKM & Mid-Market Indonesia
-> **Last Updated:** August 29, 2026
+> **Last Updated:** 30 Agustus 2026
+> **Current Version:** v1.0.0-beta.1
+> **Status:** Core Modules Production-Ready (~65% production-ready, ~20% partial, ~15% planned)
 
 ---
 
 ## 📋 Daftar Isi
 
-1. [NOW](#-now-current-sprint)
-2. [NEXT](#-next-next-2-4-weeks)
-3. [LATER](#-later-future-phases)
-4. [BLOCKED](#-blocked)
-5. [COMPLETED](#-completed)
-6. [Phase Overview](#-phase-overview)
-7. [Success Metrics](#-success-metrics)
-8. [Risks & Mitigation](#-risks--mitigation)
+1. [Development Phases](#development-phases)
+2. [Phase Overview](#phase-overview)
+3. [Success Metrics](#success-metrics)
+4. [Risks & Mitigation](#risks--mitigation)
+5. [Changelog](#changelog)
+6. [Documentation References](#documentation-references)
 
 ---
 
-## 🟢 NOW (Current Sprint)
+## Development Phases
 
-> **Phase 1 (MVP Stabilization)** — August 2026
-> Fokus: Stabilisasi MVP, bug fixes, production readiness
+### Phase 1: Core SaaS Foundation ✅ COMPLETED
 
-### Active Tasks
+> Multi-tenant architecture, authentication, authorization, audit, dan infrastructure dasar.
 
-| # | Task | Module | Priority | Status |
-|---|------|--------|----------|--------|
-| 1 | CoA & Reconciliation — migrate from in-memory to persistent DB store | Finance | High | `in_progress` |
-| 2 | ~~Settings pages — complete CRUD for company, notifications, security, team~~ ✅ Done | ~~Settings~~ | ~~Medium~~ | ~~`in_progress`~~ ✅ |
-| 3 | Email notification — real SMTP integration (currently placeholder) | Integration | Medium | `in_progress` |
-| 4 | Payment gateway — real Midtrans/Xendit integration | Integration | Medium | `in_progress` |
-| 5 | AI Chat — replace mock responses with real LLM integration | AI | Low | `in_progress` |
-| 6 | Landing page & documentation | Marketing | Low | `in_progress` |
+- [x] Multi-tenant architecture (shared DB, tenantId isolation)
+- [x] Auth (NextAuth.js 4.24 + JWT)
+- [x] RBAC (4 roles: SUPERADMIN, ADMIN, MEMBER, VIEWER)
+- [x] RBAC Defense-in-depth (3 layers: Middleware + API Route + UI)
+- [x] Registration flow (auto-create Tenant + User)
+- [x] Session management (JWT with role + tenantId)
+- [x] Password hashing (bcryptjs)
+- [x] Audit trail (77+ logAudit calls, 10 mutation endpoints)
+- [x] Zod validation (14+ schemas, 19 API routes)
+- [x] i18n (Bahasa Indonesia + English, 200+ keys)
+- [x] Rate limiting (per-IP, in-memory)
+- [x] Health check endpoint (`/api/health`)
+- [x] Global search (Ctrl+K across all modules)
+- [x] Dark mode (class-based toggle)
+- [x] Responsive design (mobile-first, 44x44px touch targets)
+- [x] Responsive tables (dual layout: mobile cards + desktop tables)
+- [x] Empty states, toast notifications, confirmation dialogs
+- [x] Loading states (12 `loading.tsx` files for detail pages)
+- [x] Error boundaries (`error.tsx` for all module sections)
+- [x] Demo data strategy (3-layer: demo login + onboarding + settings)
 
-### Known Issues Being Fixed
+### Phase 2: Finance Module ✅ COMPLETED
 
-| # | Issue | Severity | Module |
-|---|-------|----------|--------|
-| 1 | CoA & Reconciliation use in-memory store (not persistent across restarts) | Medium | Finance |
-| 2 | AI Chat uses mock responses (no real LLM integration yet) | Low | AI |
-| 3 | SMTP config is placeholder — emails not actually sent | Medium | Notifications |
-| 4 | ~~Settings pages may have incomplete CRUD operations~~ ✅ Fixed | ~~Medium~~ | Settings |
-| 5 | ~~Float type for monetary fields (should be Decimal for PostgreSQL prod)~~ ✅ Fixed | ~~Low~~ | Database |
-| 6 | Rate limiter is in-memory (not suitable for multi-instance deployment) | Low | API |
+> Modul keuangan inti — Invoice, Payment, PO, Quotation, CoA, Bank Reconciliation.
 
----
+- [x] Invoice CRUD + items + payment tracking
+- [x] Payment CRUD + processing
+- [x] Purchase Order CRUD
+- [x] Quotation CRUD
+- [x] Chart of Accounts (Prisma-backed)
+- [x] Bank Reconciliation (Prisma-backed)
+- [ ] General Ledger — PLANNED
+- [ ] Journal Entry — PLANNED
+- [ ] Trial Balance — PLANNED
+- [ ] Financial Statements (Balance Sheet, Income Statement) — PLANNED
 
-## 🔵 NEXT (Next 2-4 weeks)
+### Phase 3: CRM Module ✅ COMPLETED
 
-> **Phase 2 Start** — September-Oktober 2026
-> Fokus: Field Service, Advanced Reporting, Basic AI, Omnichannel, Bank Reconciliation
+> Manajemen kontak, leads, deals, dan pipeline.
 
-### Planned Tasks
+- [x] Contacts CRUD
+- [x] Leads CRUD
+- [x] Deals CRUD + pipeline stages (6 stages)
+- [x] Pipeline Kanban view
+- [x] Pipeline list view (table with sorting & filtering)
+- [ ] Lead Scoring — PLANNED
 
-| # | Task | Module | Phase |
-|---|------|--------|-------|
-| 1 | Field Service Module — job scheduling, technician assignment, mobile checklist | Operations | Phase 2 |
-| 2 | Advanced Reporting — custom report builder, pivot table, scheduled reports | Reporting | Phase 2 |
-| 3 | Natural Language Query — real NLP for business data queries | AI | Phase 2 |
-| 4 | Document Extraction — PDF/OCR processing for invoices, PO, KTP | AI | Phase 2 |
-| 5 | Bank Reconciliation (auto) — connect to real bank feeds | Finance | Phase 2 |
-| 6 | Omnichannel Support — WhatsApp, Email, Instagram integration | Support | Phase 2 |
-| 7 | Offline capability — Service worker, local cache for mobile/desktop | Platform | Phase 2 |
-| 8 | Full inventory module — stock opname, multi-warehouse, batch tracking | Inventory | Phase 2 |
+### Phase 4: Inventory Module ✅ COMPLETED
 
----
+> Manajemen produk, kategori, supplier, dan stok.
 
-## 🟡 LATER (Future Phases)
+- [x] Products CRUD + stock
+- [x] Categories CRUD — Full CRUD with hierarchical support
+- [x] Categories DELETE handler — connected to API
+- [x] Suppliers CRUD
+- [x] Stock movements tracking
+- [ ] Multi-warehouse — PLANNED
+- [ ] Batch/lot tracking — PLANNED
+- [ ] Stock opname — PLANNED
+- [ ] Auto-reorder suggestion — PLANNED
 
-> **Phase 3-4** — 2027
-> Fokus: Full AI Agent Suite, Advanced Multi-entity, Marketplace, White-label, Enterprise
+### Phase 5: HR Module ✅ COMPLETED
 
-### Phase 3: Full AI Agent Suite (March-May 2027)
+> Manajemen karyawan, absensi, cuti, dan payroll.
 
-| # | Task | Module |
-|---|------|--------|
-| 1 | Finance Agent — auto-generate invoice, anomaly detection, cash flow prediction | AI |
-| 2 | Sales Agent — win probability, next best action, lead scoring | AI |
-| 3 | Inventory Agent — stockout prediction, auto-reorder, demand forecasting | AI |
-| 4 | HR Agent — contract generation, leave prediction, attrition risk | AI |
-| 5 | Support Agent — auto-categorize, suggested reply, sentiment analysis | AI |
-| 6 | AI Template Generator — contract, JD, email template generation | AI |
-| 7 | Anomaly Detection — fraud, data error, compliance alerts | AI |
+- [x] Employees CRUD
+- [x] Attendance tracking
+- [x] Leave requests + approval workflow
+- [x] Payroll processing
 
-### Phase 3: Advanced Multi-entity (March-May 2027)
+### Phase 6: Reports & Analytics ✅ COMPLETED
 
-| # | Task | Module |
-|---|------|--------|
-| 1 | Multi-entity support — cabang, anak perusahaan | Platform |
-| 2 | Multi-currency — base currency, exchange rates | Platform |
-| 3 | Consolidated reporting — cross-entity reports | Reporting |
+> Dashboard stats, 12 report types, charts, dan export.
 
-### Phase 3: Marketplace Integration (March-May 2027)
+- [x] Dashboard stats (real-time overview)
+- [x] 12 report types
+- [x] Charts (Bar/Pie/Line — custom implementation)
+- [x] Export (CSV/Excel/Print)
+- [ ] Custom report builder — PLANNED
+- [ ] Scheduled reports — PLANNED
 
-| # | Task | Module |
-|---|------|--------|
-| 1 | Shopee integration — product sync, order management | Integration |
-| 2 | Tokopedia integration — product sync, order management | Integration |
-| 3 | Lazada integration — product sync, order management | Integration |
+### Phase 7: Settings & Admin ✅ COMPLETED
 
-### Phase 4: Enterprise & Scale (June-November 2027)
+> Pengaturan perusahaan, tim, notifikasi, keamanan, dan billing.
 
-| # | Task | Module |
-|---|------|--------|
-| 1 | White-label platform — custom branding, reseller portal | Platform |
-| 2 | SSO integration — SAML 2.0, OAuth 2.0 | Security |
-| 3 | Advanced approval workflows — conditional routing, delegation | Platform |
-| 4 | Open API v2 — GraphQL, webhook builder, API sandbox | Integration |
-| 5 | Predictive analytics — revenue forecasting, churn prediction | AI |
-| 6 | Self-learning capabilities — model improvement from usage | AI |
-| 7 | Coretax integration — e-Faktur, PPh 21, PPN | Tax |
-| 8 | SOC 2 Type II compliance | Security |
+- [x] Profile settings (CRUD + i18n)
+- [x] Company settings (logo upload + CRUD + i18n)
+- [x] Team management (CRUD + i18n)
+- [x] Notification settings (SMTP config + CRUD + i18n)
+- [x] Security settings (CRUD + i18n)
+- [x] Integrations settings (CRUD + i18n + dynamic connection status from API)
+- [x] Billing & Subscription (plan selection, manual transfer, superadmin approval)
 
----
+### Phase 8: AI Features (Basic) ✅ COMPLETED
 
-## 🔴 BLOCKED
+> AI foundation — chat component, hub page, dan insights cards.
 
-> Item yang terhambat oleh dependency atau issue
-
-| # | Item | Blocked By | Impact | Mitigation |
-|---|------|-----------|--------|------------|
-| 1 | Coretax Integration | Coretax API docs belum available | Tax compliance delayed | Monitor release, prepare adapter pattern |
-| 2 | Real LLM Integration | API key & cost decision pending | AI features use mock data | Continue with mock, prepare architecture |
-| 3 | ~~PostgreSQL Production Migration~~ | ~~Dev environment still on SQLite~~ | ~~Float precision issues in production~~ | ✅ Migrated to PostgreSQL, Decimal type |
-
----
-
-## ✅ COMPLETED
-
-> Semua item yang sudah selesai dikerjakan
-
-### Phase 1 — MVP Foundation (August 2026)
-
-#### Core Platform
-- [x] Authentication — NextAuth JWT with CredentialsProvider
-- [x] RBAC — 4 roles (SUPERADMIN, ADMIN, MEMBER, VIEWER)
-- [x] RBAC Defense-in-depth — 3 layers: middleware + API route + UI visibility (35 routes + 22 pages)
-- [x] Registration flow
-- [x] Session management — JWT strategy with role + tenantId
-- [x] Password hashing — bcryptjs
-- [x] Dashboard layout — unified real-time view
-- [x] Audit Trail — all mutations logged with old/new values (77 audit calls, 10 endpoints)
-- [x] Rate Limiting — in-memory rate limiter per IP
-- [x] Health Check — `/api/health` endpoint
-- [x] Global Search — Ctrl+K across all modules
-- [x] Dark Mode — class-based toggle (Tailwind)
-- [x] i18n — Bahasa Indonesia + English, 20+ pages localized
-- [x] Responsive Design — mobile-first, 44x44px touch targets
-- [x] Responsive Tables — dual layout (mobile cards + desktop tables) on 17 pages
-- [x] Zod Validation — 14+ schemas, 19 API routes validated
-- [x] Lucide Icons — consistent icon system across all modules
-- [x] Empty States — all CRUD pages
-- [x] Toast Notifications — CRUD operation feedback
-- [x] Confirmation Dialogs — delete on 14+ pages
-- [x] Navigation Links — cross-entity navigation
-- [x] Loading States — 9 loading.tsx files for detail pages
-
-#### Finance & Accounting
-- [x] Chart of Account — full CRUD tree view with hierarchical relationships
-- [x] Invoice management — create, read, update, delete
-- [x] Quotation management — create, read, update, delete
-- [x] Payment recording — create, read, update, delete
-- [x] Purchase Order management — create, read, update, delete
-- [x] Bank Reconciliation — manual page + API route
-
-#### Sales & CRM
-- [x] Lead management — CRUD
-- [x] Contact management — CRUD
-- [x] Deal management — CRUD with pipeline stages
-- [x] Pipeline board — Kanban view with 6 stages
-- [x] Pipeline list view — table with sorting & filtering
-
-#### HR & People Ops
-- [x] Employee database — CRUD
-- [x] Attendance management — CRUD
-- [x] Leave management — CRUD with approval workflow
-- [x] Payroll management — CRUD
-
-#### Inventory & Supply Chain
-- [x] Product catalog — CRUD
-- [x] Supplier management — CRUD
-- [x] Category management — CRUD
-- [x] Stock movements — tracking
-
-#### Settings & Admin
-- [x] Profile settings — CRUD with i18n
-- [x] Company settings — with logo upload, CRUD with i18n
-- [x] Team management — CRUD with i18n
-- [x] Notification settings — SMTP config, CRUD with i18n
-- [x] Security settings — CRUD with i18n
-- [x] Integrations settings — CRUD with i18n
-- [x] Billing & Subscription — plan selection, manual transfer, superadmin approval
-
-#### Reporting
-- [x] Advanced Reporting — 12 report types
-- [x] Export — CSV, Excel, Print
-- [x] Charts — Bar, Pie, Line (custom implementation)
-
-#### AI Features (Basic)
-- [x] AI Chat — floating button component
+- [x] AI Chat — floating button component (mock responses)
 - [x] AI Hub — centralized page at `/dashboard/ai`
 - [x] AI Insights — business insight cards on dashboard
 - [x] AI Sidebar Menu — dedicated menu item
+- [ ] Real DB queries (replace mock) — PLANNED
+- [ ] AI Agents (Finance, Sales, Inventory, HR) — PLANNED
+- [ ] Natural Language Query — PLANNED
+- [ ] Document Extraction (PDF/OCR) — PLANNED
 
-#### Platforms
-- [x] Web App — core Next.js application
-- [x] Desktop App — Electron wrapper
-- [x] Mobile App — React Native/Expo with SearchBar, LoadingSkeleton, pull-to-refresh
+### Phase 9: Permission Engine Foundation 📋 PLANNED
 
-#### Infrastructure
-- [x] Seed data — comprehensive demo data for all modules
-- [x] Deploy scripts — PM2 health check, configurable port
+> **Fondasi arsitektur — granular permission engine sebagai pengganti 4-role RBAC.**
+> Lihat [ADR-013](docs/DECISIONS.md#adr-013-permission-engine-architecture) dan [ADR-014](docs/DECISIONS.md#adr-014-platform-vs-tenant-architecture).
 
-### Changelog
+- [ ] Design permission model (Prisma schema: Permission, Role, Membership, Scope)
+- [ ] Implement `@qalcuity/permissions` package (`can()` engine)
+- [ ] Implement `@qalcuity/auth` package (extract from web)
+- [ ] Create permission middleware for API routes
+- [ ] Create permission hooks for UI components (`usePermission()`)
+- [ ] Migrate from 4-role RBAC to granular permissions
+- [ ] Create `apps/platform-admin` (Qalcuity Admin dashboard)
+- [ ] Platform Admin roles (Super Admin, Platform Admin, Developer, Support, Finance, Security, Analytics)
+- [ ] Implement platform permissions (tenant, billing, system, support, feature_flags)
+- [ ] Implement tenant permissions (finance, CRM, HR, inventory, settings)
+- [ ] Add scope support (branch, department level)
+- [ ] Permission-based conditional rendering in all pages
+- [ ] AI Agent permission checks (tool-level `can()` before execution)
+- [ ] Mobile permission support (same `@qalcuity/permissions` package)
+- [ ] Desktop permission support (same `@qalcuity/permissions` package)
+- [ ] Migration strategy from current 4-role system
 
-| Date | Change | Impact |
-|------|--------|--------|
-| 2026-08-29 | Zod Validation — 14+ schemas, 19 API routes validated | Input security |
-| 2026-08-29 | Audit Logging — 77 audit calls across 10 mutation endpoints | Compliance |
-| 2026-08-29 | RBAC Defense-in-depth — 3 layers, 35 API routes + 22 pages | Access control |
-| 2026-08-29 | Responsive Tables — dual layout on 17 pages | Mobile UX |
-| 2026-08-29 | i18n Expansion — 20+ pages localized, 200+ new keys | Internationalization |
-| 2026-08-29 | Settings Pages — 6 pages completed with full i18n | Settings |
-| 2026-08-29 | Detail Pages — 9 loading.tsx, delete on 6 pages, 48 i18n keys | CRUD completeness |
-| 2026-08-29 | Pipeline Fix — stage name mismatch, CLOSED_WON/LOST added | CRM |
-| 2026-08-29 | Sidebar Fix — navigation reorder, billing path fix | Navigation |
-| 2026-08-28 | Billing & Subscription — Plan selection, manual transfer, superadmin approve/reject | Revenue management |
-| 2026-08-28 | Role Superadmin — RBAC 4 role, sidebar filtering, middleware protection | Access control |
-| 2026-08-28 | AI Features — Chat, Hub, Insights, sidebar menu | AI foundation |
-| 2026-08-28 | Advanced Reporting — 12 report types, export, charts | Business intelligence |
-| 2026-08-28 | Payment Gateway — Midtrans/Xendit config + processing API | Payment processing |
-| 2026-08-28 | Email Notification — SMTP config + email templates | Communication |
-| 2026-08-28 | File Upload — drag & drop component + logo upload | Document management |
-| 2026-08-28 | Bank Reconciliation — manual page + API | Financial reconciliation |
-| 2026-08-28 | Desktop App — Electron wrapper | Desktop platform |
-| 2026-08-28 | Mobile App Polish — SearchBar, LoadingSkeleton, pull-to-refresh | Mobile UX |
-| 2026-08-28 | Chart of Accounts — full CRUD tree view | Finance foundation |
-| 2026-08-28 | Seed data — comprehensive demo data | Demo & testing |
-| 2026-08-28 | Empty states, Toast notifications, Confirmation dialogs | UX improvements |
-| 2026-08-28 | Mobile responsive, Navigation links, Lucide icons | UI consistency |
-| 2026-08-18 | i18n support, All modules localized | Internationalization |
-| 2026-08-06 | Dashboard stats, Audit trail, Global search, Dark mode | Core features |
+### Phase 10: Unified Control Engine 📋 PLANNED
+
+> **Modul fundamental — Unified Control Engine dengan 14 sub-komponen: Policy Engine, Workflow, Approval, Escalation, SLA, Delegation, Notification, Locking, Audit Trail, SoD, Exception Center, Work Inbox, Period Closing, Emergency Access.**
+> Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](docs/DECISIONS.md#adr-023-control-dashboard-tiers).
+
+#### 10A: Core Pipeline (Foundational)
+
+- [ ] Design Unified Control Engine Prisma schema (centralized state model)
+- [ ] Implement Policy Engine — rules bisnis konfigurabel (WHEN condition THEN action) [ADR-018]
+- [ ] Implement Policy versioning — rules berlaku sejak tanggal tertentu
+- [ ] Implement Policy configuration UI — per-company rule management
+- [ ] Implement Workflow Engine — transaction lifecycle (DRAFT → LOCKED) [ADR-016]
+- [ ] Implement Approval Engine — multi-level chains + amount threshold approvals [ADR-015]
+- [ ] Implement Amount Threshold configuration — tiered approval per department/type
+- [ ] Implement Escalation Engine — deadline-based (PIC → Supervisor → Manager → Director)
+- [ ] Implement Locking Engine — hierarchical (Transaction → Day → Month → Quarter → Year) [ADR-016]
+- [ ] Implement Notification Engine — real-time + scheduled, connected to all sub-engines
+- [ ] Audit trail integration — immutable trail for every pipeline step
+
+#### 10B: Compliance & Control (Advanced)
+
+- [ ] Implement Segregation of Duties (SoD) — conflict detection & prevention [ADR-019]
+- [ ] Implement SoD matrix configuration — per-company configurable rules
+- [ ] Implement SoD conflict detection — real-time check saat role assignment
+- [ ] Implement SoD exception workflow — override dengan Director approval
+- [ ] Implement SLA Engine — service level tracking dengan color coding (🟢🟡🔴) [ADR-020]
+- [ ] Implement SLA metrics — average completion time, compliance rate, escalation rate
+- [ ] Implement Delegation framework — temporary authority transfer [ADR-020]
+- [ ] Implement Delegation audit trail — delegator, delegatee, period, reason
+- [ ] Implement Delegation auto-expire — otomatis berakhir setelah periode
+
+#### 10C: Visibility & Operations (UI & Dashboard)
+
+- [ ] Implement Work Inbox — personal dashboard (overdue, approvals, assigned, escalated, completed) [ADR-023]
+- [ ] Implement Exception Center — centralized anomaly dashboard [ADR-021]
+- [ ] Implement My Dashboard (Tier 1) — personal work inbox + SLA compliance [ADR-023]
+- [ ] Implement Management Dashboard (Tier 2) — team workload + SLA metrics [ADR-023]
+- [ ] Implement Control Center (Tier 3) — organization-wide compliance + policy status [ADR-023]
+- [ ] Implement Reason Required — mandatory reason untuk edit/delete/override
+- [ ] Implement Transaction Timeline — full history (Who, When, What, Status, Approval chain)
+- [ ] Implement "Why am I seeing this?" — contextual help di UI
+
+#### 10D: Security & Access (Enterprise)
+
+- [ ] Implement Emergency Access — temporary elevated permission [ADR-021]
+- [ ] Implement Emergency Access flow — Request → Reason → Director Approval → Auto-revoke
+- [ ] Implement Access Review — periodic permission review oleh managers
+- [ ] Implement Access Review scheduling — quarterly review dengan status tracking
+
+#### 10E: Period Management (Closing)
+
+- [ ] Implement Period Closing Wizard — step-by-step closing [ADR-022]
+- [ ] Implement Pre-checks — validate unposted, pending, unreconciled transactions
+- [ ] Implement Exception resolution — resolve atau exception approval sebelum closing
+- [ ] Implement Period lock — auto-lock setelah closing approval
+- [ ] Implement Period summary report — generate after closing
+- [ ] Support monthly, quarterly, yearly periods
+
+#### 10F: Integration & Platform
+
+- [ ] Permission integration — lock, unlock, adjust sebagai sensitive permissions
+- [ ] Lock Policy configuration per tenant
+- [ ] Mobile Control Center support
+- [ ] AI Agent workflow integration
+
+### Phase 11: Integration Layer 📋 PLANNED
+
+> Email, payment gateway, dan webhook integrations.
+
+- [x] Rate Limiter (Redis activation pending)
+- [x] SMTP (Nodemailer — config ready, triggers pending)
+- [x] Payment Gateway provider pattern (Midtrans/Xendit/Mock)
+- [ ] Payment Gateway route (real integration) — PENDING
+- [ ] Email triggers (actual send on events) — PENDING
+- [ ] Webhook handlers — PENDING
+- [ ] Omnichannel (WhatsApp, Email, Instagram) — PLANNED
+
+### Phase 12: Security Hardening 📋 PLANNED
+
+> Hardening keamanan untuk production deployment.
+
+- [x] Fix hardcoded NEXTAUTH_SECRET fallback → env validation mandatory
+- [ ] CSP (Content-Security-Policy) headers
+- [ ] CORS configuration (explicit, not defaults)
+- [ ] CSRF hardening
+- [ ] Input sanitization audit
+- [ ] Rate limiter migration to Redis
+- [ ] Security penetration testing
+
+### Phase 13: Production MVP 📋 PLANNED
+
+> Infrastructure untuk production deployment.
+
+- [ ] Docker setup (Dockerfile + docker-compose)
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Monitoring & logging (structured logs, metrics)
+- [ ] Performance optimization (query optimization, caching)
+- [ ] Load testing
+- [ ] Environment validation (mandatory env vars)
+
+### Phase 14: Mobile Foundation 📋 PLANNED
+
+> Mobile app harus diperlakukan sebagai platform terpisah (bukan "versi kecil Web").
+
+- [ ] Auth flow (login/session management)
+- [ ] Permission engine integration (`@qalcuity/permissions`)
+- [ ] API integration (real endpoints, not mock)
+- [ ] Offline capability (local cache + sync)
+- [ ] Push notifications
+- [ ] Biometric authentication
+- [ ] Platform-specific UX (iOS/Android conventions)
+
+### Phase 15: Desktop Enhancement 📋 PLANNED
+
+> Desktop app memerlukan offline capability dan native integrasi.
+
+- [ ] Offline capability (local DB + sync)
+- [ ] Permission engine integration (`@qalcuity/permissions`)
+- [ ] Native menus & shortcuts
+- [ ] Auto-update mechanism
+- [ ] System tray integration
+- [ ] File system access
+
+### Phase 16: Advanced Finance 📋 PLANNED
+
+> Modul keuangan lanjutan — General Ledger, Tax Engine.
+
+- [ ] General Ledger
+- [ ] Journal Entry
+- [ ] Trial Balance
+- [ ] Balance Sheet
+- [ ] Income Statement
+- [ ] Tax Engine (Coretax, e-Faktur, PPh21, PPN)
+
+### Phase 17: Enterprise Features 📋 PLANNED
+
+> Fitur enterprise untuk skala besar.
+
+- [ ] Multi-company support
+- [ ] Inter-company transactions
+- [ ] Advanced reporting (custom report builder)
+- [ ] Custom workflows (approval routing, delegation)
+- [ ] API marketplace (GraphQL, webhook builder)
+- [ ] White-label platform (custom branding, reseller portal)
+- [ ] SSO integration (SAML 2.0, OAuth 2.0)
+- [ ] SOC 2 Type II compliance
 
 ---
 
-## 📊 Phase Overview
+## Phase Overview
 
 ```
-2026 Q3          2026 Q4          2027 Q1          2027 Q2          2027 Q3          2027 Q4
-   │                │                │                │                │                │
-   ▼                ▼                ▼                ▼                ▼                ▼
-┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
-│ MVP  │   →    │Phase1│   →    │Phase2│   →    │Phase3│   →    │Phase4│   →    │Full  │
-│Done ✅│        │ NOW  │        │ NEXT │        │LATER │        │LATER │        │Suite │
-└──────┘        └──────┘        └──────┘        └──────┘        └──────┘        └──────┘
-   │                │                │                │                │                │
- Aug '26        Sep-Oct '26     Nov '26-Feb '27  Mar-May '27    Jun-Aug '27    Sep-Nov '27
+2026 Q3          2026 Q4          2027 Q1          2027 Q2          2027 Q3
+   │                │                │                │                │
+   ▼                ▼                ▼                ▼                ▼
+┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
+│Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │
+│1-8   │        │9-10  │        │11-13 │        │14-15 │        │16-17 │
+│✅Done │        │📋NEXT│        │📋PLAN│        │📋PLAN│        │📋PLAN│
+└──────┘        └──────┘        └──────┘        └──────┘        └──────┘
+   │                │                │                │                │
+ Aug '26        Sep '26         Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27
 ```
 
 | Phase | Duration | Focus | Key Deliverables | Status |
 |-------|----------|-------|------------------|--------|
-| **MVP** | Aug 2026 (Completed) | Core platform + Finance + CRM + HR + Inventory | Foundation ready | ✅ `completed` |
-| **Phase 1** | Sep-Oct 2026 (NOW) | Stabilization, bug fixes, production readiness | Production-ready MVP | 🟢 `in_progress` |
-| **Phase 2** | Nov 2026-Feb 2027 | Field Service, Advanced Reporting, Basic AI | First paying customers | 🔵 `planned` |
-| **Phase 3** | Mar-May 2027 | Full AI Agent Suite, Multi-entity, Marketplace | Differentiated features | 🟡 `planned` |
-| **Phase 4** | Jun-Nov 2027 | Enterprise, White-label, Predictive AI | Scale & monetization | 🟡 `planned` |
+| **1-8** | Aug 2026 | Core SaaS + All modules + Basic AI | Foundation ready | ✅ `completed` |
+| **9** | Sep 2026 | Permission Engine Foundation | Granular permissions + Platform Admin | 📋 `planned` |
+| **10** | Sep 2026 | Unified Control Engine | Policy + Workflow + Approval + Escalation + SLA + Delegation + SoD + Exception + Locking | 📋 `planned` |
+| **11-13** | Oct-Nov 2026 | Integration, Security, Production | Production-ready MVP | 📋 `planned` |
+| **14-15** | Dec '26-Feb '27 | Mobile + Desktop foundation | Multi-platform ready | 📋 `planned` |
+| **16** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
+| **17** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
 
 ### Success Criteria Per Phase
 
 | Phase | Metric | Target |
 |-------|--------|--------|
-| **MVP** | Core flows working | 100% |
-| **MVP** | Critical bugs | < 5 |
-| **Phase 1** | Beta users | 50 companies |
-| **Phase 1** | User satisfaction | > 3.5/5 |
-| **Phase 2** | Paying customers | 20 companies |
-| **Phase 2** | MRR | Rp 10 juta |
-| **Phase 3** | Paying customers | 100 companies |
-| **Phase 3** | MRR | Rp 50 juta |
-| **Phase 4** | Paying customers | 500 companies |
-| **Phase 4** | MRR | Rp 250 juta |
+| **1-8** | Core flows working | 100% |
+| **1-8** | Critical bugs | < 5 |
+| **9** | Permission engine functional | 100% |
+| **9** | Platform Admin dashboard ready | Yes |
+| **10** | Unified Control Engine functional | 14 sub-components |
+| **10** | Policy Engine configurable per company | 100% |
+| **10** | Locking engine prevents unauthorized edits | 100% |
+| **10** | SoD conflict detection working | 100% |
+| **10** | SLA tracking with color coding | 100% |
+| **11-13** | Beta users | 50 companies |
+| **11-13** | User satisfaction | > 3.5/5 |
+| **14-15** | Mobile app store ready | Yes |
+| **16** | Full accounting compliance | Indonesian GAAP |
+| **17** | Paying customers | 100+ companies |
 
 ---
 
-## 📈 Success Metrics
+## Success Metrics
 
 ### North Star Metric
 
@@ -309,25 +371,25 @@
 | Date | Milestone | Status |
 |------|-----------|--------|
 | **Aug 2026** | MVP Development Complete | ✅ Done |
-| **Oct 2026** | MVP Beta Launch | 🟢 In Progress |
-| **Dec 2026** | MVP → Production | 🔵 Planned |
-| **Feb 2027** | 20 Paying Customers | 🔵 Planned |
-| **May 2027** | 100 Paying Customers | 🔵 Planned |
-| **Aug 2027** | White-label Launch | 🟡 Later |
-| **Nov 2027** | 500 Customers | 🟡 Later |
+| **Oct 2026** | MVP Beta Launch | 🔄 In Progress |
+| **Dec 2026** | Production Deployment | 📋 Planned |
+| **Feb 2027** | 20 Paying Customers | 📋 Planned |
+| **May 2027** | 100 Paying Customers | 📋 Planned |
+| **Aug 2027** | Enterprise Features Launch | 📋 Planned |
 
 ---
 
-## ⚠️ Risks & Mitigation
+## Risks & Mitigation
 
 ### Technical Risks
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| **Scope creep** | High | High | Strict MVP scope, feature flags |
+| **Scope creep** | High | High | Strict phase scope, feature flags |
 | **Performance issues** | Medium | High | Load testing, optimization sprints |
 | **Security breach** | Low | Critical | Security audit, bug bounty |
 | **Integration failures** | Medium | Medium | Fallback options, mock services |
+| **Mobile platform gaps** | High | Medium | Treat as separate platform, dedicated sprint |
 
 ### Business Risks
 
@@ -340,19 +402,56 @@
 
 ---
 
-## 📝 Documentation References
+## Changelog
+
+| Date | Change | Impact |
+|------|--------|--------|
+| 2026-08-30 | Code Quality Sprint — Dynamic pages, Categories DELETE, emoji cleanup, toast icons, loading/error states, env config, security fix | Code quality + UX |
+| 2026-08-30 | Unified Control Engine — ADR-017 s/d ADR-023, 16 recommendations documented, Phase 10 expanded | Enterprise-grade operational control |
+| 2026-08-30 | Control Center Architecture — ADR-015 & ADR-016, Phase 10 added, Control Center docs updated | Operational backbone |
+| 2026-08-30 | Permission Engine Architecture — ADR-013 & ADR-014, Phase 9 added, docs updated | Architecture foundation |
+| 2026-08-30 | Documentation overhaul — ROADMAP, ARCHITECTURE, DATABASE, SECURITY, UI_UX, DECISIONS | Developer experience |
+| 2026-08-29 | Zod Validation — 14+ schemas, 19 API routes validated | Input security |
+| 2026-08-29 | Audit Logging — 77 audit calls across 10 mutation endpoints | Compliance |
+| 2026-08-29 | RBAC Defense-in-depth — 3 layers, 35 API routes + 22 pages | Access control |
+| 2026-08-29 | Responsive Tables — dual layout on 17 pages | Mobile UX |
+| 2026-08-29 | i18n Expansion — 20+ pages localized, 200+ new keys | Internationalization |
+| 2026-08-29 | Settings Pages — 6 pages completed with full i18n | Settings |
+| 2026-08-29 | Detail Pages — 9 loading.tsx, delete on 6 pages, 48 i18n keys | CRUD completeness |
+| 2026-08-29 | Pipeline Fix — stage name mismatch, CLOSED_WON/LOST added | CRM |
+| 2026-08-29 | Sidebar Fix — navigation reorder, billing path fix | Navigation |
+| 2026-08-28 | Billing & Subscription — Plan selection, manual transfer, superadmin approve/reject | Revenue management |
+| 2026-08-28 | Role Superadmin — RBAC 4 role, sidebar filtering, middleware protection | Access control |
+| 2026-08-28 | AI Features — Chat, Hub, Insights, sidebar menu | AI foundation |
+| 2026-08-28 | Advanced Reporting — 12 report types, export, charts | Business intelligence |
+| 2026-08-28 | Payment Gateway — Midtrans/Xendit config + processing API | Payment processing |
+| 2026-08-28 | Email Notification — SMTP config + email templates | Communication |
+| 2026-08-28 | Bank Reconciliation — manual page + API | Financial reconciliation |
+| 2026-08-28 | Desktop App — Electron wrapper | Desktop platform |
+| 2026-08-28 | Mobile App Polish — SearchBar, LoadingSkeleton, pull-to-refresh | Mobile UX |
+| 2026-08-28 | Chart of Accounts — full CRUD tree view | Finance foundation |
+| 2026-08-28 | Seed data — comprehensive demo data | Demo & testing |
+| 2026-08-28 | Empty states, Toast notifications, Confirmation dialogs | UX improvements |
+| 2026-08-28 | Mobile responsive, Navigation links, Lucide icons | UI consistency |
+| 2026-08-18 | i18n support, All modules localized | Internationalization |
+| 2026-08-06 | Dashboard stats, Audit trail, Global search, Dark mode | Core features |
+
+---
+
+## Documentation References
 
 | Document | Purpose | Location |
 |----------|---------|----------|
 | **AGENT.md** | AI Agent development rules | [`AGENT.md`](AGENT.md) |
 | **FEATURES.md** | Feature list with status | [`FEATURES.md`](FEATURES.md) |
 | **CURRENT.md** | Current state & known issues | [`CURRENT.md`](CURRENT.md) |
-| **ARCHITECTURE.md** | System architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
-| **DATABASE.md** | Database schema | [`docs/DATABASE.md`](docs/DATABASE.md) |
-| **SECURITY.md** | Security rules | [`docs/SECURITY.md`](docs/SECURITY.md) |
-| **UI_UX.md** | UI/UX guidelines | [`docs/UI_UX.md`](docs/UI_UX.md) |
+| **ARCHITECTURE.md** | Technical architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| **DATABASE.md** | Database architecture | [`docs/DATABASE.md`](docs/DATABASE.md) |
+| **SECURITY.md** | Security architecture | [`docs/SECURITY.md`](docs/SECURITY.md) |
+| **UI_UX.md** | UI/UX architecture | [`docs/UI_UX.md`](docs/UI_UX.md) |
+| **DECISIONS.md** | Architectural decisions | [`docs/DECISIONS.md`](docs/DECISIONS.md) |
 
 ---
 
-**Last Updated:** August 29, 2026
+**Last Updated:** August 30, 2026
 **Maintainer:** Qalcuity Product Team

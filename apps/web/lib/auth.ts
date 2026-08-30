@@ -3,6 +3,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "./db";
 
+if (!process.env.NEXTAUTH_SECRET) {
+    console.error('[AUTH] NEXTAUTH_SECRET is not set in environment variables!');
+}
+
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -16,43 +20,54 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Email dan password harus diisi");
                 }
 
-                // Cari user berdasarkan email dari database
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email },
-                    include: { tenant: true },
-                });
+                try {
+                    // Cari user berdasarkan email dari database
+                    const user = await prisma.user.findUnique({
+                        where: { email: credentials.email },
+                        include: { tenant: true },
+                    });
 
-                if (!user) {
-                    throw new Error("Email tidak terdaftar");
+                    if (!user) {
+                        throw new Error("Email tidak terdaftar");
+                    }
+
+                    if (!user.isActive) {
+                        throw new Error("Akun sudah dinonaktifkan");
+                    }
+
+                    // Verifikasi password dengan bcrypt
+                    const isPasswordValid = await bcrypt.compare(
+                        credentials.password,
+                        user.passwordHash
+                    );
+
+                    if (!isPasswordValid) {
+                        throw new Error("Password salah");
+                    }
+
+                    // Update last login timestamp (non-blocking)
+                    prisma.user.update({
+                        where: { id: user.id },
+                        data: { lastLoginAt: new Date() },
+                    }).catch((err) => {
+                        console.error("[Auth] Failed to update lastLoginAt:", err);
+                    });
+
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                        tenantId: user.tenantId,
+                    };
+                } catch (error) {
+                    // Re-throw known errors (validation messages)
+                    if (error instanceof Error) {
+                        throw error;
+                    }
+                    console.error("[Auth] Unexpected error in authorize:", error);
+                    throw new Error("Terjadi kesalahan saat memverifikasi kredensial");
                 }
-
-                if (!user.isActive) {
-                    throw new Error("Akun sudah dinonaktifkan");
-                }
-
-                // Verifikasi password dengan bcrypt
-                const isPasswordValid = await bcrypt.compare(
-                    credentials.password,
-                    user.passwordHash
-                );
-
-                if (!isPasswordValid) {
-                    throw new Error("Password salah");
-                }
-
-                // Update last login timestamp
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { lastLoginAt: new Date() },
-                });
-
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                    tenantId: user.tenantId,
-                };
             },
         }),
     ],
@@ -80,5 +95,5 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
-    secret: process.env.NEXTAUTH_SECRET || "qalcuity-secret-key-change-in-production",
+    secret: process.env.NEXTAUTH_SECRET!,
 };

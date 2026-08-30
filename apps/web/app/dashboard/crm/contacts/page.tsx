@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
-import { Download, Plus, Search, LayoutGrid, List, Trash2 } from 'lucide-react'
+import { Download, Plus, Search, LayoutGrid, List, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 type Contact = {
@@ -155,8 +155,8 @@ export default function ContactsPage() {
                     </button>
                     {canMutate && (
                         <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        <Plus className="h-4 w-4" />
-                        {t('crm.contacts.addContact')}
+                            <Plus className="h-4 w-4" />
+                            {t('crm.contacts.addContact')}
                         </button>
                     )}
                 </div>
@@ -351,7 +351,10 @@ export default function ContactsPage() {
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
-                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
                 </div>
             )}
         </div>

@@ -1,97 +1,46 @@
-# DECISIONS
+# 📋 Qalcuity — Architectural Decisions
 
-> Architecture Decision Records (ADR) untuk Qalcuity All-in-One ERP/CRM.
-> Last Updated: 2026-08-28
-
----
-
-## Table of Contents
-
-- [ADR-001: Monorepo Structure](#adr-001-monorepo-structure)
-- [ADR-002: Next.js App Router](#adr-002-nextjs-app-router)
-- [ADR-003: Prisma ORM with SQLite (dev) / PostgreSQL (prod)](#adr-003-prisma-orm-with-sqlite-dev--postgresql-prod)
-- [ADR-004: NextAuth JWT for Authentication](#adr-004-nextauth-jwt-for-authentication)
-- [ADR-005: Role-based Access Control (String Field)](#adr-005-role-based-access-control-string-field)
-- [ADR-006: In-Memory Store for Non-Critical Data](#adr-006-in-memory-store-for-non-critical-data)
-- [ADR-007: i18n with Custom Provider](#adr-007-i18n-with-custom-provider)
-- [ADR-008: Tailwind CSS for Styling](#adr-008-tailwind-css-for-styling)
-- [ADR-009: Lucide React for Icons](#adr-009-lucide-react-for-icons)
+> **Last Updated:** 30 Agustus 2026
+> **Current Version:** v1.0.0-beta.1
 
 ---
 
-## ADR-001: Monorepo Structure
+## 📋 Daftar Isi
+
+- [ADR-001: Next.js App Router](#adr-001-nextjs-app-router)
+- [ADR-002: Prisma ORM](#adr-002-prisma-orm)
+- [ADR-003: NextAuth.js](#adr-003-nextauthjs)
+- [ADR-004: PostgreSQL](#adr-004-postgresql)
+- [ADR-005: Monorepo with pnpm](#adr-005-monorepo-with-pnpm)
+- [ADR-006: Multi-tenant Architecture](#adr-006-multi-tenant-architecture)
+- [ADR-007: Zod for Validation](#adr-007-zod-for-validation)
+- [ADR-008: Tailwind CSS](#adr-008-tailwind-css)
+- [ADR-009: Mobile Strategy](#adr-009-mobile-strategy)
+- [ADR-010: AI Provider Abstraction](#adr-010-ai-provider-abstraction)
+- [ADR-011: Payment Gateway Abstraction](#adr-011-payment-gateway-abstraction)
+- [ADR-012: Demo Data Strategy](#adr-012-demo-data-strategy)
+- [ADR-013: Permission Engine Architecture](#adr-013-permission-engine-architecture)
+- [ADR-014: Platform vs Tenant Architecture](#adr-014-platform-vs-tenant-architecture)
+- [ADR-015: Qalcuity Control Center](#adr-015-qalcuity-control-center)
+- [ADR-016: Transaction Lifecycle & Locking Engine](#adr-016-transaction-lifecycle--locking-engine)
+- [ADR-017: Unified Control Engine](#adr-017-unified-control-engine)
+- [ADR-018: Policy Engine Architecture](#adr-018-policy-engine-architecture)
+- [ADR-019: Segregation of Duties](#adr-019-segregation-of-duties)
+- [ADR-020: SLA & Delegation Framework](#adr-020-sla--delegation-framework)
+- [ADR-021: Exception Center & Emergency Access](#adr-021-exception-center--emergency-access)
+- [ADR-022: Period Closing Wizard](#adr-022-period-closing-wizard)
+- [ADR-023: Control Dashboard Tiers](#adr-023-control-dashboard-tiers)
+
+---
+
+## ADR-001: Next.js App Router
 
 **Status:** Accepted
-**Date:** 2026-08-01
-**Decision Makers:** Development Team
-
-### Context
-
-Qalcuity is a multi-platform application (Web, Desktop, Mobile) with shared business logic and database schema. We need a project structure that:
-- Shares code between platforms
-- Manages dependencies efficiently
-- Supports independent deployment
-- Scales with team growth
+**Date:** 2026-08-25
 
 ### Decision
 
-Use **pnpm workspaces** with **Turborepo** for monorepo management.
-
-### Structure
-
-```
-qalcuity-allinone/
-├── apps/
-│   ├── web/          # @qalcuity/web — Next.js core app
-│   ├── desktop/      # Electron wrapper
-│   └── mobile/       # React Native / Expo
-├── packages/
-│   ├── db/           # @qalcuity/db — Prisma schema + client
-│   ├── types/        # @qalcuity/types — Shared TypeScript types
-│   └── utils/        # @qalcuity/utils — Shared utilities
-├── pnpm-workspace.yaml
-├── package.json      # Root scripts (turbo dev/build/lint)
-└── turbo.json
-```
-
-### Alternatives Considered
-
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **Multi-repo** | Independent deployment | Code duplication, dependency hell | ❌ Rejected |
-| **npm/yarn workspaces** | Simpler setup | Slower, less efficient | ❌ Rejected |
-| **Nx** | More features, better caching | Heavier, steeper learning curve | ❌ Rejected |
-| **pnpm + Turborepo** | Fast, efficient, good DX | Newer ecosystem | ✅ Selected |
-
-### Consequences
-
-- ✅ Shared database schema across all platforms
-- ✅ Shared types ensure consistency
-- ✅ Fast builds with Turborepo caching
-- ✅ Efficient disk usage with pnpm
-- ⚠️ Requires understanding of workspace protocols
-- ⚠️ Initial setup complexity
-
----
-
-## ADR-002: Next.js App Router
-
-**Status:** Accepted
-**Date:** 2026-08-01
-**Decision Makers:** Development Team
-
-### Context
-
-The web application needs:
-- Server-side rendering (SSR) for dashboard pages
-- API routes for backend logic
-- File-based routing for simplicity
-- React Server Components for performance
-- Middleware for authentication
-
-### Decision
-
-Use **Next.js 14 with App Router** (`/app` directory).
+Use **Next.js 14+ with App Router** (`/app` directory).
 
 ### Rationale
 
@@ -104,38 +53,6 @@ Use **Next.js 14 with App Router** (`/app` directory).
 | **Route groups** | ✅ `(auth)`, `(dashboard)` | ❌ Not supported |
 | **Streaming** | ✅ Native | ❌ Not supported |
 
-### Implementation
-
-```
-app/
-├── layout.tsx              # Root layout (Session + i18n providers)
-├── page.tsx                # Landing page
-├── (auth)/
-│   ├── layout.tsx          # Auth layout (centered card)
-│   ├── login/page.tsx      # Login page
-│   └── register/page.tsx   # Register page
-├── dashboard/
-│   ├── layout.tsx          # Dashboard layout (sidebar + header)
-│   ├── loading.tsx         # Dashboard loading skeleton
-│   ├── page.tsx            # Dashboard home
-│   ├── finance/            # Finance module
-│   ├── crm/                # CRM module
-│   ├── hr/                 # HR module
-│   ├── inventory/          # Inventory module
-│   ├── reports/            # Reports
-│   ├── billing/            # Billing
-│   ├── settings/           # Settings
-│   ├── audit/              # Audit trail
-│   └── ai/                 # AI hub
-└── api/                    # API route handlers
-    ├── auth/
-    ├── finance/
-    ├── crm/
-    ├── hr/
-    ├── inventory/
-    └── ...
-```
-
 ### Alternatives Considered
 
 | Alternative | Pros | Cons | Decision |
@@ -143,7 +60,6 @@ app/
 | **Pages Router** | More mature, more docs | No RSC, manual layouts | ❌ Rejected |
 | **Remix** | Good DX, loaders | Smaller ecosystem | ❌ Rejected |
 | **Vite + React** | Faster dev server | No SSR, manual routing | ❌ Rejected |
-| **App Router** | RSC, layouts, streaming | Newer, some breaking changes | ✅ Selected |
 
 ### Consequences
 
@@ -156,24 +72,14 @@ app/
 
 ---
 
-## ADR-003: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
+## ADR-002: Prisma ORM
 
 **Status:** Accepted
-**Date:** 2026-08-01
-**Decision Makers:** Development Team
-
-### Context
-
-The application needs:
-- Type-safe database queries
-- Easy schema management and migrations
-- Fast local development
-- Production-grade database for deployment
-- Multi-tenant data isolation
+**Date:** 2026-08-25
 
 ### Decision
 
-Use **Prisma ORM** with **SQLite for development** and **PostgreSQL for production**.
+Use **Prisma 5.x** (not Drizzle, not TypeORM).
 
 ### Rationale
 
@@ -186,512 +92,1294 @@ Use **Prisma ORM** with **SQLite for development** and **PostgreSQL for producti
 | **Multi-db** | ✅ SQLite/PG/MySQL | ✅ SQLite/PG | ✅ Many | ✅ Many |
 | **Ecosystem** | ✅ Large | ⚠️ Growing | ✅ Large | ✅ Large |
 
-### Database Strategy
-
-```prisma
-// packages/db/prisma/schema.prisma
-datasource db {
-  provider = "sqlite"     // Dev: SQLite
-  url      = env("DATABASE_URL")
-  // Prod: Change to "postgresql"
-}
-```
-
-### Monetary Fields Note
-
-```prisma
-// Development (SQLite) — Float for compatibility
-subtotal Float @default(0)
-
-// Production (PostgreSQL) — Decimal for precision
-subtotal Decimal @db.Decimal(15, 2) @default(0)
-```
-
-### Alternatives Considered
-
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **Raw SQL** | Full control, no ORM overhead | No type safety, manual queries | ❌ Rejected |
-| **Drizzle** | Faster, lighter | Less mature ecosystem | ❌ Rejected |
-| **TypeORM** | Decorator-based, mature | Complex, less DX | ❌ Rejected |
-| **Prisma** | Best DX, type safety, schema-first | Heavier runtime | ✅ Selected |
-
 ### Consequences
 
-- ✅ Type-safe queries across entire codebase
-- ✅ Schema changes are tracked and versioned
-- ✅ Fast local dev with SQLite (no server needed)
-- ✅ Production-ready with PostgreSQL
-- ⚠️ Prisma Client is generated (build step required)
-- ⚠️ Float vs Decimal migration needed for production
-- ⚠️ Some advanced queries require raw SQL
+- ✅ Type-safe database queries
+- ✅ Excellent migration system
+- ✅ Good developer experience
+- ⚠️ Requires Prisma Client generation
+- ⚠️ Schema changes require migration
 
 ---
 
-## ADR-004: NextAuth JWT for Authentication
+## ADR-003: NextAuth.js
 
 **Status:** Accepted
-**Date:** 2026-08-01
-**Decision Makers:** Development Team
-
-### Context
-
-The application needs:
-- Secure user authentication
-- Session management
-- Multi-tenant user isolation
-- Role-based access control
-- Custom login/register pages
+**Date:** 2026-08-25
 
 ### Decision
 
-Use **NextAuth.js 4.24** with **JWT strategy** and **CredentialsProvider**.
-
-### Implementation
-
-```typescript
-// apps/web/lib/auth.ts
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // 1. Find user by email
-        // 2. Verify password with bcrypt
-        // 3. Update lastLoginAt
-        // 4. Return user with role + tenantId
-      },
-    }),
-  ],
-  callbacks: {
-    jwt({ token, user }) {
-      // Enrich token with role + tenantId
-    },
-    session({ session, token }) {
-      // Expose role + tenantId to session
-    },
-  },
-  session: { strategy: "jwt" },
-};
-```
-
-### JWT Token Structure
-
-```typescript
-{
-  sub: string;        // User ID
-  email: string;      // User email
-  name: string;       // User name
-  role: string;       // SUPERADMIN | ADMIN | MEMBER | VIEWER
-  tenantId: string;   // Tenant ID
-}
-```
-
-### Alternatives Considered
-
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **Database sessions** | Server-controlled, immediate revocation | Requires DB query per request | ❌ Rejected |
-| **NextAuth + OAuth** | Social login, less password management | More complexity, third-party dependency | ❌ Rejected (for now) |
-| **Custom JWT** | Full control | More code, security risk | ❌ Rejected |
-| **NextAuth JWT** | Battle-tested, easy setup, secure | Less control over token format | ✅ Selected |
-
-### Consequences
-
-- ✅ Stateless authentication (no DB query per request)
-- ✅ Built-in CSRF protection
-- ✅ Secure HTTP-only cookies
-- ✅ Easy integration with Next.js middleware
-- ⚠️ Token revocation requires additional mechanism
-- ⚠️ Secret key management (NEXTAUTH_SECRET)
-- ⚠️ Default expiration is 30 days (may need adjustment)
-
----
-
-## ADR-005: Role-based Access Control (String Field)
-
-**Status:** Accepted
-**Date:** 2026-08-01
-**Decision Makers:** Development Team
-
-### Context
-
-The application needs:
-- Multi-role access control
-- Simple role management
-- Easy to query and filter
-- Compatible with SQLite (no enum type)
-
-### Decision
-
-Use a **string field** (`role: String`) on the `User` model instead of a separate `Role` table or Prisma enum.
-
-### Implementation
-
-```prisma
-model User {
-  role String @default("USER")  // SUPERADMIN, ADMIN, MEMBER, VIEWER
-}
-```
-
-### Role Values
-
-| Role | Description | Hierarchy |
-|------|-------------|-----------|
-| `SUPERADMIN` | System administrator | 4 (highest) |
-| `ADMIN` | Tenant administrator | 3 |
-| `MEMBER` | Regular user | 2 |
-| `VIEWER` | Read-only user | 1 (lowest) |
+Use **NextAuth.js 4.x with JWT strategy** (not database sessions).
 
 ### Rationale
 
-| Criterion | String Field | Separate Role Table | Prisma Enum |
-|-----------|-------------|-------------------|-------------|
-| **Query simplicity** | ✅ `where: { role: "ADMIN" }` | ⚠️ Requires join | ✅ `where: { role: ADMIN }` |
-| **SQLite compatibility** | ✅ Works | ✅ Works | ❌ Not supported |
-| **Flexibility** | ✅ Easy to add roles | ✅ Easy to add roles | ⚠️ Requires schema change |
-| **Performance** | ✅ Fast (indexed string) | ⚠️ Join overhead | ✅ Fast |
-| **Validation** | ⚠️ Application-level | ✅ Database-level | ✅ Schema-level |
+| Feature | NextAuth | Lucia | Custom |
+|---------|----------|-------|--------|
+| **JWT support** | ✅ Native | ✅ Yes | ⚠️ Manual |
+| **CredentialsProvider** | ✅ Built-in | ⚠️ Custom | ✅ Full control |
+| **Multi-tenant** | ✅ JWT payload | ⚠️ Complex | ✅ Full control |
+| **Next.js integration** | ✅ Excellent | ✅ Good | ⚠️ Manual |
+| **Ecosystem** | ✅ Large | ⚠️ Growing | ❌ None |
 
-### Validation
+### Consequences
+
+- ✅ Mature, well-documented
+- ✅ Supports CredentialsProvider (email + password)
+- ✅ JWT strategy works well with multi-tenant
+- ✅ Role + tenantId stored in token
+- ⚠️ Some complexity with custom callbacks
+
+---
+
+## ADR-004: PostgreSQL
+
+**Status:** Accepted
+**Date:** 2026-08-25
+
+### Decision
+
+Use **PostgreSQL** (not MySQL, not SQLite for production).
+
+### Rationale
+
+| Feature | PostgreSQL | MySQL | SQLite |
+|---------|-----------|-------|--------|
+| **JSON support** | ✅ Native `Json` type | ⚠️ Limited | ⚠️ Limited |
+| **Full-text search** | ✅ Excellent | ✅ Good | ⚠️ Basic |
+| **Decimal precision** | ✅ Native `Decimal(15,2)` | ✅ `DECIMAL` | ❌ `REAL` |
+| **Concurrent access** | ✅ Excellent | ✅ Good | ⚠️ Limited |
+| **Extensions** | ✅ Rich ecosystem | ✅ Good | ❌ Minimal |
+| **Multi-tenant** | ✅ Schema-level isolation | ✅ Yes | ❌ No |
+
+### Consequences
+
+- ✅ Production-grade database
+- ✅ Excellent JSON support (settings field)
+- ✅ Native Decimal type for monetary values
+- ✅ Full-text search capability
+- ⚠️ Requires PostgreSQL server for development (DBngin)
+
+---
+
+## ADR-005: Monorepo with pnpm
+
+**Status:** Accepted
+**Date:** 2026-08-25
+
+### Decision
+
+Use **pnpm workspaces** (not Turborepo, not Nx).
+
+### Rationale
+
+| Alternative | Pros | Cons | Decision |
+|------------|------|------|----------|
+| **Multi-repo** | Independent deployment | Code duplication, dependency hell | ❌ Rejected |
+| **npm/yarn workspaces** | Simpler setup | Slower, less efficient | ❌ Rejected |
+| **Nx** | More features, better caching | Heavier, steeper learning curve | ❌ Rejected |
+| **pnpm** | Fast, efficient, native workspace support | Newer ecosystem | ✅ Selected |
+
+### Consequences
+
+- ✅ Shared database schema across all platforms
+- ✅ Shared types ensure consistency
+- ✅ Fast package installation
+- ✅ Efficient disk usage
+- ⚠️ Requires understanding of workspace protocols
+
+---
+
+## ADR-006: Multi-tenant Architecture
+
+**Status:** Accepted
+**Date:** 2026-08-25
+
+### Decision
+
+Use **shared database, shared schema, tenantId isolation** (not DB-per-tenant).
+
+### Rationale
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **DB-per-tenant** | Strong isolation | High cost, complex management | ❌ Rejected |
+| **Schema-per-tenant** | Medium isolation | Medium cost, migration complexity | ❌ Rejected |
+| **Shared schema + tenantId** | Cost-effective, simpler | Requires discipline in queries | ✅ Selected |
+
+### Consequences
+
+- ✅ Cost-effective for B2B SaaS
+- ✅ Simpler deployment and maintenance
+- ✅ Single database to manage
+- ⚠️ Requires tenantId filter on every query
+- ⚠️ Cross-tenant leak = critical bug
+
+---
+
+## ADR-007: Zod for Validation
+
+**Status:** Accepted
+**Date:** 2026-08-25
+
+### Decision
+
+Use **Zod** (not Yup, not Joi).
+
+### Rationale
+
+| Feature | Zod | Yup | Joi |
+|---------|-----|-----|-----|
+| **TypeScript-first** | ✅ Native | ⚠️ Infer | ⚠️ Infer |
+| **Runtime validation** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Schema composition** | ✅ Excellent | ✅ Good | ✅ Good |
+| **Type inference** | ✅ `z.infer<>` | ⚠️ `InferType<>` | ⚠️ Manual |
+| **Bundle size** | ✅ Small | ⚠️ Medium | ❌ Large |
+| **Next.js integration** | ✅ Excellent | ✅ Good | ⚠️ Manual |
+
+### Consequences
+
+- ✅ TypeScript-first design
+- ✅ Excellent type inference (`z.infer<typeof schema>`)
+- ✅ Runtime validation with clear error messages
+- ✅ Schema composition for complex forms
+- ⚠️ Requires learning Zod API
+
+---
+
+## ADR-008: Tailwind CSS
+
+**Status:** Accepted
+**Date:** 2026-08-25
+
+### Decision
+
+Use **Tailwind CSS** (not CSS modules, not styled-components).
+
+### Rationale
+
+| Feature | Tailwind | CSS Modules | styled-components |
+|---------|----------|-------------|-------------------|
+| **Utility-first** | ✅ Yes | ❌ No | ❌ No |
+| **Consistent design** | ✅ Enforced | ⚠️ Manual | ⚠️ Manual |
+| **Bundle size** | ✅ Small (purged) | ✅ Small | ❌ Large |
+| **Dark mode** | ✅ Native (`dark:`) | ⚠️ Manual | ⚠️ Manual |
+| **DX** | ✅ Excellent | ⚠️ Good | ⚠️ Good |
+| **Design tokens** | ✅ Via config | ⚠️ Manual | ⚠️ Manual |
+
+### Consequences
+
+- ✅ Consistent design system
+- ✅ Small bundle size (PurgeCSS)
+- ✅ Native dark mode support
+- ✅ Design tokens via `tailwind.config.js`
+- ⚠️ Verbose class names
+
+---
+
+## ADR-009: Mobile Strategy
+
+**Status:** Accepted
+**Date:** 2026-08-28
+
+### Decision
+
+Use **React Native / Expo** for mobile.
+
+### Rationale
+
+| Feature | React Native | Flutter | PWA |
+|---------|-------------|---------|-----|
+| **Code sharing with web** | ✅ React (same paradigm) | ❌ Dart | ✅ Same codebase |
+| **Ecosystem** | ✅ Large | ✅ Growing | ⚠️ Limited |
+| **Native feel** | ✅ Yes | ✅ Yes | ❌ No |
+| **Offline support** | ✅ Excellent | ✅ Excellent | ⚠️ Limited |
+| **App store** | ✅ Yes | ✅ Yes | ❌ No |
+
+### Consequences
+
+- ✅ Code sharing with web (React paradigm)
+- ✅ Large ecosystem and community
+- ✅ Native performance
+- ⚠️ Requires separate build pipeline
+- ⚠️ Platform-specific code (iOS/Android)
+
+### Important Note
+
+> Mobile app harus diperlakukan sebagai **platform terpisah**, bukan "versi kecil Web". Mobile memiliki kebutuhan UX yang berbeda (offline, biometric, push notifications).
+
+---
+
+## ADR-010: AI Provider Abstraction
+
+**Status:** Accepted
+**Date:** 2026-08-30
+
+### Decision
+
+User brings their own API key, Qalcuity provides agent framework.
+
+### Rationale
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Built-in AI (Qalcuity pays)** | Simpler UX | High cost, scaling issues | ❌ Rejected |
+| **User's own API key** | No AI cost for Qalcuity | User manages keys | ✅ Selected |
+| **Open-source local AI** | No external dependency | High resource usage | ❌ Rejected |
+
+### Consequences
+
+- ✅ No AI cost for Qalcuity
+- ✅ User controls their AI spend
+- ✅ User can choose their preferred AI provider
+- ⚠️ User needs to configure API keys
+- ⚠️ AI quality depends on user's provider
+
+---
+
+## ADR-011: Payment Gateway Abstraction
+
+**Status:** Accepted
+**Date:** 2026-08-30
+
+### Decision
+
+Provider pattern with Midtrans/Xendit/Mock.
+
+### Rationale
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Single provider (Midtrans)** | Simpler integration | Vendor lock-in | ❌ Rejected |
+| **Provider pattern** | Flexible, user choice | More code | ✅ Selected |
+| **Mock only** | No external dependency | No real payments | ❌ Rejected |
+
+### Consequences
+
+- ✅ User configures their own payment provider
+- ✅ Flexible provider switching
+- ✅ Mock provider for testing
+- ⚠️ Requires provider-specific adapters
+
+---
+
+## ADR-012: Demo Data Strategy
+
+**Status:** Accepted
+**Date:** 2026-08-30
+
+### Decision
+
+3-layer approach: demo login + onboarding + settings.
+
+### Rationale
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Demo login only** | Quick access | Limited customization | ❌ Rejected |
+| **Onboarding only** | Guided setup | Requires time | ❌ Rejected |
+| **3-layer (all)** | Quick demo + full control | More code | ✅ Selected |
+
+### Consequences
+
+- ✅ Quick demo access for prospects
+- ✅ Easy data loading for new users
+- ✅ Manual data management from settings
+- ⚠️ Requires maintaining seed data scripts
+
+---
+
+## ADR-013: Permission Engine Architecture
+
+**Decision:** Qalcuity menggunakan granular permission engine dengan model User → Membership → Role → Permission → Resource → Action → Scope
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+Qalcuity adalah multi-tenant B2B SaaS yang membutuhkan permission system enterprise-grade. Current RBAC (4 hardcoded roles) tidak cukup untuk:
+
+- Multi-branch organizations
+- Data-level access control
+- Platform-level admin permissions
+- AI Agent permission checks
+
+### Decision
+
+Implement permission engine dengan model:
 
 ```typescript
-const VALID_ROLES = ["SUPERADMIN", "ADMIN", "MEMBER", "VIEWER"];
+// Permission check
+can(user, action, resource, context) → boolean
 
-// Validate at registration/role change
-if (!VALID_ROLES.includes(role)) {
-  throw new Error("Invalid role");
+// Example
+can(budi, "approve", "invoice", { branch: "Surabaya" })
+// → true if budi has invoice.approve permission for Surabaya branch
+```
+
+**Two Permission Universes:**
+
+| Universe | Scope | Examples |
+|----------|-------|----------|
+| **Platform Permissions** | Internal Qalcuity operations | `tenant.view`, `tenant.suspend`, `subscription.manage`, `platform.billing`, `system.monitor`, `support.manage`, `feature_flags.manage` |
+| **Tenant Permissions** | Customer organization operations | `invoice.view`, `invoice.create`, `invoice.approve`, `inventory.adjust`, `employee.view`, `payroll.manage` |
+
+> ⚠️ Keduanya tidak boleh tercampur.
+
+**Permission Structure:**
+
+```
+User → Membership → Role → Permission → Scope
+                                    ↓
+                              Resource: Action
+                              Scope: Branch/Department
+```
+
+### Permission Flow
+
+```
+User
+ ↓
+Organization Membership
+ ↓
+Role
+ ↓
+Permission
+ ↓
+Resource
+ ↓
+Action
+ ↓
+Scope
+```
+
+### Alternatives Considered
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Current 4-role RBAC** | Simple, already implemented | Not granular, no data-level access | ❌ Insufficient |
+| **ABAC (Attribute-based)** | Very flexible | Complex, performance overhead | ❌ Over-engineered |
+| **Granular Permission Engine** | Enterprise-grade, scalable | More complex than simple RBAC | ✅ Selected |
+| **External IAM (Auth0/Clerk)** | Managed service | Vendor lock-in, cost | ❌ Rejected |
+
+### Consequences
+
+- ✅ Enterprise-grade access control from day one
+- ✅ Consistent across Web, Mobile, Desktop, API, AI Agent
+- ✅ Scalable for multi-branch, multi-department
+- ✅ AI Agent can check permissions before executing actions
+- ⚠️ More complex than simple role-based checks
+- ⚠️ Requires new database models (Permission, Role, Membership, Scope)
+- ⚠️ Migration from current 4-role system needed
+
+### Implementation Plan
+
+1. New packages: `@qalcuity/auth`, `@qalcuity/permissions`
+2. New app: `apps/platform-admin` (Qalcuity Owner dashboard)
+3. New Prisma models: Permission, Role, Membership, Scope
+4. Permission middleware for API routes
+5. Permission hooks for UI components
+6. Permission checks for AI Agent tools
+
+---
+
+## ADR-014: Platform vs Tenant Architecture
+
+**Decision:** Pisahkan dashboard Qalcuity Owner (platform-admin) dari dashboard Customer (web/mobile/desktop)
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+Qalcuity memiliki dua jenis pengguna:
+
+1. **Internal Qalcuity team** — mengelola platform, tenant, billing, support
+2. **Customer organizations** — menggunakan ERP modules (Finance, CRM, HR, Inventory)
+
+### Decision
+
+- `apps/platform-admin` — dashboard khusus Qalcuity Owner/Admin
+- `apps/web` — dashboard customer ERP
+- `apps/mobile` — mobile customer ERP
+- `apps/desktop` — desktop customer ERP
+
+### Platform Admin Menu
+
+```
+Qalcuity Admin
+├── Overview (platform stats)
+├── Tenants / Organizations
+├── Subscriptions
+├── Plans
+├── Billing
+├── Users (all tenants)
+├── Platform Usage
+├── System Health
+├── Integrations
+├── API
+├── Support
+├── Feature Flags
+├── Audit Logs
+├── Security
+├── Notifications
+├── System Settings
+└── Platform Analytics
+```
+
+### Target Monorepo Structure
+
+```
+apps/
+├── web/              ← Customer ERP (Web)
+├── mobile/           ← Customer ERP (Mobile)
+├── desktop/          ← Customer ERP (Desktop)
+└── platform-admin/   ← Qalcuity Owner Dashboard (BARU)
+
+packages/
+├── auth/             ← Authentication logic (BARU)
+├── permissions/      ← Permission engine (BARU)
+├── types/
+├── api/
+├── validation/
+├── ui/
+├── i18n/
+└── utils/
+```
+
+### Alternatives Considered
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Single app with role-based routing** | Simpler deployment | Complex routing logic, mixed concerns | ❌ Rejected |
+| **Separate apps** | Clear separation, different permission models | Additional app to maintain | ✅ Selected |
+| **Monolith with admin section** | No extra deployment | Security risk, mixed data contexts | ❌ Rejected |
+
+### Consequences
+
+- ✅ Clear separation of concerns
+- ✅ Platform admin doesn't mix with customer data
+- ✅ Different permission models for each
+- ⚠️ Additional app to maintain
+- ⚠️ Shared packages must work for both
+
+---
+
+## ADR-015: Qalcuity Control Center
+
+**Decision:** Implement Control Center sebagai modul fundamental yang menggabungkan Workflow, Approval, Escalation, Notification, Locking, dan Audit engines.
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+ERP bukan hanya tempat mencatat transaksi, tetapi sistem yang memastikan pekerjaan selesai, keputusan memiliki penanggung jawab, keterlambatan naik ke level yang tepat, dan transaksi yang sudah ditutup tidak bisa sembarangan diubah.
+
+### Decision
+
+Qalcuity Control Center terdiri dari 6 engines:
+
+1. **Workflow Engine** — Transaction lifecycle management
+2. **Approval Engine** — Multi-level approval workflows
+3. **Escalation Engine** — Automatic escalation on deadline miss
+4. **Notification Engine** — Connected to escalation and workflow
+5. **Locking Engine** — Transaction/monthly/yearly locking
+6. **Audit Engine** — Immutable audit trail
+
+### Architecture
+
+```
+Control Center
+├── Workflow Engine
+│   └── Transaction lifecycle (DRAFT → LOCKED)
+├── Approval Engine
+│   └── Multi-level approval chains
+├── Escalation Engine
+│   └── Deadline-based escalation (PIC → Supervisor → Manager → Director)
+├── Notification Engine
+│   └── Real-time + scheduled notifications
+├── Locking Engine
+│   └── Hierarchical locking (Transaction → Day → Month → Quarter → Year)
+└── Audit Engine
+    └── Immutable audit trail for all changes
+```
+
+### Permission-Based
+
+```
+transaction.view
+transaction.create
+transaction.edit
+transaction.delete
+transaction.submit
+transaction.approve
+transaction.lock
+transaction.unlock
+transaction.adjust
+transaction.export
+```
+
+> `lock`, `unlock`, `adjust` = permission sangat sensitif.
+
+### Management Control Center Dashboard
+
+```
+┌──────────────────────────────┐
+│ MANAGEMENT CONTROL CENTER    │
+├──────────────────────────────┤
+│ 🔴 12 Overdue                │
+│ 🟠 8 Awaiting Approval       │
+│ 🟡 5 Near Deadline           │
+│ 🔒 3 Periods Locked          │
+│ ⚠️ 4 Escalated               │
+└──────────────────────────────┘
+```
+
+### Consequences
+
+- ✅ ERP becomes operational control system, not just recording
+- ✅ Clear accountability with escalation chains
+- ✅ Financial integrity with locking engine
+- ✅ Immutable transactions prevent data tampering
+- ⚠️ Complex engine requiring careful design
+- ⚠️ Multiple new Prisma models needed
+- ⚠️ Integration with all existing modules
+
+---
+
+## ADR-016: Transaction Lifecycle & Locking Engine
+
+**Decision:** Implement hierarchical transaction lifecycle with multi-level locking
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Transaction Lifecycle
+
+```
+DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED → POSTED → COMPLETED → LOCKED
+```
+
+Tidak semua transaksi harus menggunakan semua status, tetapi engine-nya mendukung lifecycle tersebut.
+
+### Lock Levels (Hierarchical)
+
+```
+Transaction Lock
+    ↓
+Day Lock
+    ↓
+Month Lock
+    ↓
+Quarter Lock
+    ↓
+Year Lock
+```
+
+> Higher level lock = all lower levels automatically locked.
+
+### Immutable Transactions
+
+- Tidak ada physical DELETE untuk transaksi yang sudah locked
+- Corrections dilakukan via Adjustment entries
+- Original data preserved, new transaction created
+- Full audit trail maintained
+
+### Lock Policy (Per-Company Configurable)
+
+```yaml
+Transaction Lock:
+  Automatically lock when completed: true
+
+Monthly Closing:
+  Enable: true
+  Closing day: 5
+
+Yearly Closing:
+  Enable: true
+
+Edit locked transaction: Require approval
+Delete locked transaction: Disabled
+Backdated transaction: Require approval
+```
+
+### Permissions
+
+- `transaction.lock` — Very sensitive
+- `transaction.unlock` — Very sensitive
+- `transaction.adjust` — Very sensitive
+- All require special authorization
+
+### Consequences
+
+- ✅ Financial integrity with hierarchical locking
+- ✅ Immutable transactions prevent data tampering
+- ✅ Clear audit trail for all corrections
+- ✅ Per-company configurable lock policy
+- ⚠️ Complex locking logic with cascading effects
+- ⚠️ Requires careful UX for locked period handling
+- ⚠️ Adjustment workflow adds complexity
+
+---
+
+## ADR-017: Unified Control Engine
+
+**Decision:** Evolve Control Center dari 6 engine terpisah menjadi SATU engine terpadu (Unified Control Engine) dengan alur pipeline yang konsisten.
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+ADR-015 mendefinisikan Control Center sebagai 6 engine terpisah (Workflow, Approval, Escalation, Notification, Locking, Audit). Setelah analisis lebih lanjut — terinspirasi pola enterprise seperti SAP dan Microsoft Dynamics — diputuskan bahwa 6 engine terpisah memiliki kelemahan:
+
+- **Koordinasi antar-engine kompleks** — setiap engine perlu tahu tentang engine lain
+- **Alur transaksi sulit di-trace** — tidak ada satu pipeline yang jelas
+- **Duplikasi state management** — beberapa engine mempertahankan state yang tumpang tindih
+- **Sulit di-konfigurasi** — perusahaan harus konfigurasi 6 engine secara terpisah
+
+### Decision
+
+Implement **Unified Control Engine** — satu engine terpadu yang mengalir sebagai pipeline:
+
+```
+Transaction
+    ↓
+Policy Engine (rules & conditions)
+    ↓
+Workflow (status transitions)
+    ↓
+Approval (multi-level chains)
+    ↓
+Escalation + SLA + Delegation (deadline management)
+    ↓
+Notification (real-time alerts)
+    ↓
+Locking (period protection)
+    ↓
+Audit Trail (immutable log)
+```
+
+### Sub-Components
+
+| Sub-Engine | Responsibility | Key Feature |
+|------------|---------------|-------------|
+| **Policy Engine** | Rules bisnis konfigurabel | WHEN condition THEN action |
+| **Workflow** | Transaction lifecycle | Status transitions (DRAFT → LOCKED) |
+| **Approval** | Multi-level approvals | Chain-based + amount threshold |
+| **Escalation** | Deadline management | Automatic escalation on SLA breach |
+| **SLA Engine** | Service level tracking | Color-coded compliance metrics |
+| **Delegation** | Authority delegation | Temporary authority transfer |
+| **Notification** | Real-time alerts | Connected to all sub-engines |
+| **Locking** | Period protection | Hierarchical locking |
+| **Audit Trail** | Change tracking | Immutable trail |
+
+### Alur Pipeline
+
+```
+┌─────────────┐
+│ Transaction │ ── User creates/edits a transaction
+└──────┬──────┘
+       ▼
+┌──────────────┐
+│ Policy Engine│ ── Evaluates business rules (WHEN condition THEN action)
+└──────┬───────┘
+       ▼
+┌────────────┐
+│  Workflow  │ ── Determines status transition (DRAFT → SUBMITTED → ...)
+└──────┬─────┘
+       ▼
+┌────────────┐
+│  Approval  │ ── Routes to approver(s) based on rules
+└──────┬─────┘
+       ▼
+┌─────────────────────────────┐
+│ Escalation + SLA + Delegation│ ── Monitors deadline, escalates if breached
+└──────┬──────────────────────┘
+       ▼
+┌────────────────┐
+│  Notification  │ ── Alerts relevant parties
+└──────┬─────────┘
+       ▼
+┌────────────┐
+│  Locking   │ ── Locks transaction/period if applicable
+└──────┬─────┘
+       ▼
+┌──────────────┐
+│ Audit Trail  │ ── Logs every step (immutable)
+└──────────────┘
+```
+
+### Keunggulan vs 6 Engine Terpisah
+
+| Aspek | 6 Engine Terpisah (ADR-015) | Unified Control Engine |
+|-------|---------------------------|----------------------|
+| **Architecture** | 6 engine independent | 1 pipeline terpadu |
+| **State Management** | Per-engine state | Centralized state |
+| **Traceability** | Hard to trace across engines | Clear pipeline flow |
+| **Configuration** | 6 separate configs | Single config interface |
+| **Testing** | Per-engine testing | End-to-end pipeline testing |
+| **Extensibility** | Add new engine | Add new sub-component |
+
+### Consequences
+
+- ✅ Satu pipeline yang jelas untuk setiap transaksi
+- ✅ Mudah di-trace dari awal sampai akhir
+- ✅ Configuration lebih terpusat
+- ✅ Komponen bisa di-enable/disable per perusahaan
+- ✅ Mengikuti pola enterprise (SAP, Microsoft Dynamics)
+- ⚠️ Satu engine lebih kompleks dari engine individual
+- ⚠️ Requires careful pipeline design untuk handle edge cases
+- ⚠️ Migration dari model ADR-015 diperlukan
+
+---
+
+## ADR-018: Policy Engine Architecture
+
+**Decision:** Implement Policy Engine sebagai rule-based system konfigurabel dengan pola WHEN-THEN dan policy versioning.
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+Setiap perusahaan memiliki aturan bisnis yang berbeda untuk mengontrol transaksi mereka. Tanpa Policy Engine, aturan-aturan ini harus di-hardcode di application logic, yang membuat platform sulit di-customize per tenant.
+
+### Decision
+
+Implement Policy Engine dengan arsitektur:
+
+```yaml
+Policy Rule:
+  id: rule_001
+  name: "Approval required untuk invoice besar"
+  version: 1
+  effective_from: "2026-09-01"
+  effective_to: null  # null = indefinite
+  
+  WHEN:
+    - condition: "transaction.type == 'invoice'"
+    - condition: "transaction.amount > 50000000"
+    - condition: "transaction.department == 'finance'"
+  
+  THEN:
+    action: "require_approval"
+    approvers: ["finance_manager", "director"]
+    sla_hours: 24
+```
+
+### Rule Structure
+
+| Component | Description | Examples |
+|-----------|-------------|----------|
+| **WHEN conditions** | Kondisi yang harus terpenuhi | amount threshold, department, branch, transaction type, vendor/category |
+| **THEN actions** | Aksi yang dilakukan | require_approval, auto_approve, block, flag_for_review, notify |
+| **Priority** | Urutan evaluasi rules | Higher priority = evaluated first |
+| **Version** | Versi rule | Rules berlaku sejak tanggal tertentu |
+| **Scope** | Tenant/branch/department scope | Per-company configurable |
+
+### Condition Types
+
+| Condition | Operator | Example |
+|-----------|----------|---------|
+| **Amount** | >, <, >=, <=, ==, != | `amount > 50000000` |
+| **Department** | ==, !=, in | `department in ['finance', 'procurement']` |
+| **Branch** | ==, !=, in | `branch == 'Surabaya'` |
+| **Transaction Type** | ==, !=, in | `type in ['invoice', 'purchase_order']` |
+| **Vendor/Category** | ==, !=, in, contains | `vendor.category == 'strategic'` |
+
+### Action Types
+
+| Action | Description | Effect |
+|--------|-------------|--------|
+| **require_approval** | Route ke approval chain | Transaction masuk approval queue |
+| **auto_approve** | Langsung approve | Transaction langsung ke status berikutnya |
+| **block** | Blokir transaksi | Transaction tidak bisa diproses |
+| **flag_for_review** | Tandai untuk review | Muncul di Exception Center |
+| **notify** | Kirim notifikasi | Alert ke user/manager tertentu |
+
+### Policy Versioning
+
+```
+Policy v1: 2026-01-01 s/d 2026-06-30
+Policy v2: 2026-07-01 s/d 2026-12-31  ← active
+Policy v3: 2027-01-01 s/d null         ← future
+```
+
+- Setiap perusahaan bisa punya rules sendiri
+- Rules berlaku sejak tanggal tertentu (effective dating)
+- Histori rules tetap ada (untuk audit)
+- Override rules per department/branch
+
+### Consequences
+
+- ✅ Perusahaan bisa konfigurasi aturan bisnis sendiri
+- ✅ Tidak perlu hardcode rules di application logic
+- ✅ Policy versioning untuk compliance
+- ✅ Audit trail untuk setiap perubahan rules
+- ⚠️ Rule evaluation engine membutuhkan careful design
+- ⚠️ Performance impact untuk banyak rules
+- ⚠️ UI untuk rule configuration perlu user-friendly
+
+---
+
+## ADR-019: Segregation of Duties
+
+**Decision:** Implement Segregation of Duties (SoD) untuk mencegah konflik kepentingan dalam proses bisnis.
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+Dalam akuntansi dan bisnis, prinsip Segregation of Duties (SoD) adalah kontrol internal yang memastikan tidak ada satu orang yang mengontrol seluruh aspek dari transaksi. Tanpa SoD, risiko fraud dan error meningkat signifikan.
+
+### Decision
+
+Implement SoD Matrix yang bisa dikonfigurasi per perusahaan:
+
+```yaml
+SoD Rule:
+  id: sod_001
+  name: "Invoice Processing Separation"
+  
+  conflict_pairs:
+    - role: "invoice_creator"
+      cannot_also_be: ["invoice_approver", "payment_processor", "goods_receiver"]
+    - role: "purchase_order_creator"
+      cannot_also_be: ["goods_receiver", "payment_processor"]
+    - role: "payment_processor"
+      cannot_also_be: ["invoice_approver", "bank_reconciler"]
+  
+  scope: "per_company"  # or "per_branch", "per_department"
+```
+
+### SoD Matrix (Default)
+
+| Role A (Create/Initiate) | Role B (Cannot Also Be) | Reason |
+|--------------------------|------------------------|--------|
+| Pencatat Invoice | Penerima Barang | Prevent fictitious invoices |
+| Pencatat Invoice | Penerima Pembayaran | Prevent kickback schemes |
+| Pencatat Invoice | Yang Approve | Prevent self-approval |
+| Pembuat PO | Penerima Barang | Prevent fictitious purchases |
+| Pembuat PO | Yang Approve PO | Prevent unauthorized purchases |
+| Yang Approve | Yang Bayar | Prevent unauthorized payments |
+| Pencatat Pembayaran | Bank Reconciler | Prevent concealment of fraud |
+
+### Conflict Detection
+
+```
+Saat assignment:
+  User assigned sebagai invoice_creator
+  User juga sudah assignment sebagai invoice_approver
+  → SYSTEM: ⚠️ SoD Conflict detected!
+  → Warning: "User X tidak bisa menjadi invoice_creator DAN invoice_approver"
+  → Action: Block atau require exception approval
+```
+
+### Exception Handling
+
+- SoD conflict bisa di-override dengan **exception approval** (Director level)
+- Setiap exception dicatat di audit trail
+- Exception punya expiry date
+- Exception bisa di-review periodic
+
+### Consequences
+
+- ✅ Mencegah konflik kepentingan dan fraud
+- ✅ Compliance dengan standar akuntansi (SAP pattern)
+- ✅ Configurable per perusahaan
+- ✅ Conflict detection real-time saat assignment
+- ⚠️ Membutuhkan role design yang matang
+- ⚠️ Exception workflow menambah kompleksitas
+- ⚠️ User experience perlu di-balance (tidak terlalu restrictive)
+
+---
+
+## ADR-020: SLA & Delegation Framework
+
+**Decision:** Implement SLA-based tracking dengan automatic escalation dan delegation framework untuk continuous operations.
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+Tanpa SLA tracking, organisasi tidak memiliki visibility terhadap berapa lama transaksi menunggu approval, dan manager tidak memiliki cara untuk delegate authority saat absent.
+
+### Decision
+
+### SLA Framework
+
+Setiap transaction type punya SLA target:
+
+| Transaction Type | Default SLA | Color Code |
+|-----------------|-------------|------------|
+| Invoice Approval | 24 hours | 🟢 0-12h, 🟡 12-24h, 🔴 >24h |
+| Purchase Order Approval | 48 hours | 🟢 0-24h, 🟡 24-48h, 🔴 >48h |
+| Leave Request | 24 hours | 🟢 0-12h, 🟡 12-24h, 🔴 >24h |
+| Payment Processing | 72 hours | 🟢 0-36h, 🟡 36-72h, 🔴 >72h |
+| Custom per tenant | Configurable | Per-company setting |
+
+### SLA Metrics
+
+| Metric | Description | Target |
+|--------|-------------|--------|
+| **Average Completion Time** | Rata-rata waktu penyelesaian | < SLA target |
+| **SLA Compliance Rate** | % transaksi selesai dalam SLA | > 90% |
+| **Escalation Rate** | % transaksi yang di-escalate | < 10% |
+| **On-time Rate** | % transaksi on-time | > 85% |
+
+### SLA Pipeline
+
+```
+Transaction Created
+    ↓
+SLA Clock Starts
+    ↓
+┌─────────────────────────────────────┐
+│ 🟢 0-50% SLA    → On Track         │
+│ 🟡 50-100% SLA  → Warning          │
+│ 🔴 >100% SLA    → Breach → Escalate│
+└─────────────────────────────────────┘
+```
+
+### Delegation Framework
+
+```yaml
+Delegation:
+  delegator: "Budi (Manager Finance)"
+  delegatee: "Andi (Senior Staff)"
+  period: "2026-09-01 s/d 2026-09-15"
+  scope:
+    - "invoice_approval"
+    - "purchase_order_approval"
+  reason: "Budi cuti ke luar negeri"
+  auto_expire: true
+  audit_trail:
+    - created_by: "Budi"
+    - created_at: "2026-08-28"
+    - approved_by: "Director"
+```
+
+### Delegation Rules
+
+| Rule | Description |
+|------|-------------|
+| **Scope限制** | Delegatee hanya bisa approve dalam scope yang didelegasikan |
+| **Auto-expire** | Delegation otomatis berakhir setelah periode selesai |
+| **Audit trail** | Setiap approval oleh delegatee dicatat dengan delegator info |
+| **Work Inbox** | Delegatee melihat delegated items di Work Inbox |
+| **Notification** | Delegator mendapat notifikasi saat delegation digunakan |
+
+### Consequences
+
+- ✅ Visibility terhadap SLA compliance
+- ✅ Automatic escalation mengurangi bottleneck
+- ✅ Delegation memastikan operations berjalan saat manager absent
+- ✅ Full audit trail untuk delegation
+- ⚠️ SLA configuration perlu per-transaction-type tuning
+- ⚠️ Delegation abuse perlu monitoring
+- ⚠️ Complex notification routing
+
+---
+
+## ADR-021: Exception Center & Emergency Access
+
+**Decision:** Implement centralized Exception Center untuk semua anomali dan Emergency Access untuk situasi darurat.
+
+**Status:** Accepted
+
+**Date:** 2026-08-30
+
+### Context
+
+Organisasi membutuhkan satu tempat terpusat untuk melihat semua masalah yang memerlukan perhatian, dan mekanisme untuk akses darurat tanpa mengorbankan audit trail.
+
+### Decision
+
+### Exception Center
+
+Dashboard terpusat yang menampilkan semua anomali:
+
+| Exception Type | Severity | Auto-detected | Suggested Action |
+|---------------|----------|---------------|------------------|
+| **Transactions Overdue** | 🟠 High | ✅ | Contact approver, escalate |
+| **SLA Breached** | 🔴 Critical | ✅ | Immediate escalation |
+| **SoD Conflicts** | 🔴 Critical | ✅ | Reassign roles, exception approval |
+| **Negative Stock Alerts** | 🟠 High | ✅ | Physical stock opname |
+| **Unreconciled Payments** | 🟡 Medium | ✅ | Investigate, match transactions |
+| **Policy Violations** | 🔴 Critical | ✅ | Review policy, exception approval |
+| **Missing Approvals** | 🟡 Medium | ✅ | Follow up with approver |
+
+### Exception Structure
+
+```typescript
+interface Exception {
+  id: string;
+  type: 'overdue' | 'sla_breach' | 'sod_conflict' | 'negative_stock' |
+        'unreconciled' | 'policy_violation' | 'missing_approval';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  entity_type: string;      // e.g., 'invoice', 'purchase_order'
+  entity_id: string;
+  assigned_to: string;      // User responsible
+  suggested_action: string;
+  created_at: Date;
+  resolved_at: Date | null;
+  resolution_notes: string | null;
 }
 ```
 
-### Alternatives Considered
+### Emergency Access
 
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **Separate Role table** | Normalized, flexible | Complex queries, join overhead | ❌ Rejected |
-| **Prisma enum** | Type-safe, database-level | Not supported in SQLite | ❌ Rejected |
-| **Bitwise flags** | Compact, efficient | Hard to read, complex | ❌ Rejected |
-| **String field** | Simple, fast, SQLite-compatible | No DB-level validation | ✅ Selected |
+Flow untuk situasi darurat:
 
-### Consequences
-
-- ✅ Simple queries (`where: { role: "ADMIN" }`)
-- ✅ Works with SQLite and PostgreSQL
-- ✅ Easy to add new roles without schema changes
-- ⚠️ No database-level validation (application must validate)
-- ⚠️ Typos in role strings cause silent bugs
-
----
-
-## ADR-006: In-Memory Store for Non-Critical Data
-
-**Status:** Accepted (with known limitations)
-**Date:** 2026-08-15
-**Decision Makers:** Development Team
-
-### Context
-
-Some features need quick data storage without requiring database schema changes:
-- Chart of Accounts (CoA) — Financial account hierarchy
-- Bank Reconciliation — Temporary matching data
-
-### Decision
-
-Use **in-memory JavaScript objects** for non-critical, non-persistent data.
-
-### Implementation
-
-```typescript
-// apps/web/lib/seed-data/coa.ts
-// In-memory CoA data (resets on server restart)
-export const chartOfAccounts: Account[] = [
-  { id: "1000", name: "Kas", type: "ASSET", ... },
-  { id: "2000", name: "Utang Usaha", type: "LIABILITY", ... },
-  // ...
-];
-
-// apps/web/lib/seed-data/reconciliation.ts
-// In-memory reconciliation data
-export const reconciliationData: ReconciliationEntry[] = [];
+```
+User Request Emergency Access
+    ↓
+Isi Reason (mandatory)
+    ↓
+Director Approval
+    ↓
+Temporary Grant (with duration & scope)
+    ↓
+Full Audit Trail Active
+    ↓
+Auto-revoke after duration
+    ↓
+Alert ke Security Team
 ```
 
-### Data Characteristics
+### Emergency Access Rules
 
-| Feature | CoA | Reconciliation |
-|---------|-----|----------------|
-| **Criticality** | Low (seed data) | Low (temporary) |
-| **Persistence needed** | No (can be re-seeded) | No (workflow tool) |
-| **Volume** | ~50 accounts | ~100 entries |
-| **Write frequency** | Rare (setup only) | Moderate |
-| **Read frequency** | High | Moderate |
-
-### Known Issues
-
-| Issue | Impact | Mitigation |
-|-------|--------|-----------|
-| **Data loss on restart** | CoA resets | Re-seed on startup |
-| **No multi-tenant** | Shared across tenants | Acceptable for seed data |
-| **No concurrency** | Race conditions | Low risk (low write frequency) |
-| **Memory usage** | Grows with data | Bounded (small datasets) |
-
-### Alternatives Considered
-
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **Add to Prisma schema** | Persistent, typed, tenant-scoped | Requires migration, more code | ❌ Deferred |
-| **SQLite temp tables** | Persistent per session | Complex, no sharing | ❌ Rejected |
-| **Redis** | Fast, persistent | External dependency, cost | ❌ Deferred |
-| **In-memory** | Zero setup, fast | Not persistent, not tenant-scoped | ✅ Selected (temp) |
-
-### Future Plan
-
-Migrate CoA and Reconciliation to Prisma models when:
-- Production deployment requires persistence
-- Multi-tenant isolation is needed
-- Data volume grows beyond seed data
+| Rule | Description |
+|------|-------------|
+| **Duration** | Maximum 24 jam, auto-revoke |
+| **Scope** | Specific permissions only (tidak bisa all-access) |
+| **Approval** | Director level minimum |
+| **Audit** | Full trail: who requested, who approved, what access, when |
+| **Alert** | Security team notified saat emergency access digunakan |
+| **Review** | Post-incident review required |
 
 ### Consequences
 
-- ✅ Zero setup — no database changes needed
-- ✅ Fast development iteration
-- ✅ Works immediately for demo/MVP
-- ⚠️ Data lost on server restart
-- ⚠️ Not suitable for production
-- ⚠️ No tenant isolation for these features
+- ✅ Single pane of glass untuk semua anomali
+- ✅ Emergency access tanpa mengorbankan security
+- ✅ Full audit trail untuk compliance
+- ✅ Auto-revoke mencegah privilege creep
+- ⚠️ Exception Center membutuhkan careful UX design
+- ⚠️ Emergency access abuse perlu monitoring
+- ⚠️ Notification overload jika tidak di-filter dengan baik
 
 ---
 
-## ADR-007: i18n with Custom Provider
+## ADR-022: Period Closing Wizard
+
+**Decision:** Implement step-by-step wizard untuk menutup periode akuntansi dengan pre-checks, exception resolution, dan approval.
 
 **Status:** Accepted
-**Date:** 2026-08-18
-**Decision Makers:** Development Team
+
+**Date:** 2026-08-30
 
 ### Context
 
-The application targets Indonesian market primarily but needs English support for:
-- International users
-- Developer documentation
-- Future expansion
+Penutupan periode akuntansi (monthly, quarterly, yearly) adalah proses kritis yang memerlukan banyak langkah. Tanpa wizard, proses ini manual, rentan error, dan sulit di-audit.
 
 ### Decision
 
-Use a **custom i18n provider** with JSON translation files.
+Implement Period Closing Wizard dengan 7 langkah:
 
-### Implementation
-
-```typescript
-// apps/web/lib/i18n.tsx
-// Custom provider (next-intl compatible pattern)
-
-// Translation files:
-// apps/web/messages/id.json  — Bahasa Indonesia
-// apps/web/messages/en.json  — English
-
-// Usage in components:
-const { t } = useTranslation();
-t("nav.dashboard")  // "Dashboard" or "Beranda"
+```
+Step 1: Pre-checks
+    ↓ "Semua transaksi ter-posting? Ada yang pending?"
+Step 2: Show Exceptions
+    ↓ "Overdue, unreconciled, policy violations"
+Step 3: Require Resolution
+    ↓ "Resolve atau explicit exception approval"
+Step 4: Final Review Summary
+    ↓ "Ringkasan lengkap periode ini"
+Step 5: Approval
+    ↓ "Director / Finance Manager approve"
+Step 6: Lock Period
+    ↓ "Tidak bisa edit transaksi di periode ini"
+Step 7: Generate Report
+    ↓ "Period summary report"
 ```
 
-### Supported Languages
+### Pre-checks (Step 1)
 
-| Language | Code | Status |
-|----------|------|--------|
-| Bahasa Indonesia | `id` | ✅ Primary |
-| English | `en` | ✅ Secondary |
+| Check | Description | Status |
+|-------|-------------|--------|
+| **Unposted Transactions** | Transaksi belum ter-posting ke GL | ⚠️ Show count |
+| **Pending Approvals** | Transaksi menunggu approval | ⚠️ Show count |
+| **Unreconciled Payments** | Pembayaran belum reconcile | ⚠️ Show count |
+| **Missing Journal Entries** | Journal entry belum dibuat | ⚠️ Show count |
+| **Negative Stock** | Stok negatif | ⚠️ Show count |
 
-### Alternatives Considered
+### Exception Types in Closing
 
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **next-intl** | Feature-rich, well-documented | Heavier, more setup | ❌ Rejected |
-| **react-i18next** | Popular, many plugins | React-only, more setup | ❌ Rejected |
-| **Custom provider** | Lightweight, full control | Less features, manual work | ✅ Selected |
+| Exception | Required Action |
+|-----------|----------------|
+| **Overdue approvals** | Approve atau reject sebelum closing |
+| **Unreconciled payments** | Reconcile atau add exception note |
+| **Policy violations** | Exception approval dari Director |
+| **Missing documents** | Upload atau add exception note |
+
+### Period Types
+
+| Period | Frequency | Approval Level |
+|--------|-----------|----------------|
+| **Monthly** | Setiap akhir bulan | Finance Manager |
+| **Quarterly** | Setiap akhir kuartal | Director |
+| **Yearly** | Setiap akhir tahun | Board/Director |
+
+### Lock After Closing
+
+```
+Periode tertutup:
+  → Semua transaksi di periode ini ter-lock
+  → Tidak bisa edit/delete tanpa unlock workflow
+  → Unlock memerlukan Director approval
+  → Full audit trail untuk setiap unlock
+```
 
 ### Consequences
 
-- ✅ Lightweight — no additional dependencies
-- ✅ Full control over translation flow
-- ✅ Compatible with RSC (App Router)
-- ⚠️ Manual implementation of pluralization, interpolation
-- ⚠️ No built-in namespace support
-- ⚠️ Must maintain translation files manually
+- ✅ Structured closing process, tidak ada langkah yang terlewat
+- ✅ Pre-checks memastikan data lengkap
+- ✅ Exception handling terdokumentasi
+- ✅ Approval chain untuk accountability
+- ✅ Auto-lock setelah closing
+- ⚠️ Wizard complexity perlu careful UX design
+- ⚠️ Performance untuk periode dengan banyak transaksi
+- ⚠️ Rollback mechanism diperlukan jika closing gagal
 
 ---
 
-## ADR-008: Tailwind CSS for Styling
+## ADR-023: Control Dashboard Tiers
+
+**Decision:** Implement 3-tier Control Dashboard dengan role-based views: My Dashboard, Management Dashboard, Control Center.
 
 **Status:** Accepted
-**Date:** 2026-08-01
-**Decision Makers:** Development Team
+
+**Date:** 2026-08-30
 
 ### Context
 
-The application needs:
-- Consistent styling across components
-- Dark mode support
-- Responsive design
-- Fast development iteration
-- Small production bundle
+Berbagai level pengguna membutuhkan visibility yang berbeda terhadap operasional. User individual butuh melihat tugasnya, manager butuh melihat timnya, dan admin/auditor butuh melihat keseluruhan organisasi.
 
 ### Decision
 
-Use **Tailwind CSS 3.4** with **CSS variables** for theming.
+Implement 3-tier dashboard:
 
-### Configuration
+### Tier 1: My Dashboard (User Level)
 
-```javascript
-// apps/web/tailwind.config.js
-module.exports = {
-  darkMode: "class",
-  content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "../../packages/ui/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        border: "hsl(var(--border))",
-        primary: { DEFAULT: "hsl(var(--primary))", ... },
-        // ...
-      },
-      fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
-      borderRadius: { lg: "var(--radius)", ... },
-    },
-  },
-};
+```
+┌──────────────────────────────────┐
+│ MY DASHBOARD                     │
+├──────────────────────────────────┤
+│ 📋 My Work Inbox                │
+│   ├── Overdue Tasks (3)          │
+│   ├── Approval Required (5)      │
+│   ├── Awaiting My Action (2)     │
+│   ├── Assigned to Me (8)         │
+│   ├── Escalated to Me (1)        │
+│   └── Recently Completed (12)    │
+│                                  │
+│ 📊 My SLA Compliance            │
+│   ├── On Track: 85%              │
+│   ├── Warning: 10%               │
+│   └── Breached: 5%               │
+│                                  │
+│ 📝 My Recent Activity           │
+│   └── Last 10 actions            │
+└──────────────────────────────────┘
 ```
 
-### Theming Strategy
+### Tier 2: Management Dashboard (Manager Level)
 
-```css
-/* CSS variables for light/dark mode */
-:root {
-  --primary: 221.2 83.2% 53.3%;  /* Blue */
-  --background: 0 0% 100%;        /* White */
-}
-.dark {
-  --primary: 217.2 91.2% 59.8%;  /* Lighter blue */
-  --background: 222.2 84% 4.9%;  /* Dark */
-}
+```
+┌──────────────────────────────────┐
+│ MANAGEMENT DASHBOARD             │
+├──────────────────────────────────┤
+│ 👥 Team Workload                 │
+│   ├── Pending approvals: 15      │
+│   ├── Overdue items: 8           │
+│   ├── SLA compliance: 82%        │
+│   └── Team utilization: 75%      │
+│                                  │
+│ 🔴 Escalation Alerts            │
+│   └── Items requiring attention  │
+│                                  │
+│ 📊 Team SLA Metrics             │
+│   ├── Average completion: 18h    │
+│   ├── Compliance rate: 88%       │
+│   └── Bottleneck: PO Approval    │
+│                                  │
+│ 📋 Pending Approvals (Team)     │
+│   └── All pending from team      │
+└──────────────────────────────────┘
 ```
 
-### Alternatives Considered
+### Tier 3: Control Center (Admin/Auditor)
 
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **CSS Modules** | Scoped styles, no runtime | Verbose, no utilities | ❌ Rejected |
-| **Styled Components** | Dynamic styles, scoped | Runtime overhead, SSR issues | ❌ Rejected |
-| **Chakra UI** | Full component library | Heavier, opinionated | ❌ Rejected |
-| **shadcn/ui + Tailwind** | Components + utilities | Requires copy-paste | ⚠️ Partial |
-| **Tailwind CSS** | Utilities, fast, small bundle | HTML-heavy, learning curve | ✅ Selected |
+```
+┌──────────────────────────────────┐
+│ CONTROL CENTER                   │
+├──────────────────────────────────┤
+│ ⚠️ Organization Overview         │
+│   ├── Policy violations: 5       │
+│   ├── SoD conflicts: 2           │
+│   ├── SLA breach rate: 12%       │
+│   └── Exception count: 15        │
+│                                  │
+│ 🔒 Period Status                │
+│   ├── Current: August 2026       │
+│   ├── Status: Open               │
+│   └── Days to closing: 2         │
+│                                  │
+│ 📊 Compliance Metrics           │
+│   ├── Approval compliance: 92%   │
+│   ├── SLA compliance: 88%        │
+│   ├── SoD compliance: 100%       │
+│   └── Audit coverage: 100%       │
+│                                  │
+│ 🚨 Exception Center             │
+│   └── All unresolved exceptions  │
+│                                  │
+│ 📋 Policy Engine Status         │
+│   └── Active rules: 25           │
+└──────────────────────────────────┘
+```
+
+### Access Control per Tier
+
+| Tier | Access Level | Who Sees It |
+|------|-------------|-------------|
+| **My Dashboard** | Personal data only | All users |
+| **Management Dashboard** | Team data | Manager, Director, Admin |
+| **Control Center** | Organization-wide | Director, Admin, Auditor |
 
 ### Consequences
 
-- ✅ Rapid prototyping with utility classes
-- ✅ Consistent spacing, colors, typography
-- ✅ Dark mode via `class` strategy
-- ✅ Small production CSS (purged unused)
-- ✅ Works with RSC (no runtime CSS-in-JS)
-- ⚠️ HTML can become verbose
-- ⚠️ Learning curve for Tailwind newcomers
-- ⚠️ Custom CSS still needed for complex animations
+- ✅ Right information for right people
+- ✅ Reduced information overload
+- ✅ Clear accountability per level
+- ✅ Executive summary at Control Center level
+- ⚠️ 3 dashboards to maintain
+- ⚠️ Data aggregation complexity for Management/Control tiers
+- ⚠️ Role-based rendering adds UI complexity
 
 ---
 
-## ADR-009: Lucide React for Icons
-
-**Status:** Accepted
-**Date:** 2026-08-18
-**Decision Makers:** Development Team
-
-### Context
-
-The application needs:
-- Consistent icon set across all modules
-- Tree-shakeable (only import used icons)
-- React-compatible
-- Professional appearance
-- Good coverage of business/finance icons
-
-### Decision
-
-Use **Lucide React** v1.31+ as the exclusive icon library.
-
-### Usage
-
-```tsx
-import { LayoutDashboard, Receipt, Users } from "lucide-react";
-
-// In components
-<LayoutDashboard className="h-5 w-5" />
-<Receipt className="h-4 w-4 text-muted-foreground" />
-```
-
-### Icon Coverage
-
-| Category | Icons Available |
-|----------|----------------|
-| **Navigation** | LayoutDashboard, Menu, ChevronRight, X, Settings, Home |
-| **Finance** | Receipt, FileText, CreditCard, BookOpen, Wallet, DollarSign |
-| **CRM** | TrendingUp, Target, Users, Handshake, UserPlus |
-| **Inventory** | Package, Boxes, Tags, Truck, BarChart3 |
-| **HR** | UsersRound, ClipboardCheck, CalendarOff, Briefcase |
-| **Actions** | Plus, Edit, Trash2, Search, Filter, Download, Upload |
-| **Status** | Check, AlertTriangle, XCircle, Info, Clock |
-| **AI** | Zap, Sparkles, Bot |
-
-### Alternatives Considered
-
-| Alternative | Pros | Cons | Decision |
-|------------|------|------|----------|
-| **Heroicons** | Well-designed, Tailwind-native | Fewer icons | ❌ Rejected |
-| **React Icons** | Huge collection, many sets | Larger bundle, inconsistent style | ❌ Rejected |
-| **Font Awesome** | Extensive, well-known | License cost, heavier | ❌ Rejected |
-| **Emoji** | Zero dependency | Inconsistent, accessibility issues | ❌ Rejected |
-| **Lucide React** | Consistent, tree-shakeable, MIT license | Newer, smaller set | ✅ Selected |
-
-### Consequences
-
-- ✅ Consistent visual language across all modules
-- ✅ Tree-shakeable — only used icons in bundle
-- ✅ MIT license — no cost
-- ✅ Good TypeScript support
-- ✅ Active development and community
-- ⚠️ Smaller set than Font Awesome/React Icons
-- ⚠️ Some niche icons may be missing
-
----
-
-## ADR Summary
-
-| ADR | Decision | Status | Risk |
-|-----|----------|--------|------|
-| 001 | Monorepo (pnpm + Turborepo) | ✅ Accepted | Low |
-| 002 | Next.js App Router | ✅ Accepted | Medium |
-| 003 | Prisma + SQLite/PostgreSQL | ✅ Accepted | Low |
-| 004 | NextAuth JWT | ✅ Accepted | Low |
-| 005 | RBAC (string field) | ✅ Accepted | Low |
-| 006 | In-memory store (CoA, Reconciliation) | ✅ Accepted | Medium |
-| 007 | Custom i18n provider | ✅ Accepted | Low |
-| 008 | Tailwind CSS | ✅ Accepted | Low |
-| 009 | Lucide React | ✅ Accepted | Low |
-
----
-
-## File Reference
-
-| File | Purpose |
-|------|---------|
-| [`pnpm-workspace.yaml`](pnpm-workspace.yaml) | Workspace definition (ADR-001) |
-| [`package.json`](package.json) | Root scripts with Turborepo (ADR-001) |
-| [`apps/web/app/layout.tsx`](apps/web/app/layout.tsx) | Root layout (ADR-002) |
-| [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) | Prisma schema (ADR-003) |
-| [`apps/web/lib/auth.ts`](apps/web/lib/auth.ts) | NextAuth config (ADR-004) |
-| [`apps/web/lib/i18n.tsx`](apps/web/lib/i18n.tsx) | i18n provider (ADR-007) |
-| [`apps/web/tailwind.config.js`](apps/web/tailwind.config.js) | Tailwind config (ADR-008) |
-| [`apps/web/components/layout/sidebar.tsx`](apps/web/components/layout/sidebar.tsx) | Icons usage (ADR-009) |
+**Last Updated:** August 30, 2026
+**Maintainer:** Qalcuity Architecture Team

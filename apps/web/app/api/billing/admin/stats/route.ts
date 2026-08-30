@@ -49,10 +49,10 @@ export async function GET() {
         ]);
 
         const pendingCount = pendingPayments.length;
-        const pendingTotal = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+        const pendingTotal = pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
         const monthlyCount = monthlyPayments.length;
-        const monthlyTotal = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
-        const monthlyRevenueTotal = monthlyRevenue.reduce((sum, p) => sum + p.amount, 0);
+        const monthlyTotal = monthlyPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const monthlyRevenueTotal = monthlyRevenue.reduce((sum, p) => sum + Number(p.amount), 0);
 
         return NextResponse.json({
             success: true,

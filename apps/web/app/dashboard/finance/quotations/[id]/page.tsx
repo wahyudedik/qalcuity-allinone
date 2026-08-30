@@ -156,8 +156,8 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
                                         <tr key={idx}>
                                             <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600 text-center">{item.quantity}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 text-right">{formatCurrency(item.unitPrice)}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">{formatCurrency(item.quantity * item.unitPrice)}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600 text-right">{formatCurrency(Number(item.unitPrice))}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">{formatCurrency(Number(item.quantity) * Number(item.unitPrice))}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -168,15 +168,15 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
                             <div className="ml-auto w-72 space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600">{t('finance.quotationsDetail.subtotal')}</span>
-                                    <span className="font-medium">{formatCurrency(quotation.subtotal)}</span>
+                                    <span className="font-medium">{formatCurrency(Number(quotation.subtotal))}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600">{t('finance.quotationsDetail.tax')}</span>
-                                    <span className="font-medium">{formatCurrency(quotation.tax)}</span>
+                                    <span className="font-medium">{formatCurrency(Number(quotation.tax))}</span>
                                 </div>
                                 <div className="flex justify-between border-t border-gray-300 pt-2">
                                     <span className="font-semibold text-gray-900">{t('finance.quotationsDetail.total')}</span>
-                                    <span className="text-lg font-bold text-gray-900">{formatCurrency(quotation.total)}</span>
+                                    <span className="text-lg font-bold text-gray-900">{formatCurrency(Number(quotation.total))}</span>
                                 </div>
                             </div>
                         </div>

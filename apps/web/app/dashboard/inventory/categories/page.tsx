@@ -90,12 +90,25 @@ export default function CategoriesPage() {
         }
     }
 
-    const handleDelete = (id: string, name: string) => {
+    const handleDelete = async (id: string, name: string) => {
         if (!window.confirm(`Apakah Anda yakin ingin menghapus kategori "${name}"?`)) return
-        // For now, we soft-delete by filtering locally
-        // A proper implementation would call DELETE API
-        setCategories(prev => prev.filter(c => c.id !== id))
-        setToast({ message: `Kategori "${name}" berhasil dihapus`, type: 'success' })
+
+        try {
+            const response = await fetch(`/api/inventory/categories?id=${id}`, {
+                method: 'DELETE',
+            })
+            const data = await response.json()
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Gagal menghapus kategori')
+            }
+
+            setCategories(prev => prev.filter(c => c.id !== id))
+            setToast({ message: `Kategori "${name}" berhasil dihapus`, type: 'success' })
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Gagal menghapus kategori'
+            setToast({ message, type: 'error' })
+        }
     }
 
     const filtered = categories.filter((c) =>
@@ -150,11 +163,11 @@ export default function CategoriesPage() {
                 </div>
                 {canMutate && (
                     <button
-                    onClick={() => setShowAddModal(true)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={() => setShowAddModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                    <Plus className="h-4 w-4" />
-                    {t('inventory.categories.addCategory')}
+                        <Plus className="h-4 w-4" />
+                        {t('inventory.categories.addCategory')}
                     </button>
                 )}
             </div>
@@ -179,11 +192,11 @@ export default function CategoriesPage() {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Buat kategori untuk mengorganisir produk Anda</p>
                     {canMutate && (
                         <button
-                        onClick={() => setShowAddModal(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            onClick={() => setShowAddModal(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                        <Plus className="h-4 w-4" />
-                        Tambah Kategori
+                            <Plus className="h-4 w-4" />
+                            Tambah Kategori
                         </button>
                     )}
                 </div>
@@ -199,11 +212,11 @@ export default function CategoriesPage() {
                                 <div className="flex items-center gap-1">
                                     {canMutate && (
                                         <button
-                                        onClick={() => handleDelete(cat.id, cat.name)}
-                                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                        aria-label="Hapus kategori"
+                                            onClick={() => handleDelete(cat.id, cat.name)}
+                                            className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                            aria-label="Hapus kategori"
                                         >
-                                        <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-4 w-4" />
                                         </button>
                                     )}
                                     <button className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label={t('inventory.categories.dots')}>

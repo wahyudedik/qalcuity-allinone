@@ -251,10 +251,10 @@ export async function PUT(request: Request) {
 
         // Recalculate netSalary if any compensation field changed
         if (data.baseSalary !== undefined || data.allowances !== undefined || data.deductions !== undefined || data.bonus !== undefined) {
-            const base = typeof data.baseSalary === 'number' ? data.baseSalary : existing.baseSalary;
-            const allow = typeof data.allowances === 'number' ? data.allowances : existing.allowances;
-            const deduc = typeof data.deductions === 'number' ? data.deductions : existing.deductions;
-            const bon = typeof data.bonus === 'number' ? data.bonus : existing.bonus;
+            const base = typeof data.baseSalary === 'number' ? data.baseSalary : Number(existing.baseSalary);
+            const allow = typeof data.allowances === 'number' ? data.allowances : Number(existing.allowances);
+            const deduc = typeof data.deductions === 'number' ? data.deductions : Number(existing.deductions);
+            const bon = typeof data.bonus === 'number' ? data.bonus : Number(existing.bonus);
             data.netSalary = base + allow - deduc + bon;
         }
 

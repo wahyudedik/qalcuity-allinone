@@ -997,7 +997,7 @@ function EmployeeSummaryReport({ data }: { data: EmployeeData[] }) {
     }, {})
 
     const activeEmployees = data.filter(e => e.status === 'ACTIVE').length
-    const totalSalary = data.filter(e => e.status === 'ACTIVE').reduce((s, e) => s + e.salary, 0)
+    const totalSalary = data.filter(e => e.status === 'ACTIVE').reduce((s, e) => s + Number(e.salary), 0)
 
     return (
         <div className="space-y-6">
@@ -1214,8 +1214,8 @@ function PayrollSummaryReport({ data }: { data: PayrollData[] }) {
 function StockSummaryReport({ data }: { data: StockData[] }) {
     const { t } = useTranslation()
     const totalProducts = data.length
-    const totalStockValue = data.reduce((s, d) => s + d.stock * d.cost, 0)
-    const totalRetailValue = data.reduce((s, d) => s + d.stock * d.price, 0)
+    const totalStockValue = data.reduce((s, d) => s + d.stock * Number(d.cost), 0)
+    const totalRetailValue = data.reduce((s, d) => s + d.stock * Number(d.price), 0)
 
     return (
         <div className="space-y-6">
@@ -1318,14 +1318,14 @@ function LowStockReport({ data }: { data: StockData[] }) {
 
 function SupplierPerformanceReport({ data }: { data: SupplierData[] }) {
     const { t } = useTranslation()
-    const avgRating = data.length > 0 ? data.reduce((s, d) => s + d.rating, 0) / data.length : 0
+    const avgRating = data.length > 0 ? data.reduce((s, d) => s + Number(d.rating), 0) / data.length : 0
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <KPICard label={t('reports.supplierPerformance.totalSuppliers')} value={String(data.length)} icon={<Truck className="h-5 w-5" />} color="blue" />
                 <KPICard label={t('reports.supplierPerformance.avgRating')} value={avgRating.toFixed(1)} icon={<BarChart3 className="h-5 w-5" />} color="green" />
-                <KPICard label={t('reports.supplierPerformance.totalPurchases')} value={formatCurrency(data.reduce((s, d) => s + d.totalSpent, 0))} icon={<DollarSign className="h-5 w-5" />} color="orange" />
+                <KPICard label={t('reports.supplierPerformance.totalPurchases')} value={formatCurrency(data.reduce((s, d) => s + Number(d.totalSpent), 0))} icon={<DollarSign className="h-5 w-5" />} color="orange" />
             </div>
 
             {data.length > 0 ? (

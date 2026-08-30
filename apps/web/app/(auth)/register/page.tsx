@@ -75,7 +75,7 @@ export default function RegisterPage() {
                 // Jika auto login gagal, redirect ke login
                 router.push('/login')
             } else {
-                router.push('/dashboard')
+                router.push('/dashboard?onboard=true')
                 router.refresh()
             }
         } catch (err) {

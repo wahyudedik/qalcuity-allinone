@@ -3,17 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from '@/lib/i18n'
 
 export default function LoginPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const { t } = useTranslation()
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [email, setEmail] = useState(searchParams?.get('email') || '')
+    const [password, setPassword] = useState(searchParams?.get('password') || '')
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
+    const isDemoLogin = searchParams?.get('email') === 'demo@qalcuity.com'
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -58,6 +60,20 @@ export default function LoginPage() {
                     {t('auth.loginSubtitle')}
                 </p>
             </div>
+
+            {isDemoLogin && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                    <div className="flex items-start gap-3">
+                        <span className="text-blue-600 text-lg mt-0.5">🧪</span>
+                        <div>
+                            <p className="text-sm font-medium text-blue-800">Mode Demo Aktif</p>
+                            <p className="text-xs text-blue-600 mt-1">
+                                Akun demo sudah terisi. Klik "Masuk" untuk menjelajahi fitur Qalcuity dengan data contoh.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">

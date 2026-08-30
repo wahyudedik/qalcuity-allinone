@@ -174,7 +174,7 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                         {supplier.products.map((product, idx) => (
                                             <tr key={idx} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
-                                                <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(product.price)}</td>
+                                                <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(Number(product.price))}</td>
                                                 <td className="px-4 py-3 text-center text-gray-600">{product.leadTime}</td>
                                             </tr>
                                         ))}
@@ -247,8 +247,8 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                             </button>
                             {canMutate && (
                                 <button onClick={handleDelete} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
-                                <Trash2 className="h-4 w-4" />
-                                {t('inventory.supplierDetail.delete')}
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('inventory.supplierDetail.delete')}
                                 </button>
                             )}
                         </div>

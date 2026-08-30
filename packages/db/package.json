@@ -9,6 +9,7 @@
         "push": "prisma db push",
         "seed": "tsx prisma/seed.ts",
         "studio": "prisma studio",
+        "migrate:deploy": "prisma migrate deploy",
         "clean": "rm -rf node_modules .prisma"
     },
     "dependencies": {

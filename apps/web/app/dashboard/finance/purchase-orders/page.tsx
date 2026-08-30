@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PurchaseOrderForm } from '@/components/finance/purchase-order-form'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Trash2 } from 'lucide-react'
+import { Search, Plus, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 type PurchaseOrder = {
@@ -88,7 +88,7 @@ export default function PurchaseOrdersPage() {
     })
 
     const stats = {
-        total: orders.reduce((sum, o) => sum + o.total, 0),
+        total: orders.reduce((sum, o) => sum + Number(o.total), 0),
         draft: orders.filter(o => o.status === 'draft').length,
         pending: orders.filter(o => o.status === 'sent' || o.status === 'confirmed').length,
         received: orders.filter(o => o.status === 'received').length,
@@ -180,11 +180,11 @@ export default function PurchaseOrdersPage() {
                 </div>
                 {canMutate && (
                     <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                    <Plus className="h-4 w-4" />
-                    {t('finance.purchaseOrders.createPO')}
+                        <Plus className="h-4 w-4" />
+                        {t('finance.purchaseOrders.createPO')}
                     </button>
                 )}
             </div>
@@ -266,7 +266,7 @@ export default function PurchaseOrdersPage() {
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <span className="text-gray-500">{t('finance.purchaseOrders.table.total')}:</span>
-                                    <span className="ml-1 font-medium">{formatCurrency(po.total)}</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(Number(po.total))}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('finance.purchaseOrders.table.items')}:</span>
@@ -327,7 +327,7 @@ export default function PurchaseOrdersPage() {
                                         <td className="hidden lg:table-cell px-4 py-3 text-gray-500">{po.items?.length || 0} item</td>
                                         <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3">{formatDate(po.createdAt)}</td>
                                         <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3">{formatDate(po.expectedDelivery)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(po.total)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(Number(po.total))}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusStyles[po.status] || 'bg-gray-100 text-gray-700'}`}>
                                                 {i18nStatusLabels[po.status] || po.status}
@@ -336,11 +336,11 @@ export default function PurchaseOrdersPage() {
                                         <td className="whitespace-nowrap px-4 py-3 text-center">
                                             {canMutate && (
                                                 <button
-                                                onClick={() => handleDelete(po.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                                title="Hapus"
+                                                    onClick={() => handleDelete(po.id)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                    title="Hapus"
                                                 >
-                                                <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -362,7 +362,10 @@ export default function PurchaseOrdersPage() {
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
-                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
                 </div>
             )}
         </div>

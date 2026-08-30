@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { InvoiceForm } from '@/components/finance/invoice-form'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, ChevronRight, FileText, Trash2 } from 'lucide-react'
+import { Search, Plus, ChevronRight, FileText, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 type Invoice = {
@@ -79,9 +79,9 @@ export default function InvoicesPage() {
     })
 
     const stats = {
-        total: invoices.reduce((sum, inv) => sum + inv.total, 0),
-        paid: invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + inv.total, 0),
-        outstanding: invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').reduce((sum, inv) => sum + inv.total, 0),
+        total: invoices.reduce((sum, inv) => sum + Number(inv.total), 0),
+        paid: invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + Number(inv.total), 0),
+        outstanding: invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== 'draft').reduce((sum, inv) => sum + Number(inv.total), 0),
         draft: invoices.filter(i => i.status === 'draft').length,
     }
 
@@ -163,11 +163,11 @@ export default function InvoicesPage() {
                 </div>
                 {canMutate && (
                     <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                    <Plus className="h-4 w-4" />
-                    {t('finance.invoices.createInvoice')}
+                        <Plus className="h-4 w-4" />
+                        {t('finance.invoices.createInvoice')}
                     </button>
                 )}
             </div>
@@ -319,11 +319,11 @@ export default function InvoicesPage() {
                                         <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-right">
                                             {canMutate && (
                                                 <button
-                                                onClick={() => handleDelete(invoice.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                                title="Hapus"
+                                                    onClick={() => handleDelete(invoice.id)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                    title="Hapus"
                                                 >
-                                                <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </button>
                                             )}
                                         </td>
@@ -345,7 +345,10 @@ export default function InvoicesPage() {
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
-                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
                 </div>
             )}
         </div>

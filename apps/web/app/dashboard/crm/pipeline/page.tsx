@@ -80,11 +80,11 @@ export default function PipelinePage() {
 
     const allStages = [...activeStages, ...closedStages]
 
-    const totalValue = deals.reduce((sum, d) => sum + d.value, 0)
+    const totalValue = deals.reduce((sum, d) => sum + Number(d.value), 0)
     const totalDeals = deals.length
     const weightedValue = deals
         .filter(d => d.stage !== 'CLOSED_WON' && d.stage !== 'CLOSED_LOST')
-        .reduce((sum, d) => sum + (d.value * d.probability / 100), 0)
+        .reduce((sum, d) => sum + (Number(d.value) * d.probability / 100), 0)
     const wonCount = deals.filter(d => d.stage === 'CLOSED_WON').length
     const lostCount = deals.filter(d => d.stage === 'CLOSED_LOST').length
     const winRate = totalDeals > 0 ? Math.round((wonCount / (wonCount + lostCount || 1)) * 100) : 0
@@ -154,8 +154,8 @@ export default function PipelinePage() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                 {activeStages.map((stage) => {
-                    const stageValue = stage.deals.reduce((sum, d) => sum + d.value, 0)
-                    const stageWeighted = stage.deals.reduce((sum, d) => sum + (d.value * d.probability / 100), 0)
+                    const stageValue = stage.deals.reduce((sum, d) => sum + Number(d.value), 0)
+                    const stageWeighted = stage.deals.reduce((sum, d) => sum + (Number(d.value) * d.probability / 100), 0)
                     return (
                         <div key={stage.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                             <div className="flex items-center gap-2">
@@ -219,7 +219,7 @@ export default function PipelinePage() {
                                     <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.value')}:</span>
-                                            <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</span>
+                                            <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatCurrency(Number(deal.value))}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.winProb')}:</span>
@@ -227,7 +227,7 @@ export default function PipelinePage() {
                                         </div>
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.weighted')}:</span>
-                                            <span className="ml-1 font-medium text-green-600">{formatCurrency(deal.value * deal.probability / 100)}</span>
+                                            <span className="ml-1 font-medium text-green-600">{formatCurrency(Number(deal.value) * deal.probability / 100)}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">Owner:</span>
@@ -260,7 +260,7 @@ export default function PipelinePage() {
                                             <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                                 <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">{deal.name}</td>
                                                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{deal.company || '-'}</td>
-                                                <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(deal.value)}</td>
+                                                <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(Number(deal.value))}</td>
                                                 <td className="whitespace-nowrap px-4 py-3 text-center">
                                                     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${stage.bgColor} ${stage.color.replace('bg-', 'text-')}`}>
                                                         {getStageLabel(stage.id)}
@@ -268,7 +268,7 @@ export default function PipelinePage() {
                                                 </td>
                                                 <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center text-gray-600 dark:text-gray-400">{deal.probability}%</td>
                                                 <td className="hidden lg:table-cell whitespace-nowrap px-4 py-3 text-center font-medium text-green-600">
-                                                    {formatCurrency(deal.value * deal.probability / 100)}
+                                                    {formatCurrency(Number(deal.value) * deal.probability / 100)}
                                                 </td>
                                                 <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{deal.assignedTo || '-'}</td>
                                             </tr>
@@ -337,7 +337,7 @@ function BoardColumn({ stage, getStageLabel, t }: { stage: Stage; getStageLabel:
                             )}
                             <div className="mt-2 flex items-center justify-between">
                                 <span className="text-sm font-bold text-green-600">
-                                    {formatCurrency(deal.value)}
+                                    {formatCurrency(Number(deal.value))}
                                 </span>
                                 <span className="text-xs text-gray-500">
                                     {deal.probability}%
@@ -353,7 +353,7 @@ function BoardColumn({ stage, getStageLabel, t }: { stage: Stage; getStageLabel:
                             </div>
                             <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
                                 <span>{deal.assignedTo || t('crm.pipeline.unassigned')}</span>
-                                <span>{t('crm.pipeline.weighted')} {formatCurrency(deal.value * deal.probability / 100)}</span>
+                                <span>{t('crm.pipeline.weighted')} {formatCurrency(Number(deal.value) * deal.probability / 100)}</span>
                             </div>
                         </div>
                     ))

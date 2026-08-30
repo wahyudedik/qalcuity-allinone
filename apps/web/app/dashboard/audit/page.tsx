@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { PlusCircle, Pencil, Trash2, Eye } from 'lucide-react'
 
 type AuditLog = {
     id: string
@@ -17,11 +18,11 @@ type AuditLog = {
     timestamp: string
 }
 
-const actionColors: Record<string, { bg: string; text: string; icon: string }> = {
-    CREATE: { bg: 'bg-green-100', text: 'text-green-700', icon: '+' },
-    UPDATE: { bg: 'bg-blue-100', text: 'text-blue-700', icon: '↻' },
-    DELETE: { bg: 'bg-red-100', text: 'text-red-700', icon: '×' },
-    READ: { bg: 'bg-gray-100', text: 'text-gray-700', icon: '👁' },
+const actionConfig: Record<string, { bg: string; text: string; icon: string }> = {
+    CREATE: { bg: 'bg-green-100', text: 'text-green-700', icon: 'plus-circle' },
+    UPDATE: { bg: 'bg-blue-100', text: 'text-blue-700', icon: 'pencil' },
+    DELETE: { bg: 'bg-red-100', text: 'text-red-700', icon: 'trash-2' },
+    READ: { bg: 'bg-gray-100', text: 'text-gray-700', icon: 'eye' },
 }
 
 const modules = ['all', 'Invoice', 'Deal', 'Lead', 'Contact', 'Product', 'Employee', 'Payment', 'Quotation', 'PurchaseOrder']
@@ -237,14 +238,14 @@ export default function AuditPage() {
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     {logs.length === 0 ? (
                         <div className="p-12 text-center text-gray-500">
-                            <p className="text-lg">📋</p>
+                            <p className="text-lg text-gray-400"><Eye className="w-6 h-6 mx-auto" /></p>
                             <p className="mt-2">Belum ada audit log</p>
                             <p className="text-sm mt-1">Aktivitas akan tercatat secara otomatis</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
                             {logs.map((log) => {
-                                const colorConfig = actionColors[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', icon: '📋' }
+                                const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', icon: 'eye' }
                                 return (
                                     <div key={log.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                                         <div className="flex items-start gap-4">

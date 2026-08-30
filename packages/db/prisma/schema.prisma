@@ -140,6 +140,7 @@ model Invoice {
   @@index([tenantId])
   @@index([status])
   @@index([contactId])
+  @@index([createdAt])
 }
 
 model InvoiceItem {
@@ -174,6 +175,9 @@ model Payment {
 
   @@index([tenantId])
   @@index([invoiceId])
+  @@index([status])
+  @@index([type])
+  @@index([paymentDate])
 }
 
 model PurchaseOrder {
@@ -281,6 +285,7 @@ model Lead {
 
   @@index([tenantId])
   @@index([status])
+  @@index([contactId])
 }
 
 model Deal {
@@ -303,6 +308,7 @@ model Deal {
 
   @@index([tenantId])
   @@index([stage])
+  @@index([contactId])
 }
 
 // ============================================
@@ -421,6 +427,7 @@ model Employee {
 
   @@unique([employeeId, tenantId])
   @@index([tenantId])
+  @@index([status])
 }
 
 model AttendanceRecord {

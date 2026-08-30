@@ -7,21 +7,78 @@
 
 ## 📋 Daftar Isi
 
-1. [AI Agent Roles](#1-ai-agent-roles)
-2. [Task Workflow](#2-task-workflow)
-3. [Documentation Hierarchy](#3-documentation-hierarchy)
-4. [Code Quality Rules](#4-code-quality-rules)
-5. [Multi-tenant Rules](#5-multi-tenant-rules)
-6. [Security Rules](#6-security-rules)
-7. [Testing Requirements](#7-testing-requirements)
-8. [Definition of Done](#8-definition-of-done)
-9. [AI Development Contract](#9-ai-development-contract)
-10. [AI Agent Types (Product)](#10-ai-agent-types-product)
-11. [AI Features Overview](#11-ai-features-overview)
+1. [AI Agent Rules (HARD RULES)](#1-ai-agent-rules-hard-rules)
+2. [AI Agent Roles](#2-ai-agent-roles)
+3. [Task Workflow](#3-task-workflow)
+4. [Documentation Hierarchy](#4-documentation-hierarchy)
+5. [Current Architecture Summary](#5-current-architecture-summary)
+6. [Code Quality Rules](#6-code-quality-rules)
+7. [Multi-tenant Rules](#7-multi-tenant-rules)
+8. [Security Rules](#8-security-rules)
+9. [Testing Requirements](#9-testing-requirements)
+10. [Definition of Done](#10-definition-of-done)
+11. [AI Development Contract](#11-ai-development-contract)
+12. [AI Agent Types (Product)](#12-ai-agent-types-product)
+13. [AI Features Overview](#13-ai-features-overview)
+14. [Local Development Setup](#14-local-development-setup)
 
 ---
 
-## 1. AI Agent Roles
+## 1. AI Agent Rules (HARD RULES)
+
+> ⛔ **Rules ini bersifat WAJIB. Melanggar = task GAGAL. Tidak ada pengecualian.**
+
+### Rule 1: Inspect Before Coding
+
+- **WAJIB** baca file yang akan dimodifikasi — SEBELUM menulis kode
+- Cek struktur existing code (patterns, conventions, naming)
+- Pahami dependencies dan impact ke file lain
+- **JANGAN asumsi** — baca dulu, pahami dulu, baru coding
+
+### Rule 2: Reuse Before Create
+
+- Cek [`packages/ui/`](packages/ui/), [`packages/utils/`](packages/utils/), [`packages/validation/`](packages/validation/) dulu
+- Cek [`apps/web/lib/`](apps/web/lib/) dan [`apps/web/components/`](apps/web/components/) untuk shared code
+- **JANGAN buat baru** jika sudah ada yang bisa di-reuse
+- **JANGAN duplikat** naming file/component yang sudah ada — search codebase dulu
+
+### Rule 3: Test Before Done
+
+- Jalankan `npx tsc --noEmit` untuk pastikan tidak ada TypeScript errors
+- Test happy path, validation, permission, tenant isolation
+- Test regression — fitur existing tidak boleh rusak
+- **JANGAN mark task selesai** tanpa testing
+
+### Rule 4: Document After Change
+
+- Update [`CURRENT.md`](CURRENT.md) dengan status terkini
+- Update [`FEATURES.md`](FEATURES.md) jika ada perubahan status fitur
+- Update [`docs/`](docs/) jika ada perubahan arsitektur
+- **JANGAN tinggalkan code tanpa dokumentasi**
+
+### Rule 5: Do Not Touch
+
+> ⛔ **File/section ini BOLEH DIBACA tapi TIDAK BOLEH DIMODIFIKASI tanpa approval eksplisit.**
+
+| System | Reason | File/Location |
+|--------|--------|---------------|
+| Authentication system | Security-critical, affects all users | [`apps/web/lib/auth.ts`](apps/web/lib/auth.ts), [`apps/web/app/api/auth/`](apps/web/app/api/auth/) |
+| Tenant isolation | Data security — cross-tenant leak = critical bug | All API routes (`tenantId` filtering) |
+| Audit trail system | Compliance requirement | [`apps/web/lib/audit.ts`](apps/web/lib/audit.ts) |
+| Prisma schema | Production safety — changes require migration | [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) |
+| Middleware RBAC | Authorization-critical | [`apps/web/middleware.ts`](apps/web/middleware.ts) |
+| Session helpers | Security-critical auth helpers | [`apps/web/lib/session.ts`](apps/web/lib/session.ts) |
+
+### Rule 6: Security First
+
+- **Setiap input dari user dianggap berbahaya** — SELALU sanitize dan validate
+- **Setiap query WAJIB filter `tenantId`** — tidak ada exception
+- **RBAC harus diperiksa di 3 lapisan**: Middleware + API Route + UI
+- **JANGAN hardcode secrets** — gunakan environment variables
+
+---
+
+## 2. AI Agent Roles
 
 Setiap AI Agent harus mengambil role yang sesuai dengan konteks tugas:
 
@@ -43,7 +100,7 @@ Setiap AI Agent harus mengambil role yang sesuai dengan konteks tugas:
 
 ---
 
-## 2. Task Workflow
+## 3. Task Workflow
 
 Setiap tugas harus mengikuti workflow 7 langkah:
 
@@ -51,7 +108,7 @@ Setiap tugas harus mengikuti workflow 7 langkah:
 UNDERSTAND → INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT
 ```
 
-### 2.1 UNDERSTAND
+### 3.1 UNDERSTAND
 
 - Baca task description dengan seksama
 - Identifikasi **business impact** (bukan hanya file changes)
@@ -59,15 +116,15 @@ UNDERSTAND → INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT
 - Identifikasi dependency dan risiko
 - Jika ada pertanyaan, tanyakan SEBELUM mulai kerja
 
-### 2.2 INSPECT
+### 3.2 INSPECT
 
-- Baca file-file yang akan dimodifikasi
+- **WAJIB** baca file-file yang akan dimodifikasi
 - Pahami struktur existing code (patterns, conventions)
 - Identifikasi code yang bisa di-reuse
 - Cek [`CURRENT.md`](CURRENT.md) untuk known issues dan blockers
-- Cek [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk arsitektur
+- Cek [`docs/DECISIONS.md`](docs/DECISIONS.md) untuk architectural decisions
 
-### 2.3 PLAN
+### 3.3 PLAN
 
 - Buat rencana implementasi step-by-step
 - Identifikasi file yang perlu dibuat/dimodifikasi
@@ -75,7 +132,7 @@ UNDERSTAND → INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT
 - Pastikan rencana mengikuti code quality rules
 - Review plan dengan architect mindset
 
-### 2.4 IMPLEMENT
+### 3.4 IMPLEMENT
 
 - Ikuti plan yang sudah dibuat
 - Ikuti coding patterns yang sudah ada di codebase
@@ -84,7 +141,7 @@ UNDERSTAND → INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT
 - Apply security rules (input sanitization, RBAC check)
 - Commit secara berkala dengan message yang jelas
 
-### 2.5 TEST
+### 3.5 TEST
 
 - Test happy path
 - Test validation (input invalid)
@@ -93,16 +150,16 @@ UNDERSTAND → INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT
 - Test error handling
 - Test regression (tidak merusak fitur existing)
 
-### 2.6 VERIFY
+### 3.6 VERIFY
 
-- Verify semua test pass
+- Verify semua test pass — jalankan `npx tsc --noEmit`
 - Verify tidak ada TypeScript errors
 - Verify tidak ada console errors
 - Verify UI responsif (mobile/tablet/desktop)
 - Verify i18n (Bahasa Indonesia + English)
 - Verify dokumentasi updated
 
-### 2.7 DOCUMENT
+### 3.7 DOCUMENT
 
 - Update [`CURRENT.md`](CURRENT.md) dengan status terkini
 - Update [`FEATURES.md`](FEATURES.md) jika ada fitur baru/perubahan status
@@ -112,12 +169,12 @@ UNDERSTAND → INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT
 
 ---
 
-## 3. Documentation Hierarchy
+## 4. Documentation Hierarchy
 
 Semua dokumentasi harus dibaca dan di-update sesuai hierarchy:
 
 ```
-AGENT.md          ← Aturan operasi AI Agent (document ini)
+AGENT.md          ← Aturan operasi AI Agent (document ini) — HARD RULES
   ↓
 FEATURES.md       ← Daftar lengkap fitur dengan status
   ↓
@@ -125,18 +182,16 @@ ROADMAP.md        ← Timeline dan fase pengembangan
   ↓
 CURRENT.md        ← Status saat ini, known issues, blockers
   ↓
-ARCHITECTURE.md   ← Arsitektur sistem (docs/ARCHITECTURE.md)
+docs/DECISIONS.md ← Architectural decisions
   ↓
-DATABASE.md       ← Schema database (docs/DATABASE.md)
+docs/SECURITY.md  ← Aturan keamanan
   ↓
-SECURITY.md       ← Aturan keamanan (docs/SECURITY.md)
-  ↓
-UI_UX.md          ← Aturan UI/UX (docs/UI_UX.md)
+docs/UI_UX.md     ← Aturan UI/UX
 ```
 
 ### Read Order (Before Starting Task)
 
-1. [`AGENT.md`](AGENT.md) — Understand rules
+1. [`AGENT.md`](AGENT.md) — Understand rules (HARD RULES — baca dulu!)
 2. [`FEATURES.md`](FEATURES.md) — Understand feature scope
 3. [`ROADMAP.md`](ROADMAP.md) — Understand timeline
 4. [`CURRENT.md`](CURRENT.md) — Understand current state
@@ -152,20 +207,96 @@ UI_UX.md          ← Aturan UI/UX (docs/UI_UX.md)
 
 ---
 
-## 4. Code Quality Rules
+## 5. Current Architecture Summary
 
-### 4.1 Reuse Before Create
+> **Arsitektur aktual per 30 Agustus 2026.**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     PLATFORMS                            │
+│  Web (Next.js 14)  │  Desktop (Electron)  │ Mobile (RN) │
+│  ✅ Production     │  ⚠️ Placeholder      │ ⚠️ No Auth  │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│                    API LAYER                             │
+│  Next.js Route Handlers (35 routes, 19 files)           │
+│  + Middleware RBAC + Zod Validation + Audit Logging      │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│                 BUSINESS LOGIC                           │
+│  Finance │ CRM │ HR │ Inventory │ Billing │ AI (mock)   │
+│  ✅ CRUD  │✅ CRUD│✅ CRUD│ ✅ CRUD   │ ✅ CRUD │ ⚠️ Basic │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│                  DATA LAYER                              │
+│  Prisma 5.15 → PostgreSQL (26 models, 57 indexes)      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Tech Stack (Actual)
+
+| Layer | Technology | Status |
+|-------|-----------|--------|
+| **Framework** | Next.js 14 (App Router) | ✅ Active |
+| **Language** | TypeScript 5.5 | ✅ Strict |
+| **Styling** | Tailwind CSS 3.4 | ✅ Active |
+| **Icons** | Lucide React | ✅ Active |
+| **ORM** | Prisma 5.15 | ✅ Active |
+| **Database** | PostgreSQL (DBngin local) | ✅ Active |
+| **Auth** | NextAuth 4.24 (JWT) | ✅ Active |
+| **Validation** | Zod (14+ schemas) | ✅ Active |
+| **Monorepo** | pnpm workspaces | ✅ Active |
+| **Desktop** | Electron | ⚠️ Placeholder |
+| **Mobile** | React Native / Expo | ⚠️ Partial |
+| **i18n** | Custom provider | ✅ Active |
+
+### Shared Packages Status
+
+| Package | Status | Notes |
+|---------|--------|-------|
+| `@qalcuity/db` | ✅ Active | Prisma schema + migrations |
+| `@qalcuity/types` | ✅ Active | Shared TypeScript types |
+| `@qalcuity/utils` | ✅ Active | Utility functions |
+| `@qalcuity/config` | ✅ Active | App constants + env config |
+| `@qalcuity/validation` | ✅ Active | Zod schemas |
+| `@qalcuity/i18n` | ✅ Active | i18n utilities |
+| `@qalcuity/ui` | ⚠️ Partial | Tokens only, no React components |
+| `@qalcuity/api` | ❌ Not created | Mentioned but not yet implemented |
+
+### Codebase Stats (Audit: 30 Agustus 2026)
+
+| Metric | Count |
+|--------|-------|
+| TypeScript files (apps/web) | ~95+ |
+| TypeScript files (packages) | ~15 |
+| API route files | 19 |
+| API routes | 35 |
+| Pages | 22+ |
+| Prisma models | 26 |
+| Database indexes | 57 |
+| Zod schemas | 14+ |
+| i18n keys | 200+ |
+| E2E tests | 63 (63 PASS) |
+
+---
+
+## 6. Code Quality Rules
+
+### 6.1 Reuse Before Create
 
 > **Jangan buat baru jika sudah ada yang bisa di-reuse.**
 
-- Cek [`packages/ui/`](packages/ui/) untuk component yang sudah ada
+- Cek [`packages/ui/`](packages/ui/) untuk component yang sudah ada (⚠️ tokens only saat ini)
 - Cek [`packages/utils/`](packages/utils/) untuk utility functions
 - Cek [`packages/validation/`](packages/validation/) untuk validation schemas
 - Cek [`apps/web/lib/`](apps/web/lib/) untuk helper functions
 - Cek [`apps/web/components/`](apps/web/components/) untuk UI components
 - Jika tidak ada yang cocok, BUAT baru dan masukkan ke package yang tepat
 
-### 4.2 No Duplicate Naming
+### 6.2 No Duplicate Naming
 
 > **Jangan buat file/component dengan nama yang sudah ada.**
 
@@ -173,7 +304,7 @@ UI_UX.md          ← Aturan UI/UX (docs/UI_UX.md)
 - Gunakan naming convention yang konsisten
 - Ikuti struktur folder yang sudah ada
 
-### 4.3 Consistent Patterns
+### 6.3 Consistent Patterns
 
 - **API Routes:** Next.js App Router pattern (`app/api/*/route.ts`)
 - **Components:** Functional components dengan TypeScript
@@ -184,8 +315,16 @@ UI_UX.md          ← Aturan UI/UX (docs/UI_UX.md)
 - **Validation:** Zod schemas di [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) — WAJIB untuk semua API mutation routes
 - **Loading States:** `loading.tsx` file untuk semua detail pages
 - **Responsive Tables:** Dual layout (mobile cards + desktop tables) untuk list pages
+- **Error Handling:** `error.tsx` file untuk semua module sections
 
-### 4.5 Zod Validation Pattern (MANDATORY)
+### 6.4 TypeScript Strict
+
+- Semua file harus TypeScript (bukan JavaScript)
+- Gunakan proper typing (bukan `any`)
+- Export types dari [`packages/types/src/index.ts`](packages/types/src/index.ts)
+- Jalankan `npx tsc --noEmit` sebelum menyelesaikan task
+
+### 6.5 Zod Validation Pattern (MANDATORY)
 
 > **Semua API mutation routes WAJIB menggunakan Zod validation.**
 
@@ -205,7 +344,7 @@ export async function POST(req: Request) {
 - Validasi dilakukan SEBELUM proses data
 - Error handling harus return 400 dengan message yang jelas
 
-### 4.6 RBAC Defense-in-depth Pattern
+### 6.6 RBAC Defense-in-depth Pattern
 
 > **RBAC harus diperiksa di 3 lapisan: Middleware + API Route + UI**
 
@@ -229,7 +368,7 @@ const session = await getServerSession(authOptions);
 const canEdit = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN';
 ```
 
-### 4.7 Responsive Table Pattern
+### 6.7 Responsive Table Pattern
 
 > **Semua list pages harus memiliki dual layout: mobile cards + desktop tables.**
 
@@ -238,7 +377,7 @@ const canEdit = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPE
 - Gunakan pattern yang sudah ada di pages lain sebagai referensi
 - Pastikan semua kolom tabel terwakili di card view
 
-### 4.8 Loading State Pattern
+### 6.8 Loading State Pattern
 
 > **Semua detail pages WAJIB memiliki `loading.tsx` file.**
 
@@ -246,26 +385,51 @@ const canEdit = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPE
 - Gunakan skeleton/placeholder yang sesuai dengan konten
 - Konsisten dengan loading patterns di halaman lain
 
-### 4.4 TypeScript Strict
+### 6.9 API Route Pattern
 
-- Semua file harus TypeScript (bukan JavaScript)
-- Gunakan proper typing (bukan `any`)
-- Export types dari [`packages/types/src/index.ts`](packages/types/src/index.ts)
+Setiap API route harus mengikuti pola ini:
+
+```typescript
+// Standard API route structure
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+
+export async function GET(req: Request) {
+  // 1. Auth check
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // 2. RBAC check (for mutations)
+  // const auth = requireMutateAuth(req); // for POST/PUT/DELETE
+
+  // 3. Tenant isolation
+  const tenantId = session.user.tenantId;
+
+  // 4. Query with tenantId filter
+  const data = await prisma.model.findMany({
+    where: { tenantId }
+  });
+
+  return NextResponse.json(data);
+}
+```
 
 ---
 
-## 5. Multi-tenant Rules
+## 7. Multi-tenant Rules
 
 > **Tenant isolation adalah KRITIS. Cross-tenant data leak = critical bug.**
 
-### 5.1 Tenant Isolation
+### 7.1 Tenant Isolation
 
 - **Setiap query database** harus filter berdasarkan `tenantId`
 - **Setiap API route** harus mengambil `tenantId` dari session/JWT
 - **Tidak ada cross-tenant queries** — bahkan untuk admin sekalipun (kecuali SUPERADMIN dengan explicit bypass)
 - **Setiap form submission** harus menyertakan `tenantId`
 
-### 5.2 Implementation Pattern
+### 7.2 Implementation Pattern
 
 ```typescript
 // Contoh: API route dengan tenant isolation
@@ -277,28 +441,25 @@ const data = await prisma.invoice.findMany({
 });
 ```
 
-### 5.3 Do Not Touch
+### 7.3 Do Not Touch (Multi-tenant)
 
 | System | Reason | File/Location |
 |--------|--------|---------------|
-| Authentication system | Security-critical, affects all users | [`apps/web/lib/auth.ts`](apps/web/lib/auth.ts), [`apps/web/app/api/auth/`](apps/web/app/api/auth/) |
 | Tenant isolation | Data security — cross-tenant leak = critical bug | All API routes (`tenantId` filtering) |
-| Audit trail system | Compliance requirement | [`apps/web/lib/audit.ts`](apps/web/lib/audit.ts) |
-| Prisma schema | Production safety — changes require migration | [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) |
-| Middleware RBAC | Authorization-critical | [`apps/web/middleware.ts`](apps/web/middleware.ts) |
+| Registration flow | Must create tenant correctly | [`apps/web/app/api/auth/register/`](apps/web/app/api/auth/register/) |
 
 ---
 
-## 6. Security Rules
+## 8. Security Rules
 
-### 6.1 Authentication
+### 8.1 Authentication
 
 - NextAuth JWT with CredentialsProvider ([`apps/web/lib/auth.ts`](apps/web/lib/auth.ts))
 - Password hashing dengan bcryptjs
 - Session management via JWT strategy
 - Role + tenantId stored in token
 
-### 6.2 RBAC (Role-based Access Control)
+### 8.2 RBAC (Role-based Access Control)
 
 4 roles dengan permissions:
 
@@ -309,82 +470,107 @@ const data = await prisma.invoice.findMany({
 | **MEMBER** | Department-level | Create/read, limited edit, no settings/audit access |
 | **VIEWER** | Read-only | Read only, no create/edit/delete, no settings/audit access |
 
-### 6.3 Input Sanitization
+### 8.3 Input Sanitization
 
 - [`apps/web/lib/sanitize.ts`](apps/web/lib/sanitize.ts) — Sanitize semua user input
 - Rate limiting per IP ([`apps/web/lib/rate-limit.ts`](apps/web/lib/rate-limit.ts))
 - CSRF protection
 - XSS prevention (React auto-escapes, tapi tetap sanitize)
 
-### 6.4 API Security
+### 8.4 API Security Checklist
 
-- Setiap API route harus:
-  1. Cek session/auth
-  2. Cek RBAC permission
-  3. Filter by tenantId
-  4. Validate input (zod schema)
-  5. Sanitize output
-  6. Log audit trail
+Setiap API route harus:
 
-### 6.5 Data Protection
+- [ ] Cek session/auth
+- [ ] Cek RBAC permission
+- [ ] Filter by tenantId
+- [ ] Validate input (zod schema)
+- [ ] Sanitize output
+- [ ] Log audit trail
+
+### 8.5 Data Protection
 
 - AES-256 at rest, TLS 1.3 in transit
 - Data residency: Server Indonesia
 - Daily auto-backup, 30-day retention
 - UU PDP & GDPR ready
 
+### 8.6 Known Security Gaps (dari Audit)
+
+> ⚠️ **Gaps berikut diketahui dan perlu di-address di phase berikutnya.**
+
+| Gap | Severity | Status |
+|-----|----------|--------|
+| Hardcoded NEXTAUTH_SECRET fallback | 🔴 High | ⚠️ Perlu fix — gunakan env var mandatory |
+| No CSP (Content-Security-Policy) headers | 🟠 Medium | ⚠️ Perlu implement |
+| No explicit CORS config | 🟠 Medium | ⚠️ Perlu konfigurasi |
+| Rate limiter in-memory only | 🟡 Low | ⚠️ Tidak suitable untuk multi-instance |
+
 ---
 
-## 7. Testing Requirements
+## 9. Testing Requirements
 
 Setiap perubahan kode harus di-test dengan 6 kategori:
 
-### 7.1 Happy Path
+### 9.1 Happy Path
 
 - User dengan permission yang benar melakukan aksi yang benar
 - Input valid, expected output
 
-### 7.2 Validation
+### 9.2 Validation
 
 - Input invalid (field kosong, format salah, value out of range)
 - Missing required fields
 - Duplicate data (unique constraint)
 
-### 7.3 Permission
+### 9.3 Permission
 
 - User tanpa permission mencoba aksi
 - MEMBER mencoba delete
 - VIEWER mencoba create
 - Cross-tenant access attempt
 
-### 7.4 Tenant Isolation
+### 9.4 Tenant Isolation
 
 - Query tanpa tenantId filter
 - Data dari tenant lain tidak muncul
 - Update/Delete data tenant lain gagal
 
-### 7.5 Error Handling
+### 9.5 Error Handling
 
 - Database error
 - Network timeout
 - External service unavailable
 - Graceful degradation
 
-### 7.6 Regression
+### 9.6 Regression
 
 - Fitur existing tidak rusak
 - Navigation masih berfungsi
 - CRUD operations masih berfungsi
 - i18n masih berfungsi
 
+### 9.7 Running Tests
+
+```bash
+# TypeScript check
+npx tsc --noEmit
+
+# E2E tests
+cd apps/web && npx tsx __tests__/e2e-test.ts
+
+# Prisma migration check
+cd packages/db && npx prisma migrate status
+```
+
 ---
 
-## 8. Definition of Done
+## 10. Definition of Done
 
 Sebuah task dianggap **DONE** jika semua checklist ini terpenuhi:
 
 - [ ] 1. Code bersih, no `any` types, no unused imports
-- [ ] 2. TypeScript compilation tanpa errors
+- [ ] 2. TypeScript compilation tanpa errors (`npx tsc --noEmit`)
 - [ ] 3. Semua CRUD operations berfungsi (Create, Read, Update, Delete)
 - [ ] 4. Tenant isolation terjaga (setiap query filter `tenantId`)
 - [ ] 5. RBAC check ada di setiap API route
@@ -398,35 +584,37 @@ Sebuah task dianggap **DONE** jika semua checklist ini terpenuhi:
 - [ ] 13. i18n support (Bahasa Indonesia + English)
 - [ ] 14. Lucide React icons (bukan emoji)
 - [ ] 15. Documentation updated ([`CURRENT.md`](CURRENT.md), [`FEATURES.md`](FEATURES.md) if needed)
+- [ ] 16. No console errors di browser
+- [ ] 17. Loading states untuk semua async operations
 
 ---
 
-## 9. AI Development Contract
+## 11. AI Development Contract
 
 > **AI Agent harus memahami business impact, bukan hanya file changes.**
 
-### 9.1 Sebelum Menulis Kode
+### 11.1 Sebelum Menulis Kode
 
 1. **Pahami WHY** — Mengapa fitur ini dibutuhkan? Business problem apa yang diselesaikan?
 2. **Pahami WHO** — Siapa yang akan menggunakan fitur ini? Role apa?
 3. **Pahami WHAT** — Apa output yang diharapkan? Apa success criteria?
 4. **Pahami RISK** — Apa yang bisa salah? Apa impact-nya?
 
-### 9.2 Saat Menulis Kode
+### 11.2 Saat Menulis Kode
 
 1. **Write for humans** — Code harus dibaca dan dipahami oleh developer lain
 2. **Write for production** — Bukan prototype, bukan hackathon code
 3. **Write for scale** — Pertimbangkan performance di scale besar
 4. **Write for security** — Setiap input dari user dianggap berbahaya
 
-### 9.3 Setelah Menulis Kode
+### 11.3 Setelah Menulis Kode
 
 1. **Test thoroughly** — Jangan asumsi, test semua path
 2. **Document clearly** — Update documentation sesuai hierarchy
 3. **Communicate changes** — Jelaskan apa yang berubah dan mengapa
 4. **Monitor impact** — Perhatikan apakah ada side effects
 
-### 9.4 Business Impact Checklist
+### 11.4 Business Impact Checklist
 
 Sebelum menandai task selesai, tanyakan:
 
@@ -438,7 +626,7 @@ Sebelum menandai task selesai, tanyakan:
 
 ---
 
-## 10. AI Agent Types (Product)
+## 12. AI Agent Types (Product)
 
 > **Bagian ini mendeskripsikan AI Agent yang dihadirkan kepada END USER (bukan developer).**
 
@@ -457,7 +645,7 @@ Sebelum menandai task selesai, tanyakan:
 | **Anomaly Detection** | ✅ Built-in |
 | **Cash Flow Prediction** | ✅ Built-in |
 
-### 10.1 Finance Agent 🏦
+### 12.1 Finance Agent 🏦
 
 **Tujuan:** Membantu user dengan tugas-tugas keuangan secara otomatis.
 
@@ -469,7 +657,7 @@ Sebelum menandai task selesai, tanyakan:
 | **Payment Reminder** | Kirim reminder otomatis untuk overdue | Scheduled task |
 | **Expense Categorization** | Auto-kategorikan expense dari receipt | Upload receipt |
 
-### 10.2 Sales Agent 📈
+### 12.2 Sales Agent 📈
 
 **Tujuan:** Meningkatkan konversi dan efisiensi sales team.
 
@@ -481,7 +669,7 @@ Sebelum menandai task selesai, tanyakan:
 | **Sales Forecasting** | Prediksi revenue dari pipeline | "Forecast penjualan Q3" |
 | **Competitor Analysis** | Analisis win/loss vs kompetitor | "Analisis kompetitor" |
 
-### 10.3 Inventory Agent 📦
+### 12.3 Inventory Agent 📦
 
 **Tujuan:** Optimasi stok dan supply chain.
 
@@ -493,7 +681,7 @@ Sebelum menandai task selesai, tanyakan:
 | **Dead Stock Detection** | Identifikasi produk tidak bergerak | Weekly scan |
 | **Price Monitoring** | Bandingkan harga supplier | "Bandingkan harga supplier A vs B" |
 
-### 10.4 HR Agent 👥
+### 12.4 HR Agent 👥
 
 **Tujuan:** Automasi HR tasks dan document generation.
 
@@ -505,7 +693,7 @@ Sebelum menandai task selesai, tanyakan:
 | **Performance Insight** | Analisis performa tim | "Analisis performa Q2" |
 | **Compliance Check** | Cek kelengkapan dokumen | "Cek dokumen karyawan tidak lengkap" |
 
-### 10.5 Support Agent 🎧
+### 12.5 Support Agent 🎧
 
 **Tujuan:** Meningkatkan efisiensi customer support.
 
@@ -517,19 +705,19 @@ Sebelum menandai task selesai, tanyakan:
 | **Knowledge Suggestion** | Sarankan artikel dari knowledge base | Agent menulis reply |
 | **Escalation Predictor** | Prediksi tiket yang perlu escalation | Pattern detection |
 
-### 10.6 Document Agent 📄
+### 12.6 Document Agent 📄
 
 **Tujuan:** Ekstraksi dan pemrosesan dokumen.
 
 | Fitur | Deskripsi | Trigger |
 |-------|-----------|---------|
-| **PDF Extraction** | Ekstrak data dari PDF | Upload PDF |
+| **PDF Extraction** | Ekstraksi data dari PDF | Upload PDF |
 | **OCR Processing** | Scan dokumen fisik | Upload foto |
 | **Auto-validation** | Validasi kelengkapan data | Setelah extraction |
 | **Auto-entry** | Push data ke system | Validation passed |
 | **Batch Processing** | Proses multiple dokumen | Upload batch |
 
-### 10.7 Template Agent 📝
+### 12.7 Template Agent 📝
 
 **Tujuan:** Generate dokumen HR dan bisnis dari template.
 
@@ -543,7 +731,7 @@ Sebelum menandai task selesai, tanyakan:
 
 ---
 
-## 11. AI Features Overview
+## 13. AI Features Overview
 
 ### Natural Language Query
 
@@ -600,7 +788,7 @@ Sebelum menandai task selesai, tanyakan:
 
 ---
 
-## 12. Local Development Setup
+## 14. Local Development Setup
 
 ### Database (PostgreSQL via DBngin)
 
@@ -641,10 +829,16 @@ cd packages/db && npx prisma db seed
 
 # Open Prisma Studio (visual DB browser)
 cd packages/db && npx prisma studio
+
+# TypeScript check
+npx tsc --noEmit
+
+# E2E tests
+cd apps/web && npx tsx __tests__/e2e-test.ts
 ```
 
 ---
 
 **Last Updated:** August 30, 2026
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 2.2 — Local Dev Setup (DBngin)
+**Document Version:** 3.0 — Hard Rules + Architecture Summary

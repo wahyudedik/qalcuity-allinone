@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         // Sanitize text inputs
         const sanitizedCompany = typeof companyName === 'string' ? sanitizeInput(companyName) : '';
         const sanitizedName = typeof fullName === 'string' ? sanitizeInput(fullName) : '';
-        const sanitizedEmail = typeof email === 'string' ? sanitizeInput(email) : '';
+        const sanitizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
         // Validasi input
         if (!sanitizedCompany || !sanitizedName || !sanitizedEmail || !password) {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Validasi email format using sanitize utility
+        // Validasi email format
         if (!isValidEmail(sanitizedEmail)) {
             return NextResponse.json(
                 { error: "Format email tidak valid" },
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Buat tenant baru untuk perusahaan
+        // Buat slug dari nama perusahaan
         const slug = sanitizedCompany
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
@@ -101,8 +101,49 @@ export async function POST(request: Request) {
             },
             { status: 201 }
         );
-    } catch (error) {
-        console.error("Register error:", error);
+    } catch (error: unknown) {
+        // Handle Prisma-specific errors
+        if (error && typeof error === 'object' && 'code' in error) {
+            const prismaError = error as { code: string; meta?: Record<string, unknown> };
+
+            // Unique constraint violation
+            if (prismaError.code === 'P2002') {
+                const target = prismaError.meta?.target;
+                const field = Array.isArray(target) ? target[0] : 'field';
+                console.error(`[Register] Unique constraint violation on field: ${field}`);
+                return NextResponse.json(
+                    { error: `Data sudah ada untuk ${String(field)}` },
+                    { status: 400 }
+                );
+            }
+
+            // Foreign key constraint
+            if (prismaError.code === 'P2003') {
+                console.error("[Register] Foreign key constraint violation:", prismaError.meta);
+                return NextResponse.json(
+                    { error: "Referensi data tidak valid" },
+                    { status: 400 }
+                );
+            }
+
+            // Record not found
+            if (prismaError.code === 'P2025') {
+                console.error("[Register] Record not found:", prismaError.meta);
+                return NextResponse.json(
+                    { error: "Data tidak ditemukan" },
+                    { status: 404 }
+                );
+            }
+
+            console.error("[Register] Prisma error:", prismaError.code, prismaError.meta);
+            return NextResponse.json(
+                { error: "Terjadi kesalahan database" },
+                { status: 500 }
+            );
+        }
+
+        // Handle other errors
+        console.error("[Register] Unexpected error:", error);
         return NextResponse.json(
             { error: "Terjadi kesalahan server" },
             { status: 500 }

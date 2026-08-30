@@ -115,7 +115,7 @@ export async function GET(request: Request) {
             results.push({
                 id: inv.id,
                 title: inv.invoiceNumber,
-                subtitle: `${inv.contact?.name || 'Customer'} - Rp ${(inv.total || 0).toLocaleString('id-ID')}`,
+                subtitle: `${inv.contact?.name || 'Customer'} - Rp ${Number(inv.total || 0).toLocaleString('id-ID')}`,
                 type: 'Invoice',
                 href: `/dashboard/finance/invoices/${inv.id}`,
                 icon: 'receipt',
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
             results.push({
                 id: deal.id,
                 title: deal.title,
-                subtitle: `${deal.contact?.name || 'Contact'} - Rp ${(deal.value || 0).toLocaleString('id-ID')}`,
+                subtitle: `${deal.contact?.name || 'Contact'} - Rp ${Number(deal.value || 0).toLocaleString('id-ID')}`,
                 type: 'Deal',
                 href: `/dashboard/crm/deals/${deal.id}`,
                 icon: 'trending-up',

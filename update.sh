@@ -16,7 +16,7 @@ PM2_APP_NAME="qalcuity-web"
 LOG_FILE="/var/log/qalcuity-update.log"
 BRANCH="main"
 
-# --- Warna untuk output ---
+# --- Warna untuk output --- 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

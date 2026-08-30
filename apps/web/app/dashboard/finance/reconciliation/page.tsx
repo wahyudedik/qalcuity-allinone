@@ -86,6 +86,14 @@ export default function ReconciliationPage() {
     const [showMatchModal, setShowMatchModal] = useState(false)
     const [selectedBankTx, setSelectedBankTx] = useState<BankTransaction | null>(null)
     const [matchFilter, setMatchFilter] = useState<string>('all')
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     // Helper untuk format currency singkat (Rp X Miliar/Jt)
     const fmtCurrencyShort = (amount: number): string => {
@@ -152,7 +160,7 @@ export default function ReconciliationPage() {
             })
             const json = await res.json()
             if (!json.success) {
-                alert(json.message || t('finance.reconciliation.errorMatch'))
+                setToast({ message: json.message || t('finance.reconciliation.errorMatch'), type: 'error' })
                 return
             }
             // Update local state
@@ -164,7 +172,7 @@ export default function ReconciliationPage() {
             setShowMatchModal(false)
             setSelectedBankTx(null)
         } catch {
-            alert(t('finance.reconciliation.errorMatchGeneric'))
+            setToast({ message: t('finance.reconciliation.errorMatchGeneric'), type: 'error' })
         }
     }
 
@@ -178,7 +186,7 @@ export default function ReconciliationPage() {
             })
             const json = await res.json()
             if (!json.success) {
-                alert(json.message || t('finance.reconciliation.errorMark'))
+                setToast({ message: json.message || t('finance.reconciliation.errorMark'), type: 'error' })
                 return
             }
             setBankTransactions(prev =>
@@ -187,7 +195,7 @@ export default function ReconciliationPage() {
                 )
             )
         } catch {
-            alert(t('finance.reconciliation.errorGeneric'))
+            setToast({ message: t('finance.reconciliation.errorGeneric'), type: 'error' })
         }
     }
 
@@ -201,7 +209,7 @@ export default function ReconciliationPage() {
             })
             const json = await res.json()
             if (!json.success) {
-                alert(json.message || t('finance.reconciliation.errorUnmatch'))
+                setToast({ message: json.message || t('finance.reconciliation.errorUnmatch'), type: 'error' })
                 return
             }
             setBankTransactions(prev =>
@@ -210,7 +218,7 @@ export default function ReconciliationPage() {
                 )
             )
         } catch {
-            alert(t('finance.reconciliation.errorGeneric'))
+            setToast({ message: t('finance.reconciliation.errorGeneric'), type: 'error' })
         }
     }
 
@@ -746,6 +754,13 @@ export default function ReconciliationPage() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {toast.message}
                 </div>
             )}
         </div>

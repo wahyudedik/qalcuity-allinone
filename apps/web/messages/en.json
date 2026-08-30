@@ -1140,7 +1140,15 @@
             "delete": "Delete",
             "confirmDelete": "Are you sure you want to delete this employee? This action cannot be undone.",
             "deleteSuccess": "Employee deleted successfully",
-            "deleteError": "Failed to delete employee"
+            "deleteError": "Failed to delete employee",
+            "date": "Date",
+            "leaves": "Leave Requests",
+            "type": "Type",
+            "startDate": "Start Date",
+            "endDate": "End Date",
+            "days": "Days",
+            "payroll": "Payroll",
+            "netSalary": "Net Salary"
         }
     },
     "settings": {
