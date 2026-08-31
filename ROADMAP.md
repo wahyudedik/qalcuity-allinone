@@ -355,6 +355,75 @@
 - [ ] SSO integration (SAML 2.0, OAuth 2.0)
 - [ ] SOC 2 Type II compliance
 
+### Phase 22: POS Module (Core) 📋 PLANNED
+
+> **POS (Point of Sale) adalah Core Module — bukan produk terpisah.** POS terintegrasi langsung ke ERP: Inventory → Finance → Accounting → CRM → Audit. POS menggunakan Permission Engine, Workflow Engine, dan Audit Trail yang sama.
+> Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22.
+
+#### 22A: POS Core
+
+- [ ] POS Prisma schema (POSSession, POSTransaction, POSTransactionItem, POSTransactionPayment, POSRefund)
+- [ ] POS Sale API — create transaction, add items, apply discounts
+- [ ] POS Payment API — multi payment method (cash, card, e-wallet, QRIS)
+- [ ] POS Return API — return items, partial return
+- [ ] POS Refund API — refund processing with approval workflow
+- [ ] POS Receipt — receipt generation and printing
+- [ ] POS Tax Calculation — automatic tax computation per item/transaction
+- [ ] POS Barcode — barcode scanning for product lookup
+- [ ] POS Customer — customer management for loyalty/receipt
+
+#### 22B: POS Shift & Cash Management
+
+- [ ] POS Shift Management — open shift, track transactions, close shift
+- [ ] POS Cash Drawer — cash in/out tracking, opening/closing cash count
+- [ ] POS Daily Closing — end-of-day closing with approval workflow
+- [ ] POS Cashier Management — cashier assignment and shift scheduling
+- [ ] POS Shift Report — shift summary (total sales, refunds, discounts, cash count)
+
+#### 22C: POS Offline Mode
+
+- [ ] Offline transaction storage (IndexedDB/localStorage)
+- [ ] Offline stock cache with background sync
+- [ ] Offline transaction numbering (offline counter + merge)
+- [ ] Sync conflict resolution (last-write-win + manual)
+- [ ] Duplicate transaction prevention (idempotency key)
+- [ ] Offline audit trail marking (`isOffline: true`)
+
+#### 22D: POS Industry Configuration
+
+- [ ] POS Industry Config Engine — configurable POS flow per industry
+- [ ] POS Retail Config — Barcode → Cart → Payment → Receipt
+- [ ] POS F&B Config — Order → Kitchen → Preparation → Payment
+- [ ] POS Bengkel Config — Customer → Vehicle → Service → Parts → Invoice → Payment
+- [ ] POS Apotek Config — Product → Batch → Expiry → Sale → Payment
+- [ ] POS Hardware Config — barcode scanner, receipt printer, cash drawer, customer display
+
+#### 22E: POS ERP Integration
+
+- [ ] POS → Inventory integration (auto stock deduction on sale)
+- [ ] POS → Finance integration (auto payment recording, revenue tracking)
+- [ ] POS → Accounting integration (auto journal entry, tax entry)
+- [ ] POS → CRM integration (customer purchase history, loyalty)
+- [ ] POS → Audit Trail integration (all POS mutations logged)
+
+#### 22F: POS Permissions & Security
+
+- [ ] POS Permission Matrix — Cashier, Supervisor, Manager roles
+- [ ] POS RBAC enforcement (Middleware + API + UI)
+- [ ] POS Void permission (Supervisor+ only)
+- [ ] POS Discount override permission (Supervisor+ only, >10%)
+- [ ] POS Refund approval permission (Manager+ only)
+- [ ] POS Price change permission (Manager+ only)
+
+#### 22G: POS Reports & Analytics
+
+- [ ] POS Sales Report — daily/weekly/monthly sales summary
+- [ ] POS Product Report — top selling products, product performance
+- [ ] POS Cashier Report — cashier performance, transaction count
+- [ ] POS Shift Report — shift comparison, cash variance
+- [ ] POS Tax Report — tax collected per period
+- [ ] POS Discount Report — discount usage analysis
+
 ---
 
 ## Phase Overview
@@ -364,12 +433,12 @@
    │                │                │                │                │
    ▼                ▼                ▼                ▼                ▼
 ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
-│Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │
-│1-8   │        │9-10  │        │11-13 │        │14-16 │        │17-18 │
-│✅Done │        │📋NEXT│        │📋PLAN│        │📋PLAN│        │📋PLAN│
-└──────┘        └──────┘        └──────┘        └──────┘        └──────┘
-   │                │                │                │                │
- Aug '26        Sep '26         Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27
+│Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │
+│1-8   │        │9-10  │        │11-13 │        │14-16 │        │17-18 │        │22    │
+│✅Done │        │📋NEXT│        │📋PLAN│        │📋PLAN│        │📋PLAN│        │📋PLAN│
+└──────┘        └──────┘        └──────┘        └──────┘        └──────┘        └──────┘
+   │                │                │                │                │                │
+ Aug '26        Sep '26         Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27     Sep-Oct '27
 ```
 
 | Phase | Duration | Focus | Key Deliverables | Status |
@@ -382,6 +451,7 @@
 | **14-16** | Dec '26-Feb '27 | Production + Mobile + Desktop | Multi-platform ready | 📋 `planned` |
 | **17** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
 | **18** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
+| **22** | Sep-Oct '27 | POS Module (Core) | POS Core + Offline + Industry Config + ERP Integration | 📋 `planned` |
 
 ### Success Criteria Per Phase
 
@@ -405,6 +475,7 @@
 | **14-16** | Mobile app store ready | Yes |
 | **17** | Full accounting compliance | Indonesian GAAP |
 | **18** | Paying customers | 100+ companies |
+| **22** | POS operational for all industries | POS Core + Offline + Industry Config |
 
 ---
 
@@ -473,6 +544,7 @@
 | 2026-08-30 | Unified Control Engine — ADR-017 s/d ADR-023, 16 recommendations documented, Phase 10 expanded | Enterprise-grade operational control |
 | 2026-08-30 | Control Center Architecture — ADR-015 & ADR-016, Phase 10 added, Control Center docs updated | Operational backbone |
 | 2026-08-30 | Permission Engine Architecture — ADR-013 & ADR-014, Phase 9 added, docs updated | Architecture foundation |
+| 2026-08-31 | POS Module Architecture — POS as Core Module in ARCHITECTURE.md Section 22, Phase 22 in ROADMAP, POS features in FEATURES | POS module foundation |
 | 2026-08-31 | Architecture Formalization — Business Operating System vision, 3 Foundation Engines, Industry Packs, Decision Tree, Anti-patterns | Strategic architecture |
 | 2026-08-30 | Documentation overhaul — ROADMAP, ARCHITECTURE, DATABASE, SECURITY, UI_UX, DECISIONS | Developer experience |
 | 2026-08-29 | Zod Validation — 14+ schemas, 19 API routes validated | Input security |

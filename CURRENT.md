@@ -31,6 +31,7 @@
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ❌ No auth flow | 0% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
+| **POS Module** | 📋 Planned | 0% |
 | **Tax / GL Module** | ❌ Planned | 0% |
 
 ---
@@ -157,6 +158,46 @@
 
 **Impact:** High — strategic direction for entire platform
 **Timeline:** Phase 11 in ROADMAP.md (Industry Configuration Engine)
+
+---
+
+## 🏗️ POS Module: Core Architecture Decision
+
+**Date:** 2026-08-31
+**Status:** Accepted (Documented)
+**Reference:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22
+
+> **POS (Point of Sale) adalah Core Module dalam Qalcuity — bukan produk terpisah.** POS terintegrasi langsung ke seluruh ekosistem ERP: Inventory → Finance → Accounting → CRM → Audit.
+
+### POS Key Concepts
+
+- **Core Module:** POS bersifat universal — berlaku untuk SEMUA industri yang membutuhkan transaksi penjualan langsung
+- **Industry-Configurable:** POS flow dikonfigurasi per industri (Retail, F&B, Bengkel, Apotek) melalui Industry Configuration Engine
+- **ERP Integration:** POS → Inventory (stock deduction) → Finance (payment) → Accounting (journal) → CRM (customer) → Audit (trail)
+- **Permission-based:** 3 roles (Cashier, Supervisor, Manager) dengan permission matrix granular
+- **Control Engine:** Shift lifecycle (SHIFT_OPEN → TRANSACTIONS → SHIFT_CLOSING → APPROVAL → LOCKED)
+- **Offline Mode:** Transaksi offline dengan sync rules ketat (stock cache, conflict resolution, duplicate prevention)
+- **Uses Same Engines:** Permission Engine, Workflow Engine, Audit Trail — tidak ada engine baru
+
+### POS Integration Flow
+
+```
+POS Sale → Stock berkurang (Inventory) → Payment tercatat (Finance) → Revenue tercatat (Finance)
+→ Tax tercatat (Accounting) → Accounting entry (Journal) → Shift cashier (Shift Management)
+→ Daily closing (Closing) → Audit trail (Audit)
+```
+
+### POS by Industry
+
+| Industry | POS Flow | Special Features |
+|----------|----------|-----------------|
+| Retail | Barcode → Cart → Payment → Receipt | Multi-item cart, barcode scanning |
+| F&B | Order → Kitchen → Preparation → Payment | Kitchen display, table management |
+| Bengkel | Customer → Vehicle → Service → Parts → Invoice → Payment | Vehicle database, service history |
+| Apotek | Product → Batch → Expiry → Sale → Payment | Batch tracking, expiry management |
+
+**Impact:** High — POS is a major revenue driver for retail/F&B/service industries
+**Timeline:** Phase 22 in ROADMAP.md (POS Module Core)
 
 ---
 
@@ -448,6 +489,7 @@ _None currently._
 13. **Production Deployment** — Redis caching, Docker setup, multi-instance rate limiter (Phase 14)
 14. **Fix Decimal Type Errors** — Resolve pre-existing TypeScript Decimal arithmetic issues
 15. **Tax / GL Module** — Planned but not yet started (Phase 17)
+16. **POS Module** — Core POS with offline mode, industry config, ERP integration (Phase 22)
 
 ---
 
@@ -467,4 +509,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 4.0 — Business Operating System Architecture
+**Document Version:** 4.1 — Business Operating System Architecture + POS Module
