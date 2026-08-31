@@ -68,6 +68,10 @@
 | Prisma schema | Production safety — changes require migration | [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) |
 | Middleware RBAC | Authorization-critical | [`apps/web/middleware.ts`](apps/web/middleware.ts) |
 | Session helpers | Security-critical auth helpers | [`apps/web/lib/session.ts`](apps/web/lib/session.ts) |
+| Permission Engine | Core foundation — affects all authorization | `@qalcuity/permissions` package, `can()` engine |
+| Workflow Engine | Core foundation — affects all transaction lifecycles | `@qalcuity/workflow` package |
+| Industry Configuration Engine | Core foundation — affects all industry customizations | `@qalcuity/industry-config` package |
+| Architecture Vision | Strategic direction — changes require founder approval | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 1-11 |
 
 ### Rule 6: Security First
 
@@ -75,6 +79,31 @@
 - **Setiap query WAJIB filter `tenantId`** — tidak ada exception
 - **RBAC harus diperiksa di 3 lapisan**: Middleware + API Route + UI
 - **JANGAN hardcode secrets** — gunakan environment variables
+
+### Rule 7: Configuration Before Customization
+
+> ⚠️ **JANGAN hardcode logic untuk industri tertentu di core module. Gunakan configuration engine.**
+
+- **Cek apakah fitur berlaku untuk SEMUA industri** → Jika ya, tambah ke Core Module
+- **Cek apakah fitur bisa dikonfigurasi** → Jika ya, gunakan Industry Configuration Engine
+- **Cek apakah fitur spesifik untuk 1 industri** → Jika ya, buat Industry Pack
+- **JANGAN tambahkan `if (industry === 'X')` di core code** — violasi open/closed principle
+- **JANGAN hardcode workflow/approval/fields** — gunakan configurable engines
+- Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 10 untuk Decision Tree
+
+**Decision Tree untuk AI Agent:**
+
+```
+Request: "Tambahkan fitur untuk X"
+  ↓
+Apakah ini:
+  1. Core capability? → Tambah ke core module
+  2. Configuration? → Tambah ke industry config
+  3. Industry module? → Buat industry pack
+  4. Custom module? → Buat custom module
+  ↓
+Baru tentukan tempat implementasi
+```
 
 ---
 
@@ -839,6 +868,44 @@ cd apps/web && npx tsx __tests__/e2e-test.ts
 
 ---
 
-**Last Updated:** August 30, 2026
+## 15. Architecture Philosophy
+
+> **"Qalcuity — Business Operating System yang dapat dikonfigurasi untuk berbagai jenis industri."**
+
+### 15.1 Core Philosophy
+
+Qalcuity dibangun dengan filosofi **"Core + Configuration"**:
+- **Core** menyediakan kemampuan bisnis universal (Finance, CRM, HR, Inventory, dll.)
+- **Configuration** memungkinkan setiap industri menyesuaikan workflow, approval, fields, dan dashboard sesuai kebutuhan mereka
+
+### 15.2 Three Foundation Engines
+
+| Engine | Responsibility | Package |
+|--------|---------------|---------|
+| **Permission Engine** | Industry-agnostic granular permissions | `@qalcuity/permissions` |
+| **Workflow Engine** | Configurable transaction lifecycle | `@qalcuity/workflow` |
+| **Industry Configuration Engine** | Industry packs + custom fields/documents/reports | `@qalcuity/industry-config` |
+
+### 15.3 Key Principle
+
+> **"Never design a feature for only one industry unless the feature is inherently industry-specific. Prefer reusable core capabilities, configurable workflows, configurable fields, configurable permissions, configurable approval rules, and industry-specific extensions over hardcoded industry logic."**
+
+### 15.4 Anti-patterns (HARD RULES)
+
+| ❌ Anti-pattern | ✅ Correct Approach |
+|----------------|-------------------|
+| `if (industry === 'manufacturing')` di core code | Gunakan Industry Configuration Engine |
+| Hardcoded workflow status di code | Gunakan Workflow Engine |
+| Hardcoded approval levels (3 level fixed) | Gunakan configurable approval rules |
+| Schema Prisma dengan field tambahan tanpa engine | Gunakan custom fields engine |
+| Dashboard widgets yang fixed per module | Gunakan dashboard configuration |
+
+### 15.5 Reference
+
+Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap arsitektur Business Operating System.
+
+---
+
+**Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 3.0 — Hard Rules + Architecture Summary
+**Document Version:** 4.0 — Business Operating System Architecture

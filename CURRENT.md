@@ -28,7 +28,7 @@
 | **UI/UX (Responsive, i18n, Dark Mode)** | ✅ Implemented | 90% |
 | **Reporting & Charts** | ✅ Working | 85% |
 | **AI Features** | ⚠️ Basic/Mock | 20% |
-| **Payment Gateway** | ❌ Not implemented | 0% |
+| **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ❌ No auth flow | 0% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
 | **Tax / GL Module** | ❌ Planned | 0% |
@@ -82,6 +82,12 @@
 - [x] Superadmin approval/reject workflow
 - [x] WhatsApp confirmation flag
 - [x] Notification bell for admin payments
+- [x] **Midtrans Snap Integration** — Real payment gateway for subscription payments ([`apps/web/lib/payment/midtrans.ts`](apps/web/lib/payment/midtrans.ts))
+  - Create transaction API — [`/api/billing/payments/midtrans`](apps/web/app/api/billing/payments/midtrans/route.ts)
+  - Webhook/callback handler — [`/api/billing/payments/midtrans/callback`](apps/web/app/api/billing/payments/midtrans/callback/route.ts)
+  - HMAC SHA512 signature verification
+  - Billing page Midtrans payment button
+  - Payment success redirect flow
 
 ### AI Features (Basic)
 - [x] AI Chat — Floating button component ([`components/ai/ai-chat.tsx`](apps/web/components/ai/ai-chat.tsx))
@@ -109,6 +115,48 @@
 - [x] **Web App** — Core Next.js application, production-ready ([`apps/web/`](apps/web/))
 - [x] **Desktop App** — Electron wrapper, placeholder ([`apps/desktop/`](apps/desktop/))
 - [x] **Mobile App** — React Native/Expo, 12 screens, no auth ([`apps/mobile/`](apps/mobile/))
+
+---
+
+## 🏗️ Architecture Vision: Business Operating System
+
+**Date:** 2026-08-31
+**Status:** Accepted (Formalized)
+**Reference:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 1-11
+
+> **"Qalcuity — Business Operating System yang dapat dikonfigurasi untuk berbagai jenis industri."**
+> Bukan "Qalcuity ERP untuk perusahaan dagang."
+
+### Three Foundation Engines
+
+| Engine | Package | Responsibility | Status |
+|--------|---------|---------------|--------|
+| **Permission Engine** | `@qalcuity/permissions` | Industry-agnostic granular permissions | 📋 Phase 9 |
+| **Workflow Engine** | `@qalcuity/workflow` | Configurable transaction lifecycle | 📋 Phase 10 |
+| **Industry Configuration Engine** | `@qalcuity/industry-config` | Industry packs + custom fields/documents/reports | 📋 Phase 11 |
+
+### Key Decisions
+
+1. **Core + Configuration Philosophy** — Core modules bersifat universal, configuration layer memungkinkan customisasi per industri
+2. **Industry Packs = Configuration, bukan Hardcoding** — Industry Pack mendefinisikan default configuration, bukan code baru
+3. **Decision Tree for AI Agent** — Core Capability → Configuration → Industry Module → Custom Module
+4. **Anti-pattern: No Hardcoded Industry Logic** — `if (industry === 'X')` dilarang di core code
+5. **Dashboard by Industry + Role + Module + Permission** — Dashboard dikonfigurasi, bukan hardcoded
+
+### Industry Packs Planned
+
+| Industry | Custom Workflows | Custom Fields | Custom Documents |
+|----------|-----------------|---------------|-----------------|
+| Retail | POS, Stock Replenishment | Barcode, Shelf Location | Stock Opname Report |
+| Wholesale/Distribution | Order → Delivery → Invoice | Route, Driver, Vehicle | Delivery Order |
+| Manufacturing | Sales Order → WO → QC → Delivery | Production Line, Batch, BOM | Work Order, QC Report |
+| Construction | Project → Milestone → Billing | Site, Contract, Progress | Progress Report, BAST |
+| Consulting/Agency | Proposal → SOW → Timesheet → Invoice | Project, Billable Hours | SOW, Timesheet |
+| Logistics | Order → Pickup → Ship → Deliver | Route, Driver, Vehicle | Delivery Note, POD |
+| Education | Registration → Enrollment → Graduation | Student, Class, Semester | Transcript, Certificate |
+
+**Impact:** High — strategic direction for entire platform
+**Timeline:** Phase 11 in ROADMAP.md (Industry Configuration Engine)
 
 ---
 
@@ -385,19 +433,21 @@ _None currently._
 
 ## 🔜 Next Steps (Priority Order)
 
-1. **Permission Engine Foundation** — Design permission model, implement `@qalcuity/permissions` package, `can()` engine (Phase 9)
+1. **Permission Engine Foundation** — Design permission model, implement `@qalcuity/permissions` package, `can()` engine — industry-agnostic (Phase 9)
 2. **Platform Admin Dashboard** — Create `apps/platform-admin` for Qalcuity Owner (Phase 9)
 3. **Unified Control Engine** — Policy Engine + Workflow + Approval + SLA + Delegation + SoD + Exception Center + Locking (Phase 10, ADR-017 s/d ADR-023)
-4. **Security Hardening** — Implement CSP headers, configure CORS (Phase 12)
-5. **Payment Gateway** — Midtrans/Xendit integration for automated billing (Phase 11)
-6. **Mobile Auth** — Authentication flow for React Native app (Phase 14)
-7. **Shared UI Components** — `@qalcuity/ui` React components (currently tokens only)
-8. **Advanced Reporting** — Real-time data, custom dashboards, scheduled reports
-9. **Full AI Agent Suite** — Replace mock AI responses with real database queries per module
-10. **Offline Sync** — Mobile/desktop offline capability with sync on reconnect
-11. **Production Deployment** — Redis caching, Docker setup, multi-instance rate limiter (Phase 13)
-12. **Fix Decimal Type Errors** — Resolve pre-existing TypeScript Decimal arithmetic issues
-13. **Tax / GL Module** — Planned but not yet started (Phase 16)
+4. **Industry Configuration Engine** — Custom fields + Custom documents + Custom reports + Industry packs (Phase 11)
+5. **Industry Pack Framework** — Engine + 3 default packs + dashboard config (Phase 11 milestone)
+6. **Security Hardening** — Implement CSP headers, configure CORS (Phase 13)
+7. **Payment Gateway** — Midtrans/Xendit integration for automated billing (Phase 12)
+8. **Mobile Auth** — Authentication flow for React Native app (Phase 15)
+9. **Shared UI Components** — `@qalcuity/ui` React components (currently tokens only)
+10. **Advanced Reporting** — Real-time data, custom dashboards, scheduled reports
+11. **Full AI Agent Suite** — Replace mock AI responses with real database queries per module
+12. **Offline Sync** — Mobile/desktop offline capability with sync on reconnect
+13. **Production Deployment** — Redis caching, Docker setup, multi-instance rate limiter (Phase 14)
+14. **Fix Decimal Type Errors** — Resolve pre-existing TypeScript Decimal arithmetic issues
+15. **Tax / GL Module** — Planned but not yet started (Phase 17)
 
 ---
 
@@ -417,4 +467,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 3.0 — Code Quality & Dynamic Data Sprint
+**Document Version:** 4.0 — Business Operating System Architecture

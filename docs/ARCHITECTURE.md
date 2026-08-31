@@ -1,112 +1,846 @@
-# 🏗️ Qalcuity — Technical Architecture
+# 🏗️ Qalcuity — Business Operating System Architecture
 
-> **Last Updated:** 30 Agustus 2026
-> **Current Version:** v1.0.0-beta.1
+> **"Qalcuity — Business Operating System yang dapat dikonfigurasi untuk berbagai jenis industri."**
+> Bukan "Qalcuity ERP untuk perusahaan dagang."
+
+> **Last Updated:** 31 Agustus 2026
+> **Current Version:** v2.0.0 — Business Operating System Architecture
 
 ---
 
 ## 📋 Daftar Isi
 
-1. [System Overview](#1-system-overview)
-2. [Tech Stack](#2-tech-stack)
-3. [Monorepo Structure](#3-monorepo-structure)
-4. [Permission Architecture](#4-permission-architecture)
-5. [Application Architecture](#5-application-architecture)
-6. [Shared Packages](#6-shared-packages)
-7. [Data Flow](#7-data-flow)
-8. [Security Layers](#8-security-layers)
-9. [API Design](#9-api-design)
-10. [Control Center Architecture](#10-control-center-architecture)
-11. [Deployment Architecture](#11-deployment-architecture)
+1. [Vision Statement](#1-vision-statement)
+2. [Core Architecture — 3 Fondasi](#2-core-architecture--3-fondasi)
+3. [Foundation Engine: Permission Engine](#3-foundation-engine-permission-engine)
+4. [Foundation Engine: Workflow Engine](#4-foundation-engine-workflow-engine)
+5. [Foundation Engine: Industry Configuration Engine](#5-foundation-engine-industry-configuration-engine)
+6. [Core Modules (Industry-Agnostic)](#6-core-modules-industry-agnostic)
+7. [Industry Packs (Configuration)](#7-industry-packs-configuration)
+8. [Configurable Elements](#8-configurable-elements)
+9. [Dashboard by Industry](#9-dashboard-by-industry)
+10. [AI Agent Decision Tree](#10-ai-agent-decision-tree)
+11. [Anti-patterns to Avoid](#11-anti-patterns-to-avoid)
+12. [Tech Stack](#12-tech-stack)
+13. [Monorepo Structure](#13-monorepo-structure)
+14. [Permission Architecture](#14-permission-architecture)
+15. [Application Architecture](#15-application-architecture)
+16. [Shared Packages](#16-shared-packages)
+17. [Data Flow](#17-data-flow)
+18. [Security Layers](#18-security-layers)
+19. [API Design](#19-api-design)
+20. [Unified Control Engine Architecture](#20-unified-control-engine-architecture)
+21. [Deployment Architecture](#21-deployment-architecture)
 
 ---
 
-## 1. System Overview
+## 1. Vision Statement
 
+### Prinsip Utama
+
+> **Qalcuity adalah Business Operating System yang dapat dikonfigurasi untuk berbagai jenis industri** — bukan ERP spesifik industri.
+
+Qalcuity dibangun dengan filosofi **"Core + Configuration"**:
+- **Core** menyediakan kemampuan bisnis universal (Finance, CRM, HR, Inventory, dll.)
+- **Configuration** memungkinkan setiap industri menyesuaikan workflow, approval, fields, dan dashboard sesuai kebutuhan mereka
+
+### Arsitektur 3 Fondasi
+
+```mermaid
+graph TB
+    subgraph CORE["🏗️ QALCUITY CORE"]
+        PE[Permission Engine]
+        WE[Workflow Engine]
+        ICE[Industry Configuration Engine]
+        
+        PE --> BM[All Business Modules]
+        WE --> BM
+        ICE --> BM
+    end
+    
+    BM --> FIN[Finance]
+    BM --> CRM[CRM/Sales]
+    BM --> INV[Inventory]
+    BM --> HR[HR]
+    BM --> PM[Project Management]
+    BM --> SUP[Support/Tickets]
+    BM --> AI[AI Engine]
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         PLATFORMS                                            │
-│                                                                             │
-│  ┌──────────────┐  ┌──────────────────┐  ┌────────────────────────┐        │
-│  │   Web App    │  │   Desktop App    │  │     Mobile App         │        │
-│  │  (Next.js)   │  │  (Electron)      │  │  (React Native/Expo)   │        │
-│  │  apps/web/   │  │  apps/desktop/   │  │  apps/mobile/          │        │
-│  │  ✅ Active   │  │  ⚠️ Placeholder  │  │  ⚠️ Partial            │        │
-│  └──────┬───────┘  └────────┬─────────┘  └───────────┬────────────┘        │
-│         │                   │                         │                     │
-│         └───────────────────┼─────────────────────────┘                     │
-│                             │ HTTPS / REST API                              │
-└─────────────────────────────┼───────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────▼───────────────────────────────────────────────┐
-│                        NEXT.JS SERVER                                        │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                     MIDDLEWARE LAYER                                 │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐          │   │
-│  │  │  NextAuth    │  │    RBAC      │  │   Rate Limiter   │          │   │
-│  │  │  (JWT Auth)  │  │  (4 Roles)   │  │  (Per-IP)        │          │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────────┘          │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                              │                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                   ROUTE HANDLERS (35 routes, 19 files)               │   │
-│  │                                                                      │   │
-│  │  /api/auth/*          Auth (login, register, session)               │   │
-│  │  /api/crm/*           CRM (leads, contacts, deals)                  │   │
-│  │  /api/finance/*       Finance (invoices, payments, PO, CoA)        │   │
-│  │  /api/hr/*            HR (employees, attendance, leaves, payroll)   │   │
-│  │  /api/inventory/*     Inventory (products, categories, suppliers)   │   │
-│  │  /api/reports/*       Reporting (12 report types)                   │   │
-│  │  /api/settings/*      Settings (company, team, notifications)       │   │
-│  │  /api/audit/*         Audit Trail                                   │   │
-│  │  /api/search/*        Global Search (Ctrl+K)                        │   │
-│  │  /api/health/*        Health Check                                  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                              │                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    BUSINESS LOGIC LAYER                              │   │
-│  │                                                                      │   │
-│  │  lib/auth.ts        Auth configuration & JWT callbacks              │   │
-│  │  lib/db.ts          Prisma client singleton                         │   │
-│  │  lib/session.ts     Session helpers (requireMutateAuth, etc.)       │   │
-│  │  lib/audit.ts       Audit trail logging                             │   │
-│  │  lib/rate-limit.ts  In-memory rate limiter                          │   │
-│  │  lib/sanitize.ts    Input sanitization                              │   │
-│  │  lib/export.ts      CSV/Excel/Print export                          │   │
-│  │  lib/email.ts       Email notification (SMTP)                       │   │
-│  │  lib/validation-schemas.ts  Zod schemas (14+)                       │   │
-│  │  lib/i18n.tsx       Internationalization provider                   │   │
-│  │  lib/ai/provider.ts AI provider abstraction                         │   │
-│  │  lib/payment/       Payment gateway abstraction (Midtrans/Xendit)   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                              │                                              │
-└──────────────────────────────┼──────────────────────────────────────────────┘
-                               │ Prisma ORM
-                               ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        DATA LAYER                                            │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Prisma Schema (packages/db/prisma/schema.prisma)               │   │
-│  │  26 models │ Multi-tenant │ Soft delete │ Audit fields          │   │
-│  │  57 indexes │ Decimal(15,2) │ CUID IDs                          │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│         ┌────────────────────────────────────────┐                          │
-│         ▼                                        ▼                          │
-│  ┌──────────────────┐              ┌──────────────────┐                    │
-│  │ PostgreSQL 18.4  │              │ In-Memory Store  │                    │
-│  │ (DBngin local)   │              │ (AI mock data)   │                    │
-│  │ Trust auth       │              └──────────────────┘                    │
-│  └──────────────────┘                                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+
+```text
+                    QALCUITY CORE
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+ Permission          Workflow         Industry
+  Engine              Engine        Configuration
+        │                │                │
+        └────────────────┼────────────────┘
+                         ↓
+                ALL BUSINESS MODULES
+```
+
+### Prinsip Wajib untuk AI Agent
+
+> **"Never design a feature for only one industry unless the feature is inherently industry-specific. Prefer reusable core capabilities, configurable workflows, configurable fields, configurable permissions, configurable approval rules, and industry-specific extensions over hardcoded industry logic."**
+
+---
+
+## 2. Core Architecture — 3 Fondasi
+
+### 2.1 Architecture Overview
+
+```mermaid
+graph TB
+    subgraph PLATFORMS
+        WEB[Web App<br/>Next.js 14]
+        DESK[Desktop App<br/>Electron]
+        MOB[Mobile App<br/>React Native]
+    end
+    
+    subgraph CORE_ENGINES["⚙️ Qalcuity Core Engines"]
+        PE[Permission Engine<br/>can\\(user, action, resource, ctx\\)]
+        WE[Workflow Engine<br/>Configurable Status Transitions]
+        ICE[Industry Config Engine<br/>Industry Packs + Custom Fields]
+    end
+    
+    subgraph MODULES["📦 Business Modules"]
+        FIN[Finance]
+        CRM[CRM/Sales]
+        INV[Inventory]
+        HR[HR]
+        PM[Project Management]
+        SUP[Support/Tickets]
+        AI[AI Engine]
+    end
+    
+    subgraph DATA["💾 Data Layer"]
+        PRISMA[Prisma ORM]
+        PG[PostgreSQL]
+    end
+    
+    WEB --> CORE_ENGINES
+    DESK --> CORE_ENGINES
+    MOB --> CORE_ENGINES
+    
+    CORE_ENGINES --> MODULES
+    MODULES --> DATA
+```
+
+### 2.2 What Makes Qalcuity Different
+
+| Aspek | ERP Tradisional | Qalcuity BOS |
+|-------|----------------|--------------|
+| **Pendekatan** | Hardcoded untuk 1 industri | Core universal + Config per industri |
+| **Workflow** | Fixed workflow | Configurable per perusahaan |
+| **Approval** | Hardcoded levels | Configurable threshold + routing |
+| **Fields** | Fixed schema | Custom fields per kebutuhan |
+| **Dashboard** | Generic | Industry-specific + Role-based |
+| **AI** | Add-on | Built-in, industry-aware |
+
+---
+
+## 3. Foundation Engine: Permission Engine
+
+> **Industry-agnostic granular permission system.**
+
+### 3.1 Model
+
+```mermaid
+graph LR
+    U[User] --> M[Membership]
+    M --> R[Role]
+    R --> P[Permission]
+    P --> S[Scope]
+    S --> RES[Resource]
+    RES --> A[Action]
+```
+
+```text
+User → Membership → Role → Permission → Scope → Resource → Action
+```
+
+### 3.2 Engine API
+
+```typescript
+// Core permission check
+can(user, action, resource, context) → boolean
+
+// Example usage
+can(budi, "approve", "invoice", { branch: "Surabaya" })
+// → true if budi has invoice.approve permission for Surabaya branch
+
+can(sari, "create", "purchase_order", { department: "Procurement", amount: 50000000 })
+// → true if sari has purchase_order.create for Procurement dept
+```
+
+### 3.3 Two Universes
+
+| Universe | Scope | Examples |
+|----------|-------|----------|
+| **Platform Permissions** | Internal Qalcuity operations | `tenant.view`, `subscription.manage`, `system.monitor` |
+| **Tenant Permissions** | Customer organization operations | `invoice.approve`, `employee.view`, `payroll.manage` |
+
+### 3.4 Cross-platform Enforcement
+
+| Platform | Enforcement | Notes |
+|----------|------------|-------|
+| **Web** | UI conditional rendering + API middleware | `can()` on every page |
+| **Mobile** | Same `@qalcuity/permissions` package | Identical logic |
+| **Desktop** | Same `@qalcuity/permissions` package | Identical logic |
+| **API** | Middleware enforcement | `can()` check on every route |
+| **AI Agent** | Tool-level permission checks | Agent checks before executing actions |
+
+### 3.5 Industry-Agnostic Design
+
+Permission Engine **tidak mengenal industri**. Yang mengenal industri adalah **Industry Configuration Engine** yang mendefinisikan:
+- Resource apa saja yang ada per industri
+- Action apa saja yang tersedia per resource
+- Scope apa saja yang relevan per industri
+
+---
+
+## 4. Foundation Engine: Workflow Engine
+
+> **Configurable transaction lifecycle per perusahaan.**
+
+### 4.1 Core Concept
+
+```mermaid
+graph LR
+    DRAFT --> SUBMITTED
+    SUBMITTED --> UNDER_REVIEW
+    UNDER_REVIEW --> APPROVED
+    APPROVED --> POSTED
+    POSTED --> COMPLETED
+    COMPLETED --> LOCKED
+```
+
+```text
+DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED → POSTED → COMPLETED → LOCKED
+```
+
+### 4.2 What's Configurable
+
+| Element | Configurable? | Example |
+|---------|--------------|---------|
+| **Statuses** | ✅ Ya | Tambah status `NEEDS_REVISION` antara UNDER_REVIEW dan DRAFT |
+| **Transitions** | ✅ Ya | ALLOW `APPROVED → DRAFT` untuk revision |
+| **Guards** | ✅ Ya | TRANSITION hanya boleh dilakukan oleh role tertentu |
+| **Actions** | ✅ Ya | AUTO-GENERATE invoice saat deal CLOSED_WON |
+| **Notifications** | ✅ Ya | Notify Finance Manager saat invoice APPROVED |
+| **SLA** | ✅ Ya | APPROVED dalam 24 jam, jika breach → escalate |
+
+### 4.3 Workflow Configuration Example
+
+```yaml
+# Invoice Workflow untuk Perusahaan Manufaktur
+workflow:
+  name: "Invoice Workflow"
+  entity: "invoice"
+  statuses:
+    - DRAFT
+    - SUBMITTED
+    - APPROVED_BY_MANAGER
+    - APPROVED_BY_DIRECTOR  # Tambahan untuk amount > 100 juta
+    - SENT
+    - PAID
+    - OVERDUE
+    - CANCELLED
+  
+  transitions:
+    - from: DRAFT
+      to: SUBMITTED
+      guard: "creator or admin"
+    
+    - from: SUBMITTED
+      to: APPROVED_BY_MANAGER
+      guard: "amount < 100000000"
+      auto: true  # Auto-approve jika < 100 juta
+    
+    - from: SUBMITTED
+      to: APPROVED_BY_DIRECTOR
+      guard: "amount >= 100000000"
+    
+    - from: APPROVED_BY_DIRECTOR
+      to: SENT
+      guard: "finance_manager or director"
+```
+
+### 4.4 Unified Pipeline
+
+```mermaid
+graph TB
+    TX[Transaction] --> PE[Policy Engine]
+    PE --> WE[Workflow]
+    WE --> AE[Approval]
+    AE --> ES[Escalation + SLA + Delegation]
+    ES --> NE[Notification]
+    NE --> LE[Locking]
+    LE --> AT[Audit Trail]
+```
+
+```text
+Transaction → Policy Engine → Workflow → Approval → Escalation+SLA+Delegation → Notification → Locking → Audit Trail
 ```
 
 ---
 
-## 2. Tech Stack
+## 5. Foundation Engine: Industry Configuration Engine
+
+> **Memungkinkan Qalcuity dikonfigurasi untuk berbagai industri tanpa hardcoding.**
+
+### 5.1 Core Concept
+
+Industry Configuration Engine menyediakan **layer konfigurasi** di atas Core Modules:
+
+```mermaid
+graph TB
+    subgraph ICE["⚙️ Industry Configuration Engine"]
+        IP[Industry Packs]
+        CF[Custom Fields]
+        CD[Custom Documents]
+        CR[Custom Reports]
+        CW[Custom Workflows]
+    end
+    
+    IP --> FIN[Finance]
+    IP --> CRM[CRM/Sales]
+    IP --> INV[Inventory]
+    IP --> HR[HR]
+    
+    CF --> FIN
+    CF --> CRM
+    CF --> INV
+    CF --> HR
+    
+    CD --> FIN
+    CD --> HR
+    
+    CR --> FIN
+    CR --> CRM
+    CR --> INV
+    CR --> HR
+```
+
+### 5.2 What's Configurable
+
+| Element | Deskripsi | Contoh |
+|---------|-----------|--------|
+| **Custom Fields** | Field tambahan per entity | NPWP, NIB, PIC, Branch, Project, Site, Contract Number |
+| **Custom Documents** | Document types + status + workflow | Surat Pesanan, Delivery Note, BAST, Service Report |
+| **Custom Reports** | Reports berdasarkan module + field | Laporan Proyek, Laporan Produksi, Laporan Ticket |
+| **Custom Workflows** | Workflow per transaction type | Quotation → Approval → SO → Delivery → Invoice → Payment |
+| **Approval Rules** | Configurable approval routing | < 10 juta → Supervisor, 10-100 juta → Manager, > 100 juta → Director |
+| **Locking Rules** | Period locking configuration | Monthly closing, Quarterly closing, Yearly closing |
+| **Dashboard Widgets** | Industry-specific dashboard | Manufacturing: Production, WIP, Quality; Retail: Sales, Stock, Cash |
+
+### 5.3 Custom Fields Configuration
+
+```yaml
+# Custom Fields untuk Industri Konstruksi
+custom_fields:
+  entity: "project"
+  fields:
+    - name: "site_location"
+      type: "text"
+      label: "Lokasi Proyek"
+      required: true
+    
+    - name: "contract_number"
+      type: "text"
+      label: "Nomor Kontrak"
+      required: true
+    
+    - name: "progress_percentage"
+      type: "number"
+      label: "Progress (%)"
+      min: 0
+      max: 100
+    
+    - name: "site_photos"
+      type: "file"
+      label: "Foto Lokasi"
+      multiple: true
+```
+
+### 5.4 Custom Documents Configuration
+
+```yaml
+# Custom Documents untuk Industri Manufaktur
+custom_documents:
+  - name: "Work Order"
+    entity: "work_order"
+    statuses:
+      - PLANNED
+      - IN_PROGRESS
+      - QUALITY_CHECK
+      - COMPLETED
+      - CANCELLED
+    workflow:
+      auto_create_from: "sales_order"
+      approval_required: true
+      sla_hours: 48
+  
+  - name: "Quality Report"
+    entity: "quality_report"
+    statuses:
+      - DRAFT
+      - SUBMITTED
+      - APPROVED
+      - REJECTED
+    fields:
+      - name: "defect_count"
+        type: "number"
+      - name: "defect_photos"
+        type: "file"
+```
+
+---
+
+## 6. Core Modules (Industry-Agnostic)
+
+> **Semua modul ini bersifat universal — berlaku untuk semua industri.**
+
+### 6.1 Module Overview
+
+```mermaid
+graph TB
+    subgraph CORE["📦 Core Modules — Industry-Agnostic"]
+        FIN[Finance<br/>Invoice, Payment, Journal, GL]
+        CRM[CRM/Sales<br/>Lead, Deal, Contact]
+        INV[Inventory<br/>Product, Stock, Supplier]
+        HR[HR<br/>Employee, Attendance, Leave, Payroll]
+        PM[Project Management<br/>Task, Timeline, Resource]
+        SUP[Support/Tickets<br/>Ticket, SLA, Knowledge Base]
+        AI[AI Engine<br/>NLQ, Doc Extraction, Prediction]
+    end
+```
+
+| Module | Core Entities | Status |
+|--------|--------------|--------|
+| **Finance** | Invoice, Payment, Journal, GL, Quotation, PO, CoA, Bank Reconciliation | ✅ CRUD Ready |
+| **CRM/Sales** | Lead, Deal, Contact, Pipeline, Quotation | ✅ CRUD Ready |
+| **Inventory** | Product, Stock, Category, Supplier, Stock Movement | ✅ CRUD Ready |
+| **HR** | Employee, Attendance, Leave, Payroll | ✅ CRUD Ready |
+| **Project Management** | Task, Timeline, Resource Allocation | 📋 Planned |
+| **Support/Tickets** | Ticket, SLA, Knowledge Base | 📋 Planned |
+| **AI Engine** | Natural Language Query, Doc Extraction, Prediction | ⚠️ Basic/Mock |
+
+### 6.2 Core Module Principles
+
+1. **Universal** — Tidak ada asumsi industri tertentu
+2. **Configurable** — Bisa dikonfigurasi melalui Industry Configuration Engine
+3. **Extensible** — Bisa ditambah custom fields, custom documents, custom workflows
+4. **Composable** — Bisa dikombinasikan sesuai kebutuhan industri
+
+---
+
+## 7. Industry Packs (Configuration)
+
+> **Industry Packs = Configuration, bukan Hardcoding.**
+> Industry Pack mendefinisikan **default configuration** untuk industri tertentu, bukan code baru.
+
+### 7.1 Supported Industries
+
+```mermaid
+graph TB
+    subgraph RETAIL["🛒 Retail & Commerce"]
+        R1[Retail]
+        R2[Wholesale]
+        R3[Distribution]
+        R4[E-commerce]
+    end
+    
+    subgraph MFG["🏭 Manufacturing"]
+        M1[Manufacturing]
+        M2[Food & Beverage]
+        M3[Automotive]
+        M4[Electronics]
+    end
+    
+    subgraph CONST["🏗️ Construction & Engineering"]
+        C1[Construction]
+        C2[Engineering]
+        C3[Property]
+    end
+    
+    subgraph LOG["🚛 Logistics"]
+        L1[Logistics]
+        L2[Transportation]
+        L3[Warehouse]
+    end
+    
+    subgraph SVC["💼 Services"]
+        S1[Consulting]
+        S2[Agency]
+        S3[IT Services]
+        S4[Professional Services]
+    end
+    
+    subgraph OTHER["🏥 Other Industries"]
+        O1[Education & Training]
+        O2[Healthcare]
+        O3[Hospitality]
+        O4[Custom Industry]
+    end
+```
+
+### 7.2 Industry Pack = Configuration Bundle
+
+```yaml
+# Contoh: Industry Pack untuk Manufaktur
+industry_pack:
+  name: "Manufacturing"
+  description: "Configuration untuk industri manufaktur"
+  
+  # Default modules yang aktif
+  modules:
+    - finance
+    - crm
+    - inventory
+    - hr
+    - project_management
+  
+  # Custom workflows
+  workflows:
+    - name: "Sales Order → Production"
+      from: "sales_order"
+      to: "work_order"
+      auto_create: true
+    
+    - name: "Quality Control"
+      from: "work_order"
+      to: "quality_report"
+      approval_required: true
+  
+  # Custom fields
+  custom_fields:
+    product:
+      - name: "sku"
+        type: "text"
+        label: "SKU"
+      - name: "unit_of_measure"
+        type: "select"
+        options: ["pcs", "kg", "meter", "box"]
+    
+    work_order:
+      - name: "production_line"
+        type: "select"
+        options: ["Line A", "Line B", "Line C"]
+      - name: "batch_number"
+        type: "text"
+      - name: "expiry_date"
+        type: "date"
+  
+  # Custom documents
+  custom_documents:
+    - name: "Work Order"
+    - name: "Quality Report"
+    - name: "Bill of Materials"
+    - name: "Production Schedule"
+  
+  # Dashboard widgets
+  dashboard_widgets:
+    - production_overview
+    - material_usage
+    - quality_metrics
+    - machine_utilization
+    - work_in_progress
+    - inventory_levels
+```
+
+### 7.3 Industry Pack Marketplace
+
+| Industry Pack | Status | Custom Workflows | Custom Fields | Custom Documents |
+|---------------|--------|-----------------|---------------|-----------------|
+| **Retail** | 📋 Planned | POS, Stock Replenishment | Barcode, Shelf Location | Stock Opname Report |
+| **Wholesale/Distribution** | 📋 Planned | Order → Delivery → Invoice | Route, Driver, Vehicle | Delivery Order |
+| **Manufacturing** | 📋 Planned | Sales Order → WO → QC → Delivery | Production Line, Batch, BOM | Work Order, QC Report |
+| **Food & Beverage** | 📋 Planned | Recipe → Production → Expiry | Recipe, Expiry Date, Batch | Production Report |
+| **Construction** | 📋 Planned | Project → Milestone → Billing | Site, Contract, Progress | Progress Report, BAST |
+| **Property** | 📋 Planned | Unit → Booking → Contract | Unit Type, Block, Floor | Booking Form, Handover |
+| **Logistics** | 📋 Planned | Order → Pickup → Ship → Deliver | Route, Driver, Vehicle | Delivery Note, POD |
+| **Consulting/Agency** | 📋 Planned | Proposal → SOW → Timesheet → Invoice | Project, Billable Hours | SOW, Timesheet, Invoice |
+| **Education** | 📋 Planned | Registration → Enrollment → Graduation | Student, Class, Semester | Transcript, Certificate |
+| **Healthcare** | 📋 Planned | Registration → Treatment → Billing | Patient, Doctor, Room | Medical Record, Insurance |
+
+---
+
+## 8. Configurable Elements
+
+> **Semua elemen berikut BISA dikonfigurasi per perusahaan. Tidak ada yang hardcode.**
+
+### 8.1 Workflow Configuration
+
+```mermaid
+graph LR
+    Q[Quotation] -->|Approval| SO[Sales Order]
+    SO -->|Delivery| DN[Delivery Note]
+    DN -->|Invoice| INV[Invoice]
+    INV -->|Payment| PAY[Payment]
+```
+
+| Workflow | Configurable? | Default | Override |
+|----------|--------------|---------|----------|
+| **Sales Flow** | ✅ | Quotation → SO → Delivery → Invoice → Payment | Per perusahaan |
+| **Purchase Flow** | ✅ | PR → PO → GR → Bill → Payment | Per perusahaan |
+| **Leave Flow** | ✅ | Apply → Manager → HR → Approved | Per departemen |
+| **Invoice Flow** | ✅ | Draft → Submit → Approve → Send → Paid | Per perusahaan |
+
+### 8.2 Approval Rules Configuration
+
+```yaml
+# Approval Rules — Configurable per perusahaan
+approval_rules:
+  - entity: "invoice"
+    rules:
+      - condition: "amount < 10000000"        # < 10 juta
+        approver: "supervisor"
+        sla_hours: 4
+      
+      - condition: "amount >= 10000000 and amount < 100000000"  # 10-100 juta
+        approver: "manager"
+        sla_hours: 24
+      
+      - condition: "amount >= 100000000"      # > 100 juta
+        approver: "director"
+        sla_hours: 48
+  
+  - entity: "purchase_order"
+    rules:
+      - condition: "amount < 50000000"
+        approver: "supervisor"
+        sla_hours: 4
+      
+      - condition: "amount >= 50000000"
+        approver: "director"
+        sla_hours: 48
+```
+
+### 8.3 Locking Configuration
+
+```yaml
+# Locking Rules — Configurable per perusahaan
+locking_rules:
+  transaction_lock:
+    automatically_lock_when_completed: true
+  
+  monthly_closing:
+    enable: true
+    closing_day: 5  # Tanggal 5 setiap bulan
+  
+  quarterly_closing:
+    enable: true
+  
+  yearly_closing:
+    enable: true
+  
+  edit_locked: "require_approval"
+  delete_locked: "disabled"
+  backdated: "require_approval"
+```
+
+### 8.4 Custom Fields Configuration
+
+| Entity | Standard Fields | Custom Fields (Configurable) |
+|--------|----------------|----------------------------|
+| **Invoice** | Number, Date, Amount, Status | NPWP, NIB, PIC, Branch, Project, Contract Number |
+| **Product** | Name, SKU, Price, Stock | Batch Number, Expiry Date, Unit of Measure, Barcode |
+| **Employee** | Name, Position, Department | Branch, Site, Contract Type, BPJS Number |
+| **Deal** | Name, Value, Stage | Industry, Source Campaign, Competitor, Win Reason |
+| **Project** | Name, Budget, Timeline | Site Location, Contract Number, Progress %, Client PO |
+
+### 8.5 Custom Documents Configuration
+
+| Document Type | Industries | Statuses | Workflow |
+|---------------|-----------|----------|----------|
+| **Delivery Note** | Retail, Wholesale, Manufacturing | DRAFT → SENT → RECEIVED | Auto-created from SO |
+| **Work Order** | Manufacturing | PLANNED → IN_PROGRESS → QC → COMPLETED | Created from SO |
+| **BAST** | Construction, Engineering | DRAFT → REVIEWED → SIGNED → COMPLETED | Created at project milestone |
+| **Service Report** | Consulting, Agency, IT | DRAFT → SUBMITTED → APPROVED | Created weekly |
+| **Stock Opname** | Retail, Wholesale, Warehouse | PLANNED → COUNTED → ADJUSTED | Monthly schedule |
+
+### 8.6 Custom Reports Configuration
+
+| Report Type | Source Module | Customizable? |
+|-------------|-------------|---------------|
+| **Sales Report** | Finance + CRM | ✅ Filter by period, product, customer |
+| **Inventory Report** | Inventory | ✅ Filter by category, warehouse, stock level |
+| **HR Report** | HR | ✅ Filter by department, period, type |
+| **Project Report** | Project Management | ✅ Filter by project, milestone, team |
+| **Production Report** | Inventory + Custom | ✅ Filter by line, batch, period |
+| **Financial Statements** | Finance | ✅ Filter by period, account, department |
+
+---
+
+## 9. Dashboard by Industry
+
+> **Dashboard dikonfigurasi berdasarkan Industri + Role + Module + Permission.**
+
+### 9.1 Dashboard Configuration
+
+```yaml
+# Dashboard Configuration per Industry
+dashboards:
+  retail:
+    widgets:
+      - sales_overview
+      - stock_levels
+      - top_products
+      - cash_flow
+      - customer_count
+      - transaction_count
+  
+  manufacturing:
+    widgets:
+      - production_overview
+      - material_usage
+      - machine_utilization
+      - quality_metrics
+      - work_in_progress
+      - inventory_levels
+  
+  construction:
+    widgets:
+      - project_overview
+      - budget_tracking
+      - progress_status
+      - purchase_summary
+      - material_usage
+      - worker_count
+  
+  services:
+    widgets:
+      - project_overview
+      - ticket_summary
+      - sla_compliance
+      - employee_utilization
+      - billable_hours
+      - invoice_summary
+```
+
+### 9.2 Dashboard Matrix
+
+| Industry | Widget 1 | Widget 2 | Widget 3 | Widget 4 | Widget 5 | Widget 6 |
+|----------|----------|----------|----------|----------|----------|----------|
+| **Retail** | Sales | Stock | Top Products | Cash | Customer | Transactions |
+| **Manufacturing** | Production | Material | Machine | Quality | WIP | Inventory |
+| **Construction** | Projects | Budget | Progress | Purchase | Material | Workers |
+| **Services** | Projects | Tickets | SLA | Employees | Billable Hours | Invoices |
+| **Logistics** | Deliveries | Routes | Vehicles | Warehouse | Cost/Delivery | On-Time % |
+| **Education** | Students | Classes | Enrollment | Revenue | Attendance | Certificates |
+
+### 9.3 Role-based Dashboard
+
+| Role | Dashboard View | Access Level |
+|------|---------------|-------------|
+| **Owner/Director** | Full dashboard + Control Center | All modules + settings |
+| **Manager** | Department dashboard + Management view | Department modules + team |
+| **Staff** | Work inbox + assigned modules | Assigned modules only |
+| **Viewer** | Read-only dashboard | View only |
+
+---
+
+## 10. AI Agent Decision Tree
+
+> **Decision tree untuk AI Agent saat menerima request fitur baru.**
+
+### 10.1 Decision Tree
+
+```mermaid
+graph TD
+    REQ[Request: "Tambahkan fitur untuk X"] --> Q1{Apakah ini<br/>Core Capability?}
+    
+    Q1 -->|Ya| CORE[Tambah ke Core Module]
+    Q1 -->|Tidak| Q2{Apakah ini<br/>Configuration?}
+    
+    Q2 -->|Ya| CONFIG[Tambah ke Industry Config]
+    Q2 -->|Tidak| Q3{Apakah ini<br/>Industry Module?}
+    
+    Q3 -->|Ya| IND[Buat Industry Pack]
+    Q3 -->|Tidak| Q4{Apakah ini<br/>Custom Module?}
+    
+    Q4 -->|Ya| CUSTOM[Buat Custom Module]
+    Q4 -->|Tidak| REJECT[Tolak —outside scope]
+    
+    CORE --> IMPLEMENT[Implement]
+    CONFIG --> IMPLEMENT
+    IND --> IMPLEMENT
+    CUSTOM --> IMPLEMENT
+```
+
+### 10.2 Decision Criteria
+
+| Question | Criteria | Action |
+|----------|----------|--------|
+| **Core Capability?** | Berguna untuk SEMUA industri | Tambah ke core module |
+| **Configuration?** | Bisa diatasi dengan workflow/field/report config | Tambah ke industry config |
+| **Industry Module?** | Spesifik untuk 1-2 industri saja | Buat industry pack |
+| **Custom Module?** | Kebutuhan unik perusahaan tertentu | Buat custom module |
+
+### 10.3 Examples
+
+| Request | Decision | Rationale |
+|---------|----------|-----------|
+| "Tambahkan fitur Work Order" | → **Industry Pack (Manufacturing)** | Work Order spesifik manufaktur |
+| "Tambahkan field NPWP di Invoice" | → **Industry Config (Custom Fields)** | Field tambahan, bukan core change |
+| "Tambahkan multi-currency" | → **Core Module** | Berguna untuk SEMUA industri |
+| "Tambahkan BAST document" | → **Industry Pack (Construction)** | Document spesifik konstruksi |
+| "Tambahkan approval chain" | → **Core Module (Workflow Engine)** | Universal capability |
+| "Tambahkan GPS check-in" | → **Industry Pack (Field Service)** | Spesifik industri tertentu |
+| "Tambahkan barcode scanning" | → **Industry Config** | Bisa diatasi dengan custom field |
+
+### 10.4 Anti-pattern Decision
+
+| ❌ Anti-pattern | ✅ Correct Approach |
+|----------------|-------------------|
+| Hardcode "Work Order" di core module | Buat industry pack untuk Manufacturing |
+| Hardcode "NPWP field" di Invoice schema | Gunakan custom fields engine |
+| Hardcode "Approval 3 level" di code | Gunakan configurable approval rules |
+| Hardcode "Dashboard manufaktur" | Gunakan dashboard configuration |
+| Hardcode "Report produksi" | Gunakan custom reports engine |
+
+---
+
+## 11. Anti-patterns to Avoid
+
+> **Daftar anti-pattern yang HARUS dihindari dalam pengembangan Qalcuity.**
+
+### 11.1 Architecture Anti-patterns
+
+| Anti-pattern | Description | Why Bad | Correct Approach |
+|-------------|-------------|---------|-----------------|
+| **Hardcoded Industry Logic** | Menambahkan `if (industry === 'manufacturing')` di core code | Viols open/closed principle, membuat core tidak reusable | Gunakan Industry Configuration Engine |
+| **Hardcoded Workflow** | Workflow status yang fixed di code | Tidak bisa dikonfigurasi per perusahaan | Gunakan Workflow Engine |
+| **Hardcoded Approval** | Approval level yang fixed (3 level) | Tidak bisa diatur per industri/perusahaan | Gunakan configurable approval rules |
+| **Hardcoded Fields** | Field tambahan di schema Prisma tanpa engine | Schema blow-up, tidak scalable | Gunakan custom fields engine |
+| **Hardcoded Dashboard** | Dashboard widgets yang fixed per module | Tidak bisa dikonfigurasi per industri | Gunakan dashboard configuration |
+| **Hardcoded Reports** | Report queries yang fixed | Tidak bisa dikonfigurasi per industri | Gunakan custom reports engine |
+| **Industry-specific Code in Core** | Code seperti `if (industry === 'retail') { ... }` di core module | Core menjadi tidak universal | Buat industry pack |
+
+### 11.2 Code Anti-patterns
+
+| Anti-pattern | Description | Correct Approach |
+|-------------|-------------|-----------------|
+| **Copy-Paste Code** | Menduplicate code antar module | Extract ke shared utility/package |
+| **God Component** | Component yang terlalu besar (>500 lines) | Split ke smaller components |
+| **Prop Drilling** | Passing props melalui many levels | Use context or state management |
+| **Magic Numbers** | Hardcoded values tanpa constant | Extract ke constants file |
+| **Any Type** | Menggunakan `any` di TypeScript | Use proper types |
+| **Console.log** | Debug logs di production code | Use proper logging |
+
+### 11.3 Validation Rule
+
+> **Setiap code change harus di-validasi dengan pertanyaan:**
+> 1. Apakah ini berlaku untuk SEMUA industri? → Core module
+> 2. Apakah ini bisa dikonfigurasi? → Industry Configuration
+> 3. Apakah ini spesifik untuk 1 industri? → Industry Pack
+> 4. Apakah ini spesifik untuk 1 perusahaan? → Custom Module
+
+---
+
+## 12. Tech Stack
 
 | Layer | Technology | Version | Status |
 |-------|-----------|---------|--------|
@@ -125,14 +859,14 @@
 
 ---
 
-## 3. Monorepo Structure (Updated)
+## 13. Monorepo Structure
 
 ```
 qalcuity-allinone/
 ├── apps/
-│   ├── web/                    # @qalcuity/web — Next.js core app (Customer ERP)
+│   ├── web/                    # @qalcuity/web — Next.js core app
 │   │   ├── app/                # Next.js App Router pages
-│   │   │   ├── api/            # API Route Handlers (35 routes)
+│   │   │   ├── api/            # API Route Handlers (35+ routes)
 │   │   │   ├── dashboard/      # Dashboard pages (SSR)
 │   │   │   ├── (auth)/         # Auth pages (login, register)
 │   │   │   ├── layout.tsx      # Root layout
@@ -141,50 +875,20 @@ qalcuity-allinone/
 │   │   ├── lib/                # Utility libraries
 │   │   ├── messages/           # i18n translation files
 │   │   └── types/              # TypeScript type definitions
-│   ├── desktop/                # Electron desktop app (Customer ERP)
-│   │   ├── main.js             # Electron main process
-│   │   ├── preload.js          # Preload script
-│   │   └── package.json        # Desktop dependencies
-│   ├── mobile/                 # React Native / Expo mobile app (Customer ERP)
-│   │   ├── screens/            # Screen components
-│   │   ├── lib/                # API utilities
-│   │   ├── App.tsx             # App entry point
-│   │   └── app.json            # Expo config
+│   ├── desktop/                # Electron desktop app
+│   ├── mobile/                 # React Native / Expo mobile app
 │   └── platform-admin/         # Qalcuity Admin dashboard [PLANNED]
-│       └── ...                 # Platform management UI
 ├── packages/
 │   ├── auth/                   # @qalcuity/auth — Auth logic [PLANNED]
-│   │   └── src/
-│   │       ├── index.ts
-│   │       ├── session.ts      # Session management
-│   │       └── providers.ts    # Auth providers
 │   ├── permissions/            # @qalcuity/permissions — Permission engine [PLANNED]
-│   │   └── src/
-│   │       ├── index.ts
-│   │       ├── engine.ts       # can() permission engine
-│   │       ├── types.ts        # Permission types
-│   │       └── constants.ts    # Permission definitions
+│   ├── workflow/               # @qalcuity/workflow — Workflow engine [PLANNED]
+│   ├── industry-config/        # @qalcuity/industry-config — Industry config engine [PLANNED]
 │   ├── db/                     # @qalcuity/db — Prisma schema + client
-│   │   ├── prisma/
-│   │   │   ├── schema.prisma   # Database schema (26+ models)
-│   │   │   └── seed.ts         # Database seeder
-│   │   └── src/index.ts        # Package entry point
 │   ├── types/                  # @qalcuity/types — Shared TypeScript types
-│   │   └── src/index.ts
 │   ├── utils/                  # @qalcuity/utils — Shared utilities
-│   │   └── src/index.ts
 │   ├── config/                 # @qalcuity/config — App constants + env config
-│   │   └── src/
-│   │       ├── constants.ts
-│   │       ├── env.ts
-│   │       └── features.ts
 │   ├── validation/             # @qalcuity/validation — Zod schemas
-│   │   └── src/index.ts
 │   ├── ui/                     # @qalcuity/ui — Design tokens (partial)
-│   │   └── src/
-│   │       ├── tokens.ts
-│   │       ├── theme.ts
-│   │       └── icons.ts
 │   └── i18n/                   # @qalcuity/i18n — i18n utilities
 ├── docs/                       # Documentation
 ├── plans/                      # Development plans
@@ -194,11 +898,11 @@ qalcuity-allinone/
 
 ---
 
-## 4. Permission Architecture
+## 14. Permission Architecture
 
 ### Model
 
-```
+```text
 User → Membership → Role → Permission → Scope → Resource → Action
 ```
 
@@ -222,34 +926,6 @@ can(budi, "approve", "invoice", { branch: "Surabaya" })
 
 > ⚠️ Keduanya tidak boleh tercampur.
 
-### Permission Flow
-
-```
-User
- ↓
-Organization Membership
- ↓
-Role
- ↓
-Permission
- ↓
-Resource
- ↓
-Action
- ↓
-Scope (Branch / Department)
-```
-
-### Cross-platform Enforcement
-
-| Platform | Enforcement Method | Notes |
-|----------|-------------------|-------|
-| **Web** | UI conditional rendering + API middleware | Current: role-based. Target: permission-based |
-| **Mobile** | Same permission engine | `@qalcuity/permissions` package |
-| **Desktop** | Same permission engine | `@qalcuity/permissions` package |
-| **API** | Middleware enforcement | `can()` check on every route |
-| **AI Agent** | Tool-level permission checks | Agent checks before executing actions |
-
 ### Current vs Target
 
 | Aspect | Current (v1.0) | Target (v2.0) |
@@ -262,7 +938,7 @@ Scope (Branch / Department)
 
 ---
 
-## 5. Application Architecture
+## 15. Application Architecture
 
 ### Next.js App Router Patterns
 
@@ -277,16 +953,9 @@ Scope (Branch / Department)
 - `[id]/page.tsx` — Dynamic detail pages
 - `[id]/loading.tsx` — Detail page loading states
 
-**API Route Patterns:**
-- `route.ts` — Next.js App Router API handlers
-- `GET` — List/read operations
-- `POST` — Create operations
-- `PUT` — Update operations
-- `DELETE` — Delete operations
-
 ### Middleware Architecture
 
-```
+```text
 Request → NextAuth (JWT) → RBAC Check → Rate Limiter → Route Handler
               │                 │              │
               ▼                 ▼              ▼
@@ -294,40 +963,26 @@ Request → NextAuth (JWT) → RBAC Check → Rate Limiter → Route Handler
          Extract session   Route access   Reject if exceeded
 ```
 
-### Component Architecture
-
-```
-apps/web/components/
-├── auth/               # Auth-related components
-├── finance/            # Finance form components
-├── layout/             # Layout (sidebar, header, dashboard-layout)
-├── ui/                 # Generic UI components
-│   ├── charts/         # Chart components (Bar, Pie, Line)
-│   ├── modal.tsx       # Reusable modal
-│   └── confirmation-dialog.tsx  # Delete confirmation
-└── ai/                 # AI chat component
-```
-
-> **Note:** Starting from Phase 7 (Permission Engine), all UI components will use permission-based conditional rendering instead of role-based checks.
-
 ---
 
-## 6. Shared Packages
+## 16. Shared Packages
 
 ### Package Dependency Graph
 
-```
-@apps/web ──→ @qalcuity/db          (Prisma client)
-           ──→ @qalcuity/types       (Shared types)
-           ──→ @qalcuity/utils       (Utility functions)
-           ──→ @qalcuity/config      (Constants, env)
-           ──→ @qalcuity/validation  (Zod schemas)
-           ──→ @qalcuity/i18n        (i18n utilities)
-           ──→ @qalcuity/ui          (Design tokens)
-           ──→ @qalcuity/auth        (Auth logic) [PLANNED]
-           ──→ @qalcuity/permissions (Permission engine) [PLANNED]
+```text
+@apps/web ──→ @qalcuity/db              (Prisma client)
+           ──→ @qalcuity/types           (Shared types)
+           ──→ @qalcuity/utils           (Utility functions)
+           ──→ @qalcuity/config          (Constants, env)
+           ──→ @qalcuity/validation      (Zod schemas)
+           ──→ @qalcuity/i18n            (i18n utilities)
+           ──→ @qalcuity/ui              (Design tokens)
+           ──→ @qalcuity/auth            (Auth logic) [PLANNED]
+           ──→ @qalcuity/permissions     (Permission engine) [PLANNED]
+           ──→ @qalcuity/workflow        (Workflow engine) [PLANNED]
+           ──→ @qalcuity/industry-config (Industry config) [PLANNED]
 
-@apps/mobile ──→ @qalcuity/types    (Shared types)
+@apps/mobile ──→ @qalcuity/types
               ──→ @qalcuity/permissions [PLANNED]
 
 @apps/desktop ──→ (Web app as renderer)
@@ -350,14 +1005,16 @@ apps/web/components/
 | `@qalcuity/ui` | ⚠️ Partial | Tokens only, no React components yet |
 | `@qalcuity/auth` | 📋 Planned | Auth logic (extract from web) |
 | `@qalcuity/permissions` | 📋 Planned | Permission engine (`can()` function) |
+| `@qalcuity/workflow` | 📋 Planned | Workflow engine (configurable status transitions) |
+| `@qalcuity/industry-config` | 📋 Planned | Industry configuration engine |
 
 ---
 
-## 7. Data Flow
+## 17. Data Flow
 
 ### Standard Request Flow
 
-```
+```text
 ┌──────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Client  │ ──→ │  Middleware  │ ──→ │  API Route   │ ──→ │   Prisma     │
 │  Request │     │  Auth+RBAC   │     │  Validation  │     │   Query      │
@@ -369,20 +1026,13 @@ apps/web/components/
                  │ Role Check   │     │ Sanitize     │     │ Filter       │
                  │ Rate Limit   │     │ Audit Log    │     │ Execute      │
                  └──────────────┘     └──────────────┘     └──────────────┘
-                       │                      │                     │
-                       ▼                      ▼                     ▼
-                 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-                 │ Allow/Deny   │     │ Process      │     │ Response     │
-                 │              │     │ Business     │     │ JSON         │
-                 │              │     │ Logic        │     │              │
-                 └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
 ### Mutations (Create/Update/Delete)
 
-```
+```text
 1. Auth check     → getServerSession(authOptions)
-2. RBAC check     → requireMutateAuth(req) or role-based check
+2. RBAC check     → requireMutateAuth(req) or can() check
 3. Tenant filter  → session.user.tenantId
 4. Validation     → zodSchema.parse(body)
 5. Sanitization   → sanitize(body)
@@ -393,16 +1043,16 @@ apps/web/components/
 
 ---
 
-## 8. Security Layers
+## 18. Security Layers
 
 ### Defense-in-Depth Pattern
 
-```
+```text
 Layer 1: Middleware          → Route protection, role-based redirect
-Layer 2: API Route          → Session validation, RBAC check
+Layer 2: API Route          → Session validation, RBAC check (can() engine)
 Layer 3: Business Logic     → Input validation, tenant isolation
 Layer 4: Database           → tenantId filter, CUID IDs
-Layer 5: UI                 → Role-based rendering, hide/disable actions
+Layer 5: UI                 → Permission-based rendering, hide/disable actions
 ```
 
 ### Auth Configuration
@@ -422,7 +1072,7 @@ Layer 5: UI                 → Role-based rendering, hide/disable actions
 
 ---
 
-## 9. API Design
+## 19. API Design
 
 ### Route Inventory
 
@@ -438,7 +1088,7 @@ Layer 5: UI                 → Role-based rendering, hide/disable actions
 | **Audit** | 1 | 1 | GET |
 | **Search** | 1 | 1 | GET |
 | **Health** | 1 | 1 | GET |
-| **Total** | **35** | **19** | — |
+| **Total** | **35+** | **19+** | — |
 
 ### Response Format
 
@@ -454,7 +1104,7 @@ Layer 5: UI                 → Role-based rendering, hide/disable actions
 
 ---
 
-## 10. Unified Control Engine Architecture
+## 20. Unified Control Engine Architecture
 
 ### Overview
 
@@ -464,43 +1114,20 @@ Qalcuity Unified Control Engine adalah **satu engine terpadu** yang menjadi oper
 
 ### Unified Pipeline
 
-Berbeda dari model sebelumnya (6 engine terpisah), Unified Control Engine menggunakan **satu pipeline terpadu**:
-
-```
-┌─────────────┐
-│ Transaction │ ── User creates/edits a transaction
-└──────┬──────┘
-       ▼
-┌──────────────┐
-│ Policy Engine│ ── Evaluates business rules (WHEN condition THEN action)
-└──────┬───────┘
-       ▼
-┌────────────┐
-│  Workflow  │ ── Determines status transition
-└──────┬─────┘
-       ▼
-┌────────────┐
-│  Approval  │ ── Routes to approver(s) based on rules + amount threshold
-└──────┬─────┘
-       ▼
-┌─────────────────────────────┐
-│ Escalation + SLA + Delegation│ ── Monitors deadline, escalates if breached
-└──────┬──────────────────────┘
-       ▼
-┌────────────────┐
-│  Notification  │ ── Alerts relevant parties
-└──────┬─────────┘
-       ▼
-┌────────────┐
-│  Locking   │ ── Locks transaction/period if applicable
-└──────┬─────┘
-       ▼
-┌──────────────┐
-│ Audit Trail  │ ── Logs every step (immutable)
-└──────────────┘
+```mermaid
+graph TB
+    TX[Transaction] --> PE[Policy Engine]
+    PE --> WE[Workflow]
+    WE --> AE[Approval]
+    AE --> ES[Escalation + SLA + Delegation]
+    ES --> NE[Notification]
+    NE --> LE[Locking]
+    LE --> AT[Audit Trail]
 ```
 
-> Lihat [ADR-017](DECISIONS.md#adr-017-unified-control-engine) untuk detail arsitektur pipeline.
+```text
+Transaction → Policy Engine → Workflow → Approval → Escalation+SLA+Delegation → Notification → Locking → Audit Trail
+```
 
 ### Sub-Components
 
@@ -521,206 +1148,23 @@ Berbeda dari model sebelumnya (6 engine terpisah), Unified Control Engine menggu
 | **Work Inbox** | Personal work dashboard | Tasks, approvals, escalations | [ADR-023](DECISIONS.md#adr-023-control-dashboard-tiers) |
 | **Period Closing** | Period closing wizard | Step-by-step with pre-checks | [ADR-022](DECISIONS.md#adr-022-period-closing-wizard) |
 
-### 10.1 Policy Engine
-
-Rules bisnis konfigurabel per perusahaan. Lihat [ADR-018](DECISIONS.md#adr-018-policy-engine-architecture).
-
-```yaml
-Policy Rule:
-  WHEN:
-    - "transaction.type == 'invoice'"
-    - "transaction.amount > 50000000"
-  THEN:
-    action: "require_approval"
-    approvers: ["finance_manager", "director"]
-    sla_hours: 24
-```
-
-- **Conditions:** amount threshold, department, branch, transaction type, vendor/category
-- **Actions:** require_approval, auto_approve, block, flag_for_review, notify
-- **Versioning:** rules berlaku sejak tanggal tertentu, histori tetap ada
-
-### 10.2 Segregation of Duties (SoD)
-
-Mencegah konflik kepentingan dalam proses bisnis. Lihat [ADR-019](DECISIONS.md#adr-019-segregation-of-duties).
-
-```
-Pencatat Invoice ≠ Penerima Barang ≠ Penerima Pembayaran ≠ Yang Approve
-```
-
-- SoD matrix dikonfigurasi per perusahaan
-- Conflict detection real-time saat assignment
-- Exception approval untuk override (Director level)
-
-### 10.3 Amount Threshold Approvals
-
-Tiered approval berdasarkan nominal transaksi:
-
-```
-< Rp 10 juta     → Auto-approve
-Rp 10-50 juta    → Manager approval
-Rp 50-200 juta   → Director approval
-> Rp 200 juta    → Board approval
-```
-
-- Threshold dikonfigurasi per departemen/jenis transaksi
-- Kombinasi dengan Policy Engine rules
-
-### 10.4 SLA & Delegation
-
-SLA tracking dengan automatic escalation. Lihat [ADR-020](DECISIONS.md#adr-020-sla--delegation-framework).
-
-**SLA Color Coding:**
-
-| Status | Time Range | Color |
-|--------|-----------|-------|
-| On Track | 0-50% SLA | 🟢 Green |
-| Warning | 50-100% SLA | 🟡 Yellow |
-| Breached | >100% SLA | 🔴 Red |
-
-**Delegation Framework:**
-
-- Manager delegate approval authority saat absent
-- Scope: siapa → ke siapa, periode, scope
-- Auto-expire setelah periode selesai
-- Full audit trail
-
-### 10.5 Work Inbox
-
-Personal dashboard untuk setiap user:
-
-| Section | Description |
-|---------|-------------|
-| **Overdue Tasks** | Tasks yang sudah melewati deadline |
-| **Approval Required** | Transaksi menunggu approval user ini |
-| **Awaiting Action** | Transaksi yang perlu input dari user |
-| **Assigned to Me** | Task yang ditugaskan ke user |
-| **Escalated to Me** | Transaksi yang di-escalate ke user |
-| **Recently Completed** | Aktivitas terakhir yang sudah selesai |
-
-### 10.6 Exception Center
-
-Dashboard terpusat untuk semua anomali. Lihat [ADR-021](DECISIONS.md#adr-021-exception-center--emergency-access).
-
-| Exception Type | Severity |
-|---------------|----------|
-| Transactions Overdue | 🟠 High |
-| SLA Breached | 🔴 Critical |
-| SoD Conflicts | 🔴 Critical |
-| Negative Stock Alerts | 🟠 High |
-| Unreconciled Payments | 🟡 Medium |
-| Policy Violations | 🔴 Critical |
-
-### 10.7 Reason Required & Transaction Timeline
-
-**Reason Required:**
-
-- SETIAP edit/delete/override pada transaksi yang sudah submitted WAJIB isi reason
-- Reason field mandatory + optional attachment
-- Disimpan di audit trail
-
-**Transaction Timeline:**
-
-- Full history: Who, When, What, Status changes, Approval chain, Comments
-- Visual timeline di halaman detail transaksi
-- "Why am I seeing this?" — contextual help di UI
-
-### 10.8 Emergency Access
-
-Temporary elevated permission untuk situasi darurat:
-
-```
-Request → Reason → Director Approval → Temporary Grant → Auto-revoke → Security Alert
-```
-
-- Maximum duration: 24 jam
-- Full audit trail
-- Security team notification
-
-### 10.9 Access Review
-
-Periodic review oleh managers:
-
-- Review permission setiap bawahannya
-- Revoke akses yang tidak diperlukan
-- Scheduled review (quarterly)
-- Review status: reviewed, pending, overdue
-
-### 10.10 Period Closing Wizard
-
-Step-by-step wizard untuk menutup periode akuntansi. Lihat [ADR-022](DECISIONS.md#adr-022-period-closing-wizard).
-
-```
-1. Pre-checks (semua transaksi ter-posting?)
-2. Show exceptions (overdue, unreconciled, policy violations)
-3. Require resolution atau explicit exception approval
-4. Final review summary
-5. Approval (Director/Finance Manager)
-6. Lock period
-7. Generate period summary report
-```
-
-### 10.11 Control Dashboard (3 Tiers)
-
-Lihat [ADR-023](DECISIONS.md#adr-023-control-dashboard-tiers).
-
-| Tier | View | Who Sees It |
-|------|------|-------------|
-| **My Dashboard** | Personal work inbox, pending approvals, overdue items | All users |
-| **Management Dashboard** | Team workload, SLA compliance, escalation alerts | Manager, Director |
-| **Control Center** | Organization-wide policy violations, SoD conflicts, compliance metrics | Director, Admin, Auditor |
-
 ### Transaction Lifecycle
 
-```
+```text
 DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED → POSTED → COMPLETED → LOCKED
 ```
 
 ### Lock Hierarchy
 
-```
+```text
 Transaction → Day → Month → Quarter → Year
 ```
 
 > Higher level lock = all lower levels automatically locked.
 
-### Immutable Transactions
-
-- Tidak ada physical DELETE untuk transaksi yang sudah locked
-- Corrections via Adjustment entries → Reference original → Approval → Audit Trail
-- Histori tetap ada
-
-### Permission-Based Control
-
-```
-transaction.view | transaction.create | transaction.edit | transaction.delete
-transaction.submit | transaction.approve | transaction.lock | transaction.unlock
-transaction.adjust | transaction.export
-```
-
-> `lock`, `unlock`, `adjust` = permission sangat sensitif.
-
-### Lock Policy (Per-Company Configurable)
-
-```yaml
-Transaction Lock:
-  Automatically lock when completed: true
-
-Monthly Closing:
-  Enable: true
-  Closing day: 5
-
-Yearly Closing:
-  Enable: true
-
-Edit locked: Require approval
-Delete locked: Disabled
-Backdated: Require approval
-```
-
 ---
 
-## 11. Deployment Architecture
+## 21. Deployment Architecture
 
 ### Development Setup
 
@@ -732,7 +1176,7 @@ Backdated: Require approval
 
 ### Production Setup (Planned)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                    Load Balancer                          │
 │                  (Nginx / Cloudflare)                     │
@@ -763,11 +1207,14 @@ Backdated: Require approval
 
 ---
 
-> **Note:** Permission middleware will be added to the security layers during Phase 7 (Permission Engine Foundation).
+> **Note:** Permission middleware will be added to the security layers during Phase 9 (Permission Engine Foundation).
 
 > **Note:** Control Center engines will be implemented in Phase 10 (Control Center Foundation).
 
+> **Note:** Industry Configuration Engine will be implemented in Phase 11 (Industry Configuration Foundation).
+
 ---
 
-**Last Updated:** August 30, 2026
+**Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity Engineering Team
+**Document Version:** 2.0 — Business Operating System Architecture
