@@ -132,7 +132,10 @@
 ### Phase 9: Permission Engine Foundation 📋 PLANNED
 
 > **Fondasi arsitektur — granular permission engine sebagai pengganti 4-role RBAC.**
+> **Industry-agnostic** — Permission Engine tidak mengenal industri. Yang mengenal industri adalah Industry Configuration Engine.
 > Lihat [ADR-013](docs/DECISIONS.md#adr-013-permission-engine-architecture) dan [ADR-014](docs/DECISIONS.md#adr-014-platform-vs-tenant-architecture).
+
+#### 9A: Core Permission Engine
 
 - [ ] Design permission model (Prisma schema: Permission, Role, Membership, Scope)
 - [ ] Implement `@qalcuity/permissions` package (`can()` engine)
@@ -140,6 +143,10 @@
 - [ ] Create permission middleware for API routes
 - [ ] Create permission hooks for UI components (`usePermission()`)
 - [ ] Migrate from 4-role RBAC to granular permissions
+- [ ] Migration strategy from current 4-role system
+
+#### 9B: Platform Admin & Cross-platform
+
 - [ ] Create `apps/platform-admin` (Qalcuity Admin dashboard)
 - [ ] Platform Admin roles (Super Admin, Platform Admin, Developer, Support, Finance, Security, Analytics)
 - [ ] Implement platform permissions (tenant, billing, system, support, feature_flags)
@@ -149,7 +156,12 @@
 - [ ] AI Agent permission checks (tool-level `can()` before execution)
 - [ ] Mobile permission support (same `@qalcuity/permissions` package)
 - [ ] Desktop permission support (same `@qalcuity/permissions` package)
-- [ ] Migration strategy from current 4-role system
+
+#### 9C: Industry-Agnostic Validation
+
+- [ ] Validasi bahwa Permission Engine tidak mengandung hardcoded industry logic
+- [ ] Permission engine berfungsi untuk SEMUA industri tanpa perubahan code
+- [ ] Permission engine mendukung custom resources dari Industry Configuration Engine
 
 ### Phase 10: Unified Control Engine 📋 PLANNED
 
@@ -216,7 +228,52 @@
 - [ ] Mobile Control Center support
 - [ ] AI Agent workflow integration
 
-### Phase 11: Integration Layer 📋 PLANNED
+### Phase 11: Industry Configuration Engine 📋 PLANNED
+
+> **Fondasi arsitektur — Industry Configuration Engine yang memungkinkan Qalcuity dikonfigurasi untuk berbagai industri.**
+> Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 5 dan Section 7.
+
+#### 11A: Core Configuration Engine
+
+- [ ] Design Industry Configuration Engine architecture
+- [ ] Implement `@qalcuity/industry-config` package
+- [ ] Implement Custom Fields engine (dynamic fields per entity)
+- [ ] Implement Custom Documents engine (document types + status + workflow)
+- [ ] Implement Custom Reports engine (reports berdasarkan module + field)
+- [ ] Design Industry Pack data model (Prisma schema)
+
+#### 11B: Industry Pack Framework
+
+- [ ] Create Industry Pack loader (load config per tenant)
+- [ ] Create Industry Pack API (CRUD untuk managing packs)
+- [ ] Create Industry Pack UI (dashboard untuk configuring packs)
+- [ ] Implement default Industry Packs (template untuk setiap industri)
+- [ ] Industry Pack: Retail (POS, Stock Replenishment, Barcode)
+- [ ] Industry Pack: Wholesale/Distribution (Route, Driver, Delivery Order)
+- [ ] Industry Pack: Manufacturing (Work Order, BOM, Quality Report)
+- [ ] Industry Pack: Food & Beverage (Recipe, Expiry, Batch)
+- [ ] Industry Pack: Construction (Site, Contract, Progress, BAST)
+- [ ] Industry Pack: Property (Unit, Booking, Handover)
+- [ ] Industry Pack: Logistics (Route, Vehicle, POD)
+- [ ] Industry Pack: Consulting/Agency (Project, SOW, Timesheet)
+- [ ] Industry Pack: Education (Student, Class, Enrollment)
+- [ ] Industry Pack: Healthcare (Patient, Treatment, Insurance)
+
+#### 11C: Dashboard Configuration
+
+- [ ] Implement Dashboard Configuration engine (widgets per industry)
+- [ ] Dashboard: Retail (Sales, Stock, Top Products, Cash, Customer)
+- [ ] Dashboard: Manufacturing (Production, Material, Machine, Quality, WIP, Inventory)
+- [ ] Dashboard: Construction (Projects, Budget, Progress, Purchase, Material, Workers)
+- [ ] Dashboard: Services (Projects, Tickets, SLA, Employees, Billable Hours, Invoices)
+- [ ] Dashboard: Logistics (Deliveries, Routes, Vehicles, Warehouse, Cost/Delivery)
+- [ ] Dashboard: Education (Students, Classes, Enrollment, Revenue, Attendance)
+
+#### 11D: Milestone
+
+- [ ] **Milestone: Industry Pack Framework Ready** — Engine + 3 default packs + dashboard config
+
+### Phase 12: Integration Layer 📋 PLANNED
 
 > Email, payment gateway, dan webhook integrations.
 
@@ -228,7 +285,7 @@
 - [ ] Webhook handlers — PENDING
 - [ ] Omnichannel (WhatsApp, Email, Instagram) — PLANNED
 
-### Phase 12: Security Hardening 📋 PLANNED
+### Phase 13: Security Hardening 📋 PLANNED
 
 > Hardening keamanan untuk production deployment.
 
@@ -240,7 +297,7 @@
 - [ ] Rate limiter migration to Redis
 - [ ] Security penetration testing
 
-### Phase 13: Production MVP 📋 PLANNED
+### Phase 14: Production MVP 📋 PLANNED
 
 > Infrastructure untuk production deployment.
 
@@ -251,7 +308,7 @@
 - [ ] Load testing
 - [ ] Environment validation (mandatory env vars)
 
-### Phase 14: Mobile Foundation 📋 PLANNED
+### Phase 15: Mobile Foundation 📋 PLANNED
 
 > Mobile app harus diperlakukan sebagai platform terpisah (bukan "versi kecil Web").
 
@@ -263,7 +320,7 @@
 - [ ] Biometric authentication
 - [ ] Platform-specific UX (iOS/Android conventions)
 
-### Phase 15: Desktop Enhancement 📋 PLANNED
+### Phase 16: Desktop Enhancement 📋 PLANNED
 
 > Desktop app memerlukan offline capability dan native integrasi.
 
@@ -274,7 +331,7 @@
 - [ ] System tray integration
 - [ ] File system access
 
-### Phase 16: Advanced Finance 📋 PLANNED
+### Phase 17: Advanced Finance 📋 PLANNED
 
 > Modul keuangan lanjutan — General Ledger, Tax Engine.
 
@@ -285,7 +342,7 @@
 - [ ] Income Statement
 - [ ] Tax Engine (Coretax, e-Faktur, PPh21, PPN)
 
-### Phase 17: Enterprise Features 📋 PLANNED
+### Phase 18: Enterprise Features 📋 PLANNED
 
 > Fitur enterprise untuk skala besar.
 
@@ -308,7 +365,7 @@
    ▼                ▼                ▼                ▼                ▼
 ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
 │Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │
-│1-8   │        │9-10  │        │11-13 │        │14-15 │        │16-17 │
+│1-8   │        │9-10  │        │11-13 │        │14-16 │        │17-18 │
 │✅Done │        │📋NEXT│        │📋PLAN│        │📋PLAN│        │📋PLAN│
 └──────┘        └──────┘        └──────┘        └──────┘        └──────┘
    │                │                │                │                │
@@ -318,12 +375,13 @@
 | Phase | Duration | Focus | Key Deliverables | Status |
 |-------|----------|-------|------------------|--------|
 | **1-8** | Aug 2026 | Core SaaS + All modules + Basic AI | Foundation ready | ✅ `completed` |
-| **9** | Sep 2026 | Permission Engine Foundation | Granular permissions + Platform Admin | 📋 `planned` |
+| **9** | Sep 2026 | Permission Engine Foundation | Granular permissions + Platform Admin (industry-agnostic) | 📋 `planned` |
 | **10** | Sep 2026 | Unified Control Engine | Policy + Workflow + Approval + Escalation + SLA + Delegation + SoD + Exception + Locking | 📋 `planned` |
-| **11-13** | Oct-Nov 2026 | Integration, Security, Production | Production-ready MVP | 📋 `planned` |
-| **14-15** | Dec '26-Feb '27 | Mobile + Desktop foundation | Multi-platform ready | 📋 `planned` |
-| **16** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
-| **17** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
+| **11** | Oct 2026 | Industry Configuration Engine | Industry packs + Custom fields/documents/reports + Dashboard config | 📋 `planned` |
+| **12-13** | Oct-Nov 2026 | Integration, Security | Production-ready MVP | 📋 `planned` |
+| **14-16** | Dec '26-Feb '27 | Production + Mobile + Desktop | Multi-platform ready | 📋 `planned` |
+| **17** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
+| **18** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
 
 ### Success Criteria Per Phase
 
@@ -333,16 +391,20 @@
 | **1-8** | Critical bugs | < 5 |
 | **9** | Permission engine functional | 100% |
 | **9** | Platform Admin dashboard ready | Yes |
+| **9** | Industry-agnostic validation pass | 0 hardcoded industry logic |
 | **10** | Unified Control Engine functional | 14 sub-components |
 | **10** | Policy Engine configurable per company | 100% |
 | **10** | Locking engine prevents unauthorized edits | 100% |
 | **10** | SoD conflict detection working | 100% |
 | **10** | SLA tracking with color coding | 100% |
-| **11-13** | Beta users | 50 companies |
-| **11-13** | User satisfaction | > 3.5/5 |
-| **14-15** | Mobile app store ready | Yes |
-| **16** | Full accounting compliance | Indonesian GAAP |
-| **17** | Paying customers | 100+ companies |
+| **11** | Industry Pack Framework ready | Engine + 3 default packs |
+| **11** | Custom Fields engine functional | Dynamic fields per entity |
+| **11** | Dashboard configuration functional | Industry-specific dashboards |
+| **12-13** | Beta users | 50 companies |
+| **12-13** | User satisfaction | > 3.5/5 |
+| **14-16** | Mobile app store ready | Yes |
+| **17** | Full accounting compliance | Indonesian GAAP |
+| **18** | Paying customers | 100+ companies |
 
 ---
 
@@ -371,7 +433,8 @@
 | Date | Milestone | Status |
 |------|-----------|--------|
 | **Aug 2026** | MVP Development Complete | ✅ Done |
-| **Oct 2026** | MVP Beta Launch | 🔄 In Progress |
+| **Sep 2026** | Industry Pack Framework Ready | 📋 Planned |
+| **Oct 2026** | MVP Beta Launch | 📋 Planned |
 | **Dec 2026** | Production Deployment | 📋 Planned |
 | **Feb 2027** | 20 Paying Customers | 📋 Planned |
 | **May 2027** | 100 Paying Customers | 📋 Planned |
@@ -410,6 +473,7 @@
 | 2026-08-30 | Unified Control Engine — ADR-017 s/d ADR-023, 16 recommendations documented, Phase 10 expanded | Enterprise-grade operational control |
 | 2026-08-30 | Control Center Architecture — ADR-015 & ADR-016, Phase 10 added, Control Center docs updated | Operational backbone |
 | 2026-08-30 | Permission Engine Architecture — ADR-013 & ADR-014, Phase 9 added, docs updated | Architecture foundation |
+| 2026-08-31 | Architecture Formalization — Business Operating System vision, 3 Foundation Engines, Industry Packs, Decision Tree, Anti-patterns | Strategic architecture |
 | 2026-08-30 | Documentation overhaul — ROADMAP, ARCHITECTURE, DATABASE, SECURITY, UI_UX, DECISIONS | Developer experience |
 | 2026-08-29 | Zod Validation — 14+ schemas, 19 API routes validated | Input security |
 | 2026-08-29 | Audit Logging — 77 audit calls across 10 mutation endpoints | Compliance |
@@ -453,5 +517,5 @@
 
 ---
 
-**Last Updated:** August 30, 2026
+**Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity Product Team

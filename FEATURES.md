@@ -76,9 +76,11 @@
 10. [Integration & Ecosystem](#10-integration--ecosystem)
 11. [Admin & Security](#11-admin--security)
 12. [Control Center & Workflow](#12-control-center--workflow)
-13. [Mobile](#13-mobile)
-14. [Desktop](#14-desktop)
-15. [Pricing Model](#15-pricing-model)
+13. [Architecture Engines](#13-architecture-engines)
+14. [Industry Packs](#14-industry-packs)
+15. [Mobile](#15-mobile)
+16. [Desktop](#16-desktop)
+17. [Pricing Model](#17-pricing-model)
 
 ---
 
@@ -111,8 +113,8 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Deploy Scripts** | 🚀 `production_ready` | 2026-08-30 | PM2 health check, configurable port, robust db:push |
 | **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |
 | **Performance Indexes** | 🚀 `production_ready` | 2026-08-30 | 57 database indexes across frequently queried fields |
-| **Subscription** | ✅ `implemented` | — | Basic subscription model, belum verified end-to-end |
-| **Billing** | ✅ `implemented` | — | Plan selection, manual transfer, belum verified end-to-end |
+| **Subscription** | ✅ `implemented` | 2026-08-30 | Full subscription model with Midtrans payment integration |
+| **Billing** | ✅ `implemented` | 2026-08-30 | Plan selection, manual transfer + Midtrans Snap payment |
 | **Notification** | 🔄 `partial` | — | Notification bell ada, tapi belum real-time push |
 | **Multi-entity & Multi-currency** | 📋 `planned` | — | Belum ada kode |
 
@@ -538,7 +540,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Email/SMTP Config** | ✅ `implemented` | — | Real Nodemailer transport, env-based config |
-| **Payment Gateway Config** | 🔄 `partial` | — | Settings page ada, Midtrans partial, Xendit belum |
+| **Payment Gateway Config** | ✅ `implemented` | 2026-08-30 | Midtrans Snap integrated, webhook handler, HMAC verification |
 | **API Key Management** | 📋 `planned` | — | Belum ada kode |
 | **Connection Status** | ✅ `implemented` | 2026-08-30 | Dynamic fetch from `/api/settings/integrations` |
 | **Error Logging** | 📋 `planned` | — | Belum ada kode |
@@ -588,7 +590,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 |----------|---------------|--------|-------|
 | **Messaging** | WhatsApp Business, Telegram | 📋 `planned` | Belum ada kode |
 | **Marketplace** | Tokopedia, Shopee, Bukalapak | 📋 `planned` | Belum ada kode |
-| **Payment Gateway** | Midtrans, Xendit, DOKU | 🔄 `partial` | Midtrans partial |
+| **Payment Gateway** | Midtrans, Xendit, DOKU | ✅ `implemented` | Midtrans Snap integrated |
 | **E-wallet** | GoPay, OVO, Dana | 📋 `planned` | Via Payment Gateway |
 | **Banking** | BCA, Mandiri, BRI, BNI | 📋 `planned` | Belum ada kode |
 | **Productivity** | Google Workspace, Microsoft 365 | 📋 `planned` | Belum ada kode |
@@ -841,7 +843,160 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 ---
 
-## 13. Mobile
+## 13. Architecture Engines
+
+> **Tiga fondasi arsitektur yang memungkinkan Qalcuity menjadi Business Operating System.**
+> Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 2-5.
+
+### 13.1 Permission Engine
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Permission Engine (can() function)** | 📋 `planned` | — | Industry-agnostic granular permission check: `can(user, action, resource, context)` |
+| **Permission Model (Prisma)** | 📋 `planned` | — | User → Membership → Role → Permission → Scope → Resource → Action |
+| **@qalcuity/permissions package** | 📋 `planned` | — | Shared package for Web, Mobile, Desktop, API, AI Agent |
+| **Permission Middleware** | 📋 `planned` | — | API route-level permission enforcement |
+| **Permission Hooks (usePermission)** | 📋 `planned` | — | UI-level permission-based conditional rendering |
+| **Platform Permissions** | 📋 `planned` | — | Internal Qalcuity: tenant.view, subscription.manage, system.monitor |
+| **Tenant Permissions** | 📋 `planned` | — | Customer org: invoice.approve, employee.view, payroll.manage |
+| **Scope Support** | 📋 `planned` | — | Branch + Department level permissions |
+| **Cross-platform Enforcement** | 📋 `planned` | — | Web, Mobile, Desktop, API, AI Agent — same engine |
+| **Migration from 4-Role RBAC** | 📋 `planned` | — | Strategy to migrate from current 4 hardcoded roles |
+
+### 13.2 Workflow Engine
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Workflow Engine** | 📋 `planned` | — | Configurable transaction lifecycle: status transitions per entity |
+| **@qalcuity/workflow package** | 📋 `planned` | — | Shared workflow engine for all modules |
+| **Configurable Statuses** | 📋 `planned` | — | Tambah/hapus status sesuai kebutuhan perusahaan |
+| **Configurable Transitions** | 📋 `planned` | — | Define allowed transitions between statuses |
+| **Transition Guards** | 📋 `planned` | — | Role-based + condition-based transition guards |
+| **Auto Actions** | 📋 `planned` | — | Auto-create documents, send notifications on transitions |
+| **Workflow Configuration UI** | 📋 `planned` | — | Visual workflow editor per perusahaan |
+| **Default Workflows** | 📋 `planned` | — | Pre-built workflows untuk common business processes |
+| **Unified Pipeline Integration** | 📋 `planned` | — | Integrasi dengan Unified Control Engine (Phase 10) |
+
+### 13.3 Industry Configuration Engine
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Industry Configuration Engine** | 📋 `planned` | — | Core engine untuk industry-specific customizations |
+| **@qalcuity/industry-config package** | 📋 `planned` | — | Shared package untuk managing industry configurations |
+| **Custom Fields Engine** | 📋 `planned` | — | Dynamic fields per entity: NPWP, NIB, PIC, Branch, Project, Site |
+| **Custom Documents Engine** | 📋 `planned` | — | Document types + custom statuses + custom workflows |
+| **Custom Reports Engine** | 📋 `planned` | — | Reports berdasarkan module + custom fields |
+| **Industry Pack Loader** | 📋 `planned` | — | Load configuration per tenant/industry |
+| **Industry Pack API** | 📋 `planned` | — | CRUD untuk managing industry packs |
+| **Industry Pack UI** | 📋 `planned` | — | Dashboard untuk configuring industry packs |
+| **Dashboard Configuration Engine** | 📋 `planned` | — | Industry-specific dashboard widgets |
+
+---
+
+## 14. Industry Packs
+
+> **Industry Packs = Configuration, bukan Hardcoding.**
+> Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 7.
+
+### 14.1 Industry Pack: Retail
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Retail Pack** | 📋 `planned` | — | Default config untuk retail industry |
+| **POS Integration** | 📋 `planned` | — | Point of Sale workflow configuration |
+| **Stock Replenishment** | 📋 `planned` | — | Auto-reorder workflow |
+| **Barcode Management** | 📋 `planned` | — | Barcode field + scanning workflow |
+| **Dashboard: Sales, Stock, Top Products, Cash, Customer** | 📋 `planned` | — | Retail-specific dashboard widgets |
+
+### 14.2 Industry Pack: Wholesale/Distribution
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Wholesale Pack** | 📋 `planned` | — | Default config untuk wholesale/distribution |
+| **Route Management** | 📋 `planned` | — | Delivery route configuration |
+| **Driver & Vehicle** | 📋 `planned` | — | Driver/vehicle assignment fields |
+| **Delivery Order** | 📋 `planned` | — | Custom document: Delivery Order |
+| **Dashboard: Deliveries, Routes, Vehicles, Warehouse** | 📋 `planned` | — | Distribution-specific dashboard |
+
+### 14.3 Industry Pack: Manufacturing
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Manufacturing Pack** | 📋 `planned` | — | Default config untuk manufacturing |
+| **Work Order** | 📋 `planned` | — | Custom document: Work Order workflow |
+| **Bill of Materials (BOM)** | 📋 `planned` | — | BOM configuration |
+| **Quality Report** | 📋 `planned` | — | Custom document: Quality Control Report |
+| **Production Line** | 📋 `planned` | — | Production line field + assignment |
+| **Batch/Lot Tracking** | 📋 `planned` | — | Batch number + expiry date fields |
+| **Dashboard: Production, Material, Machine, Quality, WIP, Inventory** | 📋 `planned` | — | Manufacturing-specific dashboard |
+
+### 14.4 Industry Pack: Construction
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Construction Pack** | 📋 `planned` | — | Default config untuk construction |
+| **Site Location** | 📋 `planned` | — | Project site field |
+| **Contract Number** | 📋 `planned` | — | Contract reference field |
+| **Progress Tracking** | 📋 `planned` | — | Progress percentage field |
+| **BAST (Berita Acara Serah Terima)** | 📋 `planned` | — | Custom document: BAST |
+| **Progress Report** | 📋 `planned` | — | Custom document: Progress Report |
+| **Dashboard: Projects, Budget, Progress, Purchase, Material, Workers** | 📋 `planned` | — | Construction-specific dashboard |
+
+### 14.5 Industry Pack: Consulting/Agency/IT
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Services Pack** | 📋 `planned` | — | Default config untuk professional services |
+| **Project-based Workflow** | 📋 `planned` | — | Proposal → SOW → Execution → Invoice |
+| **Billable Hours** | 📋 `planned` | — | Timesheet + billable hours tracking |
+| **SOW (Statement of Work)** | 📋 `planned` | — | Custom document: SOW |
+| **Timesheet** | 📋 `planned` | — | Custom document: Timesheet |
+| **Dashboard: Projects, Tickets, SLA, Employees, Billable Hours, Invoices** | 📋 `planned` | — | Services-specific dashboard |
+
+### 14.6 Industry Pack: Logistics
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Logistics Pack** | 📋 `planned` | — | Default config untuk logistics |
+| **Route & Vehicle Management** | 📋 `planned` | — | Route + vehicle assignment |
+| **Delivery Note** | 📋 `planned` | — | Custom document: Delivery Note |
+| **Proof of Delivery (POD)** | 📋 `planned` | — | Custom document: POD |
+| **Dashboard: Deliveries, Routes, Vehicles, Warehouse, Cost/Delivery, On-Time %** | 📋 `planned` | — | Logistics-specific dashboard |
+
+### 14.7 Industry Pack: Education
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Education Pack** | 📋 `planned` | — | Default config untuk education/training |
+| **Student Management** | 📋 `planned` | — | Student entity + enrollment workflow |
+| **Class Management** | 📋 `planned` | — | Class/schedule configuration |
+| **Transcript** | 📋 `planned` | — | Custom document: Transcript |
+| **Certificate** | 📋 `planned` | — | Custom document: Certificate |
+| **Dashboard: Students, Classes, Enrollment, Revenue, Attendance** | 📋 `planned` | — | Education-specific dashboard |
+
+### 14.8 Industry Pack: Healthcare
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Healthcare Pack** | 📋 `planned` | — | Default config untuk healthcare |
+| **Patient Management** | 📋 `planned` | — | Patient entity + treatment workflow |
+| **Medical Record** | 📋 `planned` | — | Custom document: Medical Record |
+| **Insurance Integration** | 📋 `planned` | — | Insurance claim workflow |
+| **Dashboard: Patients, Treatments, Revenue, Bed Occupancy** | 📋 `planned` | — | Healthcare-specific dashboard |
+
+### 14.9 Industry Pack: Food & Beverage
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **F&B Pack** | 📋 `planned` | — | Default config untuk food & beverage |
+| **Recipe Management** | 📋 `planned` | — | Recipe + ingredient fields |
+| **Batch & Expiry Tracking** | 📋 `planned` | — | Batch number + expiry date |
+| **Production Report** | 📋 `planned` | — | Custom document: Production Report |
+| **Dashboard: Production, Ingredients, Waste, Sales, Inventory** | 📋 `planned` | — | F&B-specific dashboard |
+
+---
+
+## 15. Mobile
 
 React Native / Expo mobile app untuk field operations.
 
@@ -854,7 +1009,7 @@ React Native / Expo mobile app untuk field operations.
 
 ---
 
-## 14. Desktop
+## 16. Desktop
 
 Electron-based desktop application.
 
@@ -865,7 +1020,7 @@ Electron-based desktop application.
 
 ---
 
-## 15. Pricing Model
+## 17. Pricing Model
 
 ### Tier-based Pricing
 
@@ -882,6 +1037,8 @@ Electron-based desktop application.
 |---------|--------|---------------|-------|
 | **Plan Selection** | ✅ `implemented` | — | `/dashboard/settings/billing` — 3 paket |
 | **Manual Transfer Payment** | ✅ `implemented` | — | Upload bukti transfer, 4 rekening bank |
+| **Midtrans Snap Payment** | ✅ `implemented` | 2026-08-30 | `/api/billing/payments/midtrans` — real payment gateway |
+| **Midtrans Webhook Handler** | ✅ `implemented` | 2026-08-30 | `/api/billing/payments/midtrans/callback` — auto-verify |
 | **WhatsApp Confirmation** | ✅ `implemented` | — | Link wa.me untuk konfirmasi |
 | **Superadmin Approval** | ✅ `implemented` | — | `/dashboard/billing` — Approve/Reject |
 | **Notification Bell** | ✅ `implemented` | — | Header bell icon dengan badge count |
@@ -923,6 +1080,14 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v4.0.0 (August 31, 2026) — Business Operating System Architecture
+- **Architecture Formalization** — Qalcuity defined as "Business Operating System" (not ERP)
+- **Three Foundation Engines** — Permission Engine, Workflow Engine, Industry Configuration Engine
+- **Industry Packs** — 9 industry packs planned (Retail, Wholesale, Manufacturing, F&B, Construction, Property, Logistics, Services, Education, Healthcare)
+- **New Section 13** — Architecture Engines (Permission, Workflow, Industry Config)
+- **New Section 14** — Industry Packs (9 industries with custom workflows, fields, documents)
+- **Sections renumbered** — Mobile → 15, Desktop → 16, Pricing → 17
 
 ### v3.2.0 (August 30, 2026) — Code Quality & Dynamic Data Sprint
 - **Dynamic Overview Pages** — 5 halaman di-rewrite dari hardcoded ke dynamic API (Finance, HR, Inventory, CRM, Dashboard)
@@ -982,6 +1147,6 @@ Electron-based desktop application.
 
 ---
 
-**Last Updated:** August 30, 2026
+**Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 3.2 — Code Quality & Dynamic Data Sprint
+**Document Version:** 4.0 — Business Operating System Architecture
