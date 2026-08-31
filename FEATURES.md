@@ -1146,23 +1146,176 @@ Electron-based desktop application.
 
 ---
 
+## 19. Platform Control Center
+
+> **Platform Control Center = "4 Worlds" yang terpisah dari Customer ERP.**
+> Superadmin Qalcuity BUKAN "Admin ERP customer" — mereka adalah operator/control plane dari seluruh platform.
+> Lihat [`docs/ARCHITECTURE.md` Section 23](docs/ARCHITECTURE.md#23-platform-architecture--platform-control-center) untuk arsitektur lengkap.
+
+### 19.1 The 4 Worlds — World Separation
+
+| World | Scope | Akses | Status | Notes |
+|-------|-------|-------|--------|-------|
+| **Platform World** | Billing, support, monitoring, tenant management | Superadmin only | 📋 `planned` | Routes: `/platform/*` |
+| **Tenant World** | ERP, POS, CRM, HR, Inventory — per tenant | Tenant users (ADMIN/MEMBER/VIEWER) | 🚀 `production_ready` | Routes: `/dashboard/*` |
+| **Control Engine World** | Workflow, approval, escalation, locking, audit | System + authorized users | 🔄 `partial` | Engine packages in progress |
+| **Public World** | Login, register, landing page, pricing | Unauthenticated | ✅ `implemented` | Routes: `/`, `/login`, `/register` |
+
+### 19.2 Platform Control Center — Features
+
+#### Tenant Management
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Tenant List** | 📋 `planned` | — | View all tenants with search, filter, sort |
+| **Tenant Detail** | 📋 `planned` | — | Single tenant overview: plan, usage, health, activity |
+| **Tenant Provisioning** | 📋 `planned` | — | Auto-create tenant on registration, seed data |
+| **Tenant Suspension** | 📋 `planned` | — | Suspend tenant for non-payment or violation |
+| **Tenant Reactivation** | 📋 `planned` | — | Reactivate suspended tenant |
+| **Tenant Deletion** | 📋 `planned` | — | Archive (soft delete) tenant with 30-day grace |
+| **Tenant Settings Override** | 📋 `planned` | — | Platform-level settings override for specific tenants |
+
+#### Subscription & Entitlement
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Plan Management** | 📋 `planned` | — | Create/edit/archive subscription plans |
+| **Entitlement Engine** | 📋 `planned` | — | Plan → Entitlement → What tenant can use |
+| **Subscription Lifecycle** | 📋 `planned` | — | ACTIVE → PAST_DUE → GRACE_PERIOD → SUSPENDED → ARCHIVED |
+| **Payment Review Workflow** | 📋 `planned` | — | Customer transfer → PENDING_REVIEW → Billing Admin review → Approve/Reject |
+| **Manual Payment Approval** | 📋 `planned` | — | Review bukti transfer, approve/reject dengan notes |
+| **Auto-billing** | 📋 `planned` | — | Scheduled billing cycle, auto-invoice generation |
+| **Usage-based Pricing** | 📋 `planned` | — | Metered billing for storage, API calls, transactions |
+
+#### Usage Metering
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **User Count Tracking** | 📋 `planned` | — | Per-tenant active user count |
+| **Storage Metering** | 📋 `planned` | — | File upload storage per tenant |
+| **API Call Metering** | 📋 `planned` | — | API request count per tenant |
+| **Transaction Metering** | 📋 `planned` | — | Business transaction count per tenant |
+| **Usage Alerts** | 📋 `planned` | — | 80% warning, 90% alert, 100% policy enforcement |
+| **Usage Dashboard** | 📋 `planned` | — | Visual usage overview per tenant |
+
+#### Error & Log Center
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Error Grouping** | 📋 `planned` | — | Same error × N = 1 group, stack trace aggregation |
+| **Error Severity Levels** | 📋 `planned` | — | CRITICAL, HIGH, MEDIUM, LOW |
+| **Tenant Isolation (Errors)** | 📋 `planned` | — | Errors filtered per tenant, no cross-tenant leak |
+| **Error Timeline** | 📋 `planned` | — | When errors first appeared, frequency trend |
+| **Error Resolution Tracking** | 📋 `planned` | — | Mark as investigating, resolved, won't fix |
+| **System Log Viewer** | 📋 `planned` | — | Filterable log viewer with tenant context |
+| **Audit Log (Platform)** | 📋 `planned` | — | Immutable audit trail for all platform actions |
+
+#### Tenant Health Dashboard
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Health Status Overview** | 📋 `planned` | — | All tenants: Healthy 🟢 / Degraded 🟡 / Critical 🔴 |
+| **API Latency Monitoring** | 📋 `planned` | — | Per-tenant API response time |
+| **Database Health** | 📋 `planned` | — | Connection pool, query performance |
+| **Storage Health** | 📋 `planned` | — | Disk usage, quota consumption |
+| **Queue Health** | 📋 `planned` | — | Background job queue status |
+| **Error Rate Monitoring** | 📋 `planned` | — | Error rate per tenant, threshold alerts |
+| **Uptime Tracking** | 📋 `planned` | — | SLA compliance per tenant |
+
+#### Support System
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Support Tickets** | 📋 `planned` | — | Open, Investigating, Waiting Customer, Resolved, Closed |
+| **Auto-attach Context** | 📋 `planned` | — | Tenant info, plan, recent errors auto-attached to ticket |
+| **Internal Notes** | 📋 `planned` | — | Support agent internal notes (not visible to customer) |
+| **SLA Tracking** | 📋 `planned` | — | Response time SLA per ticket priority |
+| **Ticket Escalation** | 📋 `planned` | — | Auto-escalate based on SLA breach |
+| **Customer Communication** | 📋 `planned` | — | In-platform messaging between support and customer |
+
+#### Impersonation
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Impersonation Request** | 📋 `planned` | — | Support requests temporary access to tenant |
+| **Reason & Approval** | 📋 `planned` | — | Must provide reason, requires approval from Platform Admin |
+| **Temporary Session** | 📋 `planned` | — | Time-limited session (max 30 min), all actions logged |
+| **Audit Trail (Impersonation)** | 📋 `planned` | — | Every action during impersonation logged with support agent ID |
+| **Tenant Notification** | 📋 `planned` | — | Tenant notified when impersonation starts/ends |
+
+#### Feature Flags
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Feature Flag Management** | 📋 `planned` | — | Create/edit/delete feature flags |
+| **Rollout Stages** | 📋 `planned` | — | Internal → 1 tenant → 5 tenants → 10% → 50% → 100% |
+| **Tenant-specific Flags** | 📋 `planned` | — | Enable/disable features per tenant |
+| **A/B Testing Support** | 📋 `planned` | — | Split traffic for feature testing |
+| **Flag Analytics** | 📋 `planned` | — | Usage metrics per flag |
+
+#### Security Center
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Failed Login Monitoring** | 📋 `planned` | — | Track failed login attempts per tenant |
+| **Suspicious Activity Detection** | 📋 `planned` | — | Pattern detection for abnormal behavior |
+| **Permission Change Audit** | 📋 `planned` | — | Log all role/permission changes |
+| **API Key Management** | 📋 `planned` | — | Platform-level API key lifecycle |
+| **Immutable Audit Log** | 📋 `planned` | — | Write-only audit log, cannot be modified |
+| **IP Allowlist** | 📋 `planned` | — | Per-tenant IP restriction |
+| **Session Management** | 📋 `planned` | — | View/revoke active sessions per tenant |
+
+### 19.3 Superadmin Roles
+
+| Role | Scope | Key Permissions | Status | Notes |
+|------|-------|-----------------|--------|-------|
+| **Qalcuity Owner** | Platform-wide | Everything, assign SUPERADMIN to others | 📋 `planned` | Highest authority |
+| **Platform Admin** | Platform-wide | Manage tenants, impersonation approval, feature flags | 📋 `planned` | Day-to-day platform ops |
+| **Billing Admin** | Billing & subscription | Payment review, subscription management, invoice approval | 📋 `planned` | Financial operations |
+| **Support Agent** | Support & impersonation | View tickets, request impersonation, tenant communication | 📋 `planned` | Customer-facing support |
+| **Technical Operator** | System operations | Error center, log viewer, system health, background jobs | 📋 `planned` | Technical monitoring |
+| **Security Admin** | Security & compliance | Security center, audit logs, IP allowlist, session management | 📋 `planned` | Security operations |
+| **Auditor** | Read-only audit | View all audit logs, compliance reports, usage reports | 📋 `planned` | Compliance & audit |
+
+### 19.4 Platform vs Customer Separation
+
+| Aspect | Platform (Superadmin) | Customer (Tenant User) |
+|--------|----------------------|----------------------|
+| **Routes** | `/platform/*` | `/dashboard/*` |
+| **Session** | Superadmin JWT (platform-scoped) | Tenant JWT (tenant-scoped) |
+| **UI** | Platform Control Center UI | ERP/POS/CRM/HR UI |
+| **Audit** | `PlatformAuditLog` table | `AuditLog` table |
+| **Data** | Cross-tenant (aggregated) | Single tenant only |
+| **Auth** | NextAuth + platform role | NextAuth + tenant role |
+| **Middleware** | `/platform/*` → platform auth check | `/dashboard/*` → tenant auth check |
+
+---
+
 ## 📊 Status Summary
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~48 | ~32% |
-| `implemented` | ✅ | ~17 | ~11% |
+| `production_ready` | 🚀 | ~48 | ~28% |
+| `implemented` | ✅ | ~17 | ~10% |
 | `verified` | ✔️ | 1 | ~1% |
-| `partial` | 🔄 | ~18 | ~12% |
+| `partial` | 🔄 | ~18 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~120 | ~55% |
+| `planned` | 📋 | ~185 | ~50% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~210** | **100%** |
+| **Total** | | **~269** | **100%** |
 
 ---
 
 ## 📝 Changelog
+
+### v4.2.0 (August 31, 2026) — Platform Control Center
+- **New Section 19** — Platform Control Center: 4 Worlds separation, tenant management, subscription, entitlement, error center, tenant health, support, impersonation, feature flags, usage metering, security center
+- **Superadmin Roles** — 7 roles defined (Owner, Platform Admin, Billing Admin, Support Agent, Technical Operator, Security Admin, Auditor)
+- **Platform vs Customer Separation** — Explicit separation of routes, sessions, UI, audit tables
+- **ARCHITECTURE.md Section 23** — Full Platform Architecture documentation added
+- **ROADMAP Phase 23-25** — Platform Control Center Core, Monitoring & Error Center, Support & Impersonation
+- **65+ new planned features** — Platform Control Center feature inventory
 
 ### v4.1.0 (August 31, 2026) — POS Module Architecture
 - **POS as Core Module** — POS defined as core module, not separate product
@@ -1239,4 +1392,4 @@ Electron-based desktop application.
 
 **Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 4.0 — Business Operating System Architecture
+**Document Version:** 4.2 — Platform Control Center Architecture
