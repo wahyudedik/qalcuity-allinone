@@ -4,7 +4,7 @@
 > Bukan "Qalcuity ERP untuk perusahaan dagang."
 
 > **Last Updated:** 31 Agustus 2026
-> **Current Version:** v2.0.0 — Business Operating System Architecture
+> **Current Version:** v2.1.0 — Business Operating System + Platform Control Center
 
 ---
 
@@ -32,6 +32,7 @@
 20. [Unified Control Engine Architecture](#20-unified-control-engine-architecture)
 21. [Deployment Architecture](#21-deployment-architecture)
 22. [POS Module (Core)](#22-pos-module-core)
+23. [Platform Architecture — Platform Control Center](#23-platform-architecture--platform-control-center)
 
 ---
 
@@ -1576,6 +1577,708 @@ enum RefundStatus {
 
 ---
 
+## 23. Platform Architecture — Platform Control Center
+
+> **Platform Control Center adalah control plane operator untuk seluruh platform Qalcuity.** Superadmin Qalcuity BUKAN "Admin ERP customer" — ia adalah operator dari seluruh sistem. Platform Control Center terpisah sepenuhnya dari Customer ERP.
+
+### 23.1 The 4 Worlds
+
+> **Qalcuity memiliki 4 dunia yang harus dipisahkan secara eksplisit.** Setiap dunia memiliki scope, role, dan data yang berbeda.
+
+```text
+QALCUITY
+                    │
+       ┌────────────┼────────────┐
+       ↓            ↓            ↓
+    PLATFORM      TENANT       CONTROL
+       │            │            │
+    Billing       ERP        Workflow
+    Support       POS        Approval
+    Monitoring    CRM        Escalation
+    Security      HR         Locking
+    Usage         Finance    Audit
+    Feature       Inventory  Policy
+```
+
+| Dunia | Scope | Data | User | Status |
+|-------|-------|------|------|--------|
+| **Platform** | Seluruh platform Qalcuity | Tenant list, subscription, billing, platform config | Superadmin, Platform Admin | 📋 Planned |
+| **Tenant** | 1 organisasi customer | ERP data (invoice, deal, employee, product, dll) | ADMIN, MEMBER, VIEWER | ✅ Active |
+| **User/Role** | Individual user dalam tenant | Profile, permission, membership | Semua user | ✅ Active |
+| **Control Engine** | Operational backbone | Workflow, approval, escalation, locking, audit | ENGINE (otomatis) | 📋 Planned |
+
+```mermaid
+graph TB
+    subgraph PLATFORM_W["🌐 PLATFORM WORLD"]
+        PW_BILL[Billing & Subscription]
+        PW_SUPPORT[Support & Tickets]
+        PW_MONITOR[Monitoring & Logs]
+        PW_SECURITY[Security & Audit]
+        PW_USAGE[Usage Metering]
+        PW_FEATURE[Feature Flags]
+    end
+    
+    subgraph TENANT_W["🏢 TENANT WORLD"]
+        TW_FINANCE[Finance]
+        TW_CRM[CRM/Sales]
+        TW_INV[Inventory]
+        TW_HR[HR]
+        TW_POS[POS]
+    end
+    
+    subgraph CONTROL_W["⚙️ CONTROL ENGINE WORLD"]
+        CW_WORKFLOW[Workflow]
+        CW_APPROVAL[Approval]
+        CW_ESCALATION[Escalation]
+        CW_LOCKING[Locking]
+        CW_AUDIT[Audit Trail]
+        CW_POLICY[Policy]
+    end
+    
+    PLATFORM_W --> TENANT_W
+    TENANT_W --> CONTROL_W
+    PLATFORM_W --> CONTROL_W
+```
+
+### 23.2 Platform Control Center Structure
+
+```text
+QALCUITY PLATFORM
+│
+├── CONTROL CENTER
+│   ├── Dashboard
+│   ├── Tenants
+│   ├── Subscriptions
+│   ├── Payments
+│   ├── Plans
+│   ├── Entitlements
+│   ├── Usage
+│   ├── Monitoring
+│   │   ├── System Health
+│   │   ├── Tenant Health
+│   │   ├── Error Center
+│   │   ├── Logs
+│   │   └── Background Jobs
+│   ├── Support
+│   │   ├── Tickets
+│   │   └── Impersonation
+│   ├── Security
+│   │   ├── Access
+│   │   ├── Security Events
+│   │   └── Audit
+│   ├── Platform
+│   │   ├── Feature Flags
+│   │   ├── Releases
+│   │   ├── Integrations
+│   │   └── Settings
+│   └── Internal Users
+│
+└── CUSTOMER TENANTS
+    ├── Organization A
+    ├── Organization B
+    └── ...
+```
+
+```mermaid
+graph TB
+    subgraph PCC["🎛️ PLATFORM CONTROL CENTER"]
+        PCC_DASH[Dashboard]
+        
+        subgraph PCC_BIZ["Business"]
+            PCC_TENANTS[Tenants]
+            PCC_SUB[Subscriptions]
+            PCC_PAY[Payments]
+            PCC_PLANS[Plans]
+            PCC_ENT[Entitlements]
+            PCC_USAGE[Usage]
+        end
+        
+        subgraph PCC_MON["Monitoring"]
+            PCC_HEALTH[System Health]
+            PCC_THEALTH[Tenant Health]
+            PCC_ERRORS[Error Center]
+            PCC_LOGS[Logs]
+            PCC_JOBS[Background Jobs]
+        end
+        
+        subgraph PCC_SUP["Support"]
+            PCC_TICKETS[Tickets]
+            PCC_IMPERSONATE[Impersonation]
+        end
+        
+        subgraph PCC_SEC["Security"]
+            PCC_ACCESS[Access]
+            PCC_EVENTS[Security Events]
+            PCC_AUDIT[Audit]
+        end
+        
+        subgraph PCC_PLAT["Platform"]
+            PCC_FLAGS[Feature Flags]
+            PCC_RELEASES[Releases]
+            PCC_INT[Integrations]
+            PCC_SETTINGS[Settings]
+        end
+        
+        PCC_USERS[Internal Users]
+    end
+    
+    subgraph TENANTS["🏢 CUSTOMER TENANTS"]
+        T_A[Org A]
+        T_B[Org B]
+        T_C[Org C]
+    end
+    
+    PCC --> TENANTS
+```
+
+### 23.3 Superadmin Roles
+
+> **Platform memiliki role tersendiri — TIDAK BERCAMPUR dengan Tenant roles.**
+
+| Role | Scope | Permissions | Description |
+|------|-------|-------------|-------------|
+| **Qalcuity Owner** | Full platform | `*.*.*` (everything) | Full access, manage all tenants, assign roles |
+| **Platform Admin** | Platform management | `tenant.*`, `plan.*`, `feature.*`, `platform.*` | Manage platform, tenants, feature flags |
+| **Billing Admin** | Billing & payments | `subscription.*`, `payment.*`, `plan.*` | Manage subscriptions, payments, plans |
+| **Support Agent** | Customer support | `ticket.*`, `impersonate.*`, `tenant.read` | Customer support + impersonation |
+| **Technical Operator** | System monitoring | `system.*`, `log.*`, `error.*`, `monitor.*` | System monitoring, errors, logs |
+| **Security Admin** | Security & audit | `security.*`, `audit.*`, `access.*` | Security events, audit logs |
+| **Auditor** | Read-only audit | `audit.read`, `log.read` | Read-only audit access |
+
+```mermaid
+graph LR
+    subgraph PLATFORM_ROLES["🔑 Platform Roles"]
+        OWNER[Qalcuity Owner]
+        PA[Platform Admin]
+        BA[Billing Admin]
+        SA[Support Agent]
+        TO[Technical Operator]
+        SECA[Security Admin]
+        AUD[Auditor]
+    end
+    
+    OWNER -->|assigns| PA
+    OWNER -->|assigns| BA
+    OWNER -->|assigns| SA
+    OWNER -->|assigns| TO
+    OWNER -->|assigns| SECA
+    OWNER -->|assigns| AUD
+    
+    PA -->|manages| TENANTS[All Tenants]
+    BA -->|manages| BILLING[All Billing]
+    SA -->|supports| SUPPORT[Customer Tickets]
+    TO -->|monitors| SYSTEM[Platform Health]
+    SECA -->|secures| SECURITY[Security Events]
+    AUD -->|audits| AUDIT[All Audit Logs]
+```
+
+**Critical Rule:** Platform roles dan Tenant roles **TIDAK BOLEH tercampur**. Platform Admin BUKAN ADMIN di tenant manapun. Support Agent BUKAN MEMBER di tenant manapun.
+
+### 23.4 Subscription Lifecycle
+
+> **Setiap tenant memiliki subscription dengan lifecycle yang ketat.**
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: Create Subscription
+    ACTIVE --> PAST_DUE: Payment Overdue
+    PAST_DUE --> GRACE_PERIOD: Grace Period Starts
+    GRACE_PERIOD --> ACTIVE: Payment Received
+    PAST_DUE --> ACTIVE: Payment Received
+    GRACE_PERIOD --> SUSPENDED: Grace Period Ended
+    SUSPENDED --> ACTIVE: Reactivation Payment
+    SUSPENDED --> ARCHIVED: Manual Archive
+    ACTIVE --> ARCHIVED: Manual Archive
+```
+
+```text
+ACTIVE → PAST_DUE → GRACE_PERIOD → SUSPENDED → ARCHIVED
+```
+
+| Status | Login | Read | Transactions | New Users | Export | Description |
+|--------|-------|------|-------------|-----------|--------|-------------|
+| **ACTIVE** | ✅ | ✅ | ✅ | ✅ | ✅ | Normal operation |
+| **PAST_DUE** | ✅ | ✅ | ✅ | ✅ | ✅ | Payment overdue, reminder sent |
+| **GRACE_PERIOD** | ✅ | ✅ | ✅ | ✅ | ⚠️ | Grace period active (7-14 days) |
+| **SUSPENDED** | ✅ | ✅ | ❌ | ❌ | ⚠️ | Dependent on policy |
+| **ARCHIVED** | ❌ | ⚠️ | ❌ | ❌ | ❌ | Data retained, read-only export |
+
+**Suspended State Detail:**
+- Login: ✅ Bisa login, tapi melihat banner "Account Suspended"
+- Read-only: ✅ Bisa melihat data, tapi tidak bisa edit
+- Transactions: ❌ Tidak bisa buat transaksi baru
+- New users: ❌ Tidak bisa invite user baru
+- Export: Tergantung policy — bisa diberikan grace period untuk export data
+
+### 23.5 Entitlement System
+
+> **Plan → Entitlement → What tenant can use. TIDAK ADA hardcoded `if plan == "professional"` — gunakan entitlement engine.**
+
+```mermaid
+graph TB
+    subgraph PLANS["📋 Subscription Plans"]
+        STARTER[Starter]
+        PROFESSIONAL[Professional]
+        ADVANCED[Advanced]
+        ENTERPRISE[Enterprise]
+    end
+    
+    subgraph ENTITLEMENTS["🔑 Entitlements"]
+        ENT_MOD[Module Access]
+        ENT_USER[User Limits]
+        ENT_STORAGE[Storage Limits]
+        ENT_API[API Limits]
+        ENT_AI[AI Features]
+        ENT_SUPPORT[Support Level]
+    end
+    
+    STARTER --> ENT_MOD
+    PROFESSIONAL --> ENT_MOD
+    ADVANCED --> ENT_MOD
+    ENTERPRISE --> ENT_MOD
+```
+
+**Entitlement Matrix:**
+
+| Entitlement | Starter | Professional | Advanced AI | Enterprise |
+|-------------|---------|-------------|-------------|------------|
+| **Finance Module** | ✅ | ✅ | ✅ | ✅ |
+| **CRM Module** | ✅ | ✅ | ✅ | ✅ |
+| **Inventory Module** | ✅ | ✅ | ✅ | ✅ |
+| **POS Module** | ❌ | ✅ | ✅ | ✅ |
+| **HR Module** | ✅ | ✅ | ✅ | ✅ |
+| **Max Users** | 5 | 20 | 50 | Unlimited |
+| **Storage** | 5 GB | 100 GB | 500 GB | Unlimited |
+| **API Calls/month** | 10K | 100K | 1M | Unlimited |
+| **Transactions/month** | 1K | 20K | 100K | Unlimited |
+| **AI Finance Agent** | ❌ | ❌ | ✅ | ✅ |
+| **AI Sales Agent** | ❌ | ❌ | ✅ | ✅ |
+| **Advanced AI Features** | ❌ | ❌ | ✅ | ✅ |
+| **Enterprise SSO** | ❌ | ❌ | ❌ | ✅ |
+| **Dedicated Support** | ❌ | ❌ | ❌ | ✅ |
+| **Custom Branding** | ❌ | ❌ | ❌ | ✅ |
+| **SLA Guarantee** | ❌ | 99% | 99.5% | 99.9% |
+
+**Entitlement Engine:**
+
+```typescript
+// Core entitlement check
+hasEntitlement(tenant, feature) → boolean
+
+// Example usage
+hasEntitlement(acme, "pos.module") → true  // Professional plan includes POS
+hasEntitlement(acme, "ai.finance_agent") → false  // Professional doesn't include AI Agent
+hasEntitlement(acme, "user.limit") → 20  // Professional allows 20 users
+hasEntitlement(acme, "storage.limit") → "100GB"  // Professional includes 100GB
+```
+
+```yaml
+# Entitlement Configuration
+entitlements:
+  plan: "professional"
+  modules:
+    finance: true
+    crm: true
+    inventory: true
+    pos: true
+    hr: true
+    project_management: false
+  limits:
+    users: 20
+    storage_gb: 100
+    api_calls_month: 100000
+    transactions_month: 20000
+  features:
+    ai_finance_agent: false
+    ai_sales_agent: false
+    advanced_ai: false
+    enterprise_sso: false
+    custom_branding: false
+    dedicated_support: false
+  support:
+    level: "standard"
+    sla_uptime: 99
+    response_time_hours: 24
+```
+
+### 23.6 Payment Review Workflow
+
+> **Setiap pembayaran customer harus melewati review sebelum subscription diaktifkan.**
+
+```mermaid
+graph LR
+    A[Customer Transfer] --> B[PENDING_REVIEW]
+    B --> C[Billing Admin Review]
+    C -->|Approve| D[APPROVED]
+    C -->|Reject| E[REJECTED]
+    D --> F[Subscription Updated]
+    E --> G[Customer Notified]
+```
+
+```text
+Customer transfer → PENDING_REVIEW → Billing Admin review → Approve/Reject
+```
+
+| Status | Description | Action Required |
+|--------|-------------|-----------------|
+| **PENDING_REVIEW** | Customer sudah transfer, menunggu review | Billing Admin reviews proof of payment |
+| **APPROVED** | Payment verified, subscription updated | Subscription status updated to ACTIVE |
+| **REJECTED** | Payment not verified | Customer notified, asked to re-submit |
+
+**Payment Sources:**
+- Manual transfer (bank transfer, upload bukti)
+- Midtrans Snap (auto-verify via webhook)
+- Midtrans VA (auto-verify via callback)
+- Future: Xendit, DOKU
+
+### 23.7 Error & Log Center
+
+> **Error Center mengelola error reporting dan log management dengan tenant isolation.**
+
+**Error Grouping:**
+```text
+Same error × 1000 occurrences = 1 Error Group
+Each error group contains:
+- Error signature (message + stack trace hash)
+- Tenant ID (which tenant experienced it)
+- First seen / Last seen
+- Count
+- Affected users
+- Sample error with full context
+```
+
+**Severity Levels:**
+
+| Level | Color | Description | Action |
+|-------|-------|-------------|--------|
+| **Critical** | 🔴 | System down, data loss risk | Immediate notification, auto-page on-call |
+| **Error** | 🟠 | Feature broken, workaround exists | Dashboard alert, daily digest |
+| **Warning** | 🟡 | Degraded performance, potential issue | Dashboard alert, weekly review |
+| **Info** | 🔵 | Normal operation, noteworthy event | Log only |
+
+**Filters:**
+
+| Filter | Description |
+|--------|-------------|
+| **Tenant** | Filter by specific tenant or all tenants |
+| **Module** | Filter by module (Finance, CRM, HR, Inventory, etc.) |
+| **Severity** | Filter by Critical, Error, Warning |
+| **Time Range** | Last hour, 24h, 7 days, 30 days, custom |
+| **Search** | Full-text search in error message + stack trace |
+
+**Log Architecture:**
+
+```text
+Application → Structured Log → Log Aggregator → Log Storage → Error Center UI
+    │              │                  │               │              │
+    ▼              ▼                  ▼               ▼              ▼
+  Request      JSON format      Grouping +       Retention      Dashboard
+  Context      tenantId +       Deduplication    30-90 days     + Alerting
+  + User       timestamp +                       per policy
+               severity
+```
+
+### 23.8 Tenant Health Dashboard
+
+> **Monitoring kesehatan setiap tenant secara real-time.**
+
+**Health Metrics per Tenant:**
+
+| Metric | Description | Healthy 🟢 | Degraded 🟡 | Critical 🔴 |
+|--------|-------------|------------|-------------|-------------|
+| **API Latency** | Average response time | < 200ms | 200-1000ms | > 1000ms |
+| **Error Rate** | Errors per 100 requests | < 1% | 1-5% | > 5% |
+| **Database** | Query performance | < 50ms | 50-200ms | > 200ms |
+| **Storage** | Disk usage | < 80% | 80-95% | > 95% |
+| **Queue** | Pending background jobs | < 10 | 10-100 | > 100 |
+| **Active Users** | Concurrent sessions | Normal | Spike (>2x) | Zero (< 5min) |
+
+**Tenant Health Status:**
+
+```text
+Healthy 🟢   — All metrics within normal range
+Degraded 🟡  — 1-2 metrics in warning range
+Critical 🔴  — Any metric in critical range
+Unknown ⚪   — No data received for > 5 minutes
+```
+
+**Dashboard Widgets:**
+
+```yaml
+tenant_health_dashboard:
+  widgets:
+    - tenant_overview: # Grid of all tenants with status color
+        type: grid
+        data: tenant_id, status, api_latency, error_rate, storage_usage
+    
+    - api_latency_trend: # Line chart of API latency over time
+        type: line_chart
+        data: tenant_id, timestamp, latency_ms
+    
+    - error_rate_trend: # Line chart of error rate over time
+        type: line_chart
+        data: tenant_id, timestamp, error_count, request_count
+    
+    - storage_usage: # Bar chart of storage per tenant
+        type: bar_chart
+        data: tenant_id, used_gb, total_gb
+    
+    - active_sessions: # Real-time active session count
+        type: gauge
+        data: tenant_id, active_count, max_allowed
+```
+
+### 23.9 Impersonation
+
+> **Support Agent bisa login sebagai customer untuk troubleshooting. Harus ada approval + audit trail.**
+
+```mermaid
+graph TB
+    A[Support Agent] -->|Request Impersonation| B[Request Form]
+    B -->|Provide Reason| C[Approval]
+    C -->|Approved| D[Temporary Session]
+    C -->|Rejected| E[Request Denied]
+    D -->|Time Limit: 30 min| F[Support acts as customer]
+    D -->|Sensitive Action| G[Blocked + Alert]
+    F -->|End Session| H[Audit Log]
+    G -->|End Session| H
+```
+
+**Impersonation Flow:**
+
+| Step | Action | Audit Logged |
+|------|--------|-------------|
+| 1 | Support Agent requests impersonation | ✅ Request logged |
+| 2 | Provides reason (required) | ✅ Reason logged |
+| 3 | Approval (auto or manual based on policy) | ✅ Approval logged |
+| 4 | Temporary session created (max 30 min) | ✅ Session start logged |
+| 5 | Support acts as customer | ✅ All actions logged |
+| 6 | Sensitive actions blocked | ✅ Block logged |
+| 7 | Session ends (manual or auto-expire) | ✅ Session end logged |
+
+**Restricted Actions During Impersonation:**
+
+| Action | Allowed? | Notes |
+|--------|----------|-------|
+| View data | ✅ | Read-only access |
+| Create/Edit records | ✅ | For troubleshooting |
+| Delete records | ❌ | Blocked |
+| Change settings | ❌ | Blocked |
+| Manage users | ❌ | Blocked |
+| Export data | ⚠️ | Depends on policy |
+| Change subscription | ❌ | Blocked |
+| Access billing | ❌ | Blocked |
+
+### 23.10 Support Tickets
+
+> **Sistem tiket support terintegrasi dengan auto-attach context tenant.**
+
+**Ticket Status:**
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN: New Ticket
+    OPEN --> INVESTIGATING: Agent Assigned
+    INVESTIGATING --> WAITING_CUSTOMER: Info Needed
+    WAITING_CUSTOMER --> INVESTIGATING: Customer Replied
+    INVESTIGATING --> RESOLVED: Issue Fixed
+    RESOLVED --> CLOSED: Confirmed / Auto-close (7 days)
+    RESOLVED --> OPEN: Reopened
+```
+
+```text
+OPEN → INVESTIGATING → WAITING_CUSTOMER → INVESTIGATING → RESOLVED → CLOSED
+```
+
+**Auto-Attached Context:**
+
+| Field | Source | Description |
+|-------|--------|-------------|
+| **Tenant** | Session | Customer organization |
+| **User** | Session | User who reported |
+| **Browser** | User-Agent | Browser type + version |
+| **OS** | User-Agent | Operating system |
+| **App Version** | Config | Qalcuity version |
+| **Request ID** | Middleware | Unique request identifier |
+| **Recent Errors** | Error Center | Last 5 errors from this tenant |
+
+### 23.11 Feature Flags
+
+> **Kontrol rollout fitur baru secara bertahap — dari internal hingga 100% user.**
+
+**Rollout Stages:**
+
+```mermaid
+graph LR
+    A[Internal<br/>Testing] -->|1| B[1 Tenant<br/>Pilot]
+    B -->|2| C[5 Tenants<br/>Beta]
+    C -->|3| D[10%<br/>Rollout]
+    D -->|4| E[50%<br/>Rollout]
+    E -->|5| F[100%<br/>General Availability]
+```
+
+```text
+Internal Testing → 1 Tenant → 5 Tenants → 10% → 50% → 100%
+```
+
+**Feature Flag Types:**
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| **Percentage Rollout** | Roll out to X% of tenants | Gradual feature release |
+| **Plan-based** | Enable/disable per plan | AI Finance Agent → Enterprise only |
+| **Tenant-specific** | Enable for specific tenant | Beta testing with specific customer |
+| **User-specific** | Enable for specific user | Internal testing |
+| **Kill Switch** | Disable feature immediately | Emergency rollback |
+
+**Example Feature Flags:**
+
+```yaml
+feature_flags:
+  - name: "ai_finance_agent"
+    type: "plan_based"
+    enabled_plans: ["advanced_ai", "enterprise"]
+    rollout_percentage: 100
+  
+  - name: "pos_module"
+    type: "percentage_rollout"
+    rollout_percentage: 50
+    enabled_tenants: ["tenant_abc", "tenant_def"]  # Always enabled
+  
+  - name: "new_dashboard_v2"
+    type: "percentage_rollout"
+    rollout_percentage: 10
+    kill_switch: true
+  
+  - name: "enterprise_sso"
+    type: "plan_based"
+    enabled_plans: ["enterprise"]
+    rollout_percentage: 100
+```
+
+### 23.12 Usage Metering
+
+> **Track penggunaan setiap tenant — trigger warning/action saat approaching limits.**
+
+**Metered Metrics:**
+
+| Metric | Unit | Warning (80%) | Warning (90%) | Limit (100%) |
+|--------|------|---------------|---------------|-------------|
+| **Users** | count | ⚠️ Email warning | 🟠 Dashboard alert | ❌ Cannot add users |
+| **Storage** | GB | ⚠️ Email warning | 🟠 Dashboard alert | ❌ Read-only mode |
+| **API Calls** | per month | ⚠️ Email warning | 🟠 Rate limit increase | ❌ API blocked |
+| **Transactions** | per month | ⚠️ Email warning | 🟠 Dashboard alert | ❌ Cannot create |
+| **Documents** | count | ⚠️ Email warning | 🟠 Dashboard alert | ❌ Cannot upload |
+| **POS Transactions** | per month | ⚠️ Email warning | 🟠 Dashboard alert | ❌ Cannot transact |
+
+**Usage Alert Flow:**
+
+```mermaid
+graph LR
+    A[Usage Tracking] --> B{Usage %}
+    B -->|< 80%| C[Normal]
+    B -->|80-89%| D[⚠️ Warning Email]
+    B -->|90-99%| E[🟠 Dashboard Alert]
+    B -->|≥ 100%| F[❌ Policy Enforcement]
+    D --> G[Upgrade Prompt]
+    E --> G
+    F --> H[Service Restricted]
+    F --> I[Upgrade Required]
+```
+
+**Policy Enforcement:**
+
+```text
+1. Email notification at 80% usage
+2. Dashboard warning at 90% usage
+3. Upgrade prompt at 95% usage
+4. Service restriction at 100% usage
+5. Grace period: 7 days before full restriction
+6. Data export allowed during grace period
+```
+
+### 23.13 Security Center
+
+> **Platform security monitoring — terpisah dari Tenant security.**
+
+**Security Events:**
+
+| Category | Events | Severity |
+|----------|--------|----------|
+| **Authentication** | Failed login, password reset, MFA changes | 🟠 High |
+| **Suspicious Activity** | Brute force, unusual IP, bulk data access | 🔴 Critical |
+| **Permission Changes** | Role assignment, permission grants, access review | 🟡 Medium |
+| **API Keys** | Key creation, revocation, usage anomaly | 🟠 High |
+| **Impersonation** | Session start, actions during, session end | 🟠 High |
+| **Data Access** | Cross-tenant access attempt, bulk export | 🔴 Critical |
+
+**Security Event Flow:**
+
+```mermaid
+graph TB
+    A[Security Event] --> B[Event Classification]
+    B -->|Critical| C[Immediate Alert]
+    B -->|High| D[Dashboard Alert]
+    B -->|Medium| E[Log + Weekly Review]
+    C --> F[Auto-response: Block + Notify]
+    D --> G[Manual Review Required]
+    E --> H[Scheduled Review]
+    F --> I[Incident Report]
+    G --> I
+```
+
+**Immutable Audit Log:**
+
+| Property | Description |
+|----------|-------------|
+| **Immutability** | Once written, NEVER modified or deleted |
+| **Integrity** | Hash chain for tamper detection |
+| **Retention** | 7 years minimum (configurable per policy) |
+| **Access** | Security Admin + Auditor (read-only) |
+| **Export** | CSV/JSON export for compliance |
+
+### 23.14 Platform vs Customer Separation
+
+> **Rules ketat untuk memisahkan Platform Control Center dari Customer ERP.**
+
+| Rule | Description | Enforcement |
+|------|-------------|-------------|
+| **No shared routes** | Platform routes ≠ Customer routes | Separate route prefixes |
+| **No shared session** | Platform session ≠ Customer session | Separate JWT claims |
+| **No shared UI** | Platform UI ≠ Customer UI | Separate layout + components |
+| **Audit separation** | Platform audit ≠ Customer audit | Separate audit tables |
+| **Data isolation** | Platform data ≠ Customer data | Separate schema/tables |
+
+**Route Structure:**
+
+```text
+/platform/*           → Platform Control Center routes
+/api/platform/*       → Platform API routes
+/dashboard/*          → Customer ERP routes
+/api/*                → Customer API routes
+```
+
+**Session Structure:**
+
+```typescript
+// Platform Session
+interface PlatformSession {
+  userId: string;
+  platformRole: 'OWNER' | 'PLATFORM_ADMIN' | 'BILLING_ADMIN' | 'SUPPORT_AGENT' | 'TECHNICAL_OPERATOR' | 'SECURITY_ADMIN' | 'AUDITOR';
+  type: 'platform';
+}
+
+// Customer Session
+interface CustomerSession {
+  userId: string;
+  tenantId: string;
+  role: 'ADMIN' | 'MEMBER' | 'VIEWER';
+  type: 'tenant';
+}
+```
+
+---
+
 **Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity Engineering Team
-**Document Version:** 2.1 — Business Operating System Architecture + POS Module
+**Document Version:** 2.1 — Business Operating System Architecture + Platform Control Center

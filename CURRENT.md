@@ -33,6 +33,7 @@
 | **Desktop App** | ⚠️ Placeholder only | 5% |
 | **POS Module** | 📋 Planned | 0% |
 | **Tax / GL Module** | ❌ Planned | 0% |
+| **Platform Control Center** | 📋 Architecture Documented | 0% |
 
 ---
 
@@ -364,6 +365,59 @@ _None currently._
 
 ---
 
+## 🏗️ Platform Control Center: Architecture Decision
+
+**Date:** 2026-08-31
+**Status:** Accepted (Documented)
+**Reference:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 23, [`FEATURES.md`](FEATURES.md) Section 19, [`ROADMAP.md`](ROADMAP.md) Phase 23-25
+
+> **Platform Control Center = "4 Worlds" yang terpisah dari Customer ERP.**
+> Superadmin Qalcuity BUKAN "Admin ERP customer" — mereka adalah operator/control plane dari seluruh platform.
+
+### 4 Worlds Separation
+
+| World | Scope | Status |
+|-------|-------|--------|
+| **Platform World** | Billing, support, monitoring, tenant management | 📋 Phase 23 |
+| **Tenant World** | ERP, POS, CRM, HR, Inventory — per tenant | ✅ Production |
+| **Control Engine World** | Workflow, approval, escalation, locking, audit | 🔄 Partial |
+| **Public World** | Login, register, landing page, pricing | ✅ Implemented |
+
+### Superadmin Roles (7)
+
+| Role | Scope | Phase |
+|------|-------|-------|
+| Qalcuity Owner | Platform-wide (highest authority) | Phase 23 |
+| Platform Admin | Day-to-day platform operations | Phase 23 |
+| Billing Admin | Financial operations | Phase 23 |
+| Support Agent | Customer-facing support | Phase 25 |
+| Technical Operator | System monitoring | Phase 24 |
+| Security Admin | Security operations | Phase 25 |
+| Auditor | Compliance & audit (read-only) | Phase 25 |
+
+### Platform Phases
+
+| Phase | Name | Status |
+|-------|------|--------|
+| **Phase 23** | Platform Control Center Core | 📋 Planned |
+| **Phase 24** | Platform Monitoring & Error Center | 📋 Planned |
+| **Phase 25** | Platform Support & Impersonation | 📋 Planned |
+
+### Key Decisions
+
+1. **Platform ≠ Customer** — Separate routes (`/platform/*` vs `/dashboard/*`), sessions, UI, audit tables
+2. **Entitlement Engine** — Plan → Entitlement → What tenant can use (no hardcoded `if plan == "professional"`)
+3. **Subscription Lifecycle** — ACTIVE → PAST_DUE → GRACE_PERIOD → SUSPENDED → ARCHIVED
+4. **Error Grouping** — Same error × N = 1 group, tenant-isolated, severity-based
+5. **Impersonation** — Request → Reason → Approval → Temporary Session → Audit Log (max 30 min)
+
+**Impact:** High — defines the entire platform operations layer
+**Timeline:** Phase 23-25 in ROADMAP.md (Platform Control Center)
+**Architecture:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 23 (23.1-23.14)
+**Features:** [`FEATURES.md`](FEATURES.md) Section 19 (65+ planned features)
+
+---
+
 ## 📊 Metrics
 
 ### Codebase Stats (Audit: 30 Agustus 2026)
@@ -406,6 +460,12 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 31 Agustus 2026 — Platform Control Center Architecture
+- ✅ **ARCHITECTURE.md Section 23** — Platform Architecture formalized: 4 Worlds, 7 Superadmin Roles, Subscription Lifecycle, Entitlement, Payment Review, Error Center, Tenant Health, Impersonation, Support, Feature Flags, Usage Metering, Security Center
+- ✅ **ROADMAP Phase 23-25** — Platform Control Center Core (23A-23F), Monitoring & Error Center (24A-24D), Support & Impersonation (25A-25E)
+- ✅ **FEATURES Section 19** — 65+ planned platform features across 9 subsections
+- ✅ **4 Worlds Separation** — Platform (billing/support/monitoring), Tenant (ERP/POS/CRM/HR), Control Engine (workflow/approval/escalation/locking/audit), Public (login/register/landing)
 
 ### 30 Agustus 2026 — Code Quality & Dynamic Data Sprint
 - ✅ **Security Fix** — Hardcoded NEXTAUTH_SECRET fallback dihapus, sekarang mandatory env var
@@ -490,6 +550,7 @@ _None currently._
 14. **Fix Decimal Type Errors** — Resolve pre-existing TypeScript Decimal arithmetic issues
 15. **Tax / GL Module** — Planned but not yet started (Phase 17)
 16. **POS Module** — Core POS with offline mode, industry config, ERP integration (Phase 22)
+17. **Platform Control Center** — Tenant management, subscription, entitlement, error center, health dashboard, support, impersonation, feature flags, usage metering, security center (Phase 23-25)
 
 ---
 
@@ -509,4 +570,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 4.1 — Business Operating System Architecture + POS Module
+**Document Version:** 4.2 — Business Operating System + Platform Control Center Architecture

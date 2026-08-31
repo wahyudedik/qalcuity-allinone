@@ -424,6 +424,165 @@
 - [ ] POS Tax Report — tax collected per period
 - [ ] POS Discount Report — discount usage analysis
 
+### Phase 23: Platform Control Center (Core) 📋 PLANNED
+
+> **Platform Control Center = control plane operator untuk seluruh platform Qalcuity.** BUKAN "Admin ERP customer" — ini adalah operator/system admin dari seluruh sistem.
+> Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 23.
+
+#### 23A: Platform Foundation
+
+- [ ] Design Platform Control Center architecture (separate from Customer ERP)
+- [ ] Platform database schema (platform-level models: PlatformUser, PlatformRole, TenantRegistry, etc.)
+- [ ] Platform authentication (separate from tenant auth — platform JWT)
+- [ ] Platform authorization (7 roles: Owner, Platform Admin, Billing Admin, Support Agent, Technical Operator, Security Admin, Auditor)
+- [ ] Platform RBAC middleware (platform routes ≠ tenant routes)
+- [ ] Platform UI shell (layout, navigation, sidebar)
+
+#### 23B: Tenant Management
+
+- [ ] Tenant list (all tenants with status, plan, usage)
+- [ ] Tenant detail (overview, subscription, usage, health, errors)
+- [ ] Tenant search & filtering (by status, plan, industry, size)
+- [ ] Tenant health dashboard (API latency, error rate, storage, active users)
+- [ ] Tenant provisioning (create, activate, suspend, archive)
+- [ ] Tenant settings override (platform-level configuration)
+
+#### 23C: Subscription & Billing Management
+
+- [ ] Subscription lifecycle management (ACTIVE → PAST_DUE → GRACE_PERIOD → SUSPENDED → ARCHIVED)
+- [ ] Plan management (create, edit, deactivate plans)
+- [ ] Entitlement engine (plan → module access + limits + features)
+- [ ] Entitlement matrix configuration (per plan: modules, users, storage, API, AI features)
+- [ ] Payment review workflow (transfer → PENDING_REVIEW → approve/reject)
+- [ ] Payment history (all payments across all tenants)
+- [ ] Manual payment approval (upload bukti → billing admin review)
+- [ ] Subscription upgrade/downgrade workflow
+- [ ] Invoice generation for subscriptions
+
+#### 23D: Usage Metering
+
+- [ ] Usage tracking per tenant (users, storage, API calls, transactions, documents, POS transactions)
+- [ ] Usage dashboards (per tenant + aggregate)
+- [ ] Usage alerts (80% → warning email, 90% → dashboard alert, 100% → policy enforcement)
+- [ ] Usage history & trends
+- [ ] Usage-based billing preparation
+
+#### 23E: Platform API Routes
+
+- [ ] `/api/platform/tenants` — CRUD + list + search
+- [ ] `/api/platform/subscriptions` — list + manage
+- [ ] `/api/platform/payments` — list + approve/reject
+- [ ] `/api/platform/plans` — CRUD
+- [ ] `/api/platform/entitlements` — CRUD + check
+- [ ] `/api/platform/usage` — read + alerts
+- [ ] `/api/platform/health` — tenant health metrics
+- [ ] `/api/platform/monitoring` — system health
+- [ ] `/api/platform/security` — security events
+- [ ] `/api/platform/audit` — platform audit logs
+- [ ] `/api/platform/feature-flags` — CRUD + toggle
+- [ ] `/api/platform/support/tickets` — CRUD
+- [ ] `/api/platform/support/impersonate` — start/stop impersonation
+- [ ] `/api/platform/users` — internal user management
+
+#### 23F: Platform UI Pages
+
+- [ ] `/platform/dashboard` — Platform overview (tenants count, revenue, health, alerts)
+- [ ] `/platform/tenants` — Tenant list with search/filter
+- [ ] `/platform/tenants/[id]` — Tenant detail (overview, subscription, usage, health)
+- [ ] `/platform/subscriptions` — Subscription list with status
+- [ ] `/platform/payments` — Payment review queue
+- [ ] `/platform/plans` — Plan management
+- [ ] `/platform/entitlements` — Entitlement configuration
+- [ ] `/platform/usage` — Usage dashboards
+- [ ] `/platform/users` — Internal user management
+
+### Phase 24: Platform Monitoring & Error Center 📋 PLANNED
+
+> **Platform monitoring — system health, error tracking, log management, background jobs.**
+
+#### 24A: System Health
+
+- [ ] System health dashboard (CPU, memory, disk, network)
+- [ ] Database health (connection pool, query performance, slow queries)
+- [ ] API health (response time, throughput, error rate)
+- [ ] Background job monitoring (queue depth, processing time, failures)
+- [ ] Uptime tracking & SLA compliance
+
+#### 24B: Error Center
+
+- [ ] Error grouping (same error signature × N occurrences = 1 group)
+- [ ] Error severity levels (Critical, Error, Warning)
+- [ ] Error context (tenant, module, user, request ID, stack trace)
+- [ ] Error filtering (tenant, module, severity, time range)
+- [ ] Error trends & charts
+- [ ] Error notification rules (critical → immediate alert)
+
+#### 24C: Log Management
+
+- [ ] Structured log ingestion (JSON format with tenantId, timestamp, severity)
+- [ ] Log search & filtering (full-text search, regex support)
+- [ ] Log retention policies (30-90 days configurable)
+- [ ] Log export (CSV, JSON)
+- [ ] Log aggregation (per tenant, per module, per severity)
+
+#### 24D: Background Jobs
+
+- [ ] Job queue monitoring (pending, processing, completed, failed)
+- [ ] Job retry management (manual retry, auto-retry with backoff)
+- [ ] Job scheduling (cron jobs, one-time jobs)
+- [ ] Job history & audit
+
+### Phase 25: Platform Support & Impersonation 📋 PLANNED
+
+> **Platform support — ticket management, impersonation, feature flags, security center.**
+
+#### 25A: Support Tickets
+
+- [ ] Ticket CRUD (create, assign, update, resolve, close)
+- [ ] Ticket statuses (Open, Investigating, Waiting Customer, Resolved, Closed)
+- [ ] Auto-attach context (tenant, user, browser, OS, app version, request ID, recent errors)
+- [ ] Ticket priority & SLA (P1: 4h, P2: 8h, P3: 24h, P4: 72h)
+- [ ] Ticket assignment & routing (round-robin, skill-based)
+- [ ] Internal notes (agent-to-agent communication)
+- [ ] Customer communication (email notifications, status updates)
+- [ ] Ticket dashboard (open, by priority, by age, by agent)
+
+#### 25B: Impersonation
+
+- [ ] Impersonation request (support agent → provide reason → approval)
+- [ ] Impersonation approval (auto-approve or manual based on policy)
+- [ ] Impersonation session (temporary session, max 30 min, time-limited)
+- [ ] Impersonation restrictions (no delete, no settings change, no billing access)
+- [ ] Impersonation audit trail (all actions logged during impersonation)
+- [ ] Impersonation monitoring (real-time active impersonation sessions)
+
+#### 25C: Feature Flags
+
+- [ ] Feature flag CRUD (create, edit, delete flags)
+- [ ] Feature flag types (percentage rollout, plan-based, tenant-specific, user-specific, kill switch)
+- [ ] Rollout stages (Internal → 1 tenant → 5 tenants → 10% → 50% → 100%)
+- [ ] Feature flag dashboard (all flags with status, rollout %, affected tenants)
+- [ ] Feature flag audit trail (who changed what, when)
+- [ ] Feature flag API (client-side SDK for flag evaluation)
+
+#### 25D: Security Center
+
+- [ ] Security events dashboard (failed login, suspicious activity, permission changes)
+- [ ] Security event classification (Critical, High, Medium, Low)
+- [ ] Security event response (auto-block, manual review, incident report)
+- [ ] API key management (creation, revocation, usage tracking)
+- [ ] Impersonation security monitoring
+- [ ] Immutable audit log (platform-level, hash chain integrity)
+- [ ] Audit log export (CSV, JSON for compliance)
+- [ ] Audit log retention (7 years minimum, configurable)
+
+#### 25E: Platform Integration
+
+- [ ] Feature flag API for client-side evaluation
+- [ ] Webhook for security events (Slack, email, PagerDuty)
+- [ ] Integration with monitoring tools (Grafana, Prometheus — optional)
+- [ ] Platform API documentation (OpenAPI/Swagger)
+
 ---
 
 ## Phase Overview
@@ -434,11 +593,11 @@
    ▼                ▼                ▼                ▼                ▼
 ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
 │Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │
-│1-8   │        │9-10  │        │11-13 │        │14-16 │        │17-18 │        │22    │
+│1-8   │        │9-10  │        │11-13 │        │14-16 │        │17-18 │        │22-25 │
 │✅Done │        │📋NEXT│        │📋PLAN│        │📋PLAN│        │📋PLAN│        │📋PLAN│
 └──────┘        └──────┘        └──────┘        └──────┘        └──────┘        └──────┘
    │                │                │                │                │                │
- Aug '26        Sep '26         Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27     Sep-Oct '27
+ Aug '26        Sep '26         Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27     Sep-Nov '27
 ```
 
 | Phase | Duration | Focus | Key Deliverables | Status |
@@ -452,6 +611,9 @@
 | **17** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
 | **18** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
 | **22** | Sep-Oct '27 | POS Module (Core) | POS Core + Offline + Industry Config + ERP Integration | 📋 `planned` |
+| **23** | Sep-Oct '27 | Platform Control Center (Core) | Tenant mgmt + Subscription + Billing + Entitlements + Usage | 📋 `planned` |
+| **24** | Oct-Nov '27 | Platform Monitoring & Error Center | System health + Error center + Logs + Background jobs | 📋 `planned` |
+| **25** | Nov-Dec '27 | Platform Support & Impersonation | Support tickets + Impersonation + Feature flags + Security center | 📋 `planned` |
 
 ### Success Criteria Per Phase
 
@@ -476,6 +638,9 @@
 | **17** | Full accounting compliance | Indonesian GAAP |
 | **18** | Paying customers | 100+ companies |
 | **22** | POS operational for all industries | POS Core + Offline + Industry Config |
+| **23** | Platform Control Center core functional | Tenant mgmt + Subscription + Billing + Entitlements |
+| **24** | Monitoring & Error Center functional | System health + Error grouping + Log management |
+| **25** | Support & Security operational | Ticket system + Impersonation + Feature flags + Security center |
 
 ---
 
@@ -544,6 +709,7 @@
 | 2026-08-30 | Unified Control Engine — ADR-017 s/d ADR-023, 16 recommendations documented, Phase 10 expanded | Enterprise-grade operational control |
 | 2026-08-30 | Control Center Architecture — ADR-015 & ADR-016, Phase 10 added, Control Center docs updated | Operational backbone |
 | 2026-08-30 | Permission Engine Architecture — ADR-013 & ADR-014, Phase 9 added, docs updated | Architecture foundation |
+| 2026-08-31 | Platform Control Center — ARCHITECTURE.md Section 23 (4 Worlds, Control Center, Superadmin roles, Subscription lifecycle, Entitlements, Error center, Tenant health, Impersonation, Feature flags, Usage metering, Security center) | Platform architecture |
 | 2026-08-31 | POS Module Architecture — POS as Core Module in ARCHITECTURE.md Section 22, Phase 22 in ROADMAP, POS features in FEATURES | POS module foundation |
 | 2026-08-31 | Architecture Formalization — Business Operating System vision, 3 Foundation Engines, Industry Packs, Decision Tree, Anti-patterns | Strategic architecture |
 | 2026-08-30 | Documentation overhaul — ROADMAP, ARCHITECTURE, DATABASE, SECURITY, UI_UX, DECISIONS | Developer experience |
