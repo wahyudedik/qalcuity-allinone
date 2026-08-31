@@ -78,9 +78,10 @@
 12. [Control Center & Workflow](#12-control-center--workflow)
 13. [Architecture Engines](#13-architecture-engines)
 14. [Industry Packs](#14-industry-packs)
-15. [Mobile](#15-mobile)
-16. [Desktop](#16-desktop)
-17. [Pricing Model](#17-pricing-model)
+15. [POS Module](#15-pos-module)
+16. [Mobile](#16-mobile)
+17. [Desktop](#17-desktop)
+18. [Pricing Model](#18-pricing-model)
 
 ---
 
@@ -996,7 +997,89 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 ---
 
-## 15. Mobile
+## 15. POS Module
+
+> **POS (Point of Sale) adalah Core Module dalam Qalcuity — bukan produk terpisah.** POS terintegrasi langsung ke ERP: Inventory → Finance → Accounting → CRM → Audit.
+> Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22.
+
+### 15.1 POS Core Features
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **POS Sale** | 📋 `planned` | — | Transaksi penjualan langsung dengan cart, discount, tax |
+| **POS Returns** | 📋 `planned` | — | Pengembalian barang partial/full |
+| **POS Refunds** | 📋 `planned` | — | Pengembalian dana dengan approval workflow |
+| **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
+| **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
+| **POS Customers** | 📋 `planned` | — | Data pelanggan untuk loyalty dan receipt |
+| **POS Products** | 📋 `planned` | — | Master produk untuk POS (dari Inventory module) |
+| **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
+| **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
+| **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
+| **POS Shift Management** | 📋 `planned` | — | Open shift, track transactions, close shift |
+| **POS Cashier Management** | 📋 `planned` | — | Cashier assignment, shift scheduling, performance |
+| **POS Receipt Printing** | 📋 `planned` | — | Receipt generation dan printing (thermal/regular) |
+| **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
+| **POS Offline Mode** | 📋 `planned` | — | Transaksi tanpa koneksi internet dengan sync rules |
+| **POS Closing** | 📋 `planned` | — | Daily/shift closing dengan approval workflow |
+| **POS Audit Trail** | 📋 `planned` | — | Jejak audit lengkap untuk semua transaksi POS |
+
+### 15.2 POS Permissions by Role
+
+| Role | Permission | Scope |
+|------|------------|-------|
+| **Cashier** | Create Sale, Receive Payment, Print Receipt | Terminal/Cabang |
+| **Cashier** | ❌ NO Void Sale | — |
+| **Cashier** | ❌ NO Discount > 10% | — |
+| **Cashier** | ❌ NO Refund | — |
+| **Supervisor** | Void Sale, Refund, Override Discount | Cabang |
+| **Manager** | Change Price, Approve Refund, Close Shift | Cabang/Regional |
+
+### 15.3 POS Offline Mode Rules
+
+| Rule | Description | Implementation |
+|------|-------------|----------------|
+| **Stock Management** | Local cache + sync saat online | IndexedDB/localStorage + background sync |
+| **Nomor Transaksi** | Offline counter + merge saat online | UUID v4 + sequence generator |
+| **Payment Handling** | Cash offline, card pending | Cash: immediate, Card: queue for sync |
+| **Sync Conflict Resolution** | Last-write-win + manual resolution | Timestamp-based with conflict UI |
+| **Duplicate Prevention** | Idempotency key per transaction | SHA-256 hash of transaction data |
+| **Audit Trail** | Offline entries marked | `isOffline: true` flag + sync timestamp |
+
+### 15.4 POS Industry Configuration
+
+| Industry | POS Flow | Special Features |
+|----------|----------|-----------------|
+| **Retail** | Barcode → Cart → Payment → Receipt | Multi-item cart, barcode scanning, receipt printing |
+| **F&B** | Order → Kitchen → Preparation → Payment | Kitchen display, order tracking, table management |
+| **Bengkel** | Customer → Vehicle → Service → Parts → Invoice → Payment | Vehicle database, service history, parts inventory |
+| **Apotek** | Product → Batch → Expiry → Sale → Payment | Batch tracking, expiry management, prescription handling |
+
+### 15.5 POS Integration Points
+
+| Integration | Direction | Description |
+|-------------|-----------|-------------|
+| **POS → Inventory** | Outbound | Auto stock deduction on sale, stock lookup |
+| **POS → Finance** | Outbound | Auto payment recording, revenue tracking |
+| **POS → Accounting** | Outbound | Auto journal entry, tax entry |
+| **POS → CRM** | Outbound | Customer purchase history, loyalty points |
+| **POS → Audit Trail** | Outbound | All POS mutations logged with full trail |
+| **Inventory → POS** | Inbound | Product master data, stock levels, pricing |
+| **CRM → POS** | Inbound | Customer data, loyalty program config |
+
+### 15.6 POS Control Engine (Shift Lifecycle)
+
+| Status | Description | Allowed Actions |
+|--------|-------------|-----------------|
+| **SHIFT_OPEN** | Shift baru dibuka | Create sale, receive payment |
+| **TRANSACTIONS** | Proses transaksi | Create sale, void, refund (with permission) |
+| **SHIFT_CLOSING** | Shift akan ditutup | Hitung cash, count items, submit closing |
+| **APPROVAL** | Menunggu approval | Manager review closing report |
+| **LOCKED** | Shift sudah ditutup | View only, no modifications |
+
+---
+
+## 16. Mobile
 
 React Native / Expo mobile app untuk field operations.
 
@@ -1009,7 +1092,7 @@ React Native / Expo mobile app untuk field operations.
 
 ---
 
-## 16. Desktop
+## 17. Desktop
 
 Electron-based desktop application.
 
@@ -1020,7 +1103,7 @@ Electron-based desktop application.
 
 ---
 
-## 17. Pricing Model
+## 18. Pricing Model
 
 ### Tier-based Pricing
 
@@ -1072,14 +1155,21 @@ Electron-based desktop application.
 | `verified` | ✔️ | 1 | ~1% |
 | `partial` | 🔄 | ~18 | ~12% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~92 | ~51% |
+| `planned` | 📋 | ~120 | ~55% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~176** | **100%** |
+| **Total** | | **~210** | **100%** |
 
 ---
 
 ## 📝 Changelog
+
+### v4.1.0 (August 31, 2026) — POS Module Architecture
+- **POS as Core Module** — POS defined as core module, not separate product
+- **POS Section 15** — 17 core features, 3 roles, 6 offline rules, 4 industry configs
+- **POS Phase 22** — Full POS phase with 7 sub-phases (Core, Shift/Cash, Offline, Industry Config, ERP Integration, Permissions, Reports)
+- **POS Architecture** — Section 22 in ARCHITECTURE.md with data model, integration flow, control engine
+- **Sections renumbered** — Mobile → 16, Desktop → 17, Pricing → 18
 
 ### v4.0.0 (August 31, 2026) — Business Operating System Architecture
 - **Architecture Formalization** — Qalcuity defined as "Business Operating System" (not ERP)

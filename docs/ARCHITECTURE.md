@@ -31,6 +31,7 @@
 19. [API Design](#19-api-design)
 20. [Unified Control Engine Architecture](#20-unified-control-engine-architecture)
 21. [Deployment Architecture](#21-deployment-architecture)
+22. [POS Module (Core)](#22-pos-module-core)
 
 ---
 
@@ -1213,8 +1214,368 @@ Transaction → Day → Month → Quarter → Year
 
 > **Note:** Industry Configuration Engine will be implemented in Phase 11 (Industry Configuration Foundation).
 
+> **Note:** POS Module will be implemented in Phase 22 (POS Core Foundation).
+
+---
+
+## 22. POS Module (Core)
+
+> **POS (Point of Sale) adalah Core Module dalam Qalcuity — bukan produk terpisah.** POS terintegrasi langsung ke seluruh ekosistem ERP: Inventory → Finance → Accounting → CRM → Audit. POS menggunakan Permission Engine, Workflow Engine, dan Audit Trail yang sama dengan modul lainnya.
+
+### 22.1 POS as Core Module
+
+POS merupakan bagian dari **Core Modules (Industry-Agnostic)** — berlaku untuk semua industri yang membutuhkan transaksi penjualan langsung. POS bukan industry-specific; ia adalah capability universal yang **dikonfigurasi** per industri melalui Industry Configuration Engine.
+
+```mermaid
+graph TB
+    subgraph POS_CORE["🛒 POS Core Module"]
+        SALE[POS Sale]
+        RET[Returns & Refunds]
+        DIS[Discounts & Promotions]
+        PAY[Payments]
+        SHIFT[Shift Management]
+        CASH[Cash Drawer]
+        RECEIPT[Receipt Printing]
+        TAX[Tax Calculation]
+        CLOSING[Daily Closing]
+        AUDIT[Audit Trail]
+    end
+    
+    subgraph INTEGRATIONS["🔗 ERP Integrations"]
+        INV[Inventory Module]
+        FIN[Finance Module]
+        ACC[Accounting Module]
+        CRM[CRM Module]
+        AT[Audit Trail]
+    end
+    
+    SALE --> INV
+    SALE --> FIN
+    PAY --> FIN
+    TAX --> ACC
+    SHIFT --> AUDIT
+    CLOSING --> ACC
+    RET --> INV
+    RET --> FIN
+```
+
+### 22.2 POS Integration Flow
+
+```mermaid
+graph LR
+    A[POS Sale] --> B[Stock berkurang<br/>Inventory Module]
+    B --> C[Payment tercatat<br/>Finance Module]
+    C --> D[Revenue tercatat<br/>Finance Module]
+    D --> E[Tax tercatat<br/>Accounting Module]
+    E --> F[Accounting entry<br/>Journal Entry]
+    F --> G[Shift cashier<br/>Shift Management]
+    G --> H[Daily closing<br/>Closing Module]
+    H --> I[Audit trail<br/>Audit Module]
+```
+
+```text
+POS Sale → Stock berkurang (Inventory) → Payment tercatat (Finance) → Revenue tercatat (Finance)
+→ Tax tercatat (Accounting) → Accounting entry (Journal) → Shift cashier (Shift Management)
+→ Daily closing (Closing) → Audit trail (Audit)
+```
+
+### 22.3 POS Features
+
+| Feature | Description | Module Integration |
+|---------|-------------|-------------------|
+| **Sales** | Transaksi penjualan langsung | Inventory, Finance |
+| **Returns** | Pengembalian barang | Inventory, Finance |
+| **Refunds** | Pengembalian dana | Finance, CRM |
+| **Discounts** | Diskon per item/transaksi | Finance |
+| **Promotions** | Promosi berbasis waktu/quantity | Marketing |
+| **Customers** | Data pelanggan POS | CRM |
+| **Products** | Master produk untuk POS | Inventory |
+| **Barcode** | Scan barcode untuk transaksi | Inventory |
+| **Payments** | Multi metode pembayaran | Finance |
+| **Cash Drawer** | Kelola uang tunai | Finance |
+| **Shift Management** | Kelola shift cashier | HR, Payroll |
+| **Cashier Management** | Kelola akun cashier | HR |
+| **Receipt Printing** | Cetak struk transaksi | — |
+| **Tax Calculation** | Perhitungan pajak otomatis | Accounting |
+| **Offline Mode** | Transaksi tanpa koneksi | Sync Engine |
+| **Closing** | Penutupan harian/shift | Accounting, Audit |
+| **Audit Trail** | Jejak audit transaksi | Audit Module |
+
+### 22.4 POS Permissions by Role
+
+POS menggunakan **Permission Engine** yang sama dengan modul lain. Berikut default permission matrix:
+
+| Role | Permission | Scope |
+|------|------------|-------|
+| **Cashier** | `pos.sale.create`, `pos.payment.receive`, `pos.receipt.print` | Terminal/Cabang |
+| **Cashier** | ❌ NO `pos.sale.void` | — |
+| **Cashier** | ❌ NO `pos.discount.override` (>10%) | — |
+| **Cashier** | ❌ NO `pos.refund.create` | — |
+| **Supervisor** | `pos.sale.void`, `pos.refund.create`, `pos.discount.override` | Cabang |
+| **Manager** | `pos.price.change`, `pos.refund.approve`, `pos.shift.close` | Cabang/Regional |
+
+```typescript
+// Contoh: Permission check untuk POS
+can(cashier, "create", "pos_sale", { terminal: "Terminal-01" })
+// → true jika cashier punya pos.sale.create untuk terminal tersebut
+
+can(supervisor, "void", "pos_sale", { branch: "Surabaya" })
+// → true jika supervisor punya pos.sale.void untuk cabang Surabaya
+
+can(manager, "close", "pos_shift", { branch: "Surabaya" })
+// → true jika manager punya pos.shift.close untuk cabang Surabaya
+```
+
+### 22.5 POS Control Engine (Shift Lifecycle)
+
+POS menggunakan **Unified Control Engine** dengan shift-specific lifecycle:
+
+```mermaid
+graph LR
+    A[SHIFT_OPEN] --> B[TRANSACTIONS]
+    B --> C[SHIFT_CLOSING]
+    C --> D[APPROVAL]
+    D --> E[LOCKED]
+```
+
+```text
+SHIFT_OPEN → TRANSACTIONS → SHIFT_CLOSING → APPROVAL → LOCKED
+```
+
+| Status | Description | Allowed Actions |
+|--------|-------------|-----------------|
+| **SHIFT_OPEN** | Shift baru dibuka | Create sale, receive payment |
+| **TRANSACTIONS** | Proses transaksi | Create sale, void, refund (with permission) |
+| **SHIFT_CLOSING** | Shift akan ditutup | Hitung cash, count items, submit closing |
+| **APPROVAL** | Menunggu approval | Manager review closing report |
+| **LOCKED** | Shift sudah ditutup | View only, no modifications |
+
+### 22.6 POS Offline Mode Architecture
+
+POS mendukung **offline mode** dengan aturan sync ketat:
+
+| Rule | Description | Implementation |
+|------|-------------|----------------|
+| **Stock Management** | Local cache + sync saat online | IndexedDB/localStorage + background sync |
+| **Nomor Transaksi** | Offline counter + merge saat online | UUID v4 + sequence generator |
+| **Payment Handling** | Cash offline, card pending | Cash: immediate, Card: queue for sync |
+| **Sync Conflict Resolution** | Last-write-win + manual resolution | Timestamp-based with conflict UI |
+| **Duplicate Prevention** | Idempotency key per transaction | SHA-256 hash of transaction data |
+| **Audit Trail** | Offline entries marked | `isOffline: true` flag + sync timestamp |
+
+```text
+Offline Flow:
+1. User creates transaction offline
+2. Transaction stored locally (IndexedDB)
+3. Stock deducted from local cache
+4. Transaction marked as "pending_sync"
+5. When online: sync queue processes transactions
+6. Conflict detection: if stock changed during offline
+7. Resolution: manual if conflict, auto if no conflict
+8. Audit trail: all offline entries flagged with sync timestamp
+```
+
+### 22.7 POS Industry Configuration
+
+POS dikonfigurasi per industri melalui **Industry Configuration Engine**:
+
+| Industry | POS Flow | Special Features |
+|----------|----------|-----------------|
+| **Retail** | Barcode → Cart → Payment → Receipt | Multi-item cart, barcode scanning, receipt printing |
+| **F&B** | Order → Kitchen → Preparation → Payment | Kitchen display, order tracking, table management |
+| **Bengkel** | Customer → Vehicle → Service → Parts → Invoice → Payment | Vehicle database, service history, parts inventory |
+| **Apotek** | Product → Batch → Expiry → Sale → Payment | Batch tracking, expiry management, prescription handling |
+
+```yaml
+# Contoh: POS Configuration untuk Retail
+pos_config:
+  industry: "retail"
+  flow: "barcode_cart_payment_receipt"
+  features:
+    - barcode_scanning
+    - multi_item_cart
+    - receipt_printer
+    - cash_drawer
+    - customer_display
+  hardware:
+    barcode_scanner: true
+    receipt_printer: true
+    cash_drawer: true
+    customer_display: true
+    scale: false
+```
+
+```yaml
+# Contoh: POS Configuration untuk F&B
+pos_config:
+  industry: "food_beverage"
+  flow: "order_kitchen_preparation_payment"
+  features:
+    - table_management
+    - kitchen_display
+    - order_tracking
+    - split_bill
+    - tip_management
+  hardware:
+    kitchen_printer: true
+    customer_display: false
+    order_display: true
+```
+
+### 22.8 POS Data Model (Prisma Schema Extension)
+
+```prisma
+// POS-specific models (extensions to existing schema)
+model POSSession {
+  id            String   @id @default(cuid())
+  tenantId      String
+  terminalId    String
+  cashierId     String
+  shiftNumber   Int
+  startTime     DateTime
+  endTime       DateTime?
+  status        ShiftStatus @default(SHIFT_OPEN)
+  openingCash   Decimal  @default(0)
+  closingCash   Decimal?
+  totalSales    Decimal  @default(0)
+  totalRefunds  Decimal  @default(0)
+  totalDiscounts Decimal @default(0)
+  transactionCount Int @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  transactions  POSTransaction[]
+  
+  @@index([tenantId, status])
+  @@index([tenantId, cashierId])
+  @@index([tenantId, startTime])
+}
+
+model POSTransaction {
+  id            String   @id @default(cuid())
+  tenantId      String
+  sessionId     String
+  transactionNo String
+  customerId    String?
+  subtotal      Decimal
+  taxAmount     Decimal
+  discountAmount Decimal @default(0)
+  totalAmount   Decimal
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PAID)
+  status        TransactionStatus @default(COMPLETED)
+  isOffline     Boolean  @default(false)
+  syncTimestamp DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  session       POSSession @relation(fields: [sessionId], references: [id])
+  items         POSTransactionItem[]
+  payments      POSTransactionPayment[]
+  refunds       POSRefund[]
+  
+  @@unique([tenantId, transactionNo])
+  @@index([tenantId, sessionId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, customerId])
+}
+
+model POSTransactionItem {
+  id            String   @id @default(cuid())
+  tenantId      String
+  transactionId String
+  productId     String
+  quantity      Int
+  unitPrice     Decimal
+  discountPercent Decimal @default(0)
+  discountAmount Decimal @default(0)
+  taxRate       Decimal  @default(0)
+  taxAmount     Decimal  @default(0)
+  lineTotal     Decimal
+  createdAt     DateTime @default(now())
+  
+  transaction   POSTransaction @relation(fields: [transactionId], references: [id])
+  
+  @@index([tenantId, transactionId])
+  @@index([tenantId, productId])
+}
+
+model POSTransactionPayment {
+  id            String   @id @default(cuid())
+  tenantId      String
+  transactionId String
+  paymentMethod PaymentMethod
+  amount        Decimal
+  reference     String?
+  status        PaymentStatus @default(COMPLETED)
+  createdAt     DateTime @default(now())
+  
+  transaction   POSTransaction @relation(fields: [transactionId], references: [id])
+  
+  @@index([tenantId, transactionId])
+}
+
+model POSRefund {
+  id            String   @id @default(cuid())
+  tenantId      String
+  transactionId String
+  refundNo      String
+  amount        Decimal
+  reason        String
+  status        RefundStatus @default(PENDING)
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  transaction   POSTransaction @relation(fields: [transactionId], references: [id])
+  
+  @@unique([tenantId, refundNo])
+  @@index([tenantId, transactionId])
+  @@index([tenantId, status])
+}
+
+enum ShiftStatus {
+  SHIFT_OPEN
+  TRANSACTIONS
+  SHIFT_CLOSING
+  APPROVAL
+  LOCKED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  VOIDED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  E_WALLET
+  BANK_TRANSFER
+  QRIS
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+```
+
 ---
 
 **Last Updated:** August 31, 2026
 **Maintainer:** Qalcuity Engineering Team
-**Document Version:** 2.0 — Business Operating System Architecture
+**Document Version:** 2.1 — Business Operating System Architecture + POS Module
