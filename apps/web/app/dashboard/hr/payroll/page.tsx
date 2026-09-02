@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { useTranslation } from '@/lib/i18n'
+import { exportToCSV } from '@/lib/export'
 import {
     Download,
     Play,
@@ -14,6 +15,7 @@ import {
     Loader2,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface PayrollRecord {
     id: string
@@ -35,6 +37,11 @@ export default function PayrollPage() {
     const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState('all')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [processing, setProcessing] = useState(false)
+    const [showProcessConfirm, setShowProcessConfirm] = useState(false)
+    const [pendingCount, setPendingCount] = useState(0)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
     useEffect(() => {
         if (toast) {
@@ -42,6 +49,63 @@ export default function PayrollPage() {
             return () => clearTimeout(timer)
         }
     }, [toast])
+
+    const handleExport = () => {
+        if (filteredData.length === 0) {
+            setToast({ message: 'Tidak ada data untuk di-export', type: 'error' })
+            return
+        }
+        const csvData = filteredData.map(record => ({
+            'Karyawan': record.employeeName,
+            'Periode': record.period,
+            'Gaji Pokok': record.baseSalary,
+            'Tunjangan': record.allowances,
+            'Potongan': record.deductions,
+            'Gaji Bersih': record.netSalary,
+            'Status': statusConfig[record.status]?.label || record.status,
+        }))
+        exportToCSV(csvData, `payroll-${new Date().toISOString().split('T')[0]}`)
+        setToast({ message: 'Data payroll berhasil di-export', type: 'success' })
+    }
+
+    const handleProcessPayroll = async () => {
+        const pendingRecords = payrollData.filter(p => p.status === 'pending')
+        if (pendingRecords.length === 0) {
+            setToast({ message: 'Tidak ada payroll yang perlu diproses', type: 'error' })
+            return
+        }
+        setPendingCount(pendingRecords.length)
+        setShowProcessConfirm(true)
+    }
+
+    const confirmProcess = async () => {
+        const pendingRecords = payrollData.filter(p => p.status === 'pending')
+        setShowProcessConfirm(false)
+        setProcessing(true)
+        try {
+            const results = await Promise.all(
+                pendingRecords.map(record =>
+                    fetch('/api/hr/payroll', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: record.id, status: 'processed' }),
+                    }).then(r => r.json())
+                )
+            )
+            const succeeded = results.filter(r => r.success).length
+            const failed = results.filter(r => !r.success).length
+            fetchPayroll()
+            if (failed === 0) {
+                setToast({ message: `${succeeded} payroll berhasil diproses`, type: 'success' })
+            } else {
+                setToast({ message: `${succeeded} berhasil, ${failed} gagal diproses`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal memproses payroll', type: 'error' })
+        } finally {
+            setProcessing(false)
+        }
+    }
 
     const statusConfig = {
         pending: { label: t('hr.payroll.pending') || 'Belum Diproses', color: 'bg-yellow-100 text-yellow-700' },
@@ -75,10 +139,16 @@ export default function PayrollPage() {
         fetchPayroll()
     }, [fetchPayroll])
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus data payroll ini?')) return
+    const handleDelete = (id: string) => {
+        setDeleteTargetId(id)
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!deleteTargetId) return
+        setShowDeleteConfirm(false)
         try {
-            const response = await fetch(`/api/hr/payroll/${id}`, { method: 'DELETE' })
+            const response = await fetch(`/api/hr/payroll/${deleteTargetId}`, { method: 'DELETE' })
             const result = await response.json()
             if (result.success) {
                 fetchPayroll()
@@ -88,6 +158,8 @@ export default function PayrollPage() {
             }
         } catch {
             setToast({ message: 'Gagal menghapus data payroll', type: 'error' })
+        } finally {
+            setDeleteTargetId(null)
         }
     }
 
@@ -133,13 +205,20 @@ export default function PayrollPage() {
                     <p className="text-gray-500">{t('hr.payroll.subtitle') || 'Kelola gaji dan penggajian karyawan'}</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <button
+                        onClick={handleExport}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
                         <Download className="h-4 w-4" />
                         {t('hr.payroll.export') || 'Export'}
                     </button>
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                        <Play className="h-4 w-4" />
-                        {t('hr.payroll.processPayroll') || 'Proses Payroll'}
+                    <button
+                        onClick={handleProcessPayroll}
+                        disabled={processing}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                        {processing ? 'Memproses...' : (t('hr.payroll.processPayroll') || 'Proses Payroll')}
                     </button>
                 </div>
             </div>
@@ -252,8 +331,12 @@ export default function PayrollPage() {
                         <Play className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Belum ada data payroll</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Data payroll akan muncul setelah proses penggajian dilakukan</p>
-                        <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                            <Play className="h-4 w-4" />
+                        <button
+                            onClick={handleProcessPayroll}
+                            disabled={processing}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                             Proses Payroll
                         </button>
                     </div>
@@ -323,6 +406,29 @@ export default function PayrollPage() {
                     </div>
                 )}
             </div>
+
+            {/* Process Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showProcessConfirm}
+                onClose={() => setShowProcessConfirm(false)}
+                onConfirm={confirmProcess}
+                title="Proses Payroll"
+                message={`Proses ${pendingCount} payroll yang belum diproses?`}
+                confirmText="Proses"
+                variant="warning"
+                isLoading={processing}
+            />
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null) }}
+                onConfirm={confirmDelete}
+                title="Hapus Payroll"
+                message="Apakah Anda yakin ingin menghapus data payroll ini?"
+                confirmText="Hapus"
+                variant="danger"
+            />
 
             {/* Toast */}
             {toast && (

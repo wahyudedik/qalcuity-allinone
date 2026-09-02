@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { z } from 'zod'
+import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { formatCurrency } from '@/lib/utils'
+import { createPurchaseOrderSchema } from '@/lib/validation-schemas'
 
 interface POItem {
     description: string
@@ -32,6 +35,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
     const [items, setItems] = useState<POItem[]>([
         { description: '', quantity: 1, unitPrice: 0 },
     ])
+    const [formError, setFormError] = useState<string | null>(null)
 
     const addItem = () => {
         setItems([...items, { description: '', quantity: 1, unitPrice: 0 }])
@@ -55,6 +59,28 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Client-side Zod validation
+        try {
+            createPurchaseOrderSchema.parse({
+                supplierName: formData.supplierName || undefined,
+                supplierEmail: formData.supplierEmail || undefined,
+                expectedDelivery: formData.expectedDelivery || undefined,
+                notes: formData.notes || undefined,
+                items: items.map(item => ({
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                })),
+            })
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const firstError = error.issues[0]
+                setFormError(firstError.message)
+                return
+            }
+        }
+
         onSubmit({ ...formData, items })
         setFormData({ supplierName: '', supplierEmail: '', expectedDelivery: '', notes: '' })
         setItems([{ description: '', quantity: 1, unitPrice: 0 }])
@@ -64,6 +90,12 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Buat Purchase Order Baru" size="xl">
             <form onSubmit={handleSubmit} className="space-y-6">
+                {formError && (
+                    <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        <span>{formError}</span>
+                        <button type="button" onClick={() => setFormError(null)} className="ml-auto text-red-500 hover:text-red-700">&times;</button>
+                    </div>
+                )}
                 {/* Supplier Info */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -109,9 +141,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
                             onClick={addItem}
                             className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                         >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
+                            <Plus className="h-4 w-4" />
                             Tambah Item
                         </button>
                     </div>
@@ -159,9 +189,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
                                         onClick={() => removeItem(index)}
                                         className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
                                     >
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                        <Trash2 className="h-4 w-4" />
                                     </button>
                                 )}
                             </div>

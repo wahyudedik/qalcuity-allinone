@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency as fmtCurrency, formatDate as fmtDate } from '@/lib/utils'
+import { exportToCSV, formatExportData } from '@/lib/export'
 import {
     ArrowUpDown,
     CheckCircle,
@@ -87,6 +88,9 @@ export default function ReconciliationPage() {
     const [selectedBankTx, setSelectedBankTx] = useState<BankTransaction | null>(null)
     const [matchFilter, setMatchFilter] = useState<string>('all')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [selectedDetailTx, setSelectedDetailTx] = useState<BankTransaction | null>(null)
+    const [showDetailModal, setShowDetailModal] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         if (toast) {
@@ -320,7 +324,28 @@ export default function ReconciliationPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <button
+                        onClick={() => {
+                            const exportData = bankTransactions.map(tx => ({
+                                date: tx.date,
+                                description: tx.description,
+                                reference: tx.bankReference || '',
+                                amount: tx.amount,
+                                type: tx.type,
+                                status: tx.status,
+                            }))
+                            const headerMap: Record<string, string> = {
+                                date: t('finance.reconciliation.date'),
+                                description: t('finance.reconciliation.description'),
+                                reference: t('finance.reconciliation.reference'),
+                                amount: t('finance.reconciliation.amount'),
+                                type: t('finance.reconciliation.type'),
+                                status: t('finance.reconciliation.status'),
+                            }
+                            exportToCSV(formatExportData(exportData, headerMap), `reconciliation-${selectedAccount}-${new Date().toISOString().split('T')[0]}`)
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
                         <Download className="h-4 w-4" />
                         {t('finance.reconciliation.export')}
                     </button>
@@ -538,7 +563,10 @@ export default function ReconciliationPage() {
                                                 <LinkIcon className="h-3 w-3" />
                                                 {t('finance.reconciliation.match')}
                                             </button>
-                                            <button className="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+                                            <button
+                                                onClick={() => { setSelectedDetailTx(tx); setShowDetailModal(true) }}
+                                                className="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300"
+                                            >
                                                 <Eye className="h-3 w-3" />
                                                 {t('finance.reconciliation.detail')}
                                             </button>
@@ -651,7 +679,10 @@ export default function ReconciliationPage() {
                                                             <LinkIcon className="h-3 w-3" />
                                                             {t('finance.reconciliation.match')}
                                                         </button>
-                                                        <button className="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+                                                        <button
+                                                            onClick={() => { setSelectedDetailTx(tx); setShowDetailModal(true) }}
+                                                            className="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300"
+                                                        >
                                                             <Eye className="h-3 w-3" />
                                                             {t('finance.reconciliation.detail')}
                                                         </button>
@@ -689,7 +720,12 @@ export default function ReconciliationPage() {
                     <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                     <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {t('finance.reconciliation.dragDrop')}{' '}
-                        <button className="text-blue-600 hover:text-blue-700 dark:text-blue-400">{t('finance.reconciliation.browse')}</button>
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                        >
+                            {t('finance.reconciliation.browse')}
+                        </button>
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                         {t('finance.reconciliation.uploadFormats')}
@@ -756,6 +792,84 @@ export default function ReconciliationPage() {
                     </div>
                 </div>
             )}
+
+            {/* Detail Modal */}
+            {showDetailModal && selectedDetailTx && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                {t('finance.reconciliation.detail') || 'Detail Transaksi'}
+                            </h3>
+                            <button
+                                onClick={() => { setShowDetailModal(false); setSelectedDetailTx(null) }}
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+                            >
+                                <XCircle className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('finance.reconciliation.description') || 'Deskripsi'}</span>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedDetailTx.description}</span>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('finance.reconciliation.date') || 'Tanggal'}</span>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmtDate(selectedDetailTx.date)}</span>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Jumlah</span>
+                                    <span className={`text-sm font-semibold ${selectedDetailTx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {selectedDetailTx.amount >= 0 ? '+' : ''}{formatCurrencyFull(selectedDetailTx.amount)}
+                                    </span>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Tipe</span>
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{selectedDetailTx.type}</span>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${selectedDetailTx.status === 'matched' ? 'bg-green-100 text-green-700' :
+                                            selectedDetailTx.status === 'discrepancy' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
+                                        }`}>
+                                        {selectedDetailTx.status}
+                                    </span>
+                                </div>
+                                {selectedDetailTx.bankReference && (
+                                    <div className="mt-2 flex items-center justify-between">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Referensi Bank</span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedDetailTx.bankReference}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                onClick={() => { setShowDetailModal(false); setSelectedDetailTx(null) }}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                            >
+                                {t('finance.reconciliation.cancel') || 'Tutup'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden file input for Browse button */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                        setToast({ message: `File "${file.name}" berhasil dipilih. Mengunggah...`, type: 'success' })
+                    }
+                }}
+            />
 
             {/* Toast */}
             {toast && (

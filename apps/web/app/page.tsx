@@ -288,7 +288,7 @@ export default function HomePage() {
                         </div>
                     </div>
                     <div className="mt-8 border-t border-gray-200 pt-8 text-center text-sm text-gray-400">
-                        © 2026 Qalcuity. All rights reserved. Made with ♥ in Indonesia.
+                        © 2026 Qalcuity. All rights reserved. Made with <span className="text-red-400">&#9829;</span> in Indonesia.
                     </div>
                 </div>
             </footer>

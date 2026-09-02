@@ -11,6 +11,8 @@
         "seed": "tsx prisma/seed.ts",
         "studio": "prisma studio",
         "migrate:deploy": "prisma migrate deploy",
+        "migrate:status": "prisma migrate status",
+        "migrate:reset": "prisma migrate reset --force",
         "clean": "rm -rf node_modules .prisma"
     },
     "dependencies": {

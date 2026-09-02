@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { PlusCircle, Pencil, Trash2, Eye } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
+import { PlusCircle, Pencil, Trash2, Eye, Search } from 'lucide-react'
 
 type AuditLog = {
     id: string
@@ -51,6 +52,7 @@ const actionLabels: Record<string, string> = {
 export default function AuditPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
+    const { t } = useTranslation()
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -78,10 +80,10 @@ export default function AuditPage() {
                 setTotalPages(data.totalPages)
                 setTotal(data.total)
             } else {
-                setError('Gagal memuat data audit log')
+                setError(t('audit.loadError'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('audit.networkError'))
         } finally {
             setLoading(false)
         }
@@ -127,12 +129,12 @@ export default function AuditPage() {
         const diff = now.getTime() - date.getTime()
         const hours = Math.floor(diff / (1000 * 60 * 60))
 
-        if (hours < 1) return 'Baru saja'
-        if (hours < 24) return `${hours} jam lalu`
+        if (hours < 1) return t('audit.justNow')
+        if (hours < 24) return `${hours} ${t('audit.hoursAgo')}`
 
         const days = Math.floor(hours / 24)
-        if (days === 1) return 'Kemarin'
-        if (days < 7) return `${days} hari lalu`
+        if (days === 1) return t('audit.yesterday')
+        if (days < 7) return `${days} ${t('audit.daysAgo')}`
         return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
     }
 
@@ -146,27 +148,27 @@ export default function AuditPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Audit Trail</h1>
-                    <p className="text-gray-600 mt-1">Riwayat aktivitas dan perubahan sistem</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('audit.title')}</h1>
+                    <p className="text-gray-600 mt-1">{t('audit.subtitle')}</p>
                 </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Total Aktivitas</div>
+                    <div className="text-sm text-gray-600">{t('audit.totalActivity')}</div>
                     <div className="text-2xl font-bold text-gray-900 mt-1">{total}</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Pembuatan</div>
+                    <div className="text-sm text-gray-600">{t('audit.creation')}</div>
                     <div className="text-2xl font-bold text-green-600 mt-1">{createCount}</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Pembaruan</div>
+                    <div className="text-sm text-gray-600">{t('audit.updateAction')}</div>
                     <div className="text-2xl font-bold text-blue-600 mt-1">{updateCount}</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">Penghapusan</div>
+                    <div className="text-sm text-gray-600">{t('audit.deletion')}</div>
                     <div className="text-2xl font-bold text-red-600 mt-1">{deleteCount}</div>
                 </div>
             </div>
@@ -175,17 +177,10 @@ export default function AuditPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-1">
-                        <svg
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari aktivitas..."
+                            placeholder={t('audit.searchPlaceholder')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -216,7 +211,7 @@ export default function AuditPage() {
             {loading && (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                     <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-gray-500 mt-4">Memuat data audit log...</p>
+                    <p className="text-gray-500 mt-4">{t('audit.loading')}</p>
                 </div>
             )}
 
@@ -228,7 +223,7 @@ export default function AuditPage() {
                         onClick={fetchLogs}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('audit.retry')}
                     </button>
                 </div>
             )}
@@ -239,8 +234,8 @@ export default function AuditPage() {
                     {logs.length === 0 ? (
                         <div className="p-12 text-center text-gray-500">
                             <p className="text-lg text-gray-400"><Eye className="w-6 h-6 mx-auto" /></p>
-                            <p className="mt-2">Belum ada audit log</p>
-                            <p className="text-sm mt-1">Aktivitas akan tercatat secara otomatis</p>
+                            <p className="mt-2">{t('audit.empty')}</p>
+                            <p className="text-sm mt-1">{t('audit.emptyDescription')}</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
@@ -289,7 +284,7 @@ export default function AuditPage() {
                     {totalPages > 1 && (
                         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                             <div className="text-sm text-gray-500">
-                                Halaman {page} dari {totalPages} ({total} aktivitas)
+                                {t('audit.pagination').replace('{page}', String(page)).replace('{totalPages}', String(totalPages)).replace('{count}', String(total))}
                             </div>
                             <div className="flex gap-2">
                                 <button
@@ -297,14 +292,14 @@ export default function AuditPage() {
                                     disabled={page === 1}
                                     className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                                 >
-                                    Sebelumnya
+                                    {t('audit.previous')}
                                 </button>
                                 <button
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={page === totalPages}
                                     className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                                 >
-                                    Selanjutnya
+                                    {t('audit.next')}
                                 </button>
                             </div>
                         </div>

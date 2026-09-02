@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { updateProductSchema, formatZodError } from '@/lib/validation-schemas';
@@ -10,7 +10,9 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { id } = params;
 
         const product = await prisma.product.findFirst({
@@ -71,7 +73,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
 
@@ -123,9 +127,6 @@ export async function PUT(
         return NextResponse.json({ success: true, data: product });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         if (message.includes('Unique constraint')) {
             return NextResponse.json(
                 { success: false, error: 'SKU sudah digunakan oleh produk lain' },
@@ -141,7 +142,9 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
 
         const existing = await prisma.product.findFirst({
@@ -183,9 +186,6 @@ export async function DELETE(
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

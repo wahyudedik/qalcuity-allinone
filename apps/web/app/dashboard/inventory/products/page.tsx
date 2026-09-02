@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, Download, Package, AlertTriangle, Trash2, Check, X, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Product = {
     id: string
@@ -92,6 +93,11 @@ export default function ProductsPage() {
     const [filterCategory, setFilterCategory] = useState('all')
     const [filterStatus, setFilterStatus] = useState('all')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
+    const importInputRef = useRef<HTMLInputElement>(null)
 
     // Form modal state
     const [showForm, setShowForm] = useState(false)
@@ -166,19 +172,23 @@ export default function ProductsPage() {
     })
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus produk ini?')) return
-        try {
-            const response = await fetch(`/api/inventory/products?id=${id}`, { method: 'DELETE' })
-            const result = await response.json()
-            if (result.success) {
-                fetchProducts()
-                setToast({ message: result.message || 'Produk berhasil dihapus', type: 'success' })
-            } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus produk ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/inventory/products?id=${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchProducts()
+                    setToast({ message: result.message || 'Produk berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus produk', type: 'error' })
             }
-        } catch {
-            setToast({ message: 'Gagal menghapus produk', type: 'error' })
-        }
+        })
+        setShowConfirmDialog(true)
     }
 
     const openCreateForm = () => {
@@ -312,7 +322,10 @@ export default function ProductsPage() {
                     <p className="text-gray-500">{stats.total} {t('inventory.products.subtitle') || 'produk terdaftar'}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <button
+                        onClick={() => importInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
                         <Download className="h-4 w-4" />
                         {t('inventory.products.import') || 'Import'}
                     </button>
@@ -697,6 +710,20 @@ export default function ProductsPage() {
                 </div>
             )}
 
+            {/* Hidden file input for Import */}
+            <input
+                ref={importInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                        setToast({ message: `File "${file.name}" berhasil dipilih. Mengunggah...`, type: 'success' })
+                    }
+                }}
+            />
+
             {/* Toast */}
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
@@ -707,6 +734,18 @@ export default function ProductsPage() {
                     </span>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

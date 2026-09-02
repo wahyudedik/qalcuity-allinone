@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Phone, Mail, Handshake, FileText, ClipboardList, ArrowLeft, Trash2 } from 'lucide-react'
+import { Phone, Mail, Handshake, FileText, ClipboardList, ArrowLeft, Trash2, Pencil, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface LeadDetail {
     id: string
@@ -46,6 +47,9 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [converting, setConverting] = useState(false)
+    const [showConvertConfirm, setShowConvertConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
     useEffect(() => {
         const fetchLead = async () => {
@@ -66,8 +70,18 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         fetchLead()
     }, [params.id, t])
 
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
+
     const handleDelete = async () => {
-        if (!window.confirm(t('crm.leadDetail.confirmDelete'))) return
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
         try {
             const res = await fetch(`/api/crm/leads/${params.id}`, { method: 'DELETE' })
             const data = await res.json()
@@ -79,6 +93,45 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
             }
         } catch {
             setToast({ message: t('crm.leadDetail.deleteError'), type: 'error' })
+        }
+    }
+
+    const handleConvertToDeal = async () => {
+        try {
+            setConverting(true)
+            const res = await fetch('/api/crm/deals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: `${lead?.name} - ${lead?.company}`,
+                    company: lead?.company,
+                    contactName: lead?.name,
+                    value: 0,
+                    stage: 'DISCOVERY',
+                    probability: 10,
+                    expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    notes: `Converted from lead: ${lead?.name}`,
+                    leadId: lead?.id,
+                }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                // Update lead status to qualified
+                await fetch(`/api/crm/leads/${params.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'qualified' }),
+                })
+                setToast({ message: t('crm.leadDetail.toastConverted'), type: 'success' })
+                setShowConvertConfirm(false)
+                router.push(`/dashboard/crm/deals/${data.data.id}`)
+            } else {
+                setToast({ message: data.error || t('crm.leadDetail.toastConvertFailed'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('crm.leadDetail.toastConvertFailed'), type: 'error' })
+        } finally {
+            setConverting(false)
         }
     }
 
@@ -108,15 +161,35 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
 
     return (
         <div className="space-y-6 p-6">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                    {toast.message}
+                </div>
+            )}
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDelete}
+                title="Konfirmasi Hapus"
+                message={t('crm.leadDetail.confirmDelete')}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
+
             {/* Header */}
             <div>
                 <Link href="/dashboard/crm/leads" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                     <ArrowLeft className="h-4 w-4" />
                     {t('crm.leadDetail.backToLeads')}
                 </Link>
-                <div className="mt-4 flex items-center justify-between">
+                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{lead.name}</h1>
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{lead.name}</h1>
                         <p className="text-sm text-gray-500">{lead.company}</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -128,9 +201,18 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                             <p className="text-2xl font-bold text-gray-900">{lead.score}</p>
                         </div>
                         {canMutate && (
+                            <button
+                                onClick={() => router.push(`/dashboard/crm/leads/${params.id}/edit`)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                <Pencil className="h-4 w-4" />
+                                {t('crm.contactDetail.edit')}
+                            </button>
+                        )}
+                        {canMutate && (
                             <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
-                            <Trash2 className="inline h-4 w-4 mr-1" />
-                            {t('crm.leadDetail.delete')}
+                                <Trash2 className="inline h-4 w-4 mr-1" />
+                                {t('crm.leadDetail.delete')}
                             </button>
                         )}
                     </div>
@@ -223,29 +305,58 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">{t('crm.leadDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                            <a
+                                href={`tel:${lead.phone}`}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                            >
                                 <Phone className="h-4 w-4" />
                                 {t('crm.leadDetail.contactLead')}
-                            </button>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            </a>
+                            <a
+                                href={`mailto:${lead.email}`}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <Mail className="h-4 w-4" />
                                 {t('crm.leadDetail.sendEmail')}
-                            </button>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                <Handshake className="h-4 w-4" />
-                                {t('crm.leadDetail.scheduleMeeting')}
-                            </button>
-                            <Link
-                                href="/dashboard/crm/deals"
+                            </a>
+                            <button
+                                onClick={() => setShowConvertConfirm(true)}
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-green-200 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50"
                             >
                                 <ClipboardList className="h-4 w-4" />
                                 {t('crm.leadDetail.convertToDeal')}
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Convert Confirmation Modal */}
+            {showConvertConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowConvertConfirm(false)} />
+                    <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('crm.leadDetail.convertConfirmTitle')}</h3>
+                        <p className="text-sm text-gray-600 mb-6">{t('crm.leadDetail.convertConfirmMessage')}</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowConvertConfirm(false)}
+                                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                            <button
+                                onClick={handleConvertToDeal}
+                                disabled={converting}
+                                className="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {converting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                {t('common.confirm')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

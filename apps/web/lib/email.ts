@@ -176,13 +176,29 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
  * Render template email dengan data.
  * Mengganti placeholder {{key}} dengan value dari data.
  */
+/**
+ * Encode HTML entities in a value to prevent injection in HTML email context.
+ */
+function encodeHtmlEntities(value: string): string {
+    const amp = String.fromCharCode(38) + 'amp;';
+    const lt = String.fromCharCode(38) + 'lt;';
+    const gt = String.fromCharCode(38) + 'gt;';
+    return value
+        .replace(/&/g, amp)
+        .replace(/</g, lt)
+        .replace(/>/g, gt);
+}
+
 export function renderTemplate(
     template: string,
     data: Record<string, string>
 ): string {
     return Object.entries(data).reduce(
         (result, [key, value]) =>
-            result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value),
+            result.replace(
+                new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+                encodeHtmlEntities(value)
+            ),
         template
     );
 }

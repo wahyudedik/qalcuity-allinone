@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { useTranslation } from '@/lib/i18n'
+import { exportToCSV } from '@/lib/export'
 import {
     Search,
     Download,
@@ -16,8 +17,11 @@ import {
     Trash2,
     Check,
     X,
+    Eye,
+    Loader2,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface AttendanceRecord {
     id: string
@@ -41,6 +45,10 @@ export default function AttendancePage() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [searchQuery, setSearchQuery] = useState('')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null)
+    const [showDetailModal, setShowDetailModal] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
     useEffect(() => {
         if (toast) {
@@ -104,10 +112,28 @@ export default function AttendancePage() {
         a.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus data absensi ini?')) return
+    // Dynamic summary stats based on actual data
+    const totalAttendance = [...attendanceData, ...historicalData]
+    const attendanceRate = totalAttendance.length > 0
+        ? Math.round((totalAttendance.filter(a => a.status === 'present' || a.status === 'wfH').length / totalAttendance.length) * 100)
+        : 0
+    const avgWorkHours = totalAttendance.filter(a => a.workHours > 0).length > 0
+        ? (totalAttendance.filter(a => a.workHours > 0).reduce((sum, a) => sum + a.workHours, 0) / totalAttendance.filter(a => a.workHours > 0).length).toFixed(1)
+        : '0'
+    const totalLate = totalAttendance.filter(a => a.status === 'late').length
+    const totalWFH = totalAttendance.filter(a => a.status === 'wfH').length
+    const totalLeave = totalAttendance.filter(a => a.status === 'leave').length
+
+    const handleDelete = (id: string) => {
+        setDeleteTargetId(id)
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!deleteTargetId) return
+        setShowDeleteConfirm(false)
         try {
-            const response = await fetch(`/api/hr/attendance/${id}`, { method: 'DELETE' })
+            const response = await fetch(`/api/hr/attendance/${deleteTargetId}`, { method: 'DELETE' })
             const result = await response.json()
             if (result.success) {
                 fetchAttendance()
@@ -117,6 +143,8 @@ export default function AttendancePage() {
             }
         } catch {
             setToast({ message: 'Gagal menghapus data absensi', type: 'error' })
+        } finally {
+            setDeleteTargetId(null)
         }
     }
 
@@ -145,6 +173,24 @@ export default function AttendancePage() {
         )
     }
 
+    const handleExport = () => {
+        const exportData = historyDataFiltered.length > 0 ? historyDataFiltered : todayData
+        if (exportData.length === 0) {
+            setToast({ message: 'Tidak ada data untuk di-export', type: 'error' })
+            return
+        }
+        const csvData = exportData.map(record => ({
+            'Tanggal': new Date(record.date).toLocaleDateString('id-ID'),
+            'Karyawan': record.employeeName,
+            'Status': statusConfig[record.status]?.label || record.status,
+            'Jam Masuk': record.clockIn || '-',
+            'Jam Keluar': record.clockOut || '-',
+            'Jam Kerja': record.workHours,
+        }))
+        exportToCSV(csvData, `absensi-${selectedDate}`)
+        setToast({ message: 'Data absensi berhasil di-export', type: 'success' })
+    }
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -160,7 +206,10 @@ export default function AttendancePage() {
                         onChange={(e) => setSelectedDate(e.target.value)}
                         className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                     />
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <button
+                        onClick={handleExport}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
                         <Download className="h-4 w-4" />
                         {t('hr.attendance.export') || 'Export'}
                     </button>
@@ -265,7 +314,10 @@ export default function AttendancePage() {
                                         </div>
                                     </div>
                                     <div className="mt-3 flex justify-end">
-                                        <button className="text-sm text-blue-600 hover:text-blue-700">
+                                        <button
+                                            onClick={() => { setSelectedRecord(record); setShowDetailModal(true) }}
+                                            className="text-sm text-blue-600 hover:text-blue-700"
+                                        >
                                             Detail
                                         </button>
                                     </div>
@@ -319,7 +371,11 @@ export default function AttendancePage() {
                                                     {record.workHours > 0 ? `${record.workHours} jam` : '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <button className="text-sm text-blue-600 hover:text-blue-700">
+                                                    <button
+                                                        onClick={() => { setSelectedRecord(record); setShowDetailModal(true) }}
+                                                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
                                                         Detail
                                                     </button>
                                                 </td>
@@ -397,6 +453,7 @@ export default function AttendancePage() {
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockOut') || 'Jam Keluar'}</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.workHours') || 'Jam Kerja'}</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.action') || 'Aksi'}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -417,6 +474,15 @@ export default function AttendancePage() {
                                                 <td className="px-6 py-4 text-sm text-gray-600">{record.clockIn || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{record.clockOut || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{record.workHours} jam</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => { setSelectedRecord(record); setShowDetailModal(true) }}
+                                                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                        Detail
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -435,27 +501,101 @@ export default function AttendancePage() {
                 </h3>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600">92%</div>
+                        <div className="text-3xl font-bold text-green-600">{attendanceRate}%</div>
                         <div className="text-sm text-gray-500">Tingkat Kehadiran</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-yellow-600">8.5</div>
+                        <div className="text-3xl font-bold text-yellow-600">{avgWorkHours}</div>
                         <div className="text-sm text-gray-500">Rata-rata Jam Kerja</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-red-600">3</div>
+                        <div className="text-3xl font-bold text-red-600">{totalLate}</div>
                         <div className="text-sm text-gray-500">Total Keterlambatan</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600">2</div>
+                        <div className="text-3xl font-bold text-blue-600">{totalWFH}</div>
                         <div className="text-sm text-gray-500">Total WFH</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-purple-600">1</div>
+                        <div className="text-3xl font-bold text-purple-600">{totalLeave}</div>
                         <div className="text-sm text-gray-500">Total Cuti</div>
                     </div>
                 </div>
             </div>
+            {/* Detail Modal */}
+            {showDetailModal && selectedRecord && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {t('hr.attendance.detail') || 'Detail Kehadiran'}
+                            </h3>
+                            <button
+                                onClick={() => { setShowDetailModal(false); setSelectedRecord(null) }}
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="px-6 py-4 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                                    <Users className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <div className="font-medium text-gray-900">{selectedRecord.employeeName}</div>
+                                    <div className="text-sm text-gray-500">
+                                        {new Date(selectedRecord.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">{t('hr.attendance.type') || 'Status'}</span>
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[selectedRecord.status].color}`}>
+                                        {statusConfig[selectedRecord.status].label}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">{t('hr.attendance.clockIn') || 'Jam Masuk'}</span>
+                                    <span className="text-sm font-medium text-gray-900">{selectedRecord.clockIn || '-'}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">{t('hr.attendance.clockOut') || 'Jam Keluar'}</span>
+                                    <span className="text-sm font-medium text-gray-900">{selectedRecord.clockOut || '-'}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">{t('hr.attendance.workHours') || 'Jam Kerja'}</span>
+                                    <span className="text-sm font-medium text-gray-900">
+                                        {selectedRecord.workHours > 0 ? `${selectedRecord.workHours} jam` : '-'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-200 px-6 py-3 text-right">
+                            <button
+                                onClick={() => { setShowDetailModal(false); setSelectedRecord(null) }}
+                                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                            >
+                                {t('common.close') || 'Tutup'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null) }}
+                onConfirm={confirmDelete}
+                title="Hapus Absensi"
+                message="Apakah Anda yakin ingin menghapus data absensi ini?"
+                confirmText="Hapus"
+                variant="danger"
+            />
+
             {/* Toast */}
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'

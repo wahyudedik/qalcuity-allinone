@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: true, data: { revenue: { current: 0, previous: 0, change: 0, currency: 'IDR' }, orders: { current: 0, previous: 0, change: 0 }, customers: { current: 0, previous: 0, change: 0 }, products: { current: 0, previous: 0, change: 0 }, recentActivities: [], alerts: [] } });
+        }
+
+        // Rate limiting: 20 requests per minute per IP for dashboard stats
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:dashboard-stats:${auth.tenantId}:${ip}`, 20, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak permintaan. Coba lagi dalam 1 menit.' },
+                { status: 429 }
+            );
+        }
         const tenantId = auth.tenantId;
 
         // Query real data from database
@@ -179,21 +193,7 @@ export async function GET() {
             data: stats,
         });
     } catch (error) {
-        // Fallback to mock data if auth fails (e.g., in development without session)
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({
-                success: true,
-                data: {
-                    revenue: { current: 0, previous: 0, change: 0, currency: 'IDR' },
-                    orders: { current: 0, previous: 0, change: 0 },
-                    customers: { current: 0, previous: 0, change: 0 },
-                    products: { current: 0, previous: 0, change: 0 },
-                    recentActivities: [],
-                    alerts: [],
-                },
-            });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { updateEmployeeSchema, formatZodError } from '@/lib/validation-schemas';
@@ -10,7 +10,9 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { id } = params;
 
         const employee = await prisma.employee.findFirst({
@@ -94,7 +96,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
 
@@ -152,7 +156,9 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
 
         const existing = await prisma.employee.findFirst({

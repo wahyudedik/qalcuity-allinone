@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createPaymentSchema, updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
@@ -17,7 +17,9 @@ export async function GET(request: Request) {
             );
         }
 
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const method = searchParams.get('method');
@@ -97,9 +99,6 @@ export async function GET(request: Request) {
         });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -115,7 +114,9 @@ export async function POST(request: Request) {
             );
         }
 
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         const validation = createPaymentSchema.safeParse(body);
@@ -131,8 +132,8 @@ export async function POST(request: Request) {
         const status = (validatedData.status || 'PENDING').toUpperCase();
 
         const payment = await prisma.$transaction(async (tx: any) => {
-            const count = await tx.payment.count({ where: { tenantId } });
-            const paymentNumber = `PAY-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+            // Generate unique payment number using timestamp + random suffix to prevent race condition
+            const paymentNumber = `PAY-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
             const newPayment = await tx.payment.create({
                 data: {
@@ -210,16 +211,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, data: payment }, { status: 201 });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -310,16 +310,15 @@ export async function PUT(request: Request) {
         return NextResponse.json({ success: true, data: payment });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -345,9 +344,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

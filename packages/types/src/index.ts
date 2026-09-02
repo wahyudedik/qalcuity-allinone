@@ -45,7 +45,7 @@ export interface User {
     updatedAt: Timestamp;
 }
 
-export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'viewer';
+export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'MEMBER' | 'VIEWER' | 'USER';
 
 export interface Company {
     id: ID;

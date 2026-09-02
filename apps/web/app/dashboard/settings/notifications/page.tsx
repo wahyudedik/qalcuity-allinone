@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
-import { MessageCircle, Mail, Settings, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react'
+import { MessageCircle, Mail, Settings, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, X, Bell, MessageSquare } from 'lucide-react'
 
 type NotificationSettings = {
     emailInvoice: boolean
@@ -59,9 +59,11 @@ export default function NotificationsSettingsPage() {
     const [emailSaved, setEmailSaved] = useState(false)
     const [testingEmail, setTestingEmail] = useState(false)
     const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
+    const [testMessage, setTestMessage] = useState<string | null>(null)
 
     useEffect(() => {
         fetchSettings()
+        fetchSmtpConfig()
     }, [])
 
     useEffect(() => {
@@ -120,6 +122,82 @@ export default function NotificationsSettingsPage() {
         setEmailConfig(prev => ({ ...prev, [field]: value }))
     }
 
+    const fetchSmtpConfig = async () => {
+        try {
+            const res = await fetch('/api/settings/notifications/smtp')
+            const data = await res.json()
+            if (data.success && data.data) {
+                setEmailConfig({
+                    smtpHost: data.data.smtpHost || '',
+                    smtpPort: data.data.smtpPort || '587',
+                    smtpEmail: data.data.smtpEmail || '',
+                    smtpPassword: data.data.smtpPassword || '',
+                    useTLS: data.data.useTLS !== false,
+                })
+            }
+        } catch {
+            // SMTP config not yet configured — use defaults
+        }
+    }
+
+    const handleSaveSmtpConfig = async () => {
+        setEmailSaving(true)
+        setEmailSaved(false)
+        try {
+            const res = await fetch('/api/settings/notifications/smtp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(emailConfig),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setEmailConfig(data.data)
+                setEmailSaved(true)
+                setTimeout(() => setEmailSaved(false), 3000)
+            } else {
+                setError(data.error || 'Gagal menyimpan konfigurasi SMTP')
+            }
+        } catch {
+            setError('Gagal menyimpan konfigurasi SMTP')
+        } finally {
+            setEmailSaving(false)
+        }
+    }
+
+    const handleTestSmtp = async () => {
+        setTestingEmail(true)
+        setTestResult(null)
+        setTestMessage(null)
+        try {
+            const res = await fetch('/api/settings/notifications/smtp/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(emailConfig),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setTestResult('success')
+                setTestMessage(data.data?.message || 'Test email berhasil dikirim')
+            } else {
+                setTestResult('error')
+                setTestMessage(data.error || 'Test email gagal')
+            }
+            setTimeout(() => {
+                setTestResult(null)
+                setTestMessage(null)
+            }, 5000)
+        } catch {
+            setTestResult('error')
+            setTestMessage('Gagal mengirim test email')
+            setTimeout(() => {
+                setTestResult(null)
+                setTestMessage(null)
+            }, 5000)
+        } finally {
+            setTestingEmail(false)
+        }
+    }
+
     const ToggleSwitch = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
         <button
             type="button"
@@ -172,9 +250,7 @@ export default function NotificationsSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                        <Mail className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                         <h3 className="font-medium text-gray-900">{t('settings.emailNotifications') || 'Email'}</h3>
@@ -314,15 +390,7 @@ export default function NotificationsSettingsPage() {
 
                         <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
                             <button
-                                onClick={() => {
-                                    setTestingEmail(true);
-                                    setTestResult(null);
-                                    setTimeout(() => {
-                                        setTestingEmail(false);
-                                        setTestResult('success');
-                                        setTimeout(() => setTestResult(null), 5000);
-                                    }, 1500);
-                                }}
+                                onClick={handleTestSmtp}
                                 disabled={testingEmail}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center gap-2"
                             >
@@ -357,14 +425,7 @@ export default function NotificationsSettingsPage() {
                                     </span>
                                 )}
                                 <button
-                                    onClick={() => {
-                                        setEmailSaving(true);
-                                        setTimeout(() => {
-                                            setEmailSaving(false);
-                                            setEmailSaved(true);
-                                            setTimeout(() => setEmailSaved(false), 3000);
-                                        }, 1000);
-                                    }}
+                                    onClick={handleSaveSmtpConfig}
                                     disabled={emailSaving}
                                     className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
                                 >
@@ -380,9 +441,7 @@ export default function NotificationsSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
+                        <Bell className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
                         <h3 className="font-medium text-gray-900">{t('settings.pushNotifications') || 'Push Notification'}</h3>
@@ -463,9 +522,7 @@ export default function NotificationsSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                        </svg>
+                        <MessageSquare className="w-5 h-5 text-orange-600" />
                     </div>
                     <div>
                         <h3 className="font-medium text-gray-900">{t('settings.smsNotifications') || 'SMS'}</h3>

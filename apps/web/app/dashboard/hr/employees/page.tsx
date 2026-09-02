@@ -21,6 +21,7 @@ import {
     Loader2,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface Employee {
     id: string
@@ -174,10 +175,19 @@ export default function EmployeesPage() {
         return matchesSearch && matchesDepartment && matchesStatus
     })
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus karyawan ini?')) return
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+
+    const handleDelete = (id: string) => {
+        setDeleteTargetId(id)
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!deleteTargetId) return
+        setShowDeleteConfirm(false)
         try {
-            const response = await fetch(`/api/hr/employees?id=${id}`, { method: 'DELETE' })
+            const response = await fetch(`/api/hr/employees?id=${deleteTargetId}`, { method: 'DELETE' })
             const result = await response.json()
             if (result.success) {
                 fetchEmployees()
@@ -187,6 +197,8 @@ export default function EmployeesPage() {
             }
         } catch {
             setToast({ message: 'Gagal menghapus karyawan', type: 'error' })
+        } finally {
+            setDeleteTargetId(null)
         }
     }
 
@@ -798,6 +810,17 @@ export default function EmployeesPage() {
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null) }}
+                onConfirm={confirmDelete}
+                title="Hapus Karyawan"
+                message="Apakah Anda yakin ingin menghapus karyawan ini?"
+                confirmText="Hapus"
+                variant="danger"
+            />
 
             {/* Toast */}
             {toast && (

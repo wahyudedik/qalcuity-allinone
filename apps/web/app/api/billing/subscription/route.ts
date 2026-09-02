@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
 
         const tenant = await prisma.tenant.findUnique({
             where: { id: auth.tenantId },
@@ -56,7 +59,7 @@ export async function GET() {
             },
         });
     } catch (error) {
-        console.error('Error fetching subscription:', error);
+        console.error('Error fetching subscription:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengambil data langganan' },
             { status: 500 }

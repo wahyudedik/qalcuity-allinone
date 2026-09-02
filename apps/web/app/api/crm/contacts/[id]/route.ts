@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateContactSchema, formatZodError } from '@/lib/validation-schemas';
 
@@ -9,11 +9,13 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { id } = params;
 
         const contact = await prisma.contact.findFirst({
-            where: { id, tenantId: auth.tenantId },
+            where: { id, tenantId },
             include: {
                 invoices: {
                     select: { id: true, invoiceNumber: true, total: true, status: true, createdAt: true },
@@ -35,9 +37,6 @@ export async function GET(
         return NextResponse.json({ success: true, data: contact });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -47,7 +46,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
 
@@ -88,9 +89,6 @@ export async function PUT(
         return NextResponse.json({ success: true, data: contact });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
@@ -100,7 +98,9 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
 
         const existing = await prisma.contact.findFirst({
@@ -119,9 +119,6 @@ export async function DELETE(
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

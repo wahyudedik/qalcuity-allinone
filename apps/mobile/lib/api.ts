@@ -1,31 +1,305 @@
+/**
+ * API Client — Qalcuity Mobile
+ * 
+ * Handles all API communication with the server.
+ * Includes JWT token storage, authorization headers, and automatic token refresh.
+ * 
+ * Token Strategy:
+ * - Access token stored in AsyncStorage
+ * - Refresh token stored in AsyncStorage
+ * - Automatic refresh on 401 responses
+ * - Logout on refresh failure
+ */
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 // API Configuration
 const API_BASE_URL = 'http://localhost:3000/api';
 
-// Generic fetch helper with error handling
+// ─── Token Storage Keys ───────────────────────────────────────────────────────
+
+const TOKEN_KEY = '@qalcuity:auth_token';
+const REFRESH_TOKEN_KEY = '@qalcuity:refresh_token';
+const USER_KEY = '@qalcuity:user';
+
+// ─── Token Management ─────────────────────────────────────────────────────────
+
+export async function getStoredToken(): Promise<string | null> {
+    try {
+        return await AsyncStorage.getItem(TOKEN_KEY);
+    } catch {
+        return null;
+    }
+}
+
+export async function getStoredRefreshToken(): Promise<string | null> {
+    try {
+        return await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+    } catch {
+        return null;
+    }
+}
+
+export async function getStoredUser(): Promise<MobileUser | null> {
+    try {
+        const json = await AsyncStorage.getItem(USER_KEY);
+        return json ? JSON.parse(json) : null;
+    } catch {
+        return null;
+    }
+}
+
+export async function storeAuthData(
+    token: string,
+    refreshToken: string,
+    user: MobileUser
+): Promise<void> {
+    try {
+        await AsyncStorage.setItem(TOKEN_KEY, token);
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    } catch (error) {
+        console.error('[API] Failed to store auth data:', error);
+    }
+}
+
+export async function clearAuthData(): Promise<void> {
+    try {
+        await AsyncStorage.removeItem(TOKEN_KEY);
+        await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+        await AsyncStorage.removeItem(USER_KEY);
+    } catch (error) {
+        console.error('[API] Failed to clear auth data:', error);
+    }
+}
+
+// ─── Token Refresh ────────────────────────────────────────────────────────────
+
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
+/**
+ * Refresh the access token using the stored refresh token.
+ * Deduplicates concurrent refresh requests.
+ */
+async function refreshAccessToken(): Promise<string> {
+    if (isRefreshing && refreshPromise) {
+        return refreshPromise;
+    }
+
+    isRefreshing = true;
+    refreshPromise = (async () => {
+        try {
+            const refreshToken = await getStoredRefreshToken();
+            if (!refreshToken) {
+                throw new Error('No refresh token');
+            }
+
+            const response = await fetch(`${API_BASE_URL}/mobile/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Refresh failed');
+            }
+
+            // Store new tokens
+            const user = await getStoredUser();
+            if (user) {
+                await storeAuthData(data.token, data.refreshToken, user);
+            }
+
+            return data.token;
+        } catch (error) {
+            // Refresh failed — clear all auth data
+            await clearAuthData();
+            throw error;
+        } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface MobileUser {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    tenantId: string;
+    avatar?: string | null;
+    isActive: boolean;
+}
+
+// ─── Generic Fetch Helper ─────────────────────────────────────────────────────
+
+/**
+ * Generic fetch helper with error handling, token injection, and auto-refresh.
+ */
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
+
+    // Get stored token
+    const token = await getStoredToken();
+
+    // Build headers
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options?.headers as Record<string, string> || {}),
+    };
+
+    // Add Authorization header if token exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     try {
         const response = await fetch(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options?.headers,
-            },
             ...options,
+            headers,
         });
 
+        // If 401 and we have a refresh token, try refreshing
+        if (response.status === 401 && token) {
+            try {
+                const newToken = await refreshAccessToken();
+
+                // Retry with new token
+                headers['Authorization'] = `Bearer ${newToken}`;
+                const retryResponse = await fetch(url, {
+                    ...options,
+                    headers,
+                });
+
+                if (!retryResponse.ok) {
+                    throw new Error(`API Error: ${retryResponse.status} ${retryResponse.statusText}`);
+                }
+
+                return await retryResponse.json() as T;
+            } catch {
+                // Refresh failed — throw auth error
+                throw new AuthError('Sesi telah berakhir. Silakan login kembali.');
+            }
+        }
+
         if (!response.ok) {
-            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            const errorData = await response.json().catch(() => null);
+            const message = errorData?.error || `API Error: ${response.status} ${response.statusText}`;
+            throw new Error(message);
         }
 
         const data = await response.json();
         return data as T;
     } catch (error) {
+        if (error instanceof AuthError) {
+            throw error;
+        }
         if (error instanceof Error) {
             throw new Error(`Network error: ${error.message}`);
         }
         throw new Error('Unknown error occurred');
     }
 }
+
+// ─── Auth Error Class ─────────────────────────────────────────────────────────
+
+export class AuthError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'AuthError';
+    }
+}
+
+// ─── Auth API ─────────────────────────────────────────────────────────────────
+
+export interface AuthResponse {
+    success: boolean;
+    user?: MobileUser;
+    token?: string;
+    refreshToken?: string;
+    error?: string;
+}
+
+export async function loginAPI(
+    email: string,
+    password: string
+): Promise<{ user: MobileUser; token: string; refreshToken: string }> {
+    const res = await fetchAPI<AuthResponse>('/mobile/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.success || !res.user || !res.token || !res.refreshToken) {
+        throw new Error(res.error || 'Login gagal');
+    }
+
+    // Store auth data
+    await storeAuthData(res.token, res.refreshToken, res.user);
+
+    return { user: res.user, token: res.token, refreshToken: res.refreshToken };
+}
+
+export interface RegisterResponse {
+    success: boolean;
+    user?: MobileUser;
+    token?: string;
+    refreshToken?: string;
+    error?: string;
+}
+
+export async function registerAPI(
+    name: string,
+    email: string,
+    password: string,
+    companyName: string
+): Promise<{ user: MobileUser; token: string; refreshToken: string }> {
+    const res = await fetchAPI<RegisterResponse>('/mobile/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, companyName }),
+    });
+
+    if (!res.success || !res.user || !res.token || !res.refreshToken) {
+        throw new Error(res.error || 'Registrasi gagal');
+    }
+
+    // Store auth data
+    await storeAuthData(res.token, res.refreshToken, res.user);
+
+    return { user: res.user, token: res.token, refreshToken: res.refreshToken };
+}
+
+export async function getMeAPI(): Promise<MobileUser> {
+    const res = await fetchAPI<{ success: boolean; user?: MobileUser; error?: string }>('/mobile/auth/me');
+
+    if (!res.success || !res.user) {
+        throw new Error(res.error || 'Gagal mengambil data user');
+    }
+
+    // Update stored user
+    const token = await getStoredToken();
+    const refreshToken = await getStoredRefreshToken();
+    if (token && refreshToken) {
+        await storeAuthData(token, refreshToken, res.user);
+    }
+
+    return res.user;
+}
+
+export async function logoutAPI(): Promise<void> {
+    await clearAuthData();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUSINESS DATA APIs
+// ═══════════════════════════════════════════════════════════════════════════════
 
 // ===== Finance API =====
 export interface InvoiceData {

@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
         const category = searchParams.get('category');
@@ -88,7 +89,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         const validation = createProductSchema.safeParse(body);
@@ -121,9 +124,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, data: product }, { status: 201 });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         if (message.includes('Unique constraint')) {
             return NextResponse.json(
                 { success: false, error: 'SKU already exists' },
@@ -136,7 +136,9 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -189,16 +191,15 @@ export async function PUT(request: Request) {
         return NextResponse.json({ success: true, data: product });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -228,9 +229,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

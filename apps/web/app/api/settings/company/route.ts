@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth, requireMutateAuth } from '@/lib/session'
+import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
+import { updateCompanySettingsSchema, formatZodError } from '@/lib/validation-schemas'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const { userId } = await requireAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId } = auth
+        // Rate limiting (using tenant-based key since no request param)
+        const rateLimitResult = checkRateLimit(`api:settings:company:${userId}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+        }
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -64,17 +73,34 @@ export async function GET() {
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId } = auth
+
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:settings:company:PUT:${ip}`, 30, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 })
+        }
+
         const body = await request.json()
+
+        // Validasi input dengan Zod schema
+        const validation = updateCompanySettingsSchema.safeParse(body)
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            )
+        }
+
+        const validatedData = validation.data
 
         // Get current tenant data for audit
         const currentTenant = await prisma.tenant.findUnique({
@@ -83,23 +109,23 @@ export async function PUT(request: Request) {
         })
 
         const updateData: Record<string, unknown> = {}
-        if (typeof body.name === 'string' && body.name.trim()) {
-            updateData.name = body.name.trim()
+        if (validatedData.name !== undefined) {
+            updateData.name = validatedData.name.trim()
         }
-        if (typeof body.email === 'string') {
-            updateData.email = body.email.trim() || null
+        if (validatedData.email !== undefined) {
+            updateData.email = validatedData.email?.trim() || null
         }
-        if (typeof body.phone === 'string') {
-            updateData.phone = body.phone.trim() || null
+        if (validatedData.phone !== undefined) {
+            updateData.phone = validatedData.phone?.trim() || null
         }
-        if (typeof body.address === 'string') {
-            updateData.address = body.address.trim() || null
+        if (validatedData.address !== undefined) {
+            updateData.address = validatedData.address?.trim() || null
         }
-        if (typeof body.website === 'string') {
-            updateData.website = body.website.trim() || null
+        if (validatedData.website !== undefined) {
+            updateData.website = validatedData.website?.trim() || null
         }
-        if (typeof body.logo === 'string') {
-            updateData.logo = body.logo.trim() || null
+        if (validatedData.logo !== undefined) {
+            updateData.logo = validatedData.logo?.trim() || null
         }
 
         // Parse and update settings JSON for npwp, city, province, postalCode, country, branding
@@ -111,13 +137,13 @@ export async function PUT(request: Request) {
         }
 
         const newSettings = { ...currentSettings }
-        if (typeof body.npwp === 'string') (newSettings as Record<string, string>).npwp = body.npwp
-        if (typeof body.city === 'string') (newSettings as Record<string, string>).city = body.city
-        if (typeof body.province === 'string') (newSettings as Record<string, string>).province = body.province
-        if (typeof body.postalCode === 'string') (newSettings as Record<string, string>).postalCode = body.postalCode
-        if (typeof body.country === 'string') (newSettings as Record<string, string>).country = body.country
-        if (body.branding && typeof body.branding === 'object') {
-            newSettings.branding = body.branding
+        if (validatedData.npwp !== undefined) (newSettings as Record<string, string>).npwp = validatedData.npwp
+        if (validatedData.city !== undefined) (newSettings as Record<string, string>).city = validatedData.city
+        if (validatedData.province !== undefined) (newSettings as Record<string, string>).province = validatedData.province
+        if (validatedData.postalCode !== undefined) (newSettings as Record<string, string>).postalCode = validatedData.postalCode
+        if (validatedData.country !== undefined) (newSettings as Record<string, string>).country = validatedData.country
+        if (validatedData.branding !== undefined) {
+            newSettings.branding = validatedData.branding
         }
 
         updateData.settings = JSON.stringify(newSettings)
@@ -164,9 +190,6 @@ export async function PUT(request: Request) {
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }

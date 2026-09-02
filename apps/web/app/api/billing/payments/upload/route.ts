@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { logAudit } from '@/lib/audit';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = [
@@ -13,7 +14,11 @@ const ALLOWED_TYPES = [
 
 export async function POST(request: Request) {
     try {
-        const auth = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        const { userId, tenantId } = auth;
 
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
@@ -57,6 +62,17 @@ export async function POST(request: Request) {
 
         const fileUrl = `/uploads/billing/${fileName}`;
 
+        // Non-blocking audit log
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'CREATE',
+            entity: 'FileUpload',
+            entityId: fileName,
+            newValues: { fileName: file.name, fileSize: file.size, fileType: file.type } as Record<string, unknown>,
+            request,
+        });
+
         return NextResponse.json({
             success: true,
             data: {
@@ -68,7 +84,7 @@ export async function POST(request: Request) {
             message: 'File berhasil diupload',
         });
     } catch (error) {
-        console.error('Error uploading file:', error);
+        console.error('Error uploading file:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengupload file' },
             { status: 500 }

@@ -13,7 +13,10 @@ const optionalEnvVars = [
     'GOOGLE_CLIENT_SECRET',
     'SMTP_HOST',
     'SMTP_USER',
+    'SMTP_PASS',
     'MIDTRANS_SERVER_KEY',
+    'MIDTRANS_CLIENT_KEY',
+    'MIDTRANS_WEBHOOK_SECRET',
 ];
 
 export function validateEnv() {

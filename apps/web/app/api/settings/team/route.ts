@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth, requireMutateAuth } from '@/lib/session'
+import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
+import { inviteTeamMemberSchema, updateTeamMemberSchema, formatZodError } from '@/lib/validation-schemas'
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId } = auth
 
         const members = await prisma.user.findMany({
             where: {
@@ -40,16 +43,15 @@ export async function GET() {
         return NextResponse.json({ success: true, data })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId, role: callerRole } = await requireMutateAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId, role: callerRole } = auth
 
         // Only ADMIN and SUPERADMIN can invite team members
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
@@ -61,17 +63,16 @@ export async function POST(request: Request) {
 
         const body = await request.json()
 
-        if (!body.email || typeof body.email !== 'string') {
+        const validation = inviteTeamMemberSchema.safeParse(body)
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Email is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             )
         }
 
-        const email = body.email.trim().toLowerCase()
-        const role = ['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN'].includes(body.role?.toUpperCase())
-            ? body.role.toUpperCase()
-            : 'MEMBER'
+        const email = validation.data.email.trim().toLowerCase()
+        const role = validation.data.role || 'MEMBER'
 
         // Check if user already exists in this tenant
         const existingUser = await prisma.user.findFirst({
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
         const newUser = await prisma.user.create({
             data: {
                 email,
-                name: body.name?.trim() || email.split('@')[0],
+                name: validation.data.name?.trim() || email.split('@')[0],
                 passwordHash: tempPassword,
                 role,
                 tenantId,
@@ -131,16 +132,15 @@ export async function POST(request: Request) {
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId, role: callerRole } = await requireMutateAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId, role: callerRole } = auth
 
         // Only ADMIN and SUPERADMIN can update team members
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
@@ -151,15 +151,16 @@ export async function PUT(request: Request) {
         }
         const body = await request.json()
 
-        if (!body.memberId || typeof body.memberId !== 'string') {
+        const validation = updateTeamMemberSchema.safeParse(body)
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Member ID is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             )
         }
 
         // Prevent changing own role (owner protection)
-        if (body.memberId === userId) {
+        if (validation.data.memberId === userId) {
             return NextResponse.json(
                 { success: false, error: 'Cannot change your own role' },
                 { status: 403 }
@@ -167,18 +168,18 @@ export async function PUT(request: Request) {
         }
 
         const updateData: Record<string, unknown> = {}
-        if (body.role && ['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN'].includes(body.role.toUpperCase())) {
+        if (validation.data.role) {
             // Prevent non-superadmin from assigning SUPERADMIN role
-            if (body.role.toUpperCase() === 'SUPERADMIN' && callerRole !== 'SUPERADMIN') {
+            if (validation.data.role === 'SUPERADMIN' && callerRole !== 'SUPERADMIN') {
                 return NextResponse.json(
                     { success: false, error: 'Only superadmin can assign superadmin role' },
                     { status: 403 }
                 )
             }
-            updateData.role = body.role.toUpperCase()
+            updateData.role = validation.data.role
         }
-        if (typeof body.isActive === 'boolean') {
-            updateData.isActive = body.isActive
+        if (validation.data.isActive !== undefined) {
+            updateData.isActive = validation.data.isActive
         }
 
         if (Object.keys(updateData).length === 0) {
@@ -189,7 +190,7 @@ export async function PUT(request: Request) {
         }
 
         const member = await prisma.user.findFirst({
-            where: { id: body.memberId, tenantId, deletedAt: null },
+            where: { id: validation.data.memberId, tenantId, deletedAt: null },
         })
 
         if (!member) {
@@ -200,7 +201,7 @@ export async function PUT(request: Request) {
         }
 
         const updated = await prisma.user.update({
-            where: { id: body.memberId },
+            where: { id: validation.data.memberId },
             data: updateData,
             select: {
                 id: true,
@@ -217,7 +218,7 @@ export async function PUT(request: Request) {
             tenantId,
             action: 'UPDATE',
             entity: 'User',
-            entityId: body.memberId,
+            entityId: validation.data.memberId,
             oldValues: { role: member.role, isActive: member.isActive },
             newValues: updateData,
         })
@@ -231,16 +232,15 @@ export async function PUT(request: Request) {
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId } = auth
         const { searchParams } = new URL(request.url)
         const memberId = searchParams.get('id')
 
@@ -289,9 +289,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ success: true })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }

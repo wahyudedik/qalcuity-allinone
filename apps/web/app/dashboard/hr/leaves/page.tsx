@@ -13,6 +13,7 @@ import {
     Check,
     X,
     Clock,
+    Loader2,
     MessageCircle,
     Palmtree,
     Thermometer,
@@ -20,9 +21,11 @@ import {
     Baby,
     Wallet,
     Trash2,
-    Loader2,
+    Eye,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useRouter } from 'next/navigation'
 
 interface LeaveRequest {
     id: string
@@ -91,6 +94,7 @@ function calculateDays(start: string, end: string): number {
 export default function LeavesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
+    const router = useRouter()
     const canMutate = session?.user?.role !== 'VIEWER'
     const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
@@ -100,6 +104,11 @@ export default function LeavesPage() {
     const [filterType, setFilterType] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [processingId, setProcessingId] = useState<string | null>(null)
+    const [showApproveConfirm, setShowApproveConfirm] = useState(false)
+    const [showRejectConfirm, setShowRejectConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [confirmActionId, setConfirmActionId] = useState<string | null>(null)
 
     // Form modal state
     const [showForm, setShowForm] = useState(false)
@@ -168,10 +177,76 @@ export default function LeavesPage() {
         return matchesSearch && matchesStatus && matchesType
     })
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus permohonan cuti ini?')) return
+    const handleApprove = async (id: string) => {
+        setConfirmActionId(id)
+        setShowApproveConfirm(true)
+    }
+
+    const confirmApprove = async () => {
+        if (!confirmActionId) return
+        setShowApproveConfirm(false)
+        setProcessingId(confirmActionId)
         try {
-            const response = await fetch(`/api/hr/leaves?id=${id}`, { method: 'DELETE' })
+            const res = await fetch('/api/hr/leaves', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: confirmActionId, status: 'approved', approvedBy: session?.user?.name || 'Admin' }),
+            })
+            const result = await res.json()
+            if (result.success) {
+                fetchLeaves()
+                setToast({ message: 'Permohonan cuti berhasil disetujui', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menyetujui: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menyetujui permohonan cuti', type: 'error' })
+        } finally {
+            setProcessingId(null)
+            setConfirmActionId(null)
+        }
+    }
+
+    const handleReject = async (id: string) => {
+        setConfirmActionId(id)
+        setShowRejectConfirm(true)
+    }
+
+    const confirmReject = async () => {
+        if (!confirmActionId) return
+        setShowRejectConfirm(false)
+        setProcessingId(confirmActionId)
+        try {
+            const res = await fetch('/api/hr/leaves', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: confirmActionId, status: 'rejected' }),
+            })
+            const result = await res.json()
+            if (result.success) {
+                fetchLeaves()
+                setToast({ message: 'Permohonan cuti ditolak', type: 'success' })
+            } else {
+                setToast({ message: `Gagal menolak: ${result.error}`, type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menolak permohonan cuti', type: 'error' })
+        } finally {
+            setProcessingId(null)
+            setConfirmActionId(null)
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        setConfirmActionId(id)
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!confirmActionId) return
+        setShowDeleteConfirm(false)
+        try {
+            const response = await fetch(`/api/hr/leaves?id=${confirmActionId}`, { method: 'DELETE' })
             const result = await response.json()
             if (result.success) {
                 fetchLeaves()
@@ -181,6 +256,8 @@ export default function LeavesPage() {
             }
         } catch {
             setToast({ message: 'Gagal menghapus permohonan cuti', type: 'error' })
+        } finally {
+            setConfirmActionId(null)
         }
     }
 
@@ -414,12 +491,20 @@ export default function LeavesPage() {
                                         <div className="flex gap-2 md:flex-col">
                                             {request.status === 'pending' && (
                                                 <>
-                                                    <button className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
-                                                        <Check className="h-4 w-4" />
+                                                    <button
+                                                        onClick={() => handleApprove(request.id)}
+                                                        disabled={processingId === request.id}
+                                                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {processingId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                                         {t('hr.leaves.approve') || 'Setujui'}
                                                     </button>
-                                                    <button className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
-                                                        <X className="h-4 w-4" />
+                                                    <button
+                                                        onClick={() => handleReject(request.id)}
+                                                        disabled={processingId === request.id}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {processingId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                                                         {t('hr.leaves.reject') || 'Tolak'}
                                                     </button>
                                                 </>
@@ -617,6 +702,41 @@ export default function LeavesPage() {
                     </div>
                 </div>
             )}
+
+            {/* Approve Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showApproveConfirm}
+                onClose={() => { setShowApproveConfirm(false); setConfirmActionId(null) }}
+                onConfirm={confirmApprove}
+                title="Setujui Cuti"
+                message="Apakah Anda yakin ingin menyetujui permohonan cuti ini?"
+                confirmText="Setujui"
+                variant="info"
+                isLoading={processingId === confirmActionId}
+            />
+
+            {/* Reject Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showRejectConfirm}
+                onClose={() => { setShowRejectConfirm(false); setConfirmActionId(null) }}
+                onConfirm={confirmReject}
+                title="Tolak Cuti"
+                message="Apakah Anda yakin ingin menolak permohonan cuti ini?"
+                confirmText="Tolak"
+                variant="warning"
+                isLoading={processingId === confirmActionId}
+            />
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => { setShowDeleteConfirm(false); setConfirmActionId(null) }}
+                onConfirm={confirmDelete}
+                title="Hapus Cuti"
+                message="Apakah Anda yakin ingin menghapus permohonan cuti ini?"
+                confirmText="Hapus"
+                variant="danger"
+            />
 
             {/* Toast */}
             {toast && (

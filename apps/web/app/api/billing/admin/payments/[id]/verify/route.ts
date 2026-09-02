@@ -1,32 +1,33 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getSession, isAdmin } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
+import { verifyBillingPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const session = await getSession();
-        if (!isAdmin(session)) {
-            return NextResponse.json(
-                { success: false, error: 'Unauthorized' },
-                { status: 403 }
-            );
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
+        const { userId } = auth;
 
         const { id } = params;
         const body = await request.json();
-        const { action, rejectReason } = body;
 
-        if (!action || !['approve', 'reject'].includes(action)) {
+        const validation = verifyBillingPaymentSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Action harus approve atau reject' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
+
+        const { action, rejectReason } = validation.data;
 
         // Find payment
         const payment = await prisma.billingPayment.findUnique({
@@ -63,7 +64,7 @@ export async function PUT(
                 where: { id },
                 data: {
                     status: 'VERIFIED',
-                    verifiedById: session!.user.id,
+                    verifiedById: userId,
                     verifiedAt: now,
                 },
             });
@@ -92,33 +93,26 @@ export async function PUT(
             });
 
             // Log audit approve
-            void logAudit({ userId: session!.user.id, tenantId: payment.tenantId, action: 'UPDATE', entity: 'BillingPayment', entityId: id, oldValues: { status: 'PENDING' } as Record<string, unknown>, newValues: { status: 'VERIFIED' } as Record<string, unknown>, request });
+            void logAudit({ userId, tenantId: payment.tenantId, action: 'UPDATE', entity: 'BillingPayment', entityId: id, oldValues: { status: 'PENDING' } as Record<string, unknown>, newValues: { status: 'VERIFIED' } as Record<string, unknown>, request });
 
             return NextResponse.json({
                 success: true,
                 message: 'Pembayaran berhasil diverifikasi. Langganan tenant telah diaktifkan.',
             });
         } else {
-            // Reject
-            if (!rejectReason) {
-                return NextResponse.json(
-                    { success: false, error: 'Alasan penolakan wajib diisi' },
-                    { status: 400 }
-                );
-            }
-
+            // Reject (rejectReason guaranteed by Zod refine validation)
             await prisma.billingPayment.update({
                 where: { id },
                 data: {
                     status: 'REJECTED',
-                    rejectReason: sanitizeInput(rejectReason),
-                    verifiedById: session!.user.id,
+                    rejectReason: sanitizeInput(rejectReason!),
+                    verifiedById: userId,
                     verifiedAt: now,
                 },
             });
 
             // Log audit reject
-            void logAudit({ userId: session!.user.id, tenantId: payment.tenantId, action: 'UPDATE', entity: 'BillingPayment', entityId: id, oldValues: { status: 'PENDING' } as Record<string, unknown>, newValues: { status: 'REJECTED', rejectReason: sanitizeInput(rejectReason) } as Record<string, unknown>, request });
+            void logAudit({ userId, tenantId: payment.tenantId, action: 'UPDATE', entity: 'BillingPayment', entityId: id, oldValues: { status: 'PENDING' } as Record<string, unknown>, newValues: { status: 'REJECTED', rejectReason: sanitizeInput(rejectReason!) } as Record<string, unknown>, request });
 
             return NextResponse.json({
                 success: true,
@@ -126,7 +120,7 @@ export async function PUT(
             });
         }
     } catch (error) {
-        console.error('Error verifying payment:', error);
+        console.error('Error verifying payment:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal memproses verifikasi pembayaran' },
             { status: 500 }

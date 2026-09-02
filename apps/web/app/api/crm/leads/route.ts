@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
@@ -17,7 +17,9 @@ export async function GET(request: Request) {
             );
         }
 
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const search = searchParams.get('search');
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId: auth.tenantId };
+        const where: Record<string, unknown> = { tenantId };
 
         if (status) {
             where.status = status.toUpperCase();
@@ -77,9 +79,6 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -95,7 +94,9 @@ export async function POST(request: Request) {
             );
         }
 
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         // Validasi input dengan Zod
@@ -129,9 +130,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, data: lead }, { status: 201 });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
@@ -147,7 +145,9 @@ export async function PUT(request: Request) {
             );
         }
 
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -200,16 +200,15 @@ export async function PUT(request: Request) {
         return NextResponse.json({ success: true, data: lead });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -237,9 +236,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

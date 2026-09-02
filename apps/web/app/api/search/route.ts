@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: true, data: [] });
+        }
+
+        // Rate limiting: 30 requests per minute per IP for search
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:search:${auth.tenantId}:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak permintaan pencarian. Coba lagi dalam 1 menit.' },
+                { status: 429 }
+            );
+        }
         const { searchParams } = new URL(request.url);
         const query = searchParams.get('q');
 
@@ -180,9 +194,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ success: true, data: results });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: true, data: [] });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

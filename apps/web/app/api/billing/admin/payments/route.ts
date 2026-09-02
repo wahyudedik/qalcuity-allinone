@@ -67,7 +67,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('Error fetching admin payments:', error);
+        console.error('Error fetching admin payments:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengambil data pembayaran' },
             { status: 500 }

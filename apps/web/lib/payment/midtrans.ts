@@ -7,6 +7,7 @@
  * @see https://docs.midtrans.com/
  */
 
+import crypto from 'crypto';
 import { Snap } from 'midtrans-client';
 import type {
     PaymentProvider,
@@ -83,31 +84,35 @@ export class MidtransProvider implements PaymentProvider {
 
     async handleWebhook(payload: unknown, signature: string): Promise<WebhookResult> {
         try {
-            const data = payload as {
-                order_id: string;
-                transaction_status: string;
-                gross_amount: string;
-                transaction_id: string;
-                signature_key: string;
-            };
+            const data = payload as Record<string, string>;
 
-            // Verify signature (simplified — in production, verify against Midtrans signature key)
-            if (data.signature_key !== signature) {
+            const orderId = data.order_id || '';
+            const statusCode = data.status_code || '200';
+            const grossAmount = data.gross_amount || '0';
+            const transactionStatus = data.transaction_status || 'pending';
+
+            // Verify HMAC SHA512 signature — recommended by Midtrans documentation
+            const expectedSignature = this.generateSignature({
+                order_id: orderId,
+                status_code: statusCode,
+                gross_amount: grossAmount,
+            });
+            if (signature && expectedSignature !== signature) {
                 console.warn('[MidtransProvider] Webhook signature mismatch');
                 return {
                     success: false,
-                    orderId: data.order_id,
+                    orderId,
                     status: 'FAILED',
                     error: 'Invalid signature',
                 };
             }
 
-            const status = this.mapStatus(data.transaction_status);
+            const status = this.mapStatus(transactionStatus);
             return {
                 success: true,
-                orderId: data.order_id,
+                orderId,
                 status: status === 'SUCCESS' ? 'SUCCESS' : status === 'PENDING' ? 'PENDING' : 'FAILED',
-                amount: data.gross_amount ? Number(data.gross_amount) : undefined,
+                amount: grossAmount ? Number(grossAmount) : undefined,
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -119,6 +124,36 @@ export class MidtransProvider implements PaymentProvider {
                 error: message,
             };
         }
+    }
+
+    /**
+     * Generate HMAC SHA512 signature untuk verifikasi webhook Midtrans.
+     * Format: SHA512(order_id + status_code + gross_amount + server_key)
+     *
+     * @see https://docs.midtrans.com/#webhook-notification
+     */
+    generateSignature(payload: {
+        order_id: string;
+        status_code: string;
+        gross_amount: string;
+    }): string {
+        const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+        const input = `${payload.order_id}${payload.status_code}${payload.gross_amount}${serverKey}`;
+        return crypto.createHash('sha512').update(input).digest('hex');
+    }
+
+    /**
+     * Generate signature untuk verifikasi dengan MIDTRANS_WEBHOOK_SECRET.
+     * Menggunakan webhook secret jika tersedia (lebih aman).
+     */
+    generateWebhookSignature(payload: {
+        order_id: string;
+        status_code: string;
+        gross_amount: string;
+    }): string {
+        const secret = process.env.MIDTRANS_WEBHOOK_SECRET || process.env.MIDTRANS_SERVER_KEY || '';
+        const input = `${payload.order_id}${payload.status_code}${payload.gross_amount}${secret}`;
+        return crypto.createHash('sha512').update(input).digest('hex');
     }
 
     /**

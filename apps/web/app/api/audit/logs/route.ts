@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 
 export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
         const { searchParams } = new URL(request.url);
         const entity = searchParams.get('entity');
         const action = searchParams.get('action');
@@ -85,9 +88,6 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

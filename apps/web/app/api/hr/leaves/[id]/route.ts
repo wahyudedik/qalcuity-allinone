@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateLeaveSchema, formatZodError } from '@/lib/validation-schemas';
 
@@ -9,7 +9,9 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { id } = params;
 
         const leave = await prisma.leaveRequest.findFirst({
@@ -62,7 +64,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
 
@@ -92,7 +96,38 @@ export async function PUT(
         if (validatedData.endDate !== undefined) data.endDate = new Date(validatedData.endDate);
         if (validatedData.days !== undefined) data.days = validatedData.days;
         if (validatedData.reason !== undefined) data.reason = validatedData.reason;
-        if (validatedData.status !== undefined) data.status = validatedData.status.toUpperCase();
+        if (validatedData.status !== undefined) {
+            const newStatus = validatedData.status.toUpperCase();
+            const currentStatus = existing.status;
+            if (newStatus !== currentStatus) {
+                try {
+                    const { canTransitionSafe, logWorkflowHistory } = await import('@/lib/workflow');
+                    const isValid = canTransitionSafe('LEAVE_REQUEST', currentStatus, newStatus, tenantId);
+                    if (!isValid) {
+                        return NextResponse.json(
+                            { success: false, error: `Transisi status tidak valid: ${currentStatus} → ${newStatus}` },
+                            { status: 400 }
+                        );
+                    }
+                    // Log workflow history dengan backward compatibility
+                    await logWorkflowHistory({
+                        tenantId,
+                        entityType: 'LEAVE_REQUEST',
+                        entityId: id,
+                        fromState: currentStatus,
+                        toState: newStatus,
+                        action: newStatus.toLowerCase(),
+                        userId,
+                        notes: validatedData.notes || null,
+                    });
+                } catch (workflowError: unknown) {
+                    // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan status
+                    const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
+                    console.warn(`[Workflow] Leave workflow validation gagal, mengizinkan transisi: ${msg}`);
+                }
+            }
+            data.status = newStatus;
+        }
         if (validatedData.approvedBy !== undefined) data.approvedBy = validatedData.approvedBy;
         if (validatedData.notes !== undefined) data.notes = validatedData.notes;
 
@@ -128,7 +163,9 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
 
         const existing = await prisma.leaveRequest.findFirst({

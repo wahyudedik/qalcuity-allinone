@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -280,6 +280,9 @@ export default function ChartOfAccountsPage() {
 
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
+
+    // Import
+    const importInputRef = useRef<HTMLInputElement>(null)
 
     // Toast
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -586,7 +589,10 @@ export default function ChartOfAccountsPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <button
+                        onClick={() => importInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
                         <Download className="h-4 w-4" />
                         {t('finance.accounts.import')}
                     </button>
@@ -892,6 +898,37 @@ export default function ChartOfAccountsPage() {
                                 {t('common.delete')}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden file input for import */}
+            <input
+                ref={importInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                        setToast({ message: `Mengimpor file "${file.name}"...`, type: 'success' })
+                        // TODO: Process imported file
+                        e.target.value = ''
+                    }
+                }}
+            />
+
+            {/* Toast */}
+            {toast && (
+                <div className="fixed bottom-4 right-4 z-50">
+                    <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
+                        toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                        {toast.type === 'success' ? <Download className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                        {toast.message}
+                        <button onClick={() => setToast(null)} className="ml-2 hover:opacity-75">
+                            <X className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             )}

@@ -26,6 +26,7 @@ export async function GET() {
             prisma.billingPayment.findMany({
                 where: { status: 'PENDING' },
                 select: { amount: true },
+                take: 10000,
             }),
             // Total pembayaran bulan ini
             prisma.billingPayment.findMany({
@@ -33,6 +34,7 @@ export async function GET() {
                     createdAt: { gte: startOfMonth, lte: endOfMonth },
                 },
                 select: { amount: true },
+                take: 10000,
             }),
             // Tenant aktif
             prisma.tenant.count({
@@ -45,6 +47,7 @@ export async function GET() {
                     verifiedAt: { gte: startOfMonth, lte: endOfMonth },
                 },
                 select: { amount: true },
+                take: 10000,
             }),
         ]);
 
@@ -66,7 +69,7 @@ export async function GET() {
             },
         });
     } catch (error) {
-        console.error('Error fetching billing stats:', error);
+        console.error('Error fetching billing stats:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengambil data statistik billing' },
             { status: 500 }

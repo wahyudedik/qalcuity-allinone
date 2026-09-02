@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth } from '@/lib/session'
+import { requirePermissionForRoute } from '@/lib/session'
 
 // ============================================
 // TYPES
@@ -118,7 +118,11 @@ function categorizeExpense(notes: string | null): string {
 
 export async function GET(request: Request) {
     try {
-        const { tenantId } = await requireAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+        }
+        const { tenantId } = auth
         const { searchParams } = new URL(request.url)
         const dateFrom = searchParams.get('dateFrom')
         const dateTo = searchParams.get('dateTo')
@@ -458,12 +462,10 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: response })
     } catch (error) {
-        console.error('Reports API error:', error)
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        const status = message === 'Unauthorized' ? 401 : 500
+        console.error('Reports API error:', error instanceof Error ? error.message : 'Unknown error')
         return NextResponse.json(
-            { success: false, error: message },
-            { status }
+            { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+            { status: 500 }
         )
     }
 }

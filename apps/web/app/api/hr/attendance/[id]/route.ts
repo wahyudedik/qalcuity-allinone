@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { id } = params;
 
         const record = await prisma.attendanceRecord.findFirst({
@@ -57,7 +60,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
 
@@ -93,6 +98,17 @@ export async function PUT(
             },
         });
 
+        await logAudit({
+            tenantId,
+            userId,
+            action: 'UPDATE',
+            entity: 'Attendance',
+            entityId: updated.id,
+            oldValues: { date: existing.date, clockIn: existing.clockIn, clockOut: existing.clockOut, status: existing.status, notes: existing.notes },
+            newValues: { date: updated.date, clockIn: updated.clockIn, clockOut: updated.clockOut, status: updated.status, notes: updated.notes },
+            request,
+        });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -108,7 +124,9 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
 
         const existing = await prisma.attendanceRecord.findFirst({
@@ -122,6 +140,16 @@ export async function DELETE(
         }
 
         await prisma.attendanceRecord.delete({ where: { id } });
+
+        await logAudit({
+            tenantId,
+            userId,
+            action: 'DELETE',
+            entity: 'Attendance',
+            entityId: id,
+            oldValues: { date: existing.date, clockIn: existing.clockIn, clockOut: existing.clockOut, status: existing.status, notes: existing.notes },
+            request,
+        });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {

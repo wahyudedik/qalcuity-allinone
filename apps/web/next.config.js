@@ -4,9 +4,12 @@
 const securityHeaders = [
     {
         key: 'Content-Security-Policy',
+        // NOTE: 'unsafe-inline' for script-src is required by Next.js for inline hydration scripts.
+        // 'unsafe-eval' has been removed to strengthen XSS protection.
+        // 'unsafe-inline' for style-src is required by Tailwind CSS.
         value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://apis.google.com",
+            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https: blob:",
             "font-src 'self'",
@@ -49,19 +52,41 @@ const nextConfig = {
     reactStrictMode: true, // ← Best practice untuk production
     transpilePackages: ["@qalcuity/ui", "@qalcuity/db"],
     typescript: {
-        // Skip TypeScript errors during production build
-        // Reason: Prisma engine binary download issue on VPS causes type inference to fail
-        // All TypeScript errors are only implicit 'any' type annotations — no real type safety issues
-        ignoreBuildErrors: true,
+        // TypeScript errors should NOT be ignored in production builds.
+        // Previously set to true as workaround for Prisma engine binary issue on VPS.
+        // Setting to false ensures type safety is enforced during build.
+        ignoreBuildErrors: false,
     },
     experimental: {
         optimizePackageImports: ["lucide-react"],
     },
     // ─── Security Headers ──────────────────────────────────────────────────────
+    // See: docs/SECURITY.md — H02 (CSP) & H03 (CORS)
     headers: async () => [
         {
             source: '/(.*)',
             headers: securityHeaders,
+        },
+        // ─── CORS for API routes ────────────────────────────────────────────────
+        // Explicit CORS headers for API routes. Defense-in-depth: CORS is also
+        // enforced at middleware level. This ensures headers are set even if
+        // middleware is bypassed (e.g., internal Next.js API calls).
+        {
+            source: '/api/:path*',
+            headers: [
+                {
+                    key: 'Access-Control-Allow-Origin',
+                    value: process.env.NEXT_PUBLIC_APP_URL || 'https://qalcuity.com',
+                },
+                {
+                    key: 'Access-Control-Allow-Methods',
+                    value: 'GET, POST, PUT, DELETE, OPTIONS',
+                },
+                {
+                    key: 'Access-Control-Allow-Headers',
+                    value: 'Content-Type, Authorization',
+                },
+            ],
         },
     ],
 };

@@ -388,6 +388,325 @@ export const unreconcileTransactionSchema = z.object({
 });
 
 // ============================================
+// Billing / Payment Schemas
+// ============================================
+
+export const processPaymentSchema = z.object({
+    invoiceId: z.string().min(1, 'Invoice ID wajib diisi'),
+    amount: z.number().min(0.01, 'Jumlah pembayaran harus lebih dari 0'),
+    method: z.string().min(1, 'Metode pembayaran wajib dipilih'),
+    provider: z.enum(['midtrans', 'xendit']).optional(),
+    customerName: z.string().max(255).optional(),
+    customerEmail: z.string().email('Format email tidak valid').optional(),
+    customerPhone: z.string().max(50).optional(),
+});
+
+export const updateCompanySettingsSchema = z.object({
+    name: z.string().min(1, 'Nama perusahaan wajib diisi').max(255, 'Nama maksimal 255 karakter').optional(),
+    email: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    phone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    address: z.string().optional().nullable(),
+    website: z.string().url('Format URL tidak valid').max(255).optional().nullable(),
+    logo: z.string().max(2000).optional().nullable(),
+    npwp: z.string().max(50).optional(),
+    city: z.string().max(100).optional(),
+    province: z.string().max(100).optional(),
+    postalCode: z.string().max(10).optional(),
+    country: z.string().max(100).optional(),
+    branding: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const createMidtransPaymentSchema = z.object({
+    subscriptionId: z.string().min(1, 'ID langganan wajib diisi'),
+});
+
+/**
+ * Zod schema untuk validasi Midtrans webhook notification.
+ * Hanya field-field yang diperlukan untuk memproses payment callback.
+ * @see https://docs.midtrans.com/#blacklist-card
+ */
+export const midtransWebhookSchema = z.object({
+    order_id: z.string().min(1, 'Order ID wajib diisi'),
+    status_code: z.string(),
+    transaction_status: z.string(),
+    gross_amount: z.string(),
+    payment_type: z.string().optional(),
+    transaction_time: z.string().optional(),
+    settlement_time: z.string().optional(),
+    transaction_id: z.string().optional(),
+    signature_key: z.string().optional(),
+    status_message: z.string().optional(),
+    merchant_id: z.string().optional(),
+    fraud_status: z.string().optional(),
+    bank: z.string().optional(),
+    va_number: z.string().optional(),
+    card_type: z.string().optional(),
+    eci: z.string().optional(),
+    challenge_rejection: z.string().optional(),
+    channel_response_code: z.string().optional(),
+    capture_status: z.string().optional(),
+    currency: z.string().optional(),
+    issuer: z.string().optional(),
+    expiry_time: z.string().optional(),
+});
+
+// ============================================
+// Settings Schemas
+// ============================================
+
+export const updateProfileSchema = z.object({
+    name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter').optional(),
+    email: z.string().email('Format email tidak valid').max(255).optional(),
+});
+
+export const changePasswordSchema = z.object({
+    currentPassword: z.string().min(1, 'Password saat ini wajib diisi'),
+    newPassword: z.string().min(8, 'Password baru minimal 8 karakter'),
+}).refine((data) => data.currentPassword !== data.newPassword, {
+    message: 'Password baru harus berbeda dari password saat ini',
+    path: ['newPassword'],
+});
+
+export const updateNotificationPreferencesSchema = z.object({
+    emailInvoice: z.boolean().optional(),
+    emailPayment: z.boolean().optional(),
+    emailOverdue: z.boolean().optional(),
+    emailWeeklyReport: z.boolean().optional(),
+    emailMarketing: z.boolean().optional(),
+    pushInvoice: z.boolean().optional(),
+    pushPayment: z.boolean().optional(),
+    pushOverdue: z.boolean().optional(),
+    pushMention: z.boolean().optional(),
+    whatsappInvoice: z.boolean().optional(),
+    whatsappPayment: z.boolean().optional(),
+    whatsappOverdue: z.boolean().optional(),
+    smsOverdue: z.boolean().optional(),
+    smsPayment: z.boolean().optional(),
+});
+
+// ============================================
+// Settings: Integration Schemas
+// ============================================
+
+export const createIntegrationSchema = z.object({
+    type: z.string().min(1, 'Tipe integrasi wajib diisi').max(50),
+    name: z.string().min(1, 'Nama integrasi wajib diisi').max(255),
+    config: z.any().optional(),
+    apiKey: z.string().max(2000).optional().nullable(),
+    apiSecret: z.string().max(2000).optional().nullable(),
+    webhookUrl: z.string().url('Format URL tidak valid').max(2000).optional().nullable(),
+});
+
+export const updateIntegrationSchema = z.object({
+    id: z.string().min(1, 'ID integrasi wajib diisi'),
+    status: z.enum(['active', 'inactive', 'error']).optional(),
+    config: z.any().optional(),
+    apiKey: z.string().max(2000).optional().nullable(),
+    apiSecret: z.string().max(2000).optional().nullable(),
+    webhookUrl: z.string().url('Format URL tidak valid').max(2000).optional().nullable(),
+}).refine((data) => {
+    // At least one field besides id must be provided
+    const { id: _id, ...rest } = data;
+    return Object.keys(rest).length > 0;
+}, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const inviteTeamMemberSchema = z.object({
+    email: z.string().email('Format email tidak valid'),
+    name: z.string().max(255).optional(),
+    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN']).optional(),
+});
+
+export const updateTeamMemberSchema = z.object({
+    memberId: z.string().min(1, 'Member ID wajib diisi'),
+    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN']).optional(),
+    isActive: z.boolean().optional(),
+}).refine((data) => data.role !== undefined || data.isActive !== undefined, {
+    message: 'Minimal satu field (role atau isActive) harus diisi',
+});
+
+export const createBillingPaymentSchema = z.object({
+    subscriptionId: z.string().min(1, 'ID langganan wajib diisi'),
+    amount: z.number().min(1, 'Jumlah pembayaran harus lebih dari 0'),
+    bankName: z.string().min(1, 'Nama bank wajib diisi').max(100),
+    accountNumber: z.string().min(1, 'Nomor rekening wajib diisi').max(50),
+    accountName: z.string().min(1, 'Nama pemilik rekening wajib diisi').max(255),
+    reference: z.string().max(255).optional().nullable(),
+    notes: z.string().max(500).optional().nullable(),
+    proofFileUrl: z.string().max(2000).optional().nullable(),
+    proofFileName: z.string().max(255).optional().nullable(),
+});
+
+export const verifyBillingPaymentSchema = z.object({
+    action: z.enum(['approve', 'reject'], {
+        message: 'Action harus approve atau reject',
+    }),
+    rejectReason: z.string().max(500).optional().nullable(),
+}).refine((data) => data.action === 'reject' ? !!data.rejectReason : true, {
+    message: 'Alasan penolakan wajib diisi untuk action reject',
+    path: ['rejectReason'],
+});
+
+// ============================================
+// CRM Import Schemas
+// ============================================
+
+/** Validasi satu baris contact saat import — field name wajib, lainnya opsional */
+export const importContactRowSchema = z.object({
+    name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    email: z.string().max(255).optional().nullable(),
+    phone: z.string().max(50).optional().nullable(),
+    company: z.string().max(255).optional().nullable(),
+    address: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    type: z.string().max(50).optional(),
+});
+
+/** Validasi satu baris lead saat import — field name wajib, lainnya opsional */
+export const importLeadRowSchema = z.object({
+    name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    email: z.string().max(255).optional().nullable(),
+    phone: z.string().max(50).optional().nullable(),
+    company: z.string().max(255).optional().nullable(),
+    source: z.string().max(100).optional().nullable(),
+    value: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    status: z.string().max(50).optional(),
+});
+
+// ============================================
+// ROLE & PERMISSION MANAGEMENT
+// ============================================
+
+export const createRoleSchema = z.object({
+    name: z.string().min(1, 'Nama role wajib diisi').max(100, 'Nama role maksimal 100 karakter'),
+    description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable(),
+    permissions: z.array(z.string()).min(1, 'Minimal satu permission harus dipilih'),
+});
+
+export const updateRoleSchema = z.object({
+    name: z.string().min(1, 'Nama role wajib diisi').max(100, 'Nama role maksimal 100 karakter').optional(),
+    description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable(),
+    permissions: z.array(z.string()).min(1, 'Minimal satu permission harus dipilih').optional(),
+});
+
+// ============================================
+// Industry Configuration Schemas
+// ============================================
+
+const industryTypeEnum = z.enum([
+    'retail',
+    'manufacturing',
+    'services',
+    'construction',
+    'healthcare',
+    'education',
+    'food_beverage',
+    'general',
+]);
+
+export const updateIndustryConfigSchema = z.object({
+    industry: industryTypeEnum.optional(),
+    modules: z.object({
+        finance: z.boolean().optional(),
+        crm: z.boolean().optional(),
+        hr: z.boolean().optional(),
+        inventory: z.boolean().optional(),
+        billing: z.boolean().optional(),
+        analytics: z.boolean().optional(),
+    }).optional(),
+});
+
+export const createCustomFieldSchema = z.object({
+    entity: z.string().min(1, 'Entity wajib diisi').max(100, 'Entity maksimal 100 karakter'),
+    fieldName: z.string().min(1, 'Field name wajib diisi').max(100, 'Field name maksimal 100 karakter').regex(/^[a-z_]+$/, 'Field name hanya boleh huruf kecil dan underscore'),
+    fieldLabel: z.string().min(1, 'Field label wajib diisi').max(255, 'Field label maksimal 255 karakter'),
+    fieldType: z.enum(['text', 'number', 'date', 'select', 'boolean'], { message: 'Tipe field tidak valid' }),
+    required: z.boolean().optional().default(false),
+    options: z.array(z.string()).optional().nullable(),
+    defaultValue: z.unknown().optional().nullable(),
+    sortOrder: z.number().int().min(0).optional().default(0),
+});
+
+export const updateCustomFieldSchema = z.object({
+    fieldLabel: z.string().min(1, 'Field label wajib diisi').max(255, 'Field label maksimal 255 karakter').optional(),
+    fieldType: z.enum(['text', 'number', 'date', 'select', 'boolean'], { message: 'Tipe field tidak valid' }).optional(),
+    required: z.boolean().optional(),
+    options: z.array(z.string()).optional().nullable(),
+    defaultValue: z.unknown().optional().nullable(),
+    sortOrder: z.number().int().min(0).optional(),
+    isActive: z.boolean().optional(),
+});
+
+// ============================================
+// General Ledger & Journal Entry Schemas
+// ============================================
+
+export const createJournalEntrySchema = z.object({
+    description: z.string().min(1, 'Deskripsi wajib diisi'),
+    reference: z.string().optional().nullable(),
+    sourceType: z.enum(['manual', 'invoice', 'payment', 'purchase_order', 'payroll'], {
+        error: 'Tipe sumber tidak valid',
+    }),
+    sourceId: z.string().optional().nullable(),
+    date: z.string().optional(),
+    items: z.array(z.object({
+        accountId: z.string().min(1, 'Akun wajib dipilih'),
+        debit: z.number().min(0, 'Debit tidak boleh negatif').optional(),
+        credit: z.number().min(0, 'Kredit tidak boleh negatif').optional(),
+        description: z.string().optional().nullable(),
+    })).min(2, 'Minimal 2 item jurnal diperlukan (debit dan kredit)'),
+}).refine(
+    (data) => {
+        // Validate double-entry: total debit must equal total credit
+        const totalDebit = data.items.reduce((sum, item) => sum + (item.debit || 0), 0);
+        const totalCredit = data.items.reduce((sum, item) => sum + (item.credit || 0), 0);
+        return totalDebit > 0 && totalCredit > 0 && Math.abs(totalDebit - totalCredit) < 0.01;
+    },
+    { message: 'Total debit dan total credit harus sama dan lebih dari 0' }
+).refine(
+    (data) => {
+        // Validate: each item must have either debit OR credit, not both
+        return data.items.every(
+            (item) => !((item.debit || 0) > 0 && (item.credit || 0) > 0)
+        );
+    },
+    { message: 'Setiap item hanya boleh memiliki debit ATAU credit, bukan keduanya' }
+);
+
+export const updateJournalEntrySchema = z.object({
+    description: z.string().min(1, 'Deskripsi wajib diisi').optional(),
+    reference: z.string().optional().nullable(),
+    sourceType: z.enum(['manual', 'invoice', 'payment', 'purchase_order', 'payroll']).optional(),
+    sourceId: z.string().optional().nullable(),
+    date: z.string().optional(),
+    status: z.enum(['DRAFT', 'POSTED', 'VOID']).optional(),
+    items: z.array(z.object({
+        accountId: z.string().min(1, 'Akun wajib dipilih'),
+        debit: z.number().min(0, 'Debit tidak boleh negatif').optional(),
+        credit: z.number().min(0, 'Kredit tidak boleh negatif').optional(),
+        description: z.string().optional().nullable(),
+    })).min(2, 'Minimal 2 item jurnal diperlukan').optional(),
+}).refine(
+    (data) => {
+        if (!data.items) return true;
+        const totalDebit = data.items.reduce((sum, item) => sum + (item.debit || 0), 0);
+        const totalCredit = data.items.reduce((sum, item) => sum + (item.credit || 0), 0);
+        return totalDebit > 0 && totalCredit > 0 && Math.abs(totalDebit - totalCredit) < 0.01;
+    },
+    { message: 'Total debit dan total credit harus sama dan lebih dari 0' }
+).refine(
+    (data) => {
+        if (!data.items) return true;
+        return data.items.every(
+            (item) => !((item.debit || 0) > 0 && (item.credit || 0) > 0)
+        );
+    },
+    { message: 'Setiap item hanya boleh memiliki debit ATAU credit, bukan keduanya' }
+);
+
+// ============================================
 // Helper Function: Format Zod errors
 // ============================================
 

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createDealSchema, updateDealSchema, formatZodError } from '@/lib/validation-schemas';
+import { WorkflowEngine } from '@qalcuity/workflow';
 
 export async function GET(request: Request) {
     try {
@@ -16,7 +17,9 @@ export async function GET(request: Request) {
             );
         }
 
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const stage = searchParams.get('stage');
         const search = searchParams.get('search');
@@ -24,7 +27,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId: auth.tenantId };
+        const where: Record<string, unknown> = { tenantId };
 
         if (stage) {
             where.stage = stage.toUpperCase().replace(' ', '_');
@@ -80,9 +83,6 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -98,7 +98,9 @@ export async function POST(request: Request) {
             );
         }
 
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         const validation = createDealSchema.safeParse(body);
@@ -111,12 +113,28 @@ export async function POST(request: Request) {
 
         const validatedData = validation.data;
 
+        // Tentukan initial stage dari workflow definition
+        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'LEAD';
+        const dealStage = (validatedData.stage || initialStage).toUpperCase().replace(' ', '_');
+
+        // Validasi bahwa stage yang diberikan adalah valid dalam workflow
+        const validStages = WorkflowEngine.getStates('DEAL', tenantId);
+        if (validStages.length > 0 && !validStages.includes(dealStage)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: `Stage "${dealStage}" tidak valid. Stage yang tersedia: ${validStages.join(', ')}`,
+                },
+                { status: 400 }
+            );
+        }
+
         const deal = await prisma.deal.create({
             data: {
                 tenantId: tenantId,
                 title: validatedData.title,
                 value: validatedData.value || 0,
-                stage: (validatedData.stage || 'DISCOVERY').toUpperCase().replace(' ', '_'),
+                stage: dealStage,
                 probability: validatedData.probability || 0,
                 closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null,
                 notes: validatedData.notes || null,
@@ -125,6 +143,20 @@ export async function POST(request: Request) {
             },
             include: {
                 contact: { select: { id: true, name: true } },
+            },
+        });
+
+        // Catat workflow history untuk deal baru
+        await prisma.workflowHistory.create({
+            data: {
+                tenantId,
+                entityType: 'DEAL',
+                entityId: deal.id,
+                fromState: '',
+                toState: dealStage,
+                action: 'create',
+                userId,
+                notes: `Deal "${deal.title}" dibuat dengan stage "${dealStage}"`,
             },
         });
 
@@ -141,7 +173,9 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -173,12 +207,35 @@ export async function PUT(request: Request) {
             );
         }
 
+        // Validasi workflow transition jika stage berubah
+        const newStage = validatedData.stage
+            ? validatedData.stage.toUpperCase().replace(' ', '_')
+            : undefined;
+
+        if (newStage && newStage !== existing.stage) {
+            const { validateWorkflowTransition } = await import('@/lib/workflow');
+            const validation = await validateWorkflowTransition(
+                tenantId,
+                'DEAL',
+                existing.stage,
+                newStage,
+                'MEMBER'
+            );
+
+            if (!validation.valid) {
+                return NextResponse.json(
+                    { success: false, error: validation.error },
+                    { status: 400 }
+                );
+            }
+        }
+
         const deal = await prisma.deal.update({
             where: { id },
             data: {
                 ...(validatedData.title !== undefined && { title: validatedData.title }),
                 ...(validatedData.value !== undefined && { value: validatedData.value }),
-                ...(validatedData.stage !== undefined && { stage: validatedData.stage.toUpperCase().replace(' ', '_') }),
+                ...(newStage !== undefined && { stage: newStage }),
                 ...(validatedData.probability !== undefined && { probability: validatedData.probability }),
                 ...(validatedData.closeDate !== undefined && { closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null }),
                 ...(validatedData.notes !== undefined && { notes: validatedData.notes }),
@@ -187,20 +244,35 @@ export async function PUT(request: Request) {
             },
         });
 
+        // Catat workflow history jika stage berubah
+        if (newStage && newStage !== existing.stage) {
+            await prisma.workflowHistory.create({
+                data: {
+                    tenantId,
+                    entityType: 'DEAL',
+                    entityId: id,
+                    fromState: existing.stage,
+                    toState: newStage,
+                    action: 'stage_change',
+                    userId,
+                    notes: `Stage diubah dari "${existing.stage}" ke "${newStage}"`,
+                },
+            });
+        }
+
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: validatedData as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: deal });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 }
 
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -228,9 +300,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

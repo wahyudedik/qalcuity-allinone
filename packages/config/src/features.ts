@@ -163,6 +163,35 @@ export const FEATURE_FLAGS: Record<string, FeatureFlag> = {
         defaultValue: false,
         requiredPlan: 'business',
     },
+
+    // Analytics Features
+    ANALYTICS_WORKSPACE: {
+        key: 'ANALYTICS_WORKSPACE',
+        name: 'Analytics Workspace',
+        description: 'Data Explorer, KPI Management, Saved Reports, and Data Alerts',
+        defaultValue: true,
+    },
+    ADVANCED_ANALYTICS: {
+        key: 'ADVANCED_ANALYTICS',
+        name: 'Advanced Analytics',
+        description: 'Predictive analytics, anomaly detection, and cross-module correlation',
+        defaultValue: false,
+        requiredPlan: 'growth',
+    },
+    PREDICTIVE_ANALYTICS: {
+        key: 'PREDICTIVE_ANALYTICS',
+        name: 'Predictive Analytics',
+        description: 'ML-based forecasting, trend prediction, and what-if analysis',
+        defaultValue: false,
+        requiredPlan: 'business',
+    },
+    SCHEDULED_REPORTS: {
+        key: 'SCHEDULED_REPORTS',
+        name: 'Scheduled Reports',
+        description: 'Automated report generation and delivery via email/WhatsApp',
+        defaultValue: false,
+        requiredPlan: 'growth',
+    },
 };
 
 // --------------------------------------------

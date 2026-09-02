@@ -59,8 +59,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Hash password with cost factor 12 (consistent with security change password)
+        const hashedPassword = await bcrypt.hash(password, 12);
 
         // Buat slug dari nama perusahaan
         const slug = sanitizedCompany
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
             .replace(/^-|-$/g, "");
 
         // Gunakan transaction untuk memastikan atomicitas
-        const result = await prisma.$transaction(async (tx: any) => {
+        const result = await prisma.$transaction(async (tx) => {
             // Buat tenant
             const tenant = await tx.tenant.create({
                 data: {
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
             // Foreign key constraint
             if (prismaError.code === 'P2003') {
-                console.error("[Register] Foreign key constraint violation:", prismaError.meta);
+                console.error("[Register] Foreign key constraint violation");
                 return NextResponse.json(
                     { error: "Referensi data tidak valid" },
                     { status: 400 }
@@ -135,14 +135,14 @@ export async function POST(request: Request) {
 
             // Record not found
             if (prismaError.code === 'P2025') {
-                console.error("[Register] Record not found:", prismaError.meta);
+                console.error("[Register] Record not found");
                 return NextResponse.json(
                     { error: "Data tidak ditemukan" },
                     { status: 404 }
                 );
             }
 
-            console.error("[Register] Prisma error:", prismaError.code, prismaError.meta);
+            console.error("[Register] Prisma error:", prismaError.code);
             return NextResponse.json(
                 { error: "Terjadi kesalahan database" },
                 { status: 500 }
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
         }
 
         // Handle other errors
-        console.error("[Register] Unexpected error:", error);
+        console.error("[Register] Unexpected error:", error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { error: "Terjadi kesalahan server" },
             { status: 500 }

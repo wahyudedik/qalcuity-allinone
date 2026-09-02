@@ -56,7 +56,44 @@
         "darkMode": "Mode Gelap",
         "lightMode": "Mode Terang",
         "switchToLight": "Beralih ke mode terang",
-        "switchToDark": "Beralih ke mode gelap"
+        "switchToDark": "Beralih ke mode gelap",
+        "paymentNotifications": "Notifikasi Pembayaran",
+        "noNewNotifications": "Tidak ada notifikasi baru",
+        "viewAllPayments": "Lihat Semua Pembayaran",
+        "tryAgain": "Coba Lagi",
+        "errorOccurred": "Terjadi Kesalahan",
+        "errorDefaultDescription": "Maaf, terjadi kesalahan saat memuat data. Silakan coba lagi.",
+        "comingSoon": "Segera Hadir"
+    },
+    "errors": {
+        "hr": {
+            "title": "Kesalahan Modul HR",
+            "description": "Terjadi kesalahan saat memuat data HR. Silakan coba lagi."
+        },
+        "finance": {
+            "title": "Kesalahan Modul Keuangan",
+            "description": "Terjadi kesalahan saat memuat data keuangan. Silakan coba lagi."
+        },
+        "crm": {
+            "title": "Kesalahan Modul CRM",
+            "description": "Terjadi kesalahan saat memuat data CRM. Silakan coba lagi."
+        },
+        "inventory": {
+            "title": "Kesalahan Modul Inventaris",
+            "description": "Terjadi kesalahan saat memuat data inventaris. Silakan coba lagi."
+        },
+        "settings": {
+            "title": "Kesalahan Modul Pengaturan",
+            "description": "Terjadi kesalahan saat memuat pengaturan. Silakan coba lagi."
+        },
+        "reports": {
+            "title": "Kesalahan Modul Laporan",
+            "description": "Terjadi kesalahan saat memuat data laporan. Silakan coba lagi."
+        },
+        "analytics": {
+            "title": "Kesalahan Analitik",
+            "description": "Terjadi kesalahan saat memuat data analitik. Silakan coba lagi."
+        }
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -91,7 +128,12 @@
         "notifications": "Notifikasi",
         "integrations": "Integrasi",
         "billing": "Langganan",
-        "auditTrail": "Jejak Audit"
+        "auditTrail": "Jejak Audit",
+        "analytics": "Analitik",
+        "dataExplorer": "Penjelajah Data",
+        "kpi": "KPI",
+        "savedReports": "Laporan Tersimpan",
+        "alerts": "Peringatan"
     },
     "dashboard": {
         "welcome": "Selamat datang kembali! Berikut ringkasan bisnis Anda hari ini.",
@@ -540,6 +582,7 @@
             "differenceDesc": "Perlu direkonsiliasi",
             "searchPlaceholder": "Cari transaksi...",
             "allTypes": "Semua Tipe",
+            "type": "Tipe",
             "income": "Pemasukan",
             "expense": "Pengeluaran",
             "noDataAllMatched": "Semua transaksi sudah cocok",
@@ -846,7 +889,15 @@
             "noData": "Tidak ada data stok ditemukan",
             "error": "Gagal memuat data stok",
             "errorHint": "Terjadi kesalahan saat memuat data",
-            "retry": "Coba Lagi"
+            "retry": "Coba Lagi",
+            "product": "Produk",
+            "adjustQuantity": "Jumlah Penyesuaian",
+            "adjustQuantityHint": "Masukkan positif untuk menambah, negatif untuk mengurangi",
+            "adjustReason": "Alasan",
+            "adjustReasonPlaceholder": "Masukkan alasan penyesuaian stok...",
+            "adjustSuccess": "Stok berhasil disesuaikan",
+            "adjustError": "Gagal menyesuaikan stok",
+            "adjustNegative": "Stok tidak boleh negatif"
         },
         "categories": {
             "title": "Kategori Produk",
@@ -938,7 +989,9 @@
             "delete": "Hapus Produk",
             "confirmDelete": "Apakah Anda yakin ingin menghapus produk ini?",
             "deleteSuccess": "Produk berhasil dihapus",
-            "deleteError": "Gagal menghapus produk"
+            "deleteError": "Gagal menghapus produk",
+            "updateSuccess": "Produk berhasil diperbarui",
+            "updateError": "Gagal memperbarui produk"
         },
         "supplierDetail": {
             "backToSuppliers": "Kembali ke Suppliers",
@@ -1148,7 +1201,10 @@
             "endDate": "Tanggal Selesai",
             "days": "Hari",
             "payroll": "Payroll",
-            "netSalary": "Gaji Bersih"
+            "netSalary": "Gaji Bersih",
+            "name": "Nama",
+            "updateSuccess": "Profil karyawan berhasil diperbarui",
+            "updateError": "Gagal memperbarui profil karyawan"
         }
     },
     "settings": {
@@ -1772,5 +1828,552 @@
             "totalSpending": "Total Spending",
             "emptyState": "Belum ada data supplier"
         }
+    },
+    "analytics": {
+        "layout": {
+            "tabs": {
+                "overview": "Ringkasan",
+                "explorer": "Penjelajah",
+                "charts": "Grafik",
+                "dashboards": "Dashboard",
+                "kpi": "KPI",
+                "reports": "Laporan",
+                "dictionary": "Kamus Data",
+                "history": "Riwayat",
+                "scheduled": "Terjadwal",
+                "alerts": "Peringatan"
+            }
+        },
+        "overview": {
+            "title": "Workspace Analitik",
+            "subtitle": "Wawasan real-time dari seluruh bisnis Anda",
+            "totalQueries": "Total Kueri",
+            "savedCharts": "Grafik Tersimpan",
+            "activeDashboards": "Dashboard Aktif",
+            "totalKPIs": "Total KPI",
+            "recentQueries": "Kueri Terbaru",
+            "viewAll": "Lihat Semua",
+            "noQueries": "Belum ada kueri",
+            "newQuery": "Kueri Baru",
+            "newChart": "Grafik Baru",
+            "newDashboard": "Dashboard Baru"
+        },
+        "charts": {
+            "title": "Grafik",
+            "subtitle": "Kelola dan visualisasikan data Anda dengan grafik interaktif",
+            "create": "Buat Grafik",
+            "revenueTrend": "Tren Pendapatan",
+            "expenseTrend": "Tren Pengeluaran",
+            "cashFlowTrend": "Tren Arus Kas",
+            "empty": {
+                "title": "Belum Ada Grafik",
+                "description": "Buat grafik pertama Anda untuk mulai memvisualisasikan data."
+            },
+            "types": {
+                "bar": "Grafik Batang",
+                "line": "Grafik Garis",
+                "pie": "Grafik Pie",
+                "donut": "Grafik Donut",
+                "area": "Grafik Area",
+                "scatter": "Scatter Plot",
+                "heatmap": "Heatmap",
+                "kpi_card": "Kartu KPI",
+                "table": "Tabel"
+            },
+            "deleteConfirm": "Apakah Anda yakin ingin menghapus grafik ini?"
+        },
+        "dashboards": {
+            "title": "Dashboard",
+            "subtitle": "Buat dan kelola dashboard kustom dengan widget",
+            "create": "Buat Dashboard",
+            "widgets": "widget",
+            "empty": {
+                "title": "Belum Ada Dashboard",
+                "description": "Buat dashboard pertama Anda untuk mulai mengorganisir analitik."
+            },
+            "default": "Default",
+            "template": "Template",
+            "deleteConfirm": "Apakah Anda yakin ingin menghapus dashboard ini?"
+        },
+        "dictionary": {
+            "title": "Kamus Data",
+            "subtitle": "Jelajahi metrik, dimensi, dan definisi data di seluruh modul Anda",
+            "searchPlaceholder": "Cari metrik, dimensi...",
+            "categories": {
+                "all": "Semua Kategori",
+                "finance": "Keuangan",
+                "sales": "Penjualan",
+                "inventory": "Persediaan",
+                "hr": "SDM",
+                "crm": "CRM"
+            },
+            "types": {
+                "metric": "Metrik",
+                "dimension": "Dimensi",
+                "measure": "Ukuran",
+                "dataset": "Dataset",
+                "field": "Field"
+            },
+            "fields": {
+                "definition": "Definisi",
+                "technicalDef": "Definisi Teknis",
+                "source": "Sumber",
+                "formula": "Formula",
+                "freshness": "Ketepatan Waktu",
+                "reliability": "Keandalan",
+                "owner": "Pemilik"
+            },
+            "freshness": {
+                "REALTIME": "Real-time",
+                "HOURLY": "Per Jam",
+                "DAILY": "Harian",
+                "WEEKLY": "Mingguan"
+            },
+            "reliability": {
+                "HIGH": "Tinggi",
+                "MEDIUM": "Sedang",
+                "LOW": "Rendah"
+            },
+            "empty": {
+                "title": "Tidak Ada Entry Ditemukan",
+                "description": "Tidak ada entry kamus data yang cocok dengan pencarian Anda."
+            }
+        },
+        "history": {
+            "title": "Riwayat Kueri",
+            "subtitle": "Lihat dan kelola eksekusi kueri Anda yang lalu",
+            "rerun": "Jalankan Ulang",
+            "duplicate": "Duplikat",
+            "sql": "SQL",
+            "executionTime": "Waktu Eksekusi",
+            "rowsReturned": "Baris Dikembalikan",
+            "status": {
+                "SUCCESS": "Berhasil",
+                "FAILED": "Gagal",
+                "TIMEOUT": "Timeout",
+                "BLOCKED": "Diblokir"
+            },
+            "types": {
+                "SQL": "SQL",
+                "VISUAL": "Visual",
+                "AI": "AI",
+                "DASHBOARD": "Dashboard",
+                "KPI": "KPI"
+            },
+            "empty": {
+                "title": "Belum Ada Riwayat Kueri",
+                "description": "Riwayat eksekusi kueri Anda akan muncul di sini."
+            },
+            "fromCache": "Dari Cache",
+            "deleteConfirm": "Apakah Anda yakin ingin menghapus entry riwayat ini?"
+        },
+        "scheduled": {
+            "title": "Kueri Terjadwal",
+            "subtitle": "Kelola eksekusi kueri otomatis dan laporan",
+            "create": "Buat Jadwal",
+            "frequency": "Frekuensi",
+            "nextRun": "Jalankan Berikutnya",
+            "lastRun": "Terakhir Dijalankan",
+            "lastStatus": "Status Terakhir",
+            "runCount": "Jumlah Jalankan",
+            "active": "Aktif",
+            "paused": "Dijeda",
+            "frequencies": {
+                "daily": "Harian",
+                "weekly": "Mingguan",
+                "monthly": "Bulanan",
+                "quarterly": "Kuartalan"
+            },
+            "empty": {
+                "title": "Belum Ada Kueri Terjadwal",
+                "description": "Buat kueri terjadwal pertama Anda untuk mengotomasi analisis data."
+            },
+            "deleteConfirm": "Apakah Anda yakin ingin menghapus kueri terjadwal ini?"
+        },
+        "topMetrics": {
+            "title": "Metrik Utama"
+        },
+        "metrics": {
+            "winRate": "Tingkat Kemenangan",
+            "pipeline": "Nilai Pipeline",
+            "headcount": "Jumlah Karyawan",
+            "stockValue": "Nilai Stok",
+            "revenue": "Pendapatan",
+            "expenses": "Pengeluaran",
+            "netIncome": "Pendapatan Bersih",
+            "cashFlow": "Arus Kas",
+            "attendanceRate": "Tingkat Kehadiran",
+            "conversionRate": "Tingkat Konversi"
+        },
+        "quickActions": {
+            "title": "Aksi Cepat"
+        },
+        "actions": {
+            "explorer": "Penjelajah Data",
+            "kpi": "Pembuat KPI",
+            "reports": "Laporan",
+            "alerts": "Peringatan",
+            "createReport": "Buat Laporan Baru"
+        },
+        "errors": {
+            "loadFailed": "Gagal Memuat Analitik",
+            "queryFailed": "Gagal Menjalankan Kueri",
+            "saveFailed": "Gagal Menyimpan",
+            "deleteFailed": "Gagal Menghapus",
+            "networkError": "Terjadi kesalahan jaringan",
+            "unknownError": "Terjadi kesalahan yang tidak diketahui"
+        },
+        "common": {
+            "loading": "Memuat...",
+            "refresh": "Segarkan",
+            "export": "Ekspor",
+            "save": "Simpan",
+            "cancel": "Batal",
+            "delete": "Hapus",
+            "edit": "Ubah",
+            "create": "Buat",
+            "search": "Cari...",
+            "noData": "Tidak ada data",
+            "rows": "baris",
+            "executionTime": "waktu eksekusi",
+            "generatedAt": "dibuat pada",
+            "totalRows": "Total Baris",
+            "appliedFilters": "Filter Diterapkan",
+            "clearAll": "Hapus Semua",
+            "selectDataset": "Pilih Dataset",
+            "name": "Nama",
+            "description": "Deskripsi",
+            "tags": "Tag",
+            "createdAt": "Dibuat",
+            "updatedAt": "Diperbarui",
+            "owner": "Pemilik",
+            "type": "Tipe",
+            "status": "Status",
+            "active": "Aktif",
+            "inactive": "Nonaktif",
+            "all": "Semua",
+            "actions": "Aksi",
+            "confirmDelete": "Apakah Anda yakin ingin menghapus item ini?",
+            "close": "Tutup",
+            "back": "Kembali",
+            "next": "Selanjutnya",
+            "previous": "Sebelumnya",
+            "lastUpdated": "Terakhir Diperbarui",
+            "never": "Tidak Pernah"
+        },
+        "periods": {
+            "daily": "Harian",
+            "weekly": "Mingguan",
+            "monthly": "Bulanan",
+            "quarterly": "Kuartalan",
+            "yearly": "Tahunan"
+        },
+        "explorer": {
+            "title": "Penjelajah Data",
+            "subtitle": "Jelajahi dan analisis data Anda dengan antarmuka point-and-click",
+            "dataset": "Dataset",
+            "dimensions": "Dimensi",
+            "measures": "Ukuran",
+            "filters": "Filter",
+            "addFilter": "Tambah Filter",
+            "analyze": "Analisis",
+            "results": "Hasil",
+            "saveReport": "Simpan Laporan",
+            "saveAsReport": "Simpan sebagai Laporan",
+            "empty": {
+                "title": "Konfigurasi & Analisis",
+                "description": "Pilih dataset, tentukan dimensi dan ukuran, lalu klik Analisis untuk menjelajahi data Anda."
+            },
+            "error": {
+                "queryFailed": "Gagal menjalankan kueri. Silakan coba lagi."
+            },
+            "filterOperators": {
+                "equals": "Sama dengan",
+                "not_equals": "Tidak sama dengan",
+                "greater_than": "Lebih besar dari",
+                "less_than": "Lebih kecil dari",
+                "contains": "Mengandung",
+                "not_contains": "Tidak mengandung"
+            },
+            "datasets": {
+                "invoices": "Faktur Penjualan",
+                "payments": "Pembayaran",
+                "contacts": "Kontak",
+                "deals": "Deal",
+                "products": "Produk",
+                "stockMovements": "Pergerakan Stok",
+                "employees": "Karyawan",
+                "attendance": "Absensi",
+                "leads": "Prospek",
+                "purchaseOrders": "Pesanan Pembelian",
+                "quotations": "Penawaran",
+                "leaves": "Cuti",
+                "payroll": "Penggajian",
+                "categories": "Kategori",
+                "suppliers": "Supplier"
+            },
+            "export": {
+                "csv": "Ekspor CSV",
+                "excel": "Ekspor Excel",
+                "print": "Cetak"
+            }
+        },
+        "kpi": {
+            "title": "Manajemen KPI",
+            "subtitle": "Pantau dan kelola Key Performance Indicator Anda",
+            "create": "Buat KPI",
+            "createTitle": "Buat KPI Baru",
+            "editTitle": "Ubah KPI",
+            "revenue": "Pendapatan",
+            "expenses": "Pengeluaran",
+            "netIncome": "Pendapatan Bersih",
+            "cashFlow": "Arus Kas",
+            "empty": {
+                "title": "Belum Ada KPI",
+                "description": "Buat KPI pertama Anda untuk mulai melacak metrik performa."
+            },
+            "form": {
+                "name": "Nama",
+                "description": "Deskripsi",
+                "category": "Kategori",
+                "metric": "Metrik",
+                "target": "Target",
+                "direction": "Arah",
+                "period": "Periode",
+                "warningThreshold": "Batas Peringatan",
+                "criticalThreshold": "Batas Kritis"
+            },
+            "categories": {
+                "finance": "Keuangan",
+                "sales": "Penjualan",
+                "inventory": "Persediaan",
+                "hr": "SDM",
+                "crm": "CRM",
+                "cross_module": "Lintas Modul"
+            },
+            "statuses": {
+                "above_target": "Di Atas Target",
+                "on_target": "Sesuai Target",
+                "below_target": "Di Bawah Target",
+                "no_data": "Tidak Ada Data"
+            },
+            "periods": {
+                "daily": "Harian",
+                "weekly": "Mingguan",
+                "monthly": "Bulanan",
+                "quarterly": "Kuartalan",
+                "yearly": "Tahunan"
+            },
+            "directions": {
+                "gte": "≥ Lebih besar dari",
+                "lte": "≤ Lebih kecil dari"
+            },
+            "deleteConfirm": "Apakah Anda yakin ingin menghapus KPI ini?"
+        },
+        "reports": {
+            "title": "Laporan Tersimpan",
+            "subtitle": "Kelola dan jalankan laporan analitik yang tersimpan",
+            "create": "Buat Laporan",
+            "run": "Jalankan",
+            "edit": "Ubah",
+            "share": "Bagikan",
+            "star": "Favorit",
+            "unstar": "Hapus Favorit",
+            "folder": "Folder",
+            "goToExplorer": "Ke Penjelajah Data",
+            "empty": {
+                "title": "Belum Ada Laporan Tersimpan",
+                "description": "Buat analisis pertama Anda dari Penjelajah Data dan simpan di sini."
+            },
+            "tabs": {
+                "all": "Semua",
+                "starred": "Favorit",
+                "folders": "Folder"
+            },
+            "types": {
+                "chart": "Grafik",
+                "pivot": "Pivot",
+                "query": "Kueri",
+                "dashboard": "Dashboard",
+                "report": "Laporan"
+            },
+            "lastRun": "Terakhir Dijalankan"
+        },
+        "alerts": {
+            "title": "Peringatan Data",
+            "subtitle": "Pantau metrik dan dapatkan notifikasi saat ambang batas terlampaui",
+            "create": "Buat Peringatan",
+            "createTitle": "Buat Aturan Peringatan",
+            "editTitle": "Ubah Aturan Peringatan",
+            "active": "Peringatan Aktif",
+            "rules": "Aturan Peringatan",
+            "history": "Riwayat Peringatan",
+            "acknowledge": "Konfirmasi",
+            "acknowledged": "Dikonfirmasi",
+            "empty": {
+                "title": "Belum Ada Aturan Peringatan",
+                "description": "Buat aturan peringatan pertama Anda untuk mendapatkan notifikasi saat metrik melampaui ambang batas."
+            },
+            "form": {
+                "name": "Nama",
+                "description": "Deskripsi",
+                "metric": "Metrik",
+                "condition": "Kondisi",
+                "threshold": "Ambang Batas",
+                "severity": "Tingkat Keparahan",
+                "cooldown": "Cooldown (menit)",
+                "channels": "Kanal Notifikasi",
+                "recipients": "Penerima"
+            },
+            "conditions": {
+                "below": "Di bawah ambang batas",
+                "above": "Di atas ambang batas",
+                "equals": "Sama dengan",
+                "not_equals": "Tidak sama dengan",
+                "changes_by": "Berubah sebesar %"
+            },
+            "severities": {
+                "low": "Rendah",
+                "medium": "Sedang",
+                "high": "Tinggi",
+                "critical": "Kritis"
+            },
+            "deleteConfirm": "Apakah Anda yakin ingin menghapus aturan peringatan ini?"
+        },
+        "datasets": {
+            "invoices": {
+                "name": "Faktur Penjualan",
+                "dimensions": {
+                    "date": "Tanggal",
+                    "status": "Status",
+                    "customer": "Pelanggan",
+                    "dueDate": "Tanggal Jatuh Tempo"
+                },
+                "measures": {
+                    "invoice_total": "Total Faktur",
+                    "tax_amount": "Jumlah Pajak",
+                    "invoice_count": "Jumlah Faktur",
+                    "avg_invoice": "Rata-rata Faktur"
+                }
+            },
+            "payments": {
+                "name": "Pembayaran",
+                "dimensions": {
+                    "date": "Tanggal",
+                    "method": "Metode",
+                    "status": "Status"
+                },
+                "measures": {
+                    "payment_total": "Total Pembayaran",
+                    "payment_count": "Jumlah Pembayaran",
+                    "avg_payment": "Rata-rata Pembayaran"
+                }
+            },
+            "contacts": {
+                "name": "Kontak",
+                "dimensions": {
+                    "type": "Tipe",
+                    "createdAt": "Tanggal Dibuat",
+                    "company": "Perusahaan"
+                },
+                "measures": {
+                    "contact_count": "Jumlah Kontak"
+                }
+            },
+            "deals": {
+                "name": "Deal",
+                "dimensions": {
+                    "stage": "Tahapan",
+                    "createdAt": "Tanggal Dibuat",
+                    "contact": "Kontak"
+                },
+                "measures": {
+                    "deal_count": "Jumlah Deal",
+                    "deal_value": "Nilai Deal",
+                    "avg_deal": "Rata-rata Deal"
+                }
+            },
+            "products": {
+                "name": "Produk",
+                "dimensions": {
+                    "category": "Kategori",
+                    "supplier": "Supplier",
+                    "status": "Status"
+                },
+                "measures": {
+                    "product_count": "Jumlah Produk",
+                    "stock_value": "Nilai Stok",
+                    "avg_price": "Harga Rata-rata"
+                }
+            },
+            "employees": {
+                "name": "Karyawan",
+                "dimensions": {
+                    "department": "Departemen",
+                    "position": "Jabatan",
+                    "status": "Status"
+                },
+                "measures": {
+                    "employee_count": "Jumlah Karyawan"
+                }
+            },
+            "attendance": {
+                "name": "Absensi",
+                "dimensions": {
+                    "date": "Tanggal",
+                    "status": "Status",
+                    "employee": "Karyawan"
+                },
+                "measures": {
+                    "attendance_count": "Jumlah Absensi",
+                    "late_count": "Jumlah Terlambat",
+                    "attendance_rate": "Tingkat Kehadiran"
+                }
+            }
+        }
+    },
+    "platform": {
+        "dashboard": "Dashboard",
+        "tenants": "Tenant",
+        "billingPlans": "Langganan & Paket",
+        "monitoring": "Monitoring",
+        "support": "Dukungan",
+        "security": "Keamanan",
+        "settings": "Pengaturan",
+        "platformAdmin": "Admin Platform",
+        "customerDashboard": "Dashboard Pelanggan"
+    },
+    "search": {
+        "placeholder": "Cari invoice, deal, kontak, produk...",
+        "searching": "Mencari...",
+        "noResults": "Tidak ada hasil untuk",
+        "minChars": "Ketik minimal 2 karakter untuk mulai mencari",
+        "navigate": "navigasi",
+        "open": "buka",
+        "close": "tutup"
+    },
+    "onboarding": {
+        "welcome": "Selamat Datang di Qalcuity!",
+        "description": "Mulai dengan data demo untuk menjelajahi semua fitur, atau mulai dari nol dengan data Anda sendiri.",
+        "loadDemo": "Muat Data Demo",
+        "demoDescription": "15 produk, 20 kontak, 10 invoice, 12 karyawan, dan lainnya",
+        "startFresh": "Mulai dari Nol",
+        "freshDescription": "Kosongkan workspace dan tambahkan data Anda sendiri",
+        "hint": "Anda selalu bisa memuat data demo nanti dari menu Pengaturan.",
+        "loadingDemo": "Memuat Data Demo",
+        "preparingData": "Menyiapkan data demo...",
+        "loadingCategories": "Memuat kategori & produk...",
+        "demoLoaded": "Data demo berhasil dimuat!",
+        "demoFailed": "Gagal memuat data:",
+        "error": "Terjadi kesalahan. Silakan coba lagi."
+    },
+    "ai": {
+        "welcomeMessage": "Halo! Saya adalah AI Assistant Qalcuity. Saya bisa membantu Anda dengan:\n\n• Menampilkan data penjualan\n• Membuat invoice\n• Menganalisis profit & loss\n• Memberikan insight bisnis\n\nAda yang bisa saya bantu?",
+        "askSomething": "Tanyakan sesuatu...",
+        "errorContacting": "Gagal menghubungi AI service",
+        "errorProcessing": "Maaf, terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.",
+        "penjualan": "Penjualan",
+        "invoice": "Invoice",
+        "profit": "Profit"
     }
 }

@@ -4,39 +4,59 @@
  */
 
 /**
+ * Escape HTML special characters to prevent XSS in HTML context.
+ */
+function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  // Build HTML entities from char codes to avoid encoding issues in source
+  const amp = String.fromCharCode(38) + 'amp;';
+  const lt = String.fromCharCode(38) + 'lt;';
+  const gt = String.fromCharCode(38) + 'gt;';
+  const quot = String.fromCharCode(38) + 'quot;';
+  const apos = String.fromCharCode(38) + '#039;';
+  return str
+    .replace(/&/g, amp)
+    .replace(/</g, lt)
+    .replace(/>/g, gt)
+    .replace(/"/g, quot)
+    .replace(/'/g, apos);
+}
+
+/**
  * Escape CSV value — handle commas, quotes, and newlines
  */
 function escapeCSVValue(value: unknown): string {
-    if (value === null || value === undefined) return '';
-    const str = String(value);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
 }
 
 /**
  * Export data array to CSV file and trigger download
  */
 export function exportToCSV(data: Record<string, unknown>[], filename: string) {
-    if (data.length === 0) return;
+  if (data.length === 0) return;
 
-    const headers = Object.keys(data[0]);
-    const csvContent = [
-        headers.map(escapeCSVValue).join(','),
-        ...data.map(row =>
-            headers.map(header => escapeCSVValue(row[header])).join(',')
-        )
-    ].join('\n');
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.map(escapeCSVValue).join(','),
+    ...data.map(row =>
+      headers.map(header => escapeCSVValue(row[header])).join(',')
+    )
+  ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${filename}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
 }
 
 /**
@@ -44,11 +64,11 @@ export function exportToCSV(data: Record<string, unknown>[], filename: string) {
  * Uses HTML table format which Excel can open natively
  */
 export function exportToExcel(data: Record<string, unknown>[], filename: string) {
-    if (data.length === 0) return;
+  if (data.length === 0) return;
 
-    const headers = Object.keys(data[0]);
+  const headers = Object.keys(data[0]);
 
-    const htmlContent = `
+  const htmlContent = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office"
           xmlns:x="urn:schemas-microsoft-com:office:excel"
           xmlns="http://www.w3.org/TR/REC-html40">
@@ -76,40 +96,40 @@ export function exportToExcel(data: Record<string, unknown>[], filename: string)
       <table>
         <thead>
           <tr>
-            ${headers.map(h => `<th>${escapeCSVValue(h)}</th>`).join('')}
+            ${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
           ${data.map(row =>
-        `<tr>${headers.map(h => `<td>${escapeCSVValue(row[h])}</td>`).join('')}</tr>`
-    ).join('\n')}
+    `<tr>${headers.map(h => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`
+  ).join('\n')}
         </tbody>
       </table>
     </body>
     </html>
   `;
 
-    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}.xls`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+  const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${filename}.xls`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
 }
 
 /**
  * Print a specific element by ID
  */
 export function printReport(elementId: string) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
+  const element = document.getElementById(elementId);
+  if (!element) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
 
-    printWindow.document.write(`
+  printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -144,24 +164,24 @@ export function printReport(elementId: string) {
     </body>
     </html>
   `);
-    printWindow.document.close();
-    setTimeout(() => {
-        printWindow.print();
-    }, 300);
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+  }, 300);
 }
 
 /**
  * Format data for export — add readable headers
  */
 export function formatExportData<T extends Record<string, unknown>>(
-    data: T[],
-    headerMap: Record<string, string>
+  data: T[],
+  headerMap: Record<string, string>
 ): Record<string, unknown>[] {
-    return data.map(row => {
-        const newRow: Record<string, unknown> = {};
-        Object.entries(headerMap).forEach(([key, label]) => {
-            newRow[label] = row[key];
-        });
-        return newRow;
+  return data.map(row => {
+    const newRow: Record<string, unknown> = {};
+    Object.entries(headerMap).forEach(([key, label]) => {
+      newRow[label] = row[key];
     });
+    return newRow;
+  });
 }

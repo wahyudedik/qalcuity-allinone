@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Star, Pencil, FileText, BarChart3, ArrowLeft, Mail, Phone, MapPin, Building2, Calendar, Trash2, X } from 'lucide-react'
+import { Star, Pencil, FileText, BarChart3, ArrowLeft, Mail, Phone, MapPin, Building2, Calendar, Trash2, X, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface EmployeeAttendance {
     id: string
@@ -72,6 +73,18 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [isEditing, setIsEditing] = useState(false)
+    const [editForm, setEditForm] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        position: '',
+        department: '',
+        salary: 0,
+        joinDate: '',
+    })
+    const [editSaving, setEditSaving] = useState(false)
 
     useEffect(() => {
         const fetchEmployee = async () => {
@@ -92,8 +105,54 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
         fetchEmployee()
     }, [params.id, t])
 
-    const handleDelete = async () => {
-        if (!window.confirm(t('hr.employeeDetail.confirmDelete'))) return
+    const openEditForm = () => {
+        if (!employee) return
+        setEditForm({
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone,
+            position: employee.position,
+            department: employee.department,
+            salary: Number(employee.salary),
+            joinDate: employee.joinDate ? employee.joinDate.split('T')[0] : '',
+        })
+        setIsEditing(true)
+    }
+
+    const handleEditSave = async () => {
+        setEditSaving(true)
+        try {
+            const res = await fetch(`/api/hr/employees/${params.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editForm),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('hr.employeeDetail.updateSuccess'), type: 'success' })
+                setIsEditing(false)
+                // Refresh employee data
+                const updated = await fetch(`/api/hr/employees/${params.id}`)
+                const updatedData = await updated.json()
+                if (updatedData.success) {
+                    setEmployee(updatedData.data)
+                }
+            } else {
+                setToast({ message: data.error || t('hr.employeeDetail.updateError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('hr.employeeDetail.updateError'), type: 'error' })
+        } finally {
+            setEditSaving(false)
+        }
+    }
+
+    const handleDelete = () => {
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
+        setShowDeleteConfirm(false)
         try {
             const res = await fetch(`/api/hr/employees/${params.id}`, { method: 'DELETE' })
             const data = await res.json()
@@ -136,6 +195,17 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
     return (
         <div className="space-y-6 p-6">
             {/* Toast notification */}
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDelete}
+                title={t('hr.employeeDetail.confirmDelete') || 'Hapus Karyawan'}
+                message={t('hr.employeeDetail.confirmDelete') || 'Apakah Anda yakin ingin menghapus data karyawan ini?'}
+                confirmText="Hapus"
+                variant="danger"
+            />
+
             {toast && (
                 <div className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`}>
@@ -207,9 +277,9 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                                                 <td className="py-2">{a.clockOut ? formatDate(a.clockOut) : '-'}</td>
                                                 <td className="py-2">
                                                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${a.status === 'PRESENT' ? 'bg-green-100 text-green-700' :
-                                                            a.status === 'LATE' ? 'bg-yellow-100 text-yellow-700' :
-                                                                a.status === 'ABSENT' ? 'bg-red-100 text-red-700' :
-                                                                    'bg-gray-100 text-gray-700'
+                                                        a.status === 'LATE' ? 'bg-yellow-100 text-yellow-700' :
+                                                            a.status === 'ABSENT' ? 'bg-red-100 text-red-700' :
+                                                                'bg-gray-100 text-gray-700'
                                                         }`}>
                                                         {a.status}
                                                     </span>
@@ -246,8 +316,8 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                                                 <td className="py-2">{l.days}</td>
                                                 <td className="py-2">
                                                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${l.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                                            l.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                                                                'bg-yellow-100 text-yellow-700'
+                                                        l.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                                            'bg-yellow-100 text-yellow-700'
                                                         }`}>
                                                         {l.status}
                                                     </span>
@@ -325,8 +395,8 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                                             </p>
                                         </div>
                                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${p.status === 'PAID' ? 'bg-green-100 text-green-700' :
-                                                p.status === 'PROCESSED' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-yellow-100 text-yellow-700'
+                                            p.status === 'PROCESSED' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {p.status}
                                         </span>
@@ -340,15 +410,24 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">{t('hr.employeeDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            <button
+                                onClick={openEditForm}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
                                 <Pencil className="h-4 w-4" />
                                 {t('hr.employeeDetail.editProfile')}
                             </button>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={() => router.push(`/dashboard/hr/payroll?employeeId=${params.id}`)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <FileText className="h-4 w-4" />
                                 {t('hr.employeeDetail.viewPayslip')}
                             </button>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={() => router.push(`/dashboard/hr/attendance?employeeId=${params.id}`)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <BarChart3 className="h-4 w-4" />
                                 {t('hr.employeeDetail.attendanceHistory')}
                             </button>

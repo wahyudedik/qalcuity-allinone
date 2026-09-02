@@ -1412,6 +1412,188 @@ async function main() {
     console.log("✅ Bank Transactions: already seeded");
   }
 
+  // ============================================
+  // PLANS (Entitlement Engine) — upsert berdasarkan slug
+  // ============================================
+  const planData = [
+    {
+      name: "Free",
+      slug: "free",
+      description: "Cocok untuk bisnis kecil yang baru memulai",
+      priceMonthly: 0,
+      priceYearly: 0,
+      maxUsers: 3,
+      maxStorage: 500,
+      sortOrder: 0,
+      features: [
+        { featureKey: "finance.invoices", enabled: true, limit: 50 },
+        { featureKey: "finance.payments", enabled: true, limit: 50 },
+        { featureKey: "finance.purchase-orders", enabled: false, limit: null },
+        { featureKey: "finance.journal-entries", enabled: false, limit: null },
+        { featureKey: "finance.reports", enabled: false, limit: null },
+        { featureKey: "finance.reconciliation", enabled: false, limit: null },
+        { featureKey: "crm.contacts", enabled: true, limit: 100 },
+        { featureKey: "crm.leads", enabled: true, limit: 20 },
+        { featureKey: "crm.deals", enabled: false, limit: null },
+        { featureKey: "crm.pipeline", enabled: false, limit: null },
+        { featureKey: "inventory.products", enabled: true, limit: 50 },
+        { featureKey: "inventory.stock", enabled: true, limit: null },
+        { featureKey: "inventory.suppliers", enabled: false, limit: null },
+        { featureKey: "inventory.categories", enabled: true, limit: 10 },
+        { featureKey: "hr.employees", enabled: false, limit: null },
+        { featureKey: "hr.attendance", enabled: false, limit: null },
+        { featureKey: "hr.leaves", enabled: false, limit: null },
+        { featureKey: "hr.payroll", enabled: false, limit: null },
+        { featureKey: "ai.chat", enabled: false, limit: null },
+        { featureKey: "ai.document-extraction", enabled: false, limit: null },
+        { featureKey: "ai.predictions", enabled: false, limit: null },
+        { featureKey: "integration.whatsapp", enabled: false, limit: null },
+        { featureKey: "integration.email", enabled: false, limit: null },
+        { featureKey: "integration.payment", enabled: false, limit: null },
+        { featureKey: "platform.admin", enabled: false, limit: null },
+        { featureKey: "platform.billing", enabled: false, limit: null },
+        { featureKey: "platform.monitoring", enabled: false, limit: null },
+      ],
+    },
+    {
+      name: "Pro",
+      slug: "pro",
+      description: "Untuk bisnis yang berkembang dengan kebutuhan lengkap",
+      priceMonthly: 299000,
+      priceYearly: 2990000,
+      maxUsers: 20,
+      maxStorage: 5000,
+      sortOrder: 1,
+      features: [
+        { featureKey: "finance.invoices", enabled: true, limit: null },
+        { featureKey: "finance.payments", enabled: true, limit: null },
+        { featureKey: "finance.purchase-orders", enabled: true, limit: null },
+        { featureKey: "finance.journal-entries", enabled: true, limit: null },
+        { featureKey: "finance.reports", enabled: true, limit: null },
+        { featureKey: "finance.reconciliation", enabled: true, limit: null },
+        { featureKey: "crm.contacts", enabled: true, limit: null },
+        { featureKey: "crm.leads", enabled: true, limit: null },
+        { featureKey: "crm.deals", enabled: true, limit: null },
+        { featureKey: "crm.pipeline", enabled: true, limit: null },
+        { featureKey: "inventory.products", enabled: true, limit: null },
+        { featureKey: "inventory.stock", enabled: true, limit: null },
+        { featureKey: "inventory.suppliers", enabled: true, limit: null },
+        { featureKey: "inventory.categories", enabled: true, limit: null },
+        { featureKey: "hr.employees", enabled: true, limit: null },
+        { featureKey: "hr.attendance", enabled: true, limit: null },
+        { featureKey: "hr.leaves", enabled: true, limit: null },
+        { featureKey: "hr.payroll", enabled: false, limit: null },
+        { featureKey: "ai.chat", enabled: true, limit: 100 },
+        { featureKey: "ai.document-extraction", enabled: true, limit: 50 },
+        { featureKey: "ai.predictions", enabled: false, limit: null },
+        { featureKey: "integration.whatsapp", enabled: true, limit: null },
+        { featureKey: "integration.email", enabled: true, limit: null },
+        { featureKey: "integration.payment", enabled: false, limit: null },
+        { featureKey: "platform.admin", enabled: false, limit: null },
+        { featureKey: "platform.billing", enabled: true, limit: null },
+        { featureKey: "platform.monitoring", enabled: false, limit: null },
+      ],
+    },
+    {
+      name: "Enterprise",
+      slug: "enterprise",
+      description: "Untuk bisnis besar dengan kebutuhan advanced",
+      priceMonthly: 999000,
+      priceYearly: 9990000,
+      maxUsers: -1,
+      maxStorage: null,
+      sortOrder: 2,
+      features: [
+        { featureKey: "finance.invoices", enabled: true, limit: null },
+        { featureKey: "finance.payments", enabled: true, limit: null },
+        { featureKey: "finance.purchase-orders", enabled: true, limit: null },
+        { featureKey: "finance.journal-entries", enabled: true, limit: null },
+        { featureKey: "finance.reports", enabled: true, limit: null },
+        { featureKey: "finance.reconciliation", enabled: true, limit: null },
+        { featureKey: "crm.contacts", enabled: true, limit: null },
+        { featureKey: "crm.leads", enabled: true, limit: null },
+        { featureKey: "crm.deals", enabled: true, limit: null },
+        { featureKey: "crm.pipeline", enabled: true, limit: null },
+        { featureKey: "inventory.products", enabled: true, limit: null },
+        { featureKey: "inventory.stock", enabled: true, limit: null },
+        { featureKey: "inventory.suppliers", enabled: true, limit: null },
+        { featureKey: "inventory.categories", enabled: true, limit: null },
+        { featureKey: "hr.employees", enabled: true, limit: null },
+        { featureKey: "hr.attendance", enabled: true, limit: null },
+        { featureKey: "hr.leaves", enabled: true, limit: null },
+        { featureKey: "hr.payroll", enabled: true, limit: null },
+        { featureKey: "ai.chat", enabled: true, limit: null },
+        { featureKey: "ai.document-extraction", enabled: true, limit: null },
+        { featureKey: "ai.predictions", enabled: true, limit: null },
+        { featureKey: "integration.whatsapp", enabled: true, limit: null },
+        { featureKey: "integration.email", enabled: true, limit: null },
+        { featureKey: "integration.payment", enabled: true, limit: null },
+        { featureKey: "platform.admin", enabled: true, limit: null },
+        { featureKey: "platform.billing", enabled: true, limit: null },
+        { featureKey: "platform.monitoring", enabled: true, limit: null },
+      ],
+    },
+  ];
+
+  for (const planDef of planData) {
+    const existingPlan = await prisma.plan.findUnique({
+      where: { slug: planDef.slug },
+    });
+
+    if (!existingPlan) {
+      await prisma.plan.create({
+        data: {
+          name: planDef.name,
+          slug: planDef.slug,
+          description: planDef.description,
+          priceMonthly: planDef.priceMonthly,
+          priceYearly: planDef.priceYearly,
+          maxUsers: planDef.maxUsers,
+          maxStorage: planDef.maxStorage,
+          sortOrder: planDef.sortOrder,
+          features: {
+            create: planDef.features.map((f) => ({
+              featureKey: f.featureKey,
+              enabled: f.enabled,
+              limit: f.limit,
+            })),
+          },
+        },
+      });
+      console.log(`✅ Plan created: ${planDef.name}`);
+    } else {
+      console.log(`✅ Plan already exists: ${planDef.name}`);
+    }
+  }
+
+  // ============================================
+  // TENANT ENTITLEMENT — ensure demo tenant has Free plan
+  // ============================================
+  const freePlan = await prisma.plan.findUnique({ where: { slug: "free" } });
+  if (freePlan) {
+    const existingEntitlement = await prisma.tenantEntitlement.findUnique({
+      where: { tenantId: tenant.id },
+    });
+
+    if (!existingEntitlement) {
+      const now = new Date();
+      await prisma.tenantEntitlement.create({
+        data: {
+          tenantId: tenant.id,
+          planId: freePlan.id,
+          billingCycle: "monthly",
+          status: "trial",
+          trialEndsAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59),
+        },
+      });
+      console.log("✅ Tenant Entitlement: Free plan (trial) assigned to demo tenant");
+    } else {
+      console.log("✅ Tenant Entitlement: already exists for demo tenant");
+    }
+  }
+
   console.log("\n🎉 Seeding completed!");
   console.log("\n📋 Demo Accounts:");
   console.log("  SuperAdmin: info@qalcuity.com / Wahyu123456789@");

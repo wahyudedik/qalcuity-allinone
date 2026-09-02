@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -18,6 +19,7 @@ import {
     Shield,
     ChevronRight,
     X,
+    BarChart3,
     type LucideIcon,
 } from "lucide-react";
 
@@ -100,7 +102,20 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             href: "/dashboard/reports",
             icon: FileText,
         },
-        // 7. Settings — ADMIN, SUPERADMIN only
+        // 7. Analytics — ADMIN, MEMBER, VIEWER
+        {
+            label: t("nav.analytics") || "Analytics",
+            href: "/dashboard/analytics",
+            icon: BarChart3,
+            children: [
+                { label: t("nav.overview") || "Overview", href: "/dashboard/analytics" },
+                { label: t("nav.dataExplorer") || "Data Explorer", href: "/dashboard/analytics/explorer" },
+                { label: t("nav.kpi") || "KPI", href: "/dashboard/analytics/kpi" },
+                { label: t("nav.savedReports") || "Reports", href: "/dashboard/analytics/reports" },
+                { label: t("nav.alerts") || "Alerts", href: "/dashboard/analytics/alerts" },
+            ],
+        },
+        // 8. Settings — ADMIN, SUPERADMIN only
         {
             label: t("nav.settings") || "Settings",
             href: "/dashboard/settings",
@@ -155,6 +170,24 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const isMember = userRole === "MEMBER";
     const isViewer = userRole === "VIEWER";
 
+    // ─── Refs untuk auto-scroll ke menu aktif ─────────────────────────────────
+    const navRef = useRef<HTMLElement>(null);
+    const activeItemRef = useRef<HTMLAnchorElement>(null);
+
+    // ─── Auto-scroll ke menu yang aktif ───────────────────────────────────────
+    useEffect(() => {
+        if (activeItemRef.current && navRef.current) {
+            const nav = navRef.current;
+            const item = activeItemRef.current;
+            // Pastikan item terlihat dalam viewport nav
+            const navRect = nav.getBoundingClientRect();
+            const itemRect = item.getBoundingClientRect();
+            if (itemRect.top < navRect.top || itemRect.bottom > navRect.bottom) {
+                item.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+        }
+    }, [pathname]);
+
     // ─── Helper: Cek apakah section harus di-expand ─────────────────────────────
     const isSectionActive = (item: MenuItem) => {
         if (!item.children) return false;
@@ -182,11 +215,11 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-0 z-50 h-screen w-64 border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0 dark:border-gray-700 dark:bg-gray-900 ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:h-auto lg:translate-x-0 dark:border-gray-700 dark:bg-gray-900 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 {/* Logo */}
-                <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6 dark:border-gray-700">
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 px-6 dark:border-gray-700">
                     <Link href="/dashboard" className="flex items-center gap-2">
                         <img
                             src="/logo.png"
@@ -208,7 +241,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
                 {/* Badge Role */}
                 {userRole && (
-                    <div className="border-b border-gray-200 px-6 py-2 dark:border-gray-700">
+                    <div className="shrink-0 border-b border-gray-200 px-6 py-2 dark:border-gray-700">
                         <span
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isSuperAdmin
                                 ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
@@ -231,8 +264,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     </div>
                 )}
 
-                {/* Navigasi */}
-                <nav className="flex-1 overflow-y-auto p-4">
+                {/* Navigasi — scrollable area */}
+                <nav
+                    ref={navRef}
+                    className="flex-1 overflow-y-auto p-4 min-h-0"
+                    style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e1 transparent" }}
+                >
                     <ul className="space-y-1">
                         {getMenuItems(t)
                             .filter(isMenuVisible)
@@ -245,11 +282,19 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                 const shouldExpand = isSectionActive(item);
                                 const Icon = item.icon;
 
+                                // Cek apakah ada child yang aktif (untuk auto-scroll reference)
+                                const hasActiveChild = item.children?.some(
+                                    (child) =>
+                                        pathname === child.href ||
+                                        pathname?.startsWith(child.href + "/")
+                                );
+
                                 return (
                                     <li key={item.href}>
                                         <Link
                                             href={item.href}
                                             onClick={onClose}
+                                            ref={isActive || hasActiveChild ? activeItemRef : undefined}
                                             className={`flex items-center gap-3 rounded-lg px-3 py-2 min-h-[44px] text-sm font-medium transition ${isActive
                                                 ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                                 : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
@@ -272,12 +317,14 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                             <ul className="ml-8 mt-1 space-y-1">
                                                 {item.children!.map((child) => {
                                                     const isChildActive =
-                                                        pathname === child.href;
+                                                        pathname === child.href ||
+                                                        pathname?.startsWith(child.href + "/");
                                                     return (
                                                         <li key={child.href}>
                                                             <Link
                                                                 href={child.href}
                                                                 onClick={onClose}
+                                                                ref={isChildActive ? activeItemRef : undefined}
                                                                 className={`flex min-h-[44px] items-center rounded-lg px-3 py-2 text-sm transition ${isChildActive
                                                                     ? "bg-blue-50 text-blue-700 font-medium dark:bg-blue-900/30 dark:text-blue-400"
                                                                     : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
@@ -297,7 +344,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 </nav>
 
                 {/* Footer — data dari session */}
-                <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+                <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                             {session?.user?.name

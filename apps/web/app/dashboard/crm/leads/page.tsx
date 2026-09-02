@@ -6,6 +6,9 @@ import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
 import { Download, Plus, Search, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { Modal } from '@/components/ui/modal'
+import { ImportModal } from '@/components/crm/import-modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Lead = {
     id: string
@@ -43,6 +46,17 @@ const sourceColors: Record<string, string> = {
     'Facebook Ads': 'bg-blue-50 text-blue-700',
 }
 
+const initialFormState = {
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    source: '',
+    status: 'NEW',
+    value: '',
+    notes: '',
+}
+
 export default function LeadsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
@@ -53,6 +67,20 @@ export default function LeadsPage() {
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
+
+    // Create modal state
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [form, setForm] = useState(initialFormState)
+    const [submitting, setSubmitting] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+    // Import modal state
+    const [showImportModal, setShowImportModal] = useState(false)
+    const handleImportComplete = () => { fetchLeads() }
 
     useEffect(() => {
         if (toast) {
@@ -91,19 +119,86 @@ export default function LeadsPage() {
     })
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus lead ini?')) return
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus lead ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/crm/leads/${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchLeads()
+                    setToast({ message: 'Lead berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus lead', type: 'error' })
+            }
+        })
+        setShowConfirmDialog(true)
+    }
+
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target
+        setForm(prev => ({ ...prev, [name]: value }))
+        if (formErrors[name]) {
+            setFormErrors(prev => ({ ...prev, [name]: '' }))
+        }
+    }
+
+    const validateForm = (): boolean => {
+        const errors: Record<string, string> = {}
+        if (!form.name.trim()) {
+            errors.name = 'Nama wajib diisi'
+        }
+        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+            errors.email = 'Format email tidak valid'
+        }
+        if (form.value && isNaN(Number(form.value))) {
+            errors.value = 'Nilai harus berupa angka'
+        }
+        setFormErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
+    const handleCreateLead = async () => {
+        if (!validateForm()) return
+        setSubmitting(true)
         try {
-            const response = await fetch(`/api/crm/leads/${id}`, { method: 'DELETE' })
+            const payload: Record<string, unknown> = {
+                name: form.name.trim(),
+                status: form.status || 'NEW',
+            }
+            if (form.email.trim()) payload.email = form.email.trim()
+            if (form.phone.trim()) payload.phone = form.phone.trim()
+            if (form.company.trim()) payload.company = form.company.trim()
+            if (form.source.trim()) payload.source = form.source.trim()
+            if (form.value) payload.value = Number(form.value)
+            if (form.notes.trim()) payload.notes = form.notes.trim()
+
+            const response = await fetch('/api/crm/leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
             const result = await response.json()
             if (result.success) {
+                setShowCreateModal(false)
+                setForm(initialFormState)
                 fetchLeads()
-                setToast({ message: 'Lead berhasil dihapus', type: 'success' })
+                setToast({ message: 'Lead berhasil dibuat', type: 'success' })
             } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                setToast({ message: `Gagal membuat lead: ${result.error || 'Terjadi kesalahan'}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus lead', type: 'error' })
+            setToast({ message: 'Gagal membuat lead', type: 'error' })
+        } finally {
+            setSubmitting(false)
         }
+    }
+
+    const handleImport = () => {
+        setShowImportModal(true)
     }
 
     const stats = {
@@ -155,12 +250,18 @@ export default function LeadsPage() {
                     <p className="text-gray-500">{t('crm.leads.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <button
+                        onClick={handleImport}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
                         <Download className="h-4 w-4" />
                         {t('crm.leads.import')}
                     </button>
                     {canMutate && (
-                        <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                        >
                             <Plus className="h-4 w-4" />
                             {t('crm.leads.addLead')}
                         </button>
@@ -342,6 +443,145 @@ export default function LeadsPage() {
                 </div>
             </div>
 
+            {/* Create Lead Modal */}
+            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title="Tambah Lead Baru" size="lg">
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Nama <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={form.name}
+                            onChange={handleFormChange}
+                            placeholder="Nama lead"
+                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        {formErrors.name && <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                onChange={handleFormChange}
+                                placeholder="email@contoh.com"
+                                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                            <input
+                                type="text"
+                                name="phone"
+                                value={form.phone}
+                                onChange={handleFormChange}
+                                placeholder="08123456789"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Perusahaan</label>
+                            <input
+                                type="text"
+                                name="company"
+                                value={form.company}
+                                onChange={handleFormChange}
+                                placeholder="PT Maju Bersama"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
+                            <select
+                                name="source"
+                                value={form.source}
+                                onChange={handleFormChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="">Pilih sumber</option>
+                                <option value="Website">Website</option>
+                                <option value="Referral">Referral</option>
+                                <option value="LinkedIn">LinkedIn</option>
+                                <option value="Google Ads">Google Ads</option>
+                                <option value="Facebook Ads">Facebook Ads</option>
+                                <option value="Event">Event</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select
+                                name="status"
+                                value={form.status}
+                                onChange={handleFormChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="NEW">Baru</option>
+                                <option value="CONTACTED">Dihubungi</option>
+                                <option value="QUALIFIED">Kualifikasi</option>
+                                <option value="UNQUALIFIED">Tidak Layak</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nilai (Rp)</label>
+                            <input
+                                type="number"
+                                name="value"
+                                value={form.value}
+                                onChange={handleFormChange}
+                                placeholder="0"
+                                min="0"
+                                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.value ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            {formErrors.value && <p className="mt-1 text-xs text-red-500">{formErrors.value}</p>}
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                        <textarea
+                            name="notes"
+                            value={form.notes}
+                            onChange={handleFormChange}
+                            rows={3}
+                            placeholder="Catatan tentang lead ini..."
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button
+                            onClick={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            onClick={handleCreateLead}
+                            disabled={submitting}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {submitting ? 'Menyimpan...' : 'Simpan Lead'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Import Modal */}
+            <ImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                type="leads"
+                onImportComplete={handleImportComplete}
+            />
+
             {/* Toast */}
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
@@ -352,6 +592,18 @@ export default function LeadsPage() {
                     </span>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

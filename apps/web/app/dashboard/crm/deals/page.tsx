@@ -6,6 +6,8 @@ import { Plus, Search, Trash2, Check, X } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
+import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Deal = {
     id: string
@@ -16,6 +18,7 @@ type Deal = {
     closeDate: string | null
     notes: string | null
     contactName?: string
+    contactId?: string | null
     createdAt: string
 }
 
@@ -30,6 +33,24 @@ const stageStyles: Record<string, string> = {
 
 const filterStages = ['all', 'DISCOVERY', 'PROPOSAL', 'NEGOTIATION', 'CLOSING']
 
+const stageProbabilities: Record<string, number> = {
+    DISCOVERY: 10,
+    PROPOSAL: 30,
+    NEGOTIATION: 50,
+    CLOSING: 75,
+    CLOSED_WON: 100,
+    CLOSED_LOST: 0,
+}
+
+const initialFormState = {
+    title: '',
+    value: '',
+    stage: 'DISCOVERY',
+    closeDate: '',
+    notes: '',
+    contactId: '',
+}
+
 export default function DealsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
@@ -40,6 +61,16 @@ export default function DealsPage() {
     const [filterStage, setFilterStage] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
+
+    // Create modal state
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [form, setForm] = useState(initialFormState)
+    const [submitting, setSubmitting] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (toast) {
@@ -78,18 +109,84 @@ export default function DealsPage() {
     })
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus deal ini?')) return
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus deal ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/crm/deals/${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchDeals()
+                    setToast({ message: 'Deal berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus deal', type: 'error' })
+            }
+        })
+        setShowConfirmDialog(true)
+    }
+
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target
+        setForm(prev => {
+            const updated = { ...prev, [name]: value }
+            // Auto-set probability based on stage
+            if (name === 'stage' && stageProbabilities[value] !== undefined) {
+                // Keep current probability if user has manually set it
+            }
+            return updated
+        })
+        if (formErrors[name]) {
+            setFormErrors(prev => ({ ...prev, [name]: '' }))
+        }
+    }
+
+    const validateForm = (): boolean => {
+        const errors: Record<string, string> = {}
+        if (!form.title.trim()) {
+            errors.title = 'Judul deal wajib diisi'
+        }
+        if (form.value && isNaN(Number(form.value))) {
+            errors.value = 'Nilai harus berupa angka'
+        }
+        setFormErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
+    const handleCreateDeal = async () => {
+        if (!validateForm()) return
+        setSubmitting(true)
         try {
-            const response = await fetch(`/api/crm/deals/${id}`, { method: 'DELETE' })
+            const payload: Record<string, unknown> = {
+                title: form.title.trim(),
+                stage: form.stage || 'DISCOVERY',
+                probability: stageProbabilities[form.stage] || 10,
+            }
+            if (form.value) payload.value = Number(form.value)
+            if (form.closeDate) payload.closeDate = form.closeDate
+            if (form.notes.trim()) payload.notes = form.notes.trim()
+            if (form.contactId.trim()) payload.contactId = form.contactId.trim()
+
+            const response = await fetch('/api/crm/deals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
             const result = await response.json()
             if (result.success) {
+                setShowCreateModal(false)
+                setForm(initialFormState)
                 fetchDeals()
-                setToast({ message: 'Deal berhasil dihapus', type: 'success' })
+                setToast({ message: 'Deal berhasil dibuat', type: 'success' })
             } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                setToast({ message: `Gagal membuat deal: ${result.error || 'Terjadi kesalahan'}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus deal', type: 'error' })
+            setToast({ message: 'Gagal membuat deal', type: 'error' })
+        } finally {
+            setSubmitting(false)
         }
     }
 
@@ -140,7 +237,10 @@ export default function DealsPage() {
                     <p className="text-gray-500">{deals.length} {t('crm.deals.subtitle')} · {t('crm.deals.totalValue')}: {formatCurrency(totalValue)}</p>
                 </div>
                 {canMutate && (
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
                         <Plus className="h-4 w-4" />
                         {t('crm.deals.newDeal')}
                     </button>
@@ -320,6 +420,107 @@ export default function DealsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Create Deal Modal */}
+            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title="Tambah Deal Baru" size="lg">
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Judul Deal <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="title"
+                            value={form.title}
+                            onChange={handleFormChange}
+                            placeholder="Judul deal"
+                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.title ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        {formErrors.title && <p className="mt-1 text-xs text-red-500">{formErrors.title}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Deal (Rp)</label>
+                            <input
+                                type="number"
+                                name="value"
+                                value={form.value}
+                                onChange={handleFormChange}
+                                placeholder="0"
+                                min="0"
+                                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.value ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            {formErrors.value && <p className="mt-1 text-xs text-red-500">{formErrors.value}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                            <select
+                                name="stage"
+                                value={form.stage}
+                                onChange={handleFormChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="DISCOVERY">Discovery</option>
+                                <option value="PROPOSAL">Proposal</option>
+                                <option value="NEGOTIATION">Negosiasi</option>
+                                <option value="CLOSING">Closing</option>
+                                <option value="CLOSED_WON">Deal Won</option>
+                                <option value="CLOSED_LOST">Deal Lost</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Target Closing</label>
+                            <input
+                                type="date"
+                                name="closeDate"
+                                value={form.closeDate}
+                                onChange={handleFormChange}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Contact ID (opsional)</label>
+                            <input
+                                type="text"
+                                name="contactId"
+                                value={form.contactId}
+                                onChange={handleFormChange}
+                                placeholder="ID kontak terkait"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                        <textarea
+                            name="notes"
+                            value={form.notes}
+                            onChange={handleFormChange}
+                            rows={3}
+                            placeholder="Catatan tentang deal ini..."
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button
+                            onClick={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            onClick={handleCreateDeal}
+                            disabled={submitting}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {submitting ? 'Menyimpan...' : 'Simpan Deal'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             {/* Toast */}
             {toast && (
                 <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
@@ -330,6 +531,18 @@ export default function DealsPage() {
                     </span>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

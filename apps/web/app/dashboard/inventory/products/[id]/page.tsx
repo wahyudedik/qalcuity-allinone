@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle, Trash2, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface ProductDetail {
     id: string
@@ -39,6 +40,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [isEditing, setIsEditing] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [editForm, setEditForm] = useState({
+        name: '',
+        description: '',
+        sku: '',
+        category: '',
+        unit: '',
+        supplier: '',
+        price: 0,
+        cost: 0,
+        stock: 0,
+        minStock: 0,
+    })
+    const [editSaving, setEditSaving] = useState(false)
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -59,8 +75,56 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         fetchProduct()
     }, [params.id, t])
 
+    const openEditForm = () => {
+        if (!product) return
+        setEditForm({
+            name: product.name,
+            description: product.description || '',
+            sku: product.sku,
+            category: product.category,
+            unit: product.unit,
+            supplier: product.supplier || '',
+            price: Number(product.price),
+            cost: Number(product.cost),
+            stock: product.stock,
+            minStock: product.minStock,
+        })
+        setIsEditing(true)
+    }
+
+    const handleEditSave = async () => {
+        setEditSaving(true)
+        try {
+            const res = await fetch(`/api/inventory/products/${params.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editForm),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('inventory.productDetail.updateSuccess'), type: 'success' })
+                setIsEditing(false)
+                // Refresh product data
+                const updated = await fetch(`/api/inventory/products/${params.id}`)
+                const updatedData = await updated.json()
+                if (updatedData.success) {
+                    setProduct(updatedData.data)
+                }
+            } else {
+                setToast({ message: data.error || t('inventory.productDetail.updateError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('inventory.productDetail.updateError'), type: 'error' })
+        } finally {
+            setEditSaving(false)
+        }
+    }
+
     const handleDelete = async () => {
-        if (!window.confirm(t('inventory.productDetail.confirmDelete'))) return
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
         try {
             const res = await fetch(`/api/inventory/products/${params.id}`, { method: 'DELETE' })
             const data = await res.json()
@@ -226,18 +290,24 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">{t('inventory.supplierDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            <button
+                                onClick={openEditForm}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
                                 <Pencil className="h-4 w-4" />
                                 {t('inventory.productDetail.edit')}
                             </button>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                <Package className="h-4 w-4" />
-                                {t('inventory.productDetail.restock')}
-                            </button>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={() => router.push('/dashboard/inventory/stock')}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <ClipboardList className="h-4 w-4" />
                                 {t('inventory.productDetail.stockHistory')}
                             </button>
+                            <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed" title={t('common.comingSoon')}>
+                                <Package className="h-4 w-4" />
+                                {t('inventory.productDetail.restock')}
+                            </span>
                             {canMutate && (
                                 <button onClick={handleDelete} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
                                     <Trash2 className="h-4 w-4" />
@@ -248,6 +318,27 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     </div>
                 </div>
             </div>
+
+            {/* Toast notification */}
+            {toast && (
+                <div className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                    {toast.message}
+                    <button onClick={() => setToast(null)} className="ml-2"><X className="h-4 w-4 inline" /></button>
+                </div>
+            )}
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDelete}
+                title="Konfirmasi Hapus"
+                message={t('inventory.productDetail.confirmDelete')}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }
