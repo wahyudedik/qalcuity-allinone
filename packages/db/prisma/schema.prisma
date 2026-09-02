@@ -63,6 +63,12 @@ model Tenant {
   alertRules        AlertRule[]
   userDashboards    UserDashboard[]
 
+  // Tax Engine
+  taxRates          TaxRate[]
+
+  // Period Closing
+  accountingPeriods AccountingPeriod[]
+
   // Entitlement Engine
   entitlement   TenantEntitlement?
   usageRecords  UsageRecord[]
@@ -91,6 +97,10 @@ model Tenant {
   // Industry Configuration Engine
   industryConfig    IndustryConfiguration?
   customFields      TenantCustomField[]
+
+  // Approval Engine
+  approvalLevels    ApprovalLevel[]
+  approvalRequests  ApprovalRequest[]
 }
 
 model User {
@@ -192,25 +202,27 @@ model Contact {
 // ============================================
 
 model Invoice {
-  id            String   @id @default(cuid())
-  invoiceNumber String
-  status        String   @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
-  dueDate       DateTime
-  notes         String?
-  subtotal      Decimal  @default(0) @db.Decimal(15, 2)
-  taxRate       Decimal  @default(11) @db.Decimal(5, 2)
-  taxAmount     Decimal  @default(0) @db.Decimal(15, 2)
-  total         Decimal  @default(0) @db.Decimal(15, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  invoiceNumber   String
+  status          String   @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  dueDate         DateTime
+  notes           String?
+  subtotal        Decimal  @default(0) @db.Decimal(15, 2)
+  taxRate         Decimal  @default(0) @db.Decimal(5, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(15, 2)
+  taxCode         String?  // "PPN", "PPH23" — snapshot code
+  totalBeforeTax  Decimal  @default(0) @db.Decimal(15, 2)
+  total           Decimal  @default(0) @db.Decimal(15, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  contactId     String?
-  contact       Contact? @relation(fields: [contactId], references: [id])
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  contactId       String?
+  contact         Contact? @relation(fields: [contactId], references: [id])
 
-  items         InvoiceItem[]
-  payments      Payment[]
+  items           InvoiceItem[]
+  payments        Payment[]
 
   @@index([tenantId])
   @@index([status])
@@ -229,6 +241,27 @@ model InvoiceItem {
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
+}
+
+// ============================================
+// TAX ENGINE
+// ============================================
+
+model TaxRate {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  name          String   // "PPN 11%", "PPh 23 2%"
+  code          String   // "PPN", "PPH23", "PPH21"
+  rate          Decimal  @db.Decimal(5, 2) // 11.00, 2.00
+  type          String   @default("VAT") // VAT, INCOME_TAX, OTHER
+  isActive      Boolean  @default(true)
+  isDefault     Boolean  @default(false) // Default tax untuk type ini
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, code])
 }
 
 model Payment {
@@ -1534,4 +1567,67 @@ model RateLimitLog {
   @@index([endpoint])
   @@index([windowStart])
   @@index([createdAt])
+}
+
+// ============================================
+// PERIOD CLOSING — Accounting Period Management
+// ============================================
+
+model AccountingPeriod {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  name          String   // "Januari 2026", "Q1 2026"
+  startDate     DateTime
+  endDate       DateTime
+  status        String   @default("OPEN") // OPEN, CLOSING, CLOSED
+  closedBy      String?  // userId yang menutup
+  closedAt      DateTime?
+  closeNotes    String?  // Catatan saat closing
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, startDate])
+}
+
+// ============================================
+// APPROVAL ENGINE — Multi-level Approval Workflow
+// ============================================
+
+model ApprovalLevel {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  entityType    String   // "INVOICE", "PURCHASE_ORDER", "QUOTATION"
+  level         Int      // 1, 2, 3 (urutan approval)
+  name          String   // "Manager Approval", "Director Approval"
+  requiredRole  String   // "ADMIN", "MEMBER" — minimum role yang bisa approve
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, entityType, level])
+}
+
+model ApprovalRequest {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  entityType    String   // "INVOICE", "PURCHASE_ORDER", "QUOTATION"
+  entityId      String   // ID dari invoice/PO/quotation
+  currentLevel  Int      // Level approval saat ini (1, 2, 3)
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  requestedBy   String   // userId yang request
+  requestedAt   DateTime @default(now())
+  resolvedBy    String?  // userId yang approve/reject
+  resolvedAt    DateTime?
+  comments      String?  // Komentar saat approve/reject
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, status])
 }

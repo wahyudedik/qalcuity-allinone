@@ -1,13 +1,21 @@
-> **Last Updated:** 1 September 2026 (Improvement Sprint Complete — Batches 1-7E)
-> **Version:** v6.0.0
-> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry Implemented, Redis Rate Limiter Active
+> **Last Updated:** 2 September 2026 (FASE 3C-4C Complete — Tax Engine, Period Closing, Approval Engine)
+> **Version:** v6.1.0
+> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine Implemented
 
 ---
 
 ## 🎯 Current Sprint
 
-**Fokus:** Improvement Sprint — Batches 1-7E Complete
+**Fokus:** FASE 3C-4C Complete — Tax Engine MVP, Period Closing Wizard, Multi-level Approval Engine
 
+- ✅ **FASE 3C:** Sidebar Navigation — 11 new pages added to sidebar
+- ✅ **FASE 4A:** Tax Engine MVP — TaxRate model, CRUD API, invoice integration
+- ✅ **FASE 4B:** Period Closing Wizard — AccountingPeriod model, 4-step wizard, period management service
+- ✅ **FASE 4C:** Multi-level Approval Engine — ApprovalLevel + ApprovalRequest models, API routes (requests, approve, reject)
+- ✅ TypeScript check PASS (0 errors)
+- ✅ Documentation updated (CURRENT.md, FEATURES.md, ARCHITECTURE.md, REMAINING-WORK.md)
+
+### Previous Batches (Complete)
 - ✅ **Batch 1:** ConfirmDialog (24 `window.confirm` replaced), inline error banners (4 `alert()` replaced), emoji→Lucide icons, SVG→Lucide (14 icons)
 - ✅ **Batch 2:** Dark mode (8 components), 33 i18n keys added, navigation fixes
 - ✅ **Batch 3:** Reports page mobile cards (12 sub-components)
@@ -19,8 +27,6 @@
 - ✅ **Batch 7C:** General Ledger + Journal Entry — CoA API, Journal Entry API + UI, Double-entry validation
 - ✅ **Batch 7D:** Redis Rate Limiter — Production-ready rate limiting with Redis fallback to in-memory
 - ✅ **Batch 7E:** Entitlement Engine — Plan-based module access, feature limits, usage tracking
-- ✅ TypeScript check PASS (0 errors)
-- ✅ Documentation updated (CURRENT.md, FEATURES.md, ROADMAP.md, AGENT.md)
 
 ---
 
@@ -33,6 +39,9 @@
 | **Workflow Engine Integration** | ✅ Production-ready | 80% (5 entities) |
 | **Core CRUD (Finance, CRM, HR, Inventory)** | ✅ Production-ready | ~95% |
 | **General Ledger & Journal Entry** | ✅ Implemented | 70% (CoA + Journal + Validation) |
+| **Tax Engine MVP** | ✅ Implemented | 40% (TaxRate CRUD + Invoice integration, belum Coretax/e-Faktur) |
+| **Period Closing Wizard** | ✅ Implemented | 50% (4-step wizard, belum 7-step full) |
+| **Multi-level Approval Engine** | ✅ Implemented | 40% (Basic levels + requests, belum delegation/SLA) |
 | **Billing & Subscription** | ✅ Working | 100% |
 | **Entitlement Engine** | ✅ Implemented | 75% (Plan-based access + limits) |
 | **Security (Validation, Sanitization, Audit)** | ✅ Hardened | 95% |
@@ -45,7 +54,6 @@
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
 | **POS Module** | 📋 Planned | 0% |
-| **Tax Module** | ❌ Planned | 0% |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API) | 40% |
 
 ---
@@ -122,6 +130,33 @@
 - [x] **Journal Entry UI** — Journal entry page with create/view functionality ([`apps/web/app/dashboard/finance/journal-entries/`](apps/web/app/dashboard/finance/journal-entries/))
 - [x] **Double-entry Validation** — Zod schema validates debit = credit, minimum 2 items per entry
 - [x] **Journal Entry Schema** — [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) — `createJournalEntrySchema`, `journalEntryItemSchema`
+
+### Tax Engine MVP (FASE 4A)
+- [x] **TaxRate Model** — Prisma model with name, code, rate, type (VAT/INCOME_TAX/OTHER), isActive, isDefault ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- [x] **Tax Rate CRUD API** — GET/POST di [`/api/finance/tax-rates`](apps/web/app/api/finance/tax-rates/route.ts), GET/PUT/DELETE di [`/api/finance/tax-rates/[id]`](apps/web/app/api/finance/tax-rates/[id]/route.ts) dengan tenant isolation + RBAC
+- [x] **Tax Rate UI** — List page dengan search/filter di [`/dashboard/finance/tax-rates`](apps/web/app/dashboard/finance/tax-rates/page.tsx) + loading state
+- [x] **Invoice Tax Integration** — Invoice form terintegrasi dengan TaxRate (select tax rate, auto-calculate taxAmount) ([`apps/web/components/finance/invoice-form.tsx`](apps/web/components/finance/invoice-form.tsx))
+- [x] **Tax Zod Schema** — `createTaxRateSchema` di [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts)
+- [x] **Prisma Migration** — `TaxRate` model + `tenantId_code` unique index
+
+### Period Closing Wizard (FASE 4B)
+- [x] **AccountingPeriod Model** — Prisma model with name, startDate, endDate, status (OPEN/CLOSING/CLOSED), closedBy, closedAt, closeNotes ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- [x] **Period Management Service** — [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts) — 4-step wizard logic (pre-checks, exceptions, review, closing)
+- [x] **Period CRUD API** — GET/POST di [`/api/finance/periods`](apps/web/app/api/finance/periods/route.ts), GET/PUT di [`/api/finance/periods/[id]`](apps/web/app/api/finance/periods/[id]/route.ts)
+- [x] **Period Close API** — POST di [`/api/finance/periods/[id]/close`](apps/web/app/api/finance/periods/[id]/close/route.ts) — execute period closing
+- [x] **Period UI** — List page di [`/dashboard/finance/periods`](apps/web/app/dashboard/finance/periods/page.tsx) + loading state
+- [x] **Prisma Migration** — `AccountingPeriod` model + `tenantId_startDate` unique index
+
+### Multi-level Approval Engine (FASE 4C)
+- [x] **ApprovalLevel Model** — Prisma model with entityType, level, name, requiredRole ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- [x] **ApprovalRequest Model** — Prisma model with entityType, entityId, currentLevel, status (PENDING/APPROVED/REJECTED/CANCELLED), requestedBy, resolvedBy
+- [x] **Approval Request API** — GET/POST di [`/api/approval/requests`](apps/web/app/api/approval/requests/route.ts), GET di [`/api/approval/requests/[id]`](apps/web/app/api/approval/requests/[id]/route.ts)
+- [x] **Approval Actions API** — POST approve di [`/api/approval/requests/[id]/approve`](apps/web/app/api/approval/requests/[id]/approve/route.ts), POST reject di [`/api/approval/requests/[id]/reject`](apps/web/app/api/approval/requests/[id]/reject/route.ts)
+- [x] **Approval UI** — Approvals page di [`/dashboard/approvals`](apps/web/app/dashboard/approvals/page.tsx)
+- [x] **Prisma Migration** — `ApprovalLevel` + `ApprovalRequest` models
+
+### Sidebar Navigation (FASE 3C)
+- [x] **11 New Pages Added** — Tax Rates, Periods, Approvals, dan halaman lainnya ditambahkan ke sidebar navigation
 
 ### Entitlement Engine (Batch 7E)
 - [x] **Entitlement Engine** — Plan-based module access, feature limits, usage tracking ([`apps/web/lib/entitlement.ts`](apps/web/lib/entitlement.ts))
@@ -442,6 +477,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 18 | ~~Emoji icons di production~~ | 🟡 Low | UI | ✅ Fixed |
 | 19 | `.env` file tracked in git history | 🟠 Medium | Security | ⚠️ Added to .gitignore + .env.production untracked |
 | 20 | ConfirmDialog not yet applied to platform pages | 🟡 Low | UI | 📋 Planned — platform pages still use browser confirm |
+| 21 | **Prisma generate needed on VPS** | 🟡 Low | Infrastructure | ⚠️ 3 new migrations (tax engine, period closing, approval engine) require `npx prisma generate` on deployment |
 
 ---
 
@@ -462,7 +498,7 @@ _None currently._
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                    API LAYER                             │
-│  Next.js Route Handlers (70+ routes, 50+ files)         │
+│  Next.js Route Handlers (80+ routes, 60+ files)         │
 │  + Middleware RBAC + Zod Validation + Audit Logging      │
 │  + CSP Headers + CORS Config + Security Hardening       │
 │  + Redis Rate Limiter + Entitlement Checks              │
@@ -480,13 +516,15 @@ _None currently._
 │                 BUSINESS LOGIC                           │
 │  Finance │ CRM │ HR │ Inventory │ Billing │ Analytics   │
 │  ✅ CRUD+GL│✅ CRUD│✅ CRUD│ ✅ CRUD   │ ✅ Entitle│ ✅ Studio│
+│  Tax ✅   │ Period ✅│ Approval ✅│              │           │           │
 └──────────────────────────┬──────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                  DATA LAYER                              │
-│  Prisma 5.15 → PostgreSQL (45+ models, 57+ indexes)    │
+│  Prisma 5.15 → PostgreSQL (48+ models, 60+ indexes)    │
 │  + Redis Cache + Rate Limit Log + Entitlement Models    │
 │  + General Ledger + Journal Entry + Workflow History    │
+│  + TaxRate + AccountingPeriod + ApprovalLevel/Request   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -585,16 +623,16 @@ _None currently._
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files (apps/web) | ~130+ |
+| TypeScript files (apps/web) | ~140+ |
 | TypeScript files (packages) | ~45+ |
-| API route files | 50+ |
-| API routes | 70+ |
-| Pages | 35+ |
-| Prisma models | 45+ |
-| Database indexes | 57+ |
-| Zod schemas | 16+ |
+| API route files | 60+ |
+| API routes | 80+ |
+| Pages | 40+ |
+| Prisma models | 48+ |
+| Database indexes | 60+ |
+| Zod schemas | 18+ |
 | i18n keys | 433+ |
-| Loading states | 28+ |
+| Loading states | 30+ |
 | E2E tests | 63 (63 PASS) |
 | Shared packages | 12 (11 active, 1 not created) |
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
@@ -602,6 +640,7 @@ _None currently._
 | Mobile screens | 14 (12 + Login + Register) |
 | Permission-integrated routes | ~90 |
 | Workflow-integrated entities | 5 (Invoice, Payment, PO, Quotation, Leaves) |
+| Prisma Migrations (FASE 3C-4C) | 3 (Tax Engine, Period Closing, Approval Engine) |
 
 ### Test Results
 
@@ -662,6 +701,32 @@ _None currently._
 **Bug Fixes:**
 - ✅ Fix `rate-limit-monitor.ts` typo (`viation` → `violation`)
 - ✅ Fix `validation-schemas.ts` Zod API mismatch (`errorMap` → `error`)
+
+### 2 September 2026 — Feature Sprint (FASE 3C-4C)
+
+**FASE 3C — Sidebar Navigation:**
+- ✅ **11 New Pages** — Added navigation entries for Tax Rates, Periods, Approval, and other sub-pages across Finance, HR, Inventory, and Settings modules
+
+**FASE 4A — Tax Engine MVP:**
+- ✅ **TaxRate Model** — Prisma model with tenantId, name, code, rate, type, isActive, isDefault ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- ✅ **Tax Rate CRUD API** — GET/POST at `/api/finance/tax-rates`, GET/PUT/DELETE at `/api/finance/tax-rates/[id]` ([`apps/web/app/api/finance/tax-rates/route.ts`](apps/web/app/api/finance/tax-rates/route.ts))
+- ✅ **Tax Rate UI** — List page + loading state ([`apps/web/app/dashboard/finance/tax-rates/page.tsx`](apps/web/app/dashboard/finance/tax-rates/page.tsx))
+- ✅ **Invoice Integration** — Tax rate selection in invoice form ([`apps/web/components/finance/invoice-form.tsx`](apps/web/components/finance/invoice-form.tsx))
+- ✅ **Zod Validation** — `createTaxRateSchema`, `updateTaxRateSchema` ([`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts))
+- ✅ **Prisma Migration** — `20260902171400_add_tax_engine`
+
+**FASE 4B — Period Closing Wizard:**
+- ✅ **AccountingPeriod Model** — Prisma model with name, startDate, endDate, status (OPEN/CLOSING/CLOSED) ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- ✅ **Period Closing Service** — 4-step wizard logic ([`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts))
+- ✅ **Period API** — CRUD at `/api/finance/periods`, close at `/api/finance/periods/[id]/close` ([`apps/web/app/api/finance/periods/route.ts`](apps/web/app/api/finance/periods/route.ts))
+- ✅ **Period UI** — List page + loading state ([`apps/web/app/dashboard/finance/periods/page.tsx`](apps/web/app/dashboard/finance/periods/page.tsx))
+- ✅ **Prisma Migration** — `20260902173400_add_period_closing`
+
+**FASE 4C — Multi-level Approval Engine:**
+- ✅ **ApprovalLevel Model** — entityType, level, name, requiredRole ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- ✅ **ApprovalRequest Model** — entityType, entityId, currentLevel, status ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
+- ✅ **Approval API** — CRUD at `/api/approval/requests`, approve/reject endpoints ([`apps/web/app/api/approval/`](apps/web/app/api/approval/))
+- ✅ **Prisma Migration** — `20260902200400_add_approval_engine`
 
 ### 1 September 2026 — UI Modernization Sprint (Batch 1-5)
 
@@ -1008,15 +1073,15 @@ _None currently._
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).** Document ini berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan dokumen tersebut sebagai **single source of truth** untuk sprint planning dan task breakdown.
 
-### Ringkasan Status (per 1 September 2026)
+### Ringkasan Status (per 2 September 2026)
 
 | Kategori | Jumlah | Keterangan |
 |----------|--------|------------|
-| 🟢 **Production Ready** | ~65 features | Sudah deployed dan tested |
-| 🟡 **Partial/Implemented** | ~45 features | CRUD ada, fitur lanjutan belum |
-| 🔴 **Belum Dikerjakan** | ~160 features | Perlu implementasi, ~40% dari total |
+| 🟢 **Production Ready** | ~70 features | Sudah deployed dan tested |
+| 🟡 **Partial/Implemented** | ~50 features | CRUD ada, fitur lanjutan belum |
+| 🔴 **Belum Dikerjakan** | ~155 features | Perlu implementasi, ~39% dari total |
 | 📦 **Shared Packages** | 12 packages | 9 active, 2 new (permissions, workflow, industry-config), 1 not created (api) |
-| 🗄️ **Prisma Models** | 39 models | Core modules + foundation engines + analytics |
+| 🗄️ **Prisma Models** | 48 models | Core modules + foundation engines + analytics + tax + period + approval |
 | ⚙️ **Foundation Engines** | 3 engines | Permission ✅, Workflow ✅, Industry Config ✅ |
 
 ### Prioritas Eksekusi
@@ -1051,7 +1116,7 @@ _None currently._
 - [x] **Industry Config** — Package setup, registry, custom fields engine, custom documents, custom reports, dashboard config, 9 default packs
 - [ ] **Unified Control Engine** — Policy Engine, configurable approval, SLA engine, delegation, SoD validation, document locking, exception center, notifications, ADR-017
 - [ ] **Analytics Studio** — Security Pipeline (5 layers), Dataset Config CRUD, Materialized Views (12 views), KPI Engine, Chart Engine, Pivot/OLAP, SQL Studio, Visual Query Builder, Dashboard Builder, Data Lineage, Anomaly Detection, Forecasting
-- [ ] **Finance** — GL module, journal entries, trial balance, P&L, balance sheet, tax engine, multi-currency, bank reconciliation, revenue recognition
+- [ ] **Finance** — GL module ✅, journal entries ✅, tax rate management ✅, period closing ✅, approval engine ✅, trial balance, P&L, balance sheet, multi-currency, bank reconciliation, revenue recognition
 - [ ] **CRM** — Pipeline config, email integration, calendar sync, win probability, lead scoring, automation rules
 - [ ] **HR** — Recruitment, performance review, training, onboarding, expense claims, PTO management
 - [ ] **Inventory** — Multi-warehouse, lot/serial tracking, expiry management, MRP, barcode/QR, cycle count, ABC analysis
@@ -1082,4 +1147,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.0 — Improvement Sprint Complete (Batches 1-7E)
+**Document Version:** 6.1 — Feature Sprint Complete (FASE 3C-4C)

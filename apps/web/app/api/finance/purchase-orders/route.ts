@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createPurchaseOrderSchema, updatePurchaseOrderSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createApprovalRequest } from '@/lib/approval';
 
 export async function GET(request: Request) {
     try {
@@ -158,6 +159,15 @@ export async function POST(request: Request) {
         });
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'PurchaseOrder', entityId: purchaseOrder.id, newValues: { poNumber: purchaseOrder.poNumber, total: purchaseOrder.total, status: purchaseOrder.status } as Record<string, unknown>, request });
+
+        // Approval Engine: trigger approval if levels are configured
+        void createApprovalRequest({
+            tenantId,
+            entityType: 'PURCHASE_ORDER',
+            entityId: purchaseOrder.id,
+            userId,
+            request,
+        });
 
         return NextResponse.json({ success: true, data: purchaseOrder }, { status: 201 });
     } catch (error: unknown) {

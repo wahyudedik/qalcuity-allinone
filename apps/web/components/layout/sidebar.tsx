@@ -20,6 +20,7 @@ import {
     ChevronRight,
     X,
     BarChart3,
+    CheckCircle,
     type LucideIcon,
 } from "lucide-react";
 
@@ -69,6 +70,8 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.journalEntries") || "Jurnal", href: "/dashboard/finance/journal-entries" },
                 { label: t("nav.chartOfAccount") || "Chart of Account", href: "/dashboard/finance/accounts" },
                 { label: t("nav.reconciliation") || "Rekonsiliasi", href: "/dashboard/finance/reconciliation" },
+                { label: t("nav.taxRates") || "Pajak", href: "/dashboard/finance/tax-rates" },
+                { label: t("nav.periods") || "Periode", href: "/dashboard/finance/periods" },
             ],
         },
         // 4. HR — ADMIN, MEMBER, VIEWER (read-only)
@@ -97,7 +100,13 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.suppliers") || "Suppliers", href: "/dashboard/inventory/suppliers" },
             ],
         },
-        // 6. Reports — ADMIN, MEMBER, VIEWER
+        // 6. Approvals — all roles
+        {
+            label: t("nav.approvals") || "Approvals",
+            href: "/dashboard/approvals",
+            icon: CheckCircle,
+        },
+        // 7. Reports — ADMIN, MEMBER, VIEWER
         {
             label: t("nav.reports") || "Reports",
             href: "/dashboard/reports",
@@ -111,9 +120,14 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             children: [
                 { label: t("nav.overview") || "Overview", href: "/dashboard/analytics" },
                 { label: t("nav.dataExplorer") || "Data Explorer", href: "/dashboard/analytics/explorer" },
+                { label: t("nav.charts") || "Charts", href: "/dashboard/analytics/charts" },
+                { label: t("nav.dashboards") || "Dashboards", href: "/dashboard/analytics/dashboards" },
                 { label: t("nav.kpi") || "KPI", href: "/dashboard/analytics/kpi" },
                 { label: t("nav.savedReports") || "Reports", href: "/dashboard/analytics/reports" },
                 { label: t("nav.alerts") || "Alerts", href: "/dashboard/analytics/alerts" },
+                { label: t("nav.analyticsHistory") || "History", href: "/dashboard/analytics/history" },
+                { label: t("nav.scheduledReports") || "Scheduled", href: "/dashboard/analytics/scheduled" },
+                { label: t("nav.dictionary") || "Dictionary", href: "/dashboard/analytics/dictionary" },
             ],
         },
         // 8. Settings — ADMIN, SUPERADMIN only
@@ -125,9 +139,13 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             children: [
                 { label: t("nav.company") || "Company", href: "/dashboard/settings/company" },
                 { label: t("nav.team") || "Team", href: "/dashboard/settings/team" },
+                { label: t("nav.roles") || "Roles & Permissions", href: "/dashboard/settings/roles" },
                 { label: t("nav.security") || "Security", href: "/dashboard/settings/security" },
                 { label: t("nav.notifications") || "Notifications", href: "/dashboard/settings/notifications" },
                 { label: t("nav.integrations") || "Integrations", href: "/dashboard/settings/integrations" },
+                { label: t("nav.customFields") || "Custom Fields", href: "/dashboard/settings/custom-fields" },
+                { label: t("nav.industry") || "Industry", href: "/dashboard/settings/industry" },
+                { label: t("nav.workflow") || "Workflow", href: "/dashboard/settings/workflow" },
             ],
         },
         // 8. Billing — ADMIN, SUPERADMIN only

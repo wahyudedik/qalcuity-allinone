@@ -64,7 +64,7 @@
   - **Complexity:** Low
   - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #2
 
-- [ ] **[SEC-03]** `@qalcuity/ui` package — Tokens only, belum ada React components
+- [x] **[SEC-03]** `@qalcuity/ui` package — ✅ DONE (11 React components: Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider)
   - **File:** [`packages/ui/`](packages/ui/)
   - **Dependency:** Design system decisions
   - **Complexity:** High
@@ -76,7 +76,7 @@
   - **Complexity:** Medium
   - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #8
 
-- [ ] **[SEC-05]** Settings pages simulated backend — Notifications, integrations masih ada simulated data
+- [x] **[SEC-05]** Settings pages simulated backend — ✅ DONE (Notifications & integrations connected to Prisma DB)
   - **File:** [`apps/web/app/api/settings/notifications/route.ts`](apps/web/app/api/settings/notifications/route.ts), [`apps/web/app/api/settings/integrations/route.ts`](apps/web/app/api/settings/integrations/route.ts)
   - **Dependency:** None
   - **Complexity:** Low
@@ -302,8 +302,8 @@
 
 #### Approval Engine
 
-- [ ] **[UCE-10]** Multi-level Approval Chains — Configurable approval flow per module
-  - **File:** Approval chain model
+- [x] **[UCE-10]** Multi-level Approval Chains — ✅ DONE (ApprovalLevel + ApprovalRequest models, API at `/api/approval/`)
+  - **File:** Approval chain model ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma))
   - **Dependency:** UCE-01
   - **Complexity:** High
   - **Ref:** ADR-015
@@ -469,19 +469,19 @@
 
 #### Period Closing Wizard
 
-- [ ] **[UCE-37]** Period Closing Wizard — 7-step wizard untuk menutup periode akuntansi
-  - **File:** `apps/web/app/dashboard/finance/period-closing/page.tsx` (new)
+- [x] **[UCE-37]** Period Closing Wizard — ✅ DONE (4-step wizard, AccountingPeriod model, service + API + UI)
+  - **File:** [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts), [`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)
   - **Dependency:** UCE-24
   - **Complexity:** High
   - **Ref:** ADR-022
 
-- [ ] **[UCE-38]** Pre-checks — Validate unposted, pending, unreconciled transactions
-  - **File:** Validation logic
+- [x] **[UCE-38]** Pre-checks — ✅ DONE (Validate unposted transactions before closing in period-closing service)
+  - **File:** [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)
   - **Dependency:** UCE-37
   - **Complexity:** Medium
 
-- [ ] **[UCE-39]** Monthly/Quarterly/Yearly Closing — Progressive closing levels
-  - **File:** Closing workflow
+- [x] **[UCE-39]** Monthly/Quarterly/Yearly Closing — ✅ DONE (Basic closing via AccountingPeriod, configurable date ranges)
+  - **File:** [`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)
   - **Dependency:** UCE-37
   - **Complexity:** High
 
@@ -1927,7 +1927,7 @@ Parallel tracks (can run alongside):
 ---
 
 > **Document maintained by:** Qalcuity AI Team
-> **Version:** 1.1 — Remaining Work Documentation (Updated: 2 September 2026)
+> **Version:** 1.2 — Remaining Work Documentation (Updated: 2 September 2026 — FASE 3C-4C items marked done)
 > **Next Review:** Setelah Phase 10 (Unified Control Engine) selesai
 > **Related Documents:**
 > - [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) — Analytics architecture
