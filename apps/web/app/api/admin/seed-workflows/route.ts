@@ -47,7 +47,7 @@ export async function POST(request: Request) {
             }
 
             // Create default workflows for this tenant
-            const workflows = Object.entries(DEFAULT_WORKFLOWS).map(
+            const workflows: Prisma.WorkflowDefinitionCreateManyInput[] = Object.entries(DEFAULT_WORKFLOWS).map(
                 ([entityType, config]) => ({
                     tenantId: tenant.id,
                     entityType: entityType.toUpperCase(),
