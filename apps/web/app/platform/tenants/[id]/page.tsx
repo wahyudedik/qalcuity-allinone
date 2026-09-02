@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,56 +19,60 @@ import {
     FileText,
     Package,
     Shield,
-    Settings,
+    AlertTriangle,
+    Globe,
+    MapPin,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface TenantUser {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
+
+interface TenantSubscription {
+    id: string;
+    plan: string;
+    status: string;
+    startDate: string;
+    endDate: string | null;
+    price: number;
+}
+
+interface TenantActivity {
+    id: string;
+    action: string;
+    entity: string;
+    entityId: string;
+    ipAddress: string | null;
+    createdAt: string;
+}
+
 interface TenantDetail {
     id: string;
     name: string;
     email: string;
-    phone: string;
-    address: string;
+    slug: string;
+    phone: string | null;
+    website: string | null;
+    address: string | null;
+    status: "active" | "suspended" | "trial" | "cancelled" | "pending_payment";
     plan: string;
-    status: "active" | "suspended" | "trial";
-    industry: string;
+    planPrice: number;
     createdAt: string;
-    lastActive: string;
-    userCount: number;
-    activeUsers: number;
-    mrr: number;
-    totalInvoices: number;
-    totalProducts: number;
-    totalEmployees: number;
-    storageUsed: number; // in MB
-    storageLimit: number; // in MB
-    apiCalls: number;
-    loginCount: number;
+    updatedAt: string;
+    stats: {
+        totalUsers: number;
+        totalInvoices: number;
+        totalContacts: number;
+        totalProducts: number;
+    };
+    users: TenantUser[];
+    subscriptions: TenantSubscription[];
+    recentActivity: TenantActivity[];
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockTenantDetail: TenantDetail = {
-    id: "t1",
-    name: "PT Maju Bersama",
-    email: "admin@majubersama.co.id",
-    phone: "+62 21 5555 1234",
-    address: "Jl. Sudirman No. 123, Jakarta Selatan",
-    plan: "Enterprise",
-    status: "active",
-    industry: "Manufacturing",
-    createdAt: "15 Januari 2026",
-    lastActive: "2 menit lalu",
-    userCount: 25,
-    activeUsers: 18,
-    mrr: 1500000,
-    totalInvoices: 1247,
-    totalProducts: 89,
-    totalEmployees: 45,
-    storageUsed: 2048,
-    storageLimit: 10240,
-    apiCalls: 15420,
-    loginCount: 892,
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatRupiah(amount: number): string {
@@ -103,6 +107,41 @@ function StatusBadge({ status }: { status: TenantDetail["status"] }) {
                     Trial
                 </span>
             );
+        default:
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {status}
+                </span>
+            );
+    }
+}
+
+function RoleBadge({ role }: { role: string }) {
+    switch (role) {
+        case "ADMIN":
+            return (
+                <span className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    Admin
+                </span>
+            );
+        case "MEMBER":
+            return (
+                <span className="inline-flex items-center rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    Member
+                </span>
+            );
+        case "VIEWER":
+            return (
+                <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    Viewer
+                </span>
+            );
+        default:
+            return (
+                <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {role}
+                </span>
+            );
     }
 }
 
@@ -112,33 +151,78 @@ export default function PlatformTenantDetailPage() {
     const tenantId = params?.id as string;
     const [tenant, setTenant] = useState<TenantDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setTenant({ ...mockTenantDetail, id: tenantId });
+    const fetchTenant = useCallback(async () => {
+        if (!tenantId) return;
+        try {
+            setLoading(true);
+            setError(null);
+            const res = await fetch(`/api/platform/tenants/${tenantId}`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                setTenant(data.data);
+            } else {
+                setError(data.error || "Gagal mengambil data tenant");
+            }
+        } catch {
+            setError("Gagal menghubungi server");
+        } finally {
             setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
+        }
     }, [tenantId]);
+
+    useEffect(() => {
+        fetchTenant();
+    }, [fetchTenant]);
 
     const handleSuspend = async () => {
         if (!tenant) return;
         setActionLoading(true);
-        await new Promise((r) => setTimeout(r, 1000));
-        setTenant({ ...tenant, status: "suspended", mrr: 0 });
-        setActionLoading(false);
-        setToast({ message: "Tenant berhasil ditangguhkan", type: "success" });
+        try {
+            const res = await fetch(`/api/platform/tenants/${tenant.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "SUSPENDED" }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setTenant({ ...tenant, status: "suspended", planPrice: 0 });
+                setToast({ message: "Tenant berhasil ditangguhkan", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal menangguhkan tenant", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     const handleReactivate = async () => {
         if (!tenant) return;
         setActionLoading(true);
-        await new Promise((r) => setTimeout(r, 1000));
-        setTenant({ ...tenant, status: "active", mrr: 1500000 });
-        setActionLoading(false);
-        setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
+        try {
+            const res = await fetch(`/api/platform/tenants/${tenant.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "ACTIVE" }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Re-fetch to get updated data
+                fetchTenant();
+                setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal mengaktifkan tenant", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     if (loading) {
@@ -149,21 +233,19 @@ export default function PlatformTenantDetailPage() {
         );
     }
 
-    if (!tenant) {
+    if (error || !tenant) {
         return (
             <div className="text-center py-12">
-                <Building2 className="mx-auto h-12 w-12 text-gray-300" />
+                <Building2 className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
                 <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Tenant tidak ditemukan
+                    {error || "Tenant tidak ditemukan"}
                 </p>
-                <Link href="/platform/tenants" className="mt-4 text-sm text-purple-600 hover:text-purple-700">
+                <Link href="/platform/tenants" className="mt-4 inline-block text-sm text-purple-600 hover:text-purple-700">
                     Kembali ke daftar tenant
                 </Link>
             </div>
         );
     }
-
-    const storagePercent = Math.round((tenant.storageUsed / tenant.storageLimit) * 100);
 
     return (
         <div className="space-y-6">
@@ -190,12 +272,12 @@ export default function PlatformTenantDetailPage() {
                             <StatusBadge status={tenant.status} />
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {tenant.email} · {tenant.industry}
+                            {tenant.email} · {tenant.plan}
                         </p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    {tenant.status === "active" ? (
+                    {tenant.status === "active" || tenant.status === "trial" ? (
                         <button
                             onClick={handleSuspend}
                             disabled={actionLoading}
@@ -235,7 +317,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Users</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.activeUsers}/{tenant.userCount}
+                                {tenant.stats.totalUsers}
                             </p>
                         </div>
                     </div>
@@ -248,7 +330,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">MRR</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.mrr > 0 ? formatRupiah(tenant.mrr) : "-"}
+                                {tenant.planPrice > 0 ? formatRupiah(tenant.planPrice) : "-"}
                             </p>
                         </div>
                     </div>
@@ -261,7 +343,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Invoices</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.totalInvoices.toLocaleString()}
+                                {tenant.stats.totalInvoices.toLocaleString()}
                             </p>
                         </div>
                     </div>
@@ -274,7 +356,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Products</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.totalProducts}
+                                {tenant.stats.totalProducts}
                             </p>
                         </div>
                     </div>
@@ -293,12 +375,11 @@ export default function PlatformTenantDetailPage() {
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
                         {[
                             { icon: Mail, label: "Email", value: tenant.email },
-                            { icon: Settings, label: "Telepon", value: tenant.phone },
-                            { icon: Building2, label: "Alamat", value: tenant.address },
-                            { icon: FileText, label: "Industri", value: tenant.industry },
+                            { icon: Globe, label: "Website", value: tenant.website || "-" },
+                            { icon: MapPin, label: "Alamat", value: tenant.address || "-" },
                             { icon: CreditCard, label: "Plan", value: tenant.plan },
-                            { icon: Calendar, label: "Terdaftar", value: tenant.createdAt },
-                            { icon: Clock, label: "Terakhir Aktif", value: tenant.lastActive },
+                            { icon: Calendar, label: "Terdaftar", value: new Date(tenant.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) },
+                            { icon: Clock, label: "Terakhir Update", value: new Date(tenant.updatedAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) },
                         ].map((item) => (
                             <div key={item.label} className="flex items-center gap-4 px-6 py-3">
                                 <item.icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -315,95 +396,141 @@ export default function PlatformTenantDetailPage() {
                     </div>
                 </div>
 
-                {/* Usage & Activity */}
+                {/* Users + Subscriptions + Activity */}
                 <div className="space-y-6">
-                    {/* Storage Usage */}
+                    {/* Users List */}
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Storage Usage
-                            </h2>
-                        </div>
-                        <div className="p-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    {(tenant.storageUsed / 1024).toFixed(1)} GB dari {(tenant.storageLimit / 1024).toFixed(0)} GB
-                                </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {storagePercent}%
-                                </span>
-                            </div>
-                            <div className="h-3 rounded-full bg-gray-100 dark:bg-gray-800">
-                                <div
-                                    className={`h-3 rounded-full ${storagePercent > 80
-                                            ? "bg-red-500"
-                                            : storagePercent > 60
-                                                ? "bg-yellow-500"
-                                                : "bg-green-500"
-                                        }`}
-                                    style={{ width: `${storagePercent}%` }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Activity Summary */}
-                    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-                        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Activity Summary
+                                Users ({tenant.users.length})
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                            <div className="flex items-center justify-between px-6 py-3">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Total Employees
-                                </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {tenant.totalEmployees}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between px-6 py-3">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    API Calls (bulan ini)
-                                </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {tenant.apiCalls.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between px-6 py-3">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Login Count (bulan ini)
-                                </span>
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {tenant.loginCount.toLocaleString()}
-                                </span>
-                            </div>
+                            {tenant.users.length === 0 ? (
+                                <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                    Belum ada user
+                                </div>
+                            ) : (
+                                tenant.users.map((user) => (
+                                    <div key={user.id} className="flex items-center justify-between px-6 py-3">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                {user.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                        <RoleBadge role={user.role} />
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
 
-                    {/* Quick Actions */}
+                    {/* Subscriptions */}
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Quick Actions
+                                Subscriptions
                             </h2>
                         </div>
-                        <div className="p-4 space-y-2">
-                            <button className="flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                                <Shield className="h-4 w-4 text-blue-500" />
-                                Reset Password Admin
-                            </button>
-                            <button className="flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                                <Activity className="h-4 w-4 text-green-500" />
-                                View Audit Log
-                            </button>
-                            <button className="flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                                <FileText className="h-4 w-4 text-purple-500" />
-                                Export Data
-                            </button>
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {tenant.subscriptions.length === 0 ? (
+                                <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                    Belum ada subscription
+                                </div>
+                            ) : (
+                                tenant.subscriptions.map((sub) => (
+                                    <div key={sub.id} className="px-6 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                    {sub.plan}
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {new Date(sub.startDate).toLocaleDateString("id-ID")} - {sub.endDate ? new Date(sub.endDate).toLocaleDateString("id-ID") : "Berlangsung"}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sub.status === "ACTIVE"
+                                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                        : sub.status === "TRIAL"
+                                                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                            : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                                    }`}>
+                                                    {sub.status}
+                                                </span>
+                                                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                                    {sub.price > 0 ? formatRupiah(sub.price) : "Free"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
+
+                    {/* Recent Activity */}
+                    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                Recent Activity
+                            </h2>
+                        </div>
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {tenant.recentActivity.length === 0 ? (
+                                <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                    Belum ada aktivitas
+                                </div>
+                            ) : (
+                                tenant.recentActivity.map((log) => (
+                                    <div key={log.id} className="flex items-start gap-3 px-6 py-3">
+                                        <div className="mt-0.5 rounded-full bg-gray-100 p-1.5 dark:bg-gray-800">
+                                            <Activity className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm text-gray-900 dark:text-gray-100">
+                                                <span className="font-medium">{log.action}</span>
+                                                {" "}on {log.entity}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {log.ipAddress && `IP: ${log.ipAddress} · `}
+                                                {new Date(log.createdAt).toLocaleString("id-ID")}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Quick Actions
+                    </h2>
+                </div>
+                <div className="flex flex-wrap gap-3 p-4">
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                        <Shield className="h-4 w-4 text-blue-500" />
+                        Reset Password Admin
+                    </button>
+                    <Link
+                        href="/platform/monitoring"
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                        <Activity className="h-4 w-4 text-green-500" />
+                        View Audit Log
+                    </Link>
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                        <FileText className="h-4 w-4 text-purple-500" />
+                        Export Data
+                    </button>
                 </div>
             </div>
 
@@ -412,8 +539,8 @@ export default function PlatformTenantDetailPage() {
                 <div className="fixed bottom-4 right-4 z-50">
                     <div
                         className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === "success"
-                                ? "bg-green-600"
-                                : "bg-red-600"
+                            ? "bg-green-600"
+                            : "bg-red-600"
                             }`}
                     >
                         {toast.message}

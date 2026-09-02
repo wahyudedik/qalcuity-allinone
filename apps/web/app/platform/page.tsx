@@ -38,54 +38,26 @@ interface RecentActivity {
     tenant?: string;
 }
 
-// ─── Mock Data (akan diganti dengan API call) ─────────────────────────────────
-const mockStats: PlatformStats = {
-    totalTenants: 47,
-    activeTenants: 42,
-    totalUsers: 312,
-    mrr: 234500000, // Rp 234.5 juta
-    mrrGrowth: 12.3,
+// ─── Default Stats (fallback saat error) ──────────────────────────────────────
+const defaultStats: PlatformStats = {
+    totalTenants: 0,
+    activeTenants: 0,
+    totalUsers: 0,
+    mrr: 0,
+    mrrGrowth: 0,
     systemHealth: "healthy",
-    apiLatency: 145,
-    errorRate: 0.12,
-    uptime: 99.97,
+    apiLatency: 0,
+    errorRate: 0,
+    uptime: 100,
 };
 
-const mockActivities: RecentActivity[] = [
+const defaultActivities: RecentActivity[] = [
     {
         id: "1",
         type: "tenant_created",
-        message: "Tenant baru terdaftar",
-        timestamp: "2 menit lalu",
-        tenant: "PT Maju Bersama",
-    },
-    {
-        id: "2",
-        type: "payment_received",
-        message: "Pembayaran diterima",
-        timestamp: "15 menit lalu",
-        tenant: "CV Sejahtera",
-    },
-    {
-        id: "3",
-        type: "support_ticket",
-        message: "Tiket support baru",
-        timestamp: "1 jam lalu",
-        tenant: "PT Digital Nusantara",
-    },
-    {
-        id: "4",
-        type: "security_event",
-        message: "Login dari IP baru",
-        timestamp: "2 jam lalu",
-        tenant: "PT Global Tech",
-    },
-    {
-        id: "5",
-        type: "tenant_suspended",
-        message: "Tenant ditangguhkan (belum bayar)",
-        timestamp: "3 jam lalu",
-        tenant: "CV Mitra Jaya",
+        message: "Menunggu data aktivitas...",
+        timestamp: "-",
+        tenant: "-",
     },
 ];
 
@@ -119,25 +91,47 @@ function ActivityIcon({ type }: { type: RecentActivity["type"] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformDashboardPage() {
-    const [stats, setStats] = useState<PlatformStats>(mockStats);
-    const [activities, setActivities] = useState<RecentActivity[]>(mockActivities);
+    const [stats, setStats] = useState<PlatformStats>(defaultStats);
+    const [activities, setActivities] = useState<RecentActivity[]>(defaultActivities);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Simulate data fetch
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setStats(mockStats);
-            setActivities(mockActivities);
+    const fetchStats = async () => {
+        try {
+            const res = await fetch("/api/platform/stats");
+            const data = await res.json();
+            if (data.success && data.data) {
+                setStats({
+                    totalTenants: data.data.totalTenants ?? 0,
+                    activeTenants: data.data.activeTenants ?? 0,
+                    totalUsers: data.data.totalUsers ?? 0,
+                    mrr: data.data.mrr ?? 0,
+                    mrrGrowth: data.data.mrrGrowth ?? 0,
+                    systemHealth: data.data.systemHealth ?? "healthy",
+                    apiLatency: data.data.apiLatency ?? 0,
+                    errorRate: data.data.errorRate ?? 0,
+                    uptime: data.data.uptime ?? 100,
+                });
+                setError(null);
+            } else {
+                setError(data.error || "Gagal mengambil data stats");
+            }
+        } catch {
+            setError("Gagal menghubungi server");
+        } finally {
             setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
+        }
+    };
+
+    useEffect(() => {
+        fetchStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        // TODO: Replace with actual API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await fetchStats();
         setRefreshing(false);
     };
 
@@ -151,6 +145,20 @@ export default function PlatformDashboardPage() {
 
     return (
         <div className="space-y-6">
+            {/* Error Banner */}
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                    <p className="font-medium">Gagal memuat data:</p>
+                    <p>{error}</p>
+                    <button
+                        onClick={handleRefresh}
+                        className="mt-2 text-sm font-medium underline hover:no-underline"
+                    >
+                        Coba lagi
+                    </button>
+                </div>
+            )}
+
             {/* Page Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>

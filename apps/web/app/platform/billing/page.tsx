@@ -115,7 +115,7 @@ export default function PlatformBillingPage() {
     const fetchPlans = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await fetch("/api/admin/plans");
+            const res = await fetch("/api/platform/plans");
             const data = await res.json();
             if (data.success) {
                 setPlans(data.data);
@@ -293,8 +293,8 @@ export default function PlatformBillingPage() {
             {message && (
                 <div
                     className={`rounded-lg p-4 ${message.type === "success"
-                            ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                            : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                        : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
                         }`}
                 >
                     {message.text}
@@ -313,8 +313,8 @@ export default function PlatformBillingPage() {
                     <div
                         key={plan.id}
                         className={`relative rounded-xl border-2 p-6 ${plan.isActive
-                                ? "border-blue-200 bg-white dark:border-blue-800 dark:bg-gray-800"
-                                : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 opacity-60"
+                            ? "border-blue-200 bg-white dark:border-blue-800 dark:bg-gray-800"
+                            : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 opacity-60"
                             }`}
                     >
                         {/* Plan Header */}
@@ -325,8 +325,8 @@ export default function PlatformBillingPage() {
                                 </h3>
                                 <span
                                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${plan.isActive
-                                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                            : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                        : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
                                         }`}
                                 >
                                     {plan.isActive ? "Active" : "Inactive"}

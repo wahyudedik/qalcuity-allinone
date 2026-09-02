@@ -13,11 +13,11 @@ const securityHeaders = [
         // 'unsafe-inline' for style-src is required by Tailwind CSS.
         value: [
             "default-src 'self'",
-            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://apis.google.com`,
+            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://apis.google.com https://static.cloudflareinsights.com`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https: blob:",
             "font-src 'self'",
-            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com",
+            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://static.cloudflareinsights.com",
             "frame-src 'self' https://accounts.google.com",
             "object-src 'none'",
             "base-uri 'self'",
