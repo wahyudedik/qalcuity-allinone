@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
     Search,
     Building2,
-    Users,
     CreditCard,
     MoreHorizontal,
     Eye,
@@ -13,12 +12,12 @@ import {
     CheckCircle2,
     XCircle,
     Plus,
-    Filter,
     ChevronLeft,
     ChevronRight,
     RefreshCw,
     ArrowUpDown,
     Loader2,
+    AlertTriangle,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,30 +25,24 @@ interface Tenant {
     id: string;
     name: string;
     email: string;
+    slug: string;
     plan: string;
-    status: "active" | "suspended" | "trial";
+    status: "active" | "suspended" | "trial" | "cancelled" | "pending_payment";
     userCount: number;
     mrr: number;
     createdAt: string;
-    lastActive: string;
+    updatedAt: string;
+}
+
+interface Pagination {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
 }
 
 type SortField = "name" | "plan" | "status" | "userCount" | "mrr" | "createdAt";
 type SortDirection = "asc" | "desc";
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockTenants: Tenant[] = [
-    { id: "t1", name: "PT Maju Bersama", email: "admin@majubersama.co.id", plan: "Enterprise", status: "active", userCount: 25, mrr: 1500000, createdAt: "2026-01-15", lastActive: "2 menit lalu" },
-    { id: "t2", name: "CV Sejahtera", email: "info@sejahtera.com", plan: "Professional", status: "active", userCount: 12, mrr: 750000, createdAt: "2026-02-20", lastActive: "1 jam lalu" },
-    { id: "t3", name: "PT Digital Nusantara", email: "hello@digitalnusantara.id", plan: "Enterprise", status: "active", userCount: 45, mrr: 2500000, createdAt: "2025-11-10", lastActive: "30 menit lalu" },
-    { id: "t4", name: "CV Mitra Jaya", email: "admin@mitrajaya.co.id", plan: "Starter", status: "suspended", userCount: 5, mrr: 0, createdAt: "2026-03-05", lastActive: "7 hari lalu" },
-    { id: "t5", name: "PT Global Tech", email: "ops@globaltech.id", plan: "Professional", status: "active", userCount: 18, mrr: 750000, createdAt: "2026-04-12", lastActive: "2 jam lalu" },
-    { id: "t6", name: "UD Berkah Jaya", email: "berkah@berkahjaya.com", plan: "Trial", status: "trial", userCount: 3, mrr: 0, createdAt: "2026-08-28", lastActive: "5 menit lalu" },
-    { id: "t7", name: "PT Nusantara Solusi", email: "admin@nusantarasolusi.id", plan: "Enterprise", status: "active", userCount: 32, mrr: 1500000, createdAt: "2025-12-01", lastActive: "15 menit lalu" },
-    { id: "t8", name: "CV Abadi Makmur", email: "info@abadimakmur.co.id", plan: "Starter", status: "active", userCount: 8, mrr: 250000, createdAt: "2026-06-20", lastActive: "3 jam lalu" },
-    { id: "t9", name: "PT Sukses Mandiri", email: "admin@suksesmandiri.id", plan: "Professional", status: "suspended", userCount: 15, mrr: 0, createdAt: "2026-01-30", lastActive: "14 hari lalu" },
-    { id: "t10", name: "UD Pelangi Teknologi", email: "hello@pelangitech.com", plan: "Trial", status: "trial", userCount: 2, mrr: 0, createdAt: "2026-08-30", lastActive: "1 jam lalu" },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatRupiah(amount: number): string {
@@ -84,6 +77,12 @@ function StatusBadge({ status }: { status: Tenant["status"] }) {
                     Trial
                 </span>
             );
+        default:
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {status}
+                </span>
+            );
     }
 }
 
@@ -91,112 +90,133 @@ function StatusBadge({ status }: { status: Tenant["status"] }) {
 export default function PlatformTenantsPage() {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterPlan, setFilterPlan] = useState<string>("all");
-    const [sortField, setSortField] = useState<SortField>("name");
-    const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+    const [sortField] = useState<SortField>("name");
+    const [sortDirection] = useState<SortDirection>("asc");
     const [currentPage, setCurrentPage] = useState(1);
+    const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
     const [menuTenantId, setMenuTenantId] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-    const pageSize = 8;
+    const pageSize = 10;
+
+    const fetchTenants = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const params = new URLSearchParams();
+            params.set("page", String(currentPage));
+            params.set("limit", String(pageSize));
+            if (searchQuery) params.set("search", searchQuery);
+            if (filterStatus !== "all") params.set("status", filterStatus);
+            if (filterPlan !== "all") params.set("plan", filterPlan);
+
+            const res = await fetch(`/api/platform/tenants?${params.toString()}`);
+            const data = await res.json();
+
+            if (data.success && data.data) {
+                setTenants(data.data);
+                setPagination(data.pagination);
+            } else {
+                setError(data.error || "Gagal mengambil data tenants");
+                setTenants([]);
+            }
+        } catch {
+            setError("Gagal menghubungi server");
+            setTenants([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, searchQuery, filterStatus, filterPlan]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setTenants(mockTenants);
-            setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+        fetchTenants();
+    }, [fetchTenants]);
 
-    // Filter & Sort
-    const filteredTenants = useMemo(() => {
-        let result = [...tenants];
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterStatus, filterPlan]);
 
-        // Search
-        if (searchQuery) {
-            const q = searchQuery.toLowerCase();
-            result = result.filter(
-                (t) =>
-                    t.name.toLowerCase().includes(q) ||
-                    t.email.toLowerCase().includes(q)
-            );
-        }
-
-        // Filter status
-        if (filterStatus !== "all") {
-            result = result.filter((t) => t.status === filterStatus);
-        }
-
-        // Filter plan
-        if (filterPlan !== "all") {
-            result = result.filter((t) => t.plan === filterPlan);
-        }
-
-        // Sort
-        result.sort((a, b) => {
-            const aVal = a[sortField];
-            const bVal = b[sortField];
-            if (typeof aVal === "string" && typeof bVal === "string") {
-                return sortDirection === "asc"
-                    ? aVal.localeCompare(bVal)
-                    : bVal.localeCompare(aVal);
-            }
-            if (typeof aVal === "number" && typeof bVal === "number") {
-                return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
-            }
-            return 0;
-        });
-
-        return result;
-    }, [tenants, searchQuery, filterStatus, filterPlan, sortField, sortDirection]);
-
-    // Pagination
-    const totalPages = Math.ceil(filteredTenants.length / pageSize);
-    const paginatedTenants = filteredTenants.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-    );
-
-    const handleSort = (field: SortField) => {
-        if (sortField === field) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortField(field);
-            setSortDirection("asc");
-        }
+    const handleSort = (_field: SortField) => {
+        // Server-side sorting would require API param — placeholder for now
+        // Keeping client-side sort indicator only
     };
 
     const handleSuspend = async (tenantId: string) => {
         setActionLoading(tenantId);
-        // TODO: API call to suspend tenant
-        await new Promise((r) => setTimeout(r, 1000));
-        setTenants((prev) =>
-            prev.map((t) =>
-                t.id === tenantId ? { ...t, status: "suspended" as const, mrr: 0 } : t
-            )
-        );
-        setActionLoading(null);
-        setMenuTenantId(null);
-        setToast({ message: "Tenant berhasil ditangguhkan", type: "success" });
+        try {
+            const res = await fetch(`/api/platform/tenants/${tenantId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "SUSPENDED" }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setTenants((prev) =>
+                    prev.map((t) =>
+                        t.id === tenantId ? { ...t, status: "suspended" as const, mrr: 0 } : t
+                    )
+                );
+                setToast({ message: "Tenant berhasil ditangguhkan", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal menangguhkan tenant", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
+            setActionLoading(null);
+            setMenuTenantId(null);
+        }
     };
 
     const handleReactivate = async (tenantId: string) => {
         setActionLoading(tenantId);
-        // TODO: API call to reactivate tenant
-        await new Promise((r) => setTimeout(r, 1000));
-        setTenants((prev) =>
-            prev.map((t) =>
-                t.id === tenantId ? { ...t, status: "active" as const } : t
-            )
-        );
-        setActionLoading(null);
-        setMenuTenantId(null);
-        setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
+        try {
+            const res = await fetch(`/api/platform/tenants/${tenantId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "ACTIVE" }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Re-fetch to get updated MRR
+                fetchTenants();
+                setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal mengaktifkan tenant", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
+            setActionLoading(null);
+            setMenuTenantId(null);
+        }
     };
 
-    if (loading) {
+    // Client-side sort for current page display
+    const sortedTenants = [...tenants].sort((a, b) => {
+        const aVal = a[sortField];
+        const bVal = b[sortField];
+        if (typeof aVal === "string" && typeof bVal === "string") {
+            return sortDirection === "asc"
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        }
+        if (typeof aVal === "number" && typeof bVal === "number") {
+            return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        }
+        return 0;
+    });
+
+    const totalPages = pagination.totalPages;
+    const totalActive = tenants.filter((t) => t.status === "active").length;
+
+    if (loading && tenants.length === 0) {
         return (
             <div className="flex items-center justify-center h-64">
                 <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
@@ -213,7 +233,7 @@ export default function PlatformTenantsPage() {
                         Tenant Management
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {filteredTenants.length} total tenants · {filteredTenants.filter((t) => t.status === "active").length} aktif
+                        {pagination.total} total tenants · {totalActive} aktif
                     </p>
                 </div>
                 <button className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700">
@@ -221,6 +241,22 @@ export default function PlatformTenantsPage() {
                     Add Tenant
                 </button>
             </div>
+
+            {/* Error Banner */}
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <p className="font-medium">{error}</p>
+                    </div>
+                    <button
+                        onClick={fetchTenants}
+                        className="mt-2 text-sm font-medium underline hover:no-underline"
+                    >
+                        Coba lagi
+                    </button>
+                </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -230,19 +266,13 @@ export default function PlatformTenantsPage() {
                         type="text"
                         placeholder="Cari tenant..."
                         value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            setCurrentPage(1);
-                        }}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                     />
                 </div>
                 <select
                     value={filterStatus}
-                    onChange={(e) => {
-                        setFilterStatus(e.target.value);
-                        setCurrentPage(1);
-                    }}
+                    onChange={(e) => setFilterStatus(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
                     <option value="all">Semua Status</option>
@@ -252,17 +282,13 @@ export default function PlatformTenantsPage() {
                 </select>
                 <select
                     value={filterPlan}
-                    onChange={(e) => {
-                        setFilterPlan(e.target.value);
-                        setCurrentPage(1);
-                    }}
+                    onChange={(e) => setFilterPlan(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
                     <option value="all">Semua Plan</option>
-                    <option value="Starter">Starter</option>
-                    <option value="Professional">Professional</option>
-                    <option value="Enterprise">Enterprise</option>
-                    <option value="Trial">Trial</option>
+                    <option value="starter">Starter</option>
+                    <option value="professional">Professional</option>
+                    <option value="enterprise">Enterprise</option>
                 </select>
             </div>
 
@@ -296,7 +322,7 @@ export default function PlatformTenantsPage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {paginatedTenants.map((tenant) => (
+                        {sortedTenants.map((tenant) => (
                             <tr key={tenant.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                 <td className="px-4 py-3">
                                     <div>
@@ -328,7 +354,7 @@ export default function PlatformTenantsPage() {
                                 </td>
                                 <td className="px-4 py-3">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        {tenant.createdAt}
+                                        {new Date(tenant.createdAt).toLocaleDateString("id-ID")}
                                     </span>
                                 </td>
                                 <td className="px-4 py-3 text-right">
@@ -358,7 +384,7 @@ export default function PlatformTenantsPage() {
                                                         <Eye className="h-4 w-4" />
                                                         Detail
                                                     </Link>
-                                                    {tenant.status === "active" ? (
+                                                    {tenant.status === "active" || tenant.status === "trial" ? (
                                                         <button
                                                             onClick={() => handleSuspend(tenant.id)}
                                                             disabled={actionLoading === tenant.id}
@@ -398,7 +424,7 @@ export default function PlatformTenantsPage() {
 
             {/* Mobile Cards */}
             <div className="space-y-3 md:hidden">
-                {paginatedTenants.map((tenant) => (
+                {sortedTenants.map((tenant) => (
                     <div
                         key={tenant.id}
                         className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
@@ -442,7 +468,7 @@ export default function PlatformTenantsPage() {
                                 <Eye className="h-3.5 w-3.5" />
                                 Detail
                             </Link>
-                            {tenant.status === "active" ? (
+                            {tenant.status === "active" || tenant.status === "trial" ? (
                                 <button
                                     onClick={() => handleSuspend(tenant.id)}
                                     disabled={actionLoading === tenant.id}
@@ -475,7 +501,7 @@ export default function PlatformTenantsPage() {
             </div>
 
             {/* Empty State */}
-            {filteredTenants.length === 0 && (
+            {tenants.length === 0 && !loading && (
                 <div className="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
                     <Building2 className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
                     <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -491,7 +517,7 @@ export default function PlatformTenantsPage() {
             {totalPages > 1 && (
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Halaman {currentPage} dari {totalPages}
+                        Halaman {currentPage} dari {totalPages} · {pagination.total} total
                     </p>
                     <div className="flex gap-2">
                         <button
@@ -518,11 +544,10 @@ export default function PlatformTenantsPage() {
             {toast && (
                 <div className="fixed bottom-4 right-4 z-50">
                     <div
-                        className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
-                            toast.type === "success"
+                        className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === "success"
                                 ? "bg-green-600"
                                 : "bg-red-600"
-                        }`}
+                            }`}
                     >
                         {toast.message}
                         <button
