@@ -34,8 +34,8 @@ export async function GET() {
         });
 
         const mrr = activeSubscriptions.reduce(
-            (sum: number, sub: { plan?: { price?: number } }) =>
-                sum + (sub.plan?.price ?? 0),
+            (sum: number, sub) =>
+                sum + Number(sub.plan?.price ?? 0),
             0
         );
 

@@ -38,8 +38,8 @@ const createPlanSchema = z.object({
     name: z.string().min(1, 'Nama plan wajib diisi').max(100),
     slug: z.string().min(1, 'Slug wajib diisi').max(50).regex(/^[a-z0-9-]+$/, 'Slug hanya boleh huruf kecil, angka, dan strip'),
     description: z.string().max(500).optional(),
-    priceMonthly: z.number().int().min(0, 'Harga bulanan tidak boleh negatif'),
-    priceYearly: z.number().int().min(0).optional(),
+    priceMonthly: z.number().min(0, 'Harga bulanan tidak boleh negatif'),
+    priceYearly: z.number().min(0).optional(),
     maxUsers: z.number().int().min(-1, 'Max users minimal -1 (unlimited)'),
     maxStorage: z.number().int().min(0).optional(),
     sortOrder: z.number().int().default(0),
@@ -68,13 +68,13 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            data: plans.map((plan: PlanWithFeatures) => ({
+            data: plans.map((plan) => ({
                 id: plan.id,
                 name: plan.name,
                 slug: plan.slug,
                 description: plan.description,
-                priceMonthly: plan.priceMonthly,
-                priceYearly: plan.priceYearly,
+                priceMonthly: Number(plan.priceMonthly),
+                priceYearly: plan.priceYearly != null ? Number(plan.priceYearly) : null,
                 maxUsers: plan.maxUsers,
                 maxStorage: plan.maxStorage,
                 isActive: plan.isActive,

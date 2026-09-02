@@ -171,8 +171,8 @@ export async function getEntitlement(tenantId: string): Promise<EntitlementData 
             id: entitlement.plan.id,
             name: entitlement.plan.name,
             slug: entitlement.plan.slug,
-            priceMonthly: entitlement.plan.priceMonthly,
-            priceYearly: entitlement.plan.priceYearly,
+            priceMonthly: Number(entitlement.plan.priceMonthly),
+            priceYearly: entitlement.plan.priceYearly != null ? Number(entitlement.plan.priceYearly) : null,
             maxUsers: entitlement.plan.maxUsers,
             maxStorage: entitlement.plan.maxStorage,
             features: entitlement.plan.features.map((f) => ({
@@ -461,8 +461,8 @@ export async function ensureEntitlement(tenantId: string): Promise<EntitlementDa
             id: entitlement.plan.id,
             name: entitlement.plan.name,
             slug: entitlement.plan.slug,
-            priceMonthly: entitlement.plan.priceMonthly,
-            priceYearly: entitlement.plan.priceYearly,
+            priceMonthly: Number(entitlement.plan.priceMonthly),
+            priceYearly: entitlement.plan.priceYearly != null ? Number(entitlement.plan.priceYearly) : null,
             maxUsers: entitlement.plan.maxUsers,
             maxStorage: entitlement.plan.maxStorage,
             features: entitlement.plan.features.map((f) => ({
@@ -536,8 +536,8 @@ export async function changePlan(
             id: entitlement.plan.id,
             name: entitlement.plan.name,
             slug: entitlement.plan.slug,
-            priceMonthly: entitlement.plan.priceMonthly,
-            priceYearly: entitlement.plan.priceYearly,
+            priceMonthly: Number(entitlement.plan.priceMonthly),
+            priceYearly: entitlement.plan.priceYearly != null ? Number(entitlement.plan.priceYearly) : null,
             maxUsers: entitlement.plan.maxUsers,
             maxStorage: entitlement.plan.maxStorage,
             features: entitlement.plan.features.map((f) => ({
