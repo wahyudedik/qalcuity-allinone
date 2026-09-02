@@ -1,20 +1,96 @@
 /**
  * POST /api/billing/webhook
  *
- * Handle payment webhook from payment providers (Midtrans, etc.).
+ * Handle payment webhook from payment providers (Midtrans, Xendit, etc.).
  * This route is PUBLIC (no auth required) — called by payment provider servers.
  *
+ * Security: Webhook signature verification using HMAC SHA256.
+ * The signature is computed as HMAC-SHA256(rawBody, BILLING_WEBHOOK_SECRET).
+ * Signature must be provided in the `X-Webhook-Signature` header.
+ *
  * Updates TenantEntitlement status when payment is confirmed.
+ *
+ * @see apps/web/app/api/billing/payments/midtrans/callback/route.ts for Midtrans-specific handler
  */
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
+import crypto from 'crypto';
+
+/**
+ * Verify webhook signature using HMAC SHA256.
+ *
+ * @param rawBody - Raw request body string
+ * @param signature - Signature from X-Webhook-Signature header
+ * @returns true if signature is valid
+ */
+function verifyWebhookSignature(rawBody: string, signature: string): boolean {
+    const secret = process.env.BILLING_WEBHOOK_SECRET;
+    if (!secret) {
+        console.error('[Webhook] BILLING_WEBHOOK_SECRET environment variable is not set');
+        return false;
+    }
+
+    const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(rawBody, 'utf8')
+        .digest('hex');
+
+    // Timing-safe comparison to prevent timing attacks
+    try {
+        return crypto.timingSafeEqual(
+            Buffer.from(expectedSignature, 'hex'),
+            Buffer.from(signature, 'hex')
+        );
+    } catch {
+        // Buffer lengths differ or invalid hex — signature is invalid
+        return false;
+    }
+}
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
+        // ─── Step 1: Extract and verify webhook signature ──────────────────
+        const signature = request.headers.get('x-webhook-signature');
+
+        if (!signature) {
+            console.warn('[Webhook] Missing X-Webhook-Signature header — rejecting request');
+            return NextResponse.json(
+                { success: false, error: 'Missing webhook signature' },
+                { status: 401 }
+            );
+        }
+
+        // Read raw body for signature verification
+        const rawBody = await request.text();
+
+        if (!verifyWebhookSignature(rawBody, signature)) {
+            console.error('[Webhook] Invalid webhook signature — rejecting request');
+            // Log failed attempt for security monitoring
+            void logAudit({
+                userId: 'system',
+                tenantId: 'unknown',
+                action: 'WEBHOOK_SIGNATURE_FAILED',
+                entity: 'BillingPayment',
+                entityId: 'unknown',
+                oldValues: {} as Record<string, unknown>,
+                newValues: {
+                    reason: 'Invalid webhook signature',
+                    signatureHeader: signature.substring(0, 8) + '...',
+                    timestamp: new Date().toISOString(),
+                } as Record<string, unknown>,
+                request,
+            });
+            return NextResponse.json(
+                { success: false, error: 'Invalid webhook signature' },
+                { status: 401 }
+            );
+        }
+
+        // ─── Step 2: Parse and validate payload ────────────────────────────
+        const body = JSON.parse(rawBody) as Record<string, unknown>;
 
         const { orderId, status, transactionId } = body as {
             orderId?: string;

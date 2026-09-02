@@ -180,11 +180,11 @@
 
 #### 9A: Core Permission Engine
 
-- [ ] Design permission model (Prisma schema: Permission, Role, Membership, Scope)
-- [ ] Implement `@qalcuity/permissions` package (`can()` engine)
+- [x] Design permission model (Prisma schema: Permission, Role, Membership, Scope)
+- [x] Implement `@qalcuity/permissions` package (`can()` engine)
 - [ ] Implement `@qalcuity/auth` package (extract from web)
-- [ ] Create permission middleware for API routes
-- [ ] Create permission hooks for UI components (`usePermission()`)
+- [x] Create permission middleware for API routes
+- [x] Create permission hooks for UI components (`usePermission()`)
 - [ ] Migrate from 4-role RBAC to granular permissions
 - [ ] Migration strategy from current 4-role system
 
@@ -192,19 +192,19 @@
 
 - [ ] Create `apps/platform-admin` (Qalcuity Admin dashboard)
 - [ ] Platform Admin roles (Super Admin, Platform Admin, Developer, Support, Finance, Security, Analytics)
-- [ ] Implement platform permissions (tenant, billing, system, support, feature_flags)
-- [ ] Implement tenant permissions (finance, CRM, HR, inventory, settings)
-- [ ] Add scope support (branch, department level)
-- [ ] Permission-based conditional rendering in all pages
+- [x] Implement platform permissions (tenant, billing, system, support, feature_flags)
+- [x] Implement tenant permissions (finance, CRM, HR, inventory, settings)
+- [x] Add scope support (branch, department level)
+- [x] Permission-based conditional rendering in all pages
 - [ ] AI Agent permission checks (tool-level `can()` before execution)
-- [ ] Mobile permission support (same `@qalcuity/permissions` package)
-- [ ] Desktop permission support (same `@qalcuity/permissions` package)
+- [x] Mobile permission support (same `@qalcuity/permissions` package)
+- [x] Desktop permission support (same `@qalcuity/permissions` package)
 
 #### 9C: Industry-Agnostic Validation
 
-- [ ] Validasi bahwa Permission Engine tidak mengandung hardcoded industry logic
-- [ ] Permission engine berfungsi untuk SEMUA industri tanpa perubahan code
-- [ ] Permission engine mendukung custom resources dari Industry Configuration Engine
+- [x] Validasi bahwa Permission Engine tidak mengandung hardcoded industry logic
+- [x] Permission engine berfungsi untuk SEMUA industri tanpa perubahan code
+- [x] Permission engine mendukung custom resources dari Industry Configuration Engine
 
 ### Phase 10: Unified Control Engine 📋 PLANNED
 

@@ -100,11 +100,52 @@ export function Header({ title, onMenuClick }: HeaderProps) {
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, []);
 
-    // Generate breadcrumbs from pathname
+    // Generate breadcrumbs from pathname with label mapping
+    const LABEL_MAP: Record<string, string> = {
+        'dashboard': 'Dashboard',
+        'crm': 'CRM',
+        'contacts': 'Contacts',
+        'leads': 'Leads',
+        'deals': 'Deals',
+        'pipeline': 'Pipeline',
+        'finance': 'Finance',
+        'invoices': 'Invoices',
+        'payments': 'Payments',
+        'purchase-orders': 'Purchase Orders',
+        'quotations': 'Quotations',
+        'journal-entries': 'Jurnal',
+        'chart-of-account': 'CoA',
+        'accounts': 'Chart of Account',
+        'bank-reconciliation': 'Rekonsiliasi Bank',
+        'reconciliation': 'Rekonsiliasi',
+        'hr': 'HR & People',
+        'employees': 'Employees',
+        'attendance': 'Attendance',
+        'leaves': 'Leaves',
+        'payroll': 'Payroll',
+        'inventory': 'Inventory',
+        'products': 'Products',
+        'stock': 'Stock',
+        'categories': 'Categories',
+        'suppliers': 'Suppliers',
+        'reports': 'Reports',
+        'analytics': 'Analytics',
+        'explorer': 'Data Explorer',
+        'kpi': 'KPI',
+        'settings': 'Settings',
+        'company': 'Company',
+        'team': 'Team',
+        'security': 'Security',
+        'notifications': 'Notifications',
+        'integrations': 'Integrations',
+        'billing': 'Billing',
+        'audit': 'Audit Trail',
+    };
+
     const segments = (pathname || "").split("/").filter(Boolean);
     const breadcrumbs = segments.map((segment, index) => {
         const href = "/" + segments.slice(0, index + 1).join("/");
-        const label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
+        const label = LABEL_MAP[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
         return { href, label };
     });
 
