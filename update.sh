@@ -126,9 +126,24 @@ echo -e "${YELLOW}📥 Update ditemukan!${NC}"
 echo -e "   Sebelum: ${COMMIT_BEFORE:0:7}"
 echo -e "   Sesudah: ${COMMIT_AFTER:0:7}"
 
-# Pull update
+# Pull update — stash local changes dulu jika ada
+STASHED=false
+if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+    echo -e "${YELLOW}📋 Local changes terdeteksi, stashing sebelum pull...${NC}"
+    git stash push -m "auto-stash before update $(date +%Y%m%d_%H%M%S)" && STASHED=true
+fi
+
 git pull origin "$BRANCH"
 print_success "Code berhasil di-pull"
+
+# Restore stashed changes
+if [ "$STASHED" = true ] && git stash list | grep -q "auto-stash"; then
+    echo -e "${YELLOW}📋 Restoring stashed changes...${NC}"
+    if ! git stash pop; then
+        print_warning "Stash conflict — dropping stash (remote version kept)"
+        git stash drop
+    fi
+fi
 
 # --- 5. Install dependency baru (jika ada perubahan) ---
 print_step "5/8 - Install dependencies"
