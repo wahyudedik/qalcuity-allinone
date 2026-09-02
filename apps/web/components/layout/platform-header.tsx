@@ -86,10 +86,10 @@ export function PlatformHeader({ onMenuClick }: PlatformHeaderProps) {
                 {/* User Name */}
                 <div className="hidden sm:block text-right">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {session?.user?.name || "Super Admin"}
+                        {session?.user?.name || session?.user?.email || "Platform Owner"}
                     </p>
                     <p className="text-xs text-purple-600 dark:text-purple-400">
-                        Platform Admin
+                        Platform Owner
                     </p>
                 </div>
             </div>

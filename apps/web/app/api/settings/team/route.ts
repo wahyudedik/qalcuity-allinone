@@ -169,10 +169,13 @@ export async function PUT(request: Request) {
 
         const updateData: Record<string, unknown> = {}
         if (validation.data.role) {
-            // Prevent non-superadmin from assigning SUPERADMIN role
-            if (validation.data.role === 'SUPERADMIN' && callerRole !== 'SUPERADMIN') {
+            // SECURITY: Block ALL SUPERADMIN role assignments — no exceptions.
+            // The SUPERADMIN role is exclusively for the platform owner (info@qalcuity.com)
+            // and can ONLY be assigned via direct database operation by the platform owner.
+            // This prevents privilege escalation even by existing SUPERADMIN users.
+            if (validation.data.role === 'SUPERADMIN') {
                 return NextResponse.json(
-                    { success: false, error: 'Only superadmin can assign superadmin role' },
+                    { success: false, error: 'Cannot assign SUPERADMIN role — platform owner only' },
                     { status: 403 }
                 )
             }

@@ -79,6 +79,10 @@ export async function POST(request: Request) {
             });
 
             // Buat user admin untuk tenant
+            // SECURITY: Role is ALWAYS "ADMIN" for new registrations.
+            // SUPERADMIN role is exclusively for the platform owner (info@qalcuity.com)
+            // and can ONLY be assigned via direct database update by the platform owner.
+            // No API endpoint should ever assign SUPERADMIN to a new user.
             const user = await tx.user.create({
                 data: {
                     email: sanitizedEmail,
