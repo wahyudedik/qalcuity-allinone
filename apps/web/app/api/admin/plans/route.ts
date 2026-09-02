@@ -9,11 +9,30 @@ import { requireAdminAuth, isSuperAdmin } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
-
-type PlanWithFeatures = Prisma.PlanGetPayload<{
-    include: { features: true; _count: { select: { entitlements: true } } };
-}>;
+type PlanWithFeatures = {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    priceMonthly: number;
+    priceYearly: number | null;
+    maxUsers: number;
+    maxStorage: number | null;
+    isActive: boolean;
+    sortOrder: number;
+    createdAt: Date;
+    updatedAt: Date;
+    features: Array<{
+        id: string;
+        planId: string;
+        featureKey: string;
+        enabled: boolean;
+        limit: number | null;
+    }>;
+    _count: {
+        entitlements: number;
+    };
+};
 
 const createPlanSchema = z.object({
     name: z.string().min(1, 'Nama plan wajib diisi').max(100),
