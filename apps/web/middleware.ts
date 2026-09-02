@@ -16,9 +16,13 @@
  *   - Entitlement route mapping → API route level
  *   - Role-based redirects → Client-side (layout.tsx)
  *
+ * IMPORTANT: This file does NOT import from rate-limit-config.ts to avoid
+ * bundling Node.js-incompatible code into the Edge Runtime bundle.
+ * Rate limit rules are inlined here as simple static data.
+ *
  * @see apps/web/next.config.js — Security headers (CSP, CORS)
  * @see apps/web/lib/middleware-rate-limit.ts — Edge-safe rate limiter
- * @see apps/web/lib/rate-limit-config.ts — Rate limit rules
+ * @see apps/web/lib/rate-limit-config.ts — Full rate limit config (used by API routes only)
  */
 
 import { withAuth } from "next-auth/middleware";
@@ -26,7 +30,27 @@ import { NextResponse } from "next/server";
 import type { NextFetchEvent } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 import { checkRateLimit, getClientIp } from "@/lib/middleware-rate-limit";
-import { getRateLimitRule } from "@/lib/rate-limit-config";
+
+// ─── Inline Rate Limit Rules (Edge Runtime-safe) ────────────────────────────
+// Only the essential rules for middleware. Full config lives in rate-limit-config.ts.
+const RATE_LIMIT_RULES: Record<string, { maxRequests: number; windowMs: number }> = {
+    '/api/auth': { maxRequests: 10, windowMs: 60000 },
+    '/api/auth/register': { maxRequests: 5, windowMs: 300000 },
+    '/api/search': { maxRequests: 20, windowMs: 60000 },
+    '/api/mobile/auth/login': { maxRequests: 10, windowMs: 60000 },
+};
+const DEFAULT_RATE_LIMIT = { maxRequests: 100, windowMs: 60000 };
+
+/** Get rate limit rule for a given pathname (inline, Edge-safe). */
+function getRateLimitRule(pathname: string): { maxRequests: number; windowMs: number } {
+    // Check most specific rules first
+    for (const [pattern, rule] of Object.entries(RATE_LIMIT_RULES)) {
+        if (pathname.startsWith(pattern)) {
+            return rule;
+        }
+    }
+    return DEFAULT_RATE_LIMIT;
+}
 
 // ─── Public API paths (no auth required) ─────────────────────────────────────
 const PUBLIC_API_PATHS = [

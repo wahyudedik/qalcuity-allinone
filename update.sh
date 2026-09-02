@@ -158,6 +158,11 @@ fi
 # --- 7. Build aplikasi ---
 print_step "7/8 - Build aplikasi"
 
+# Bersihkan .next cache untuk memaksa fresh build
+# Ini mencegah crash karena middleware.js lama masih ter-cache
+rm -rf apps/web/.next
+print_success "Cache .next dibersihkan"
+
 pnpm build
 print_success "Build berhasil"
 
