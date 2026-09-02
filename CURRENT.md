@@ -1,19 +1,26 @@
-> **Last Updated:** 2 September 2026 (FASE 3C-4C Complete — Tax Engine, Period Closing, Approval Engine)
-> **Version:** v6.1.0
-> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine Implemented
+> **Last Updated:** 2 September 2026 (Batch 1A — Fix Decimal Type + VPS Deployment Fix)
+> **Version:** v6.1.1
+> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine Implemented, Decimal Type Fixed
 
 ---
 
 ## 🎯 Current Sprint
 
-**Fokus:** FASE 3C-4C Complete — Tax Engine MVP, Period Closing Wizard, Multi-level Approval Engine
+**Fokus:** Batch 1A — Fix Decimal Type + VPS Deployment Fix
 
+- ✅ **Batch 1A:** Fix Decimal Type — All monetary fields upgraded to `Decimal(19,4)`, Int→Decimal conversion, TypeScript fixes
+- ✅ Prisma schema updated: 15+ models with monetary fields upgraded from `Decimal(15,2)` to `Decimal(19,4)`
+- ✅ 4 Int fields converted to Decimal: `SubscriptionPlan.price`, `BillingPayment.amount`, `Plan.priceMonthly`, `Plan.priceYearly`
+- ✅ Migration SQL created: `20260902221200_fix_decimal_types/migration.sql`
+- ✅ Utility functions updated: `toNumber()`, `formatCurrency()`, `roundMoney()` handle Prisma Decimal
+- ✅ TypeScript check PASS (0 errors)
+- ✅ Documentation updated
+
+### Previous Milestones
 - ✅ **FASE 3C:** Sidebar Navigation — 11 new pages added to sidebar
 - ✅ **FASE 4A:** Tax Engine MVP — TaxRate model, CRUD API, invoice integration
 - ✅ **FASE 4B:** Period Closing Wizard — AccountingPeriod model, 4-step wizard, period management service
 - ✅ **FASE 4C:** Multi-level Approval Engine — ApprovalLevel + ApprovalRequest models, API routes (requests, approve, reject)
-- ✅ TypeScript check PASS (0 errors)
-- ✅ Documentation updated (CURRENT.md, FEATURES.md, ARCHITECTURE.md, REMAINING-WORK.md)
 
 ### Previous Batches (Complete)
 - ✅ **Batch 1:** ConfirmDialog (24 `window.confirm` replaced), inline error banners (4 `alert()` replaced), emoji→Lucide icons, SVG→Lucide (14 icons)

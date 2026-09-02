@@ -207,12 +207,12 @@ model Invoice {
   status          String   @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
   dueDate         DateTime
   notes           String?
-  subtotal        Decimal  @default(0) @db.Decimal(15, 2)
+  subtotal        Decimal  @default(0) @db.Decimal(19, 4)
   taxRate         Decimal  @default(0) @db.Decimal(5, 2)
-  taxAmount       Decimal  @default(0) @db.Decimal(15, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(19, 4)
   taxCode         String?  // "PPN", "PPH23" — snapshot code
-  totalBeforeTax  Decimal  @default(0) @db.Decimal(15, 2)
-  total           Decimal  @default(0) @db.Decimal(15, 2)
+  totalBeforeTax  Decimal  @default(0) @db.Decimal(19, 4)
+  total           Decimal  @default(0) @db.Decimal(19, 4)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -234,8 +234,8 @@ model InvoiceItem {
   id          String  @id @default(cuid())
   description String
   quantity    Decimal @default(1) @db.Decimal(10, 2)
-  unitPrice   Decimal @default(0) @db.Decimal(15, 2)
-  total       Decimal @default(0) @db.Decimal(15, 2)
+  unitPrice   Decimal @default(0) @db.Decimal(19, 4)
+  total       Decimal @default(0) @db.Decimal(19, 4)
 
   invoiceId   String
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -267,7 +267,7 @@ model TaxRate {
 model Payment {
   id            String   @id @default(cuid())
   paymentNumber String
-  amount        Decimal  @db.Decimal(15, 2)
+  amount        Decimal  @default(0) @db.Decimal(19, 4)
   paymentDate   DateTime
   method        String   @default("BANK_TRANSFER") // BANK_TRANSFER, CASH, CREDIT_CARD, E_WALLET
   status        String   @default("COMPLETED") // COMPLETED, PENDING, FAILED
@@ -295,10 +295,10 @@ model PurchaseOrder {
   orderDate       DateTime
   deliveryDate    DateTime?
   notes           String?
-  subtotal        Decimal  @default(0) @db.Decimal(15, 2)
+  subtotal        Decimal  @default(0) @db.Decimal(19, 4)
   taxRate         Decimal  @default(11) @db.Decimal(5, 2)
-  taxAmount       Decimal  @default(0) @db.Decimal(15, 2)
-  total           Decimal  @default(0) @db.Decimal(15, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(19, 4)
+  total           Decimal  @default(0) @db.Decimal(19, 4)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -318,8 +318,8 @@ model PurchaseOrderItem {
   id          String        @id @default(cuid())
   description String
   quantity    Decimal       @default(1) @db.Decimal(10, 2)
-  unitPrice   Decimal       @default(0) @db.Decimal(15, 2)
-  total       Decimal       @default(0) @db.Decimal(15, 2)
+  unitPrice   Decimal       @default(0) @db.Decimal(19, 4)
+  total       Decimal       @default(0) @db.Decimal(19, 4)
 
   purchaseOrderId String
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
@@ -334,11 +334,11 @@ model Quotation {
   validUntil      DateTime
   notes           String?
   terms           String?
-  subtotal        Decimal  @default(0) @db.Decimal(15, 2)
+  subtotal        Decimal  @default(0) @db.Decimal(19, 4)
   taxRate         Decimal  @default(11) @db.Decimal(5, 2)
-  taxAmount       Decimal  @default(0) @db.Decimal(15, 2)
-  discount        Decimal  @default(0) @db.Decimal(15, 2)
-  total           Decimal  @default(0) @db.Decimal(15, 2)
+  taxAmount       Decimal  @default(0) @db.Decimal(19, 4)
+  discount        Decimal  @default(0) @db.Decimal(19, 4)
+  total           Decimal  @default(0) @db.Decimal(19, 4)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -358,8 +358,8 @@ model QuotationItem {
   id          String     @id @default(cuid())
   description String
   quantity    Decimal    @default(1) @db.Decimal(10, 2)
-  unitPrice   Decimal    @default(0) @db.Decimal(15, 2)
-  total       Decimal    @default(0) @db.Decimal(15, 2)
+  unitPrice   Decimal    @default(0) @db.Decimal(19, 4)
+  total       Decimal    @default(0) @db.Decimal(19, 4)
 
   quotationId String
   quotation   Quotation  @relation(fields: [quotationId], references: [id], onDelete: Cascade)
@@ -379,7 +379,7 @@ model Lead {
   phone       String?
   source      String?  // WEBSITE, REFERRAL, COLD_CALL, SOCIAL_MEDIA, OTHER
   status      String   @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
-  value       Decimal  @default(0) @db.Decimal(15, 2)
+  value       Decimal  @default(0) @db.Decimal(19, 4)
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -399,7 +399,7 @@ model Lead {
 model Deal {
   id          String   @id @default(cuid())
   title       String
-  value       Decimal  @default(0) @db.Decimal(15, 2)
+  value       Decimal  @default(0) @db.Decimal(19, 4)
   stage       String   @default("DISCOVERY") // DISCOVERY, PROPOSAL, NEGOTIATION, CLOSING, CLOSED_WON, CLOSED_LOST
   probability Int      @default(0)
   closeDate   DateTime?
@@ -468,8 +468,8 @@ model Product {
   name        String
   description String?
   unit        String    @default("pcs")
-  price       Decimal   @default(0) @db.Decimal(15, 2)
-  cost        Decimal   @default(0) @db.Decimal(15, 2)
+  price       Decimal   @default(0) @db.Decimal(19, 4)
+  cost        Decimal   @default(0) @db.Decimal(19, 4)
   stock       Int       @default(0)
   minStock    Int       @default(0)
   isActive    Boolean   @default(true)
@@ -520,7 +520,7 @@ model Employee {
   position    String
   department  String?
   joinDate    DateTime
-  salary      Decimal   @default(0) @db.Decimal(15, 2)
+  salary      Decimal   @default(0) @db.Decimal(19, 4)
   status      String    @default("ACTIVE") // ACTIVE, INACTIVE, TERMINATED
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -586,11 +586,11 @@ model LeaveRequest {
 model PayrollRecord {
   id            String   @id @default(cuid())
   period        String   // e.g. "2026-08"
-  baseSalary    Decimal  @db.Decimal(15, 2)
-  allowances    Decimal  @default(0) @db.Decimal(15, 2)
-  deductions    Decimal  @default(0) @db.Decimal(15, 2)
-  bonus         Decimal  @default(0) @db.Decimal(15, 2)
-  netSalary     Decimal  @db.Decimal(15, 2)
+  baseSalary    Decimal  @db.Decimal(19, 4)
+  allowances    Decimal  @default(0) @db.Decimal(19, 4)
+  deductions    Decimal  @default(0) @db.Decimal(19, 4)
+  bonus         Decimal  @default(0) @db.Decimal(19, 4)
+  netSalary     Decimal  @db.Decimal(19, 4)
   status        String   @default("PENDING") // PENDING, PROCESSED, PAID
   paidAt        DateTime?
   notes         String?
@@ -642,7 +642,7 @@ model SubscriptionPlan {
   name          String   // Starter, Growth, Business
   slug          String   @unique // starter, growth, business
   description   String?
-  price         Int      // Harga dalam Rupiah (tanpa decimal)
+  price         Decimal  @default(0) @db.Decimal(19, 4) // Harga dalam Rupiah
   billingPeriod String   @default("monthly") // monthly, yearly
   maxUsers      Int      @default(5)
   maxProducts   Int      @default(100)
@@ -683,7 +683,7 @@ model BillingPayment {
   subscription    TenantSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  amount          Int      // Amount in Rupiah
+  amount          Decimal  @default(0) @db.Decimal(19, 4) // Amount in Rupiah
   paymentMethod   String   // manual_transfer
   bankName        String?  // BRI, JAGO, BTN, BSI
   accountNumber   String?  // Rekening pengirim
@@ -717,7 +717,7 @@ model CoAAccount {
   type        String   // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
   description String   @default("")
   parentId    String?
-  balance     Decimal  @default(0) @db.Decimal(15, 2)
+  balance     Decimal  @default(0) @db.Decimal(19, 4)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -738,7 +738,7 @@ model BankTransaction {
   tenantId          String
   date              DateTime
   description       String
-  amount            Decimal   @db.Decimal(15, 2)
+  amount            Decimal   @default(0) @db.Decimal(19, 4)
   type              String    // credit, debit
   status            String    @default("unmatched") // unmatched, matched, discrepancy
   matchedAccountId  String?
@@ -1438,8 +1438,8 @@ model JournalEntry {
   sourceType    String   // 'manual', 'invoice', 'payment', 'purchase_order', 'payroll'
   sourceId      String?
   status        String   @default("DRAFT") // DRAFT, POSTED, VOID
-  totalDebit    Decimal  @default(0) @db.Decimal(15, 2)
-  totalCredit   Decimal  @default(0) @db.Decimal(15, 2)
+  totalDebit    Decimal  @default(0) @db.Decimal(19, 4)
+  totalCredit   Decimal  @default(0) @db.Decimal(19, 4)
   createdBy     String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1459,8 +1459,8 @@ model JournalEntryItem {
   tenantId       String
   journalEntryId String
   accountId      String
-  debit          Decimal  @default(0) @db.Decimal(15, 2)
-  credit         Decimal  @default(0) @db.Decimal(15, 2)
+  debit          Decimal  @default(0) @db.Decimal(19, 4)
+  credit         Decimal  @default(0) @db.Decimal(19, 4)
   description    String?
   createdAt      DateTime @default(now())
 
@@ -1482,8 +1482,8 @@ model Plan {
   name          String   @unique
   slug          String   @unique
   description   String?
-  priceMonthly  Int      // in Rupiah
-  priceYearly   Int?     // in Rupiah, with discount
+  priceMonthly  Decimal  @default(0) @db.Decimal(19, 4) // in Rupiah
+  priceYearly   Decimal? @db.Decimal(19, 4) // in Rupiah, with discount
   maxUsers      Int      // -1 = unlimited
   maxStorage    Int?     // in MB, null = unlimited
   isActive      Boolean  @default(true)

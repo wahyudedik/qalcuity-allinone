@@ -345,7 +345,7 @@ export async function notifySuperadminPayment(paymentId: string): Promise<SendEm
             tenantName: payment.tenant.name,
             tenantEmail: payment.tenant.email || '-',
             planName: payment.subscription.plan.name,
-            amount: `Rp ${payment.amount.toLocaleString('id-ID')}`,
+            amount: `Rp ${Number(payment.amount).toLocaleString('id-ID')}`,
             bankName: payment.bankName || '-',
             accountNumber: payment.accountNumber || '-',
             accountName: payment.accountName || '-',

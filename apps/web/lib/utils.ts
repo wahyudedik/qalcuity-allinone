@@ -5,13 +5,29 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number, currency = "IDR"): string {
+/**
+ * Convert Prisma Decimal / string / number to a safe JavaScript number.
+ * Prisma serializes Decimal fields as strings in JSON (e.g. "1000000.0000").
+ */
+export function toNumber(value: unknown): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return value;
+    // Handle Prisma Decimal objects that have a .toNumber() method
+    if (typeof value === 'object' && value !== null && 'toNumber' in value && typeof (value as { toNumber: () => number }).toNumber === 'function') {
+        return (value as { toNumber: () => number }).toNumber();
+    }
+    const parsed = Number(String(value));
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function formatCurrency(amount: number | string | unknown, currency = "IDR"): string {
+    const num = toNumber(amount);
     return new Intl.NumberFormat("id-ID", {
         style: "currency",
         currency,
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(num);
 }
 
 export function formatDate(date: Date | string): string {
@@ -85,7 +101,8 @@ export function toFixed(value: number, decimals: number = 2): string {
  * Round a monetary value to avoid floating point precision issues.
  * Uses Math.round to avoid issues like 19.999999999999996
  */
-export function roundMoney(value: number): number {
-    return Math.round(value * 100) / 100;
+export function roundMoney(value: number | string | unknown): number {
+    const num = toNumber(value);
+    return Math.round(num * 100) / 100;
 }
 
