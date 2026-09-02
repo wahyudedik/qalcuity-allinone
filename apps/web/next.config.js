@@ -60,16 +60,6 @@ const nextConfig = {
     experimental: {
         optimizePackageImports: ["lucide-react"],
     },
-    // Exclude native Node.js modules from webpack bundling.
-    // ioredis uses `node:diagnostics_channel` which webpack cannot handle.
-    // NOTE: `serverExternalPackages` is NOT valid in Next.js 14.x.
-    // Using webpack externals instead for reliable server-side externalization.
-    webpack: (config, { isServer }) => {
-        if (isServer) {
-            config.externals.push('ioredis');
-        }
-        return config;
-    },
     // ─── Security Headers ──────────────────────────────────────────────────────
     // See: docs/SECURITY.md — H02 (CSP) & H03 (CORS)
     headers: async () => [

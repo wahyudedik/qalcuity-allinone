@@ -2,9 +2,8 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextFetchEvent } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/lib/middleware-rate-limit";
 import { getRateLimitRule } from "@/lib/rate-limit-config";
-import { hasFeature, checkLimit } from "@/lib/entitlement";
 import type { FeatureKey } from "@/lib/entitlements-config";
 
 // ─── Security Headers ─────────────────────────────────────────────────────────
