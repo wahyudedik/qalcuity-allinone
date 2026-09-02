@@ -6,7 +6,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { DEFAULT_WORKFLOWS } from '@qalcuity/workflow';
@@ -47,13 +46,13 @@ export async function POST(request: Request) {
             }
 
             // Create default workflows for this tenant
-            const workflows: Prisma.WorkflowDefinitionCreateManyInput[] = Object.entries(DEFAULT_WORKFLOWS).map(
+            const workflows = Object.entries(DEFAULT_WORKFLOWS).map(
                 ([entityType, config]) => ({
                     tenantId: tenant.id,
                     entityType: entityType.toUpperCase(),
                     name: `${entityType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())} Workflow`,
                     description: null,
-                    config: config as unknown as Prisma.InputJsonValue,
+                    config: JSON.parse(JSON.stringify(config)),
                     isSystem: true,
                     isActive: true,
                 })
