@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from '@/lib/i18n'
 import { getInitials } from '@/lib/utils'
-import { Mail, Shield, Crown, User, Eye, Search, Loader2, Pencil, Trash2, X, ChevronDown } from 'lucide-react'
+import { Mail, User, Eye, Search, Loader2, Pencil, Trash2, X, ChevronDown } from 'lucide-react'
 
 type TeamMember = {
     id: string
@@ -17,9 +17,10 @@ type TeamMember = {
     joinedAt: string
 }
 
+// SECURITY: SuperAdmin and Owner roles are EXCLUDED from tenant settings.
+// SuperAdmin is exclusively for platform owner (info@qalcuity.com) — assigned via database only.
+// Tenant admins can only manage: Admin, Member, Viewer roles.
 const roles = [
-    { id: 'superadmin', icon: Crown, color: 'text-purple-600 bg-purple-100' },
-    { id: 'owner', icon: Shield, color: 'text-red-600 bg-red-100' },
     { id: 'admin', icon: User, color: 'text-blue-600 bg-blue-100' },
     { id: 'member', icon: User, color: 'text-green-600 bg-green-100' },
     { id: 'viewer', icon: Eye, color: 'text-gray-600 bg-gray-100' },
@@ -419,7 +420,7 @@ export default function TeamSettingsPage() {
                                     onChange={(e) => setInviteRole(e.target.value)}
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                                 >
-                                    <option value="superadmin">{t('settings.superadmin') || 'Super Admin'}</option>
+                                    {/* SECURITY: SuperAdmin removed — platform owner only, assigned via database */}
                                     <option value="admin">{t('settings.admin') || 'Admin'}</option>
                                     <option value="member">{t('settings.member') || 'Anggota'}</option>
                                     <option value="viewer">{t('settings.viewer') || 'Pengamat'}</option>
@@ -479,7 +480,7 @@ export default function TeamSettingsPage() {
                                         onChange={(e) => setEditRole(e.target.value)}
                                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none"
                                     >
-                                        <option value="superadmin">{t('settings.superadmin') || 'Super Admin'}</option>
+                                        {/* SECURITY: SuperAdmin removed — platform owner only, assigned via database */}
                                         <option value="admin">{t('settings.admin') || 'Admin'}</option>
                                         <option value="member">{t('settings.member') || 'Anggota'}</option>
                                         <option value="viewer">{t('settings.viewer') || 'Pengamat'}</option>
