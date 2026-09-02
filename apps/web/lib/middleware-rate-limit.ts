@@ -12,14 +12,13 @@
  *   - redis.ts (menggunakan process.on, ioredis)
  *   - rate-limit.ts (menggunakan redis.ts, setInterval)
  *   - rate-limit-monitor.ts (menggunakan redis.ts, prisma)
+ *   - rate-limit-config.ts (unused import sebelumnya, telah dihapus)
  *
- * Hanya mengimpor dari rate-limit-config.ts (pure config, Edge-safe).
+ * File ini sepenuhnya self-contained — zero external imports.
  *
  * @see apps/web/middleware.ts
  * @see apps/web/lib/rate-limit.ts — Full-featured rate limiter untuk Node.js runtime
  */
-
-import { getRateLimitRule } from '@/lib/rate-limit-config';
 
 // ============================================================
 // In-memory Store (Edge Runtime-safe)
