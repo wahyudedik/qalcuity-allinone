@@ -1,15 +1,19 @@
 /** @type {import('next').NextConfig} */
 
 // ─── Security Headers ──────────────────────────────────────────────────────────
+const isDev = process.env.NODE_ENV !== 'production';
+
 const securityHeaders = [
     {
         key: 'Content-Security-Policy',
         // NOTE: 'unsafe-inline' for script-src is required by Next.js for inline hydration scripts.
-        // 'unsafe-eval' has been removed to strengthen XSS protection.
+        // 'unsafe-eval' is ONLY allowed in development mode — required by React Fast Refresh
+        // (react-refresh-utils/dist/runtime.js uses eval). In production, 'unsafe-eval' is
+        // excluded to strengthen XSS protection.
         // 'unsafe-inline' for style-src is required by Tailwind CSS.
         value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com",
+            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://apis.google.com`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https: blob:",
             "font-src 'self'",
