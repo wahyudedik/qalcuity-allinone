@@ -213,7 +213,7 @@ export async function disconnectRedis(): Promise<void> {
 // Graceful Shutdown
 // ============================================================
 
-if (typeof process !== 'undefined') {
+if (typeof process !== 'undefined' && typeof process.on === 'function') {
     const shutdown = async () => {
         await disconnectRedis();
         process.exit(0);
