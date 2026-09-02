@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { updateProfileSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+        const rateLimitResult = checkRateLimit(`api:settings:profile:${auth.userId}`, 100, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 })
+        }
 
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
@@ -56,24 +64,36 @@ export async function GET() {
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:settings:profile:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+        }
         const body = await request.json();
 
-        const updateData: Record<string, string> = {};
-        if (typeof body.name === 'string' && body.name.trim()) {
-            updateData.name = body.name.trim();
+        const validation = updateProfileSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
         }
-        if (typeof body.email === 'string' && body.email.trim()) {
-            updateData.email = body.email.trim();
+
+        const updateData: Record<string, string> = {};
+        if (validation.data.name !== undefined) {
+            updateData.name = validation.data.name.trim();
+        }
+        if (validation.data.email !== undefined) {
+            updateData.email = validation.data.email.trim();
         }
 
         if (Object.keys(updateData).length === 0) {
@@ -100,9 +120,6 @@ export async function PUT(request: Request) {
         return NextResponse.json({ success: true, data: user });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

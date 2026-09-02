@@ -16,7 +16,7 @@ export async function GET() {
             })),
         });
     } catch (error) {
-        console.error('Error fetching plans:', error);
+        console.error('Error fetching plans:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengambil data paket' },
             { status: 500 }

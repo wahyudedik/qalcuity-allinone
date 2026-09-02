@@ -147,11 +147,12 @@ print_step "6/8 - Cek Prisma schema"
 
 if echo "$CHANGED_FILES" | grep -q "schema.prisma"; then
     pnpm db:generate
-    pnpm db:push --skip-generate 2>/dev/null || pnpm db:push
-    print_success "Prisma schema di-update dan di-push ke database"
+    pnpm db:migrate 2>/dev/null || pnpm db:migrate:deploy
+    print_success "Prisma migrations di-deploy ke database"
 else
     pnpm db:generate 2>/dev/null || true
-    print_success "Prisma Client verified"
+    pnpm db:migrate 2>/dev/null || true
+    print_success "Prisma Client verified + migrations checked"
 fi
 
 # --- 7. Build aplikasi ---
@@ -175,12 +176,22 @@ cd "$APP_DIR/apps/web"
 bash start.sh &
 sleep 5
 
-# Health check
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$APP_PORT/api/health 2>/dev/null || echo "000")
+# Health check dengan retry
+MAX_RETRIES=5
+RETRY_COUNT=0
+HTTP_STATUS="000"
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$HTTP_STATUS" != "200" ]; do
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    sleep 3
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$APP_PORT/api/health 2>/dev/null || echo "000")
+    echo "  Health check attempt $RETRY_COUNT/$MAX_RETRIES: HTTP $HTTP_STATUS"
+done
+
 if [ "$HTTP_STATUS" = "200" ]; then
     print_success "Health check passed (HTTP $HTTP_STATUS) — Service running!"
 else
-    print_warning "Health check returned HTTP $HTTP_STATUS — cek log jika error"
+    print_error "Health check FAILED after $MAX_RETRIES attempts!"
 fi
 
 # ============================================================

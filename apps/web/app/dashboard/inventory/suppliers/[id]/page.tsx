@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { ArrowLeft, Star, Pencil, Package, ClipboardList, Mail, Phone, MapPin, Trash2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface SupplierDetail {
     id: string
@@ -33,6 +34,7 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
     useEffect(() => {
         const fetchSupplier = async () => {
@@ -54,7 +56,10 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
     }, [params.id, t])
 
     const handleDelete = async () => {
-        if (!window.confirm(t('inventory.supplierDetail.confirmDelete'))) return
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
         try {
             const res = await fetch(`/api/inventory/suppliers/${params.id}`, { method: 'DELETE' })
             const data = await res.json()
@@ -230,7 +235,10 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-lg font-semibold text-gray-900">{t('inventory.supplierDetail.actions')}</h3>
                         <div className="mt-4 space-y-3">
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            <button
+                                onClick={() => router.push(`/dashboard/inventory/suppliers/${params.id}/edit`)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
                                 <Pencil className="h-4 w-4" />
                                 {t('inventory.supplierDetail.edit')}
                             </button>
@@ -241,7 +249,10 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                 <Package className="h-4 w-4" />
                                 {t('inventory.supplierDetail.createPO')}
                             </Link>
-                            <button className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={() => router.push('/dashboard/finance/purchase-orders')}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <ClipboardList className="h-4 w-4" />
                                 {t('inventory.supplierDetail.orderHistory')}
                             </button>
@@ -255,6 +266,18 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDelete}
+                title="Konfirmasi Hapus"
+                message={t('inventory.supplierDetail.confirmDelete')}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

@@ -3,8 +3,8 @@
 > **"Qalcuity — Business Operating System yang dapat dikonfigurasi untuk berbagai jenis industri."**
 > Bukan "Qalcuity ERP untuk perusahaan dagang."
 
-> **Last Updated:** 31 Agustus 2026
-> **Current Version:** v2.1.0 — Business Operating System + Platform Control Center
+> **Last Updated:** 1 September 2026
+> **Current Version:** v5.0.0 — Foundation Engines Implemented
 
 ---
 
@@ -978,19 +978,19 @@ Request → NextAuth (JWT) → RBAC Check → Rate Limiter → Route Handler
            ──→ @qalcuity/config          (Constants, env)
            ──→ @qalcuity/validation      (Zod schemas)
            ──→ @qalcuity/i18n            (i18n utilities)
-           ──→ @qalcuity/ui              (Design tokens)
+           ──→ @qalcuity/ui              (9 React components + theme)
+           ──→ @qalcuity/permissions     (Permission engine) [ACTIVE]
+           ──→ @qalcuity/workflow        (Workflow engine) [ACTIVE]
+           ──→ @qalcuity/industry-config (Industry config) [ACTIVE]
            ──→ @qalcuity/auth            (Auth logic) [PLANNED]
-           ──→ @qalcuity/permissions     (Permission engine) [PLANNED]
-           ──→ @qalcuity/workflow        (Workflow engine) [PLANNED]
-           ──→ @qalcuity/industry-config (Industry config) [PLANNED]
 
 @apps/mobile ──→ @qalcuity/types
-              ──→ @qalcuity/permissions [PLANNED]
+              ──→ @qalcuity/permissions [ACTIVE]
 
 @apps/desktop ──→ (Web app as renderer)
 
 @apps/platform-admin ──→ @qalcuity/db
-                       ──→ @qalcuity/permissions [PLANNED]
+                       ──→ @qalcuity/permissions [ACTIVE]
                        ──→ @qalcuity/auth [PLANNED]
 ```
 
@@ -1004,11 +1004,11 @@ Request → NextAuth (JWT) → RBAC Check → Rate Limiter → Route Handler
 | `@qalcuity/config` | ✅ Active | App constants + env config |
 | `@qalcuity/validation` | ✅ Active | Zod schemas |
 | `@qalcuity/i18n` | ✅ Active | i18n utilities |
-| `@qalcuity/ui` | ⚠️ Partial | Tokens only, no React components yet |
+| `@qalcuity/ui` | ✅ Active | 9 React components + theme system |
+| `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) |
+| `@qalcuity/workflow` | ✅ Active | Workflow engine (configurable status transitions) |
+| `@qalcuity/industry-config` | ✅ Active | Industry configuration engine |
 | `@qalcuity/auth` | 📋 Planned | Auth logic (extract from web) |
-| `@qalcuity/permissions` | 📋 Planned | Permission engine (`can()` function) |
-| `@qalcuity/workflow` | 📋 Planned | Workflow engine (configurable status transitions) |
-| `@qalcuity/industry-config` | 📋 Planned | Industry configuration engine |
 
 ---
 
@@ -2279,6 +2279,6 @@ interface CustomerSession {
 
 ---
 
-**Last Updated:** August 31, 2026
+**Last Updated:** September 1, 2026
 **Maintainer:** Qalcuity Engineering Team
-**Document Version:** 2.1 — Business Operating System Architecture + Platform Control Center
+**Document Version:** 5.0 — Foundation Engines Implemented

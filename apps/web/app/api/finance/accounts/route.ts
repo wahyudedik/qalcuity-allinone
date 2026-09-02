@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createCoAAccountSchema, updateCoAAccountSchema } from '@/lib/validation-schemas';
 
 // GET: Ambil semua akun CoA (dengan tenant isolation)
 export async function GET(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type');
         const search = searchParams.get('search');
@@ -58,12 +60,11 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[CoA GET]', error);
+        console.error('[CoA GET]', error instanceof Error ? error.message : 'Unknown error');
         const message = error instanceof Error ? error.message : 'Gagal mengambil data akun';
-        const status = message.includes('Unauthorized') ? 401 : 500;
         return NextResponse.json(
             { success: false, message },
-            { status }
+            { status: 500 }
         );
     }
 }
@@ -71,7 +72,9 @@ export async function GET(request: Request) {
 // POST: Buat akun CoA baru
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         // Validasi input dengan Zod
@@ -131,7 +134,7 @@ export async function POST(request: Request) {
             data: newAccount,
         }, { status: 201 });
     } catch (error) {
-        console.error('[CoA POST]', error);
+        console.error('[CoA POST]', error instanceof Error ? error.message : 'Unknown error');
         // Tangani error Zod validation
         if (error && typeof error === 'object' && 'issues' in error) {
             return NextResponse.json(
@@ -140,12 +143,6 @@ export async function POST(request: Request) {
             );
         }
         const message = error instanceof Error ? error.message : 'Gagal membuat akun';
-        if (message.includes('Unauthorized')) {
-            return NextResponse.json({ success: false, message }, { status: 401 });
-        }
-        if (message.includes('Forbidden')) {
-            return NextResponse.json({ success: false, message }, { status: 403 });
-        }
         return NextResponse.json(
             { success: false, message },
             { status: 500 }
@@ -156,7 +153,9 @@ export async function POST(request: Request) {
 // PUT: Perbarui akun CoA
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         const { id, ...updateData } = body;
@@ -250,7 +249,7 @@ export async function PUT(request: Request) {
             data: updated,
         });
     } catch (error) {
-        console.error('[CoA PUT]', error);
+        console.error('[CoA PUT]', error instanceof Error ? error.message : 'Unknown error');
         if (error && typeof error === 'object' && 'issues' in error) {
             return NextResponse.json(
                 { success: false, message: 'Validasi gagal', details: error },
@@ -258,12 +257,6 @@ export async function PUT(request: Request) {
             );
         }
         const message = error instanceof Error ? error.message : 'Gagal memperbarui akun';
-        if (message.includes('Unauthorized')) {
-            return NextResponse.json({ success: false, message }, { status: 401 });
-        }
-        if (message.includes('Forbidden')) {
-            return NextResponse.json({ success: false, message }, { status: 403 });
-        }
         return NextResponse.json(
             { success: false, message },
             { status: 500 }
@@ -274,7 +267,9 @@ export async function PUT(request: Request) {
 // DELETE: Hapus akun CoA
 export async function DELETE(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -337,14 +332,8 @@ export async function DELETE(request: Request) {
             data: { id },
         });
     } catch (error) {
-        console.error('[CoA DELETE]', error);
+        console.error('[CoA DELETE]', error instanceof Error ? error.message : 'Unknown error');
         const message = error instanceof Error ? error.message : 'Gagal menghapus akun';
-        if (message.includes('Unauthorized')) {
-            return NextResponse.json({ success: false, message }, { status: 401 });
-        }
-        if (message.includes('Forbidden')) {
-            return NextResponse.json({ success: false, message }, { status: 403 });
-        }
         return NextResponse.json(
             { success: false, message },
             { status: 500 }

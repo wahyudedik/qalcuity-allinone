@@ -1,0 +1,20 @@
+export default function IndustryLoading() {
+    return (
+        <div className="space-y-6">
+            <div className="animate-pulse">
+                <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-96"></div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="animate-pulse space-y-4">
+                    <div className="h-10 bg-gray-200 rounded w-full"></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}

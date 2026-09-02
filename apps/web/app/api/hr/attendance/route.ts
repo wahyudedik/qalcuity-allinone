@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:attendance:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+        }
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type') || 'today';
         const date = searchParams.get('date');
@@ -92,7 +101,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:attendance:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+        }
         const body = await request.json();
 
         if (!body.employeeId || !body.date) {
@@ -151,6 +167,9 @@ export async function POST(request: Request) {
             },
         });
 
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'AttendanceRecord', entityId: record.id, newValues: { date: record.date, status: record.status, employeeId: record.employeeId, workHours: record.workHours } as Record<string, unknown>, request });
+
         return NextResponse.json({ success: true, data: record }, { status: 201 });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -163,7 +182,9 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const body = await request.json();
         const { id, clockOut, status } = body;
 
@@ -222,7 +243,9 @@ export async function PATCH(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const { tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -285,7 +308,9 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const { tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

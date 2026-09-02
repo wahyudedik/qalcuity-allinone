@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Trash2 } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Trash2, Pencil } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface ContactDetail {
     id: string
@@ -43,6 +44,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
     useEffect(() => {
         const contactId = params?.id
@@ -67,8 +69,12 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
         fetchContact()
     }, [params?.id, t])
 
-    const handleDelete = async () => {
-        if (!window.confirm(t('crm.contactDetail.confirmDelete'))) return
+    const handleDelete = () => {
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDelete = async () => {
+        setShowDeleteConfirm(false)
         try {
             const res = await fetch(`/api/crm/contacts/${params.id}`, { method: 'DELETE' })
             const data = await res.json()
@@ -129,16 +135,25 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        {t('crm.contactDetail.edit')}
-                    </button>
+                    {canMutate && (
+                        <button
+                            onClick={() => router.push(`/dashboard/crm/contacts/${params.id}/edit`)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <Pencil className="h-4 w-4" />
+                            {t('crm.contactDetail.edit')}
+                        </button>
+                    )}
                     {canMutate && (
                         <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
                             <Trash2 className="inline h-4 w-4 mr-1" />
                             {t('crm.contactDetail.delete')}
                         </button>
                     )}
-                    <Link href="/dashboard/crm/deals" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    <Link
+                        href={`/dashboard/crm/deals?contactId=${params.id}&company=${encodeURIComponent(contact.company)}`}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    >
                         {t('crm.contactDetail.createNewDeal')}
                     </Link>
                 </div>
@@ -227,6 +242,17 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                         <p className="text-sm text-gray-600">{contact.notes}</p>
                     </div>
                 </div>
+
+                {/* Delete Confirm Dialog */}
+                <ConfirmDialog
+                    isOpen={showDeleteConfirm}
+                    onClose={() => setShowDeleteConfirm(false)}
+                    onConfirm={confirmDelete}
+                    title={t('crm.contactDetail.confirmDelete') || 'Hapus Kontak'}
+                    message={t('crm.contactDetail.confirmDelete') || 'Apakah Anda yakin ingin menghapus kontak ini?'}
+                    confirmText="Hapus"
+                    variant="danger"
+                />
             </div>
         </div>
     )

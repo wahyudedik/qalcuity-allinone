@@ -1,37 +1,23 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePermissionForRoute } from "@/lib/session";
 import { loadDemoData, tenantHasData } from "@/lib/seed-data/demo";
 
 /**
  * POST /api/demo/load
- * 
+ *
  * Loads demo data into the current user's tenant.
  * Requires authenticated user with ADMIN or SUPERADMIN role.
- * 
+ *
  * Request body (optional):
  * - force: boolean — skip the "already has data" check
  */
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user?.tenantId) {
-            return NextResponse.json(
-                { success: false, error: "Unauthorized" },
-                { status: 401 }
-            );
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
-
-        // Only ADMIN and SUPERADMIN can load demo data
-        if (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN") {
-            return NextResponse.json(
-                { success: false, error: "Hanya admin yang dapat memuat demo data" },
-                { status: 403 }
-            );
-        }
-
-        const tenantId = session.user.tenantId;
+        const { tenantId } = auth;
 
         // Check if tenant already has data (unless force=true)
         let body: { force?: boolean } = {};
@@ -71,7 +57,7 @@ export async function POST(req: Request) {
             );
         }
     } catch (error) {
-        console.error("[API /api/demo/load] Error:", error);
+        console.error("[API /api/demo/load] Error:", error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             {
                 success: false,

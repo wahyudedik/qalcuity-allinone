@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { SessionProvider } from "@/components/auth/session-provider";
 import { I18nProvider } from "@/lib/i18n";
+import { ToastProvider } from "@/components/ui/toast";
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,9 @@ export default function RootLayout({
         <html lang="id">
             <body>
                 <SessionProvider>
-                    <I18nProvider>{children}</I18nProvider>
+                    <I18nProvider>
+                        <ToastProvider>{children}</ToastProvider>
+                    </I18nProvider>
                 </SessionProvider>
             </body>
         </html>

@@ -249,9 +249,9 @@ setup_database() {
     pnpm db:generate
     print_success "Prisma Client berhasil di-generate"
 
-    # Push schema ke database
-    pnpm db:push
-    print_success "Schema berhasil di-push ke database"
+    # Deploy migrations ke database
+    pnpm db:migrate
+    print_success "Migrations berhasil di-deploy ke database"
 
     # Seed database (opsional)
     print_warning "Menjalankan seed database..."

@@ -1,19 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import {
     reconcileTransactionSchema,
     unreconcileTransactionSchema,
 } from '@/lib/validation-schemas';
 
-// GET: Ambil data rekonsiliasi (dengan tenant isolation)
+// GET: Ambil data rekonsiliasi (dengan tenant isolation + pagination)
 export async function GET(request: Request) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(request.url);
         const accountId = searchParams.get('accountId');
         const type = searchParams.get('type') || 'all';
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const skip = (page - 1) * limit;
 
         // Ambil akun bank (akun tipe ASSET dengan code 11xx)
         const bankAccounts = await prisma.coAAccount.findMany({
@@ -57,16 +62,23 @@ export async function GET(request: Request) {
             bankWhere.matchedAccountId = accountId;
         }
 
-        // Ambil transaksi bank
-        const bankTransactions = await prisma.bankTransaction.findMany({
-            where: bankWhere,
-            include: {
-                matchedAccount: {
-                    select: { id: true, code: true, name: true },
+        // Ambil transaksi bank dengan pagination
+        const [bankTransactions, bankTransactionsTotal] = await Promise.all([
+            prisma.bankTransaction.findMany({
+                where: bankWhere,
+                include: {
+                    matchedAccount: {
+                        select: { id: true, code: true, name: true },
+                    },
                 },
-            },
-            orderBy: { date: 'desc' },
-        });
+                orderBy: { date: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.bankTransaction.count({
+                where: bankWhere,
+            }),
+        ]);
 
         if (type === 'transactions') {
             // Hitung ringkasan
@@ -77,6 +89,12 @@ export async function GET(request: Request) {
             return NextResponse.json({
                 success: true,
                 data: bankTransactions,
+                pagination: {
+                    page,
+                    limit,
+                    total: bankTransactionsTotal,
+                    totalPages: Math.ceil(bankTransactionsTotal / limit),
+                },
                 meta: {
                     bankAccount: bankAccounts.find((a: any) => a.id === accountId) || bankAccounts[0],
                     summary: {
@@ -140,12 +158,11 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[Reconciliation GET]', error);
+        console.error('[Reconciliation GET]', error instanceof Error ? error.message : 'Unknown error');
         const message = error instanceof Error ? error.message : 'Gagal mengambil data rekonsiliasi';
-        const status = message.includes('Unauthorized') ? 401 : 500;
         return NextResponse.json(
             { success: false, message },
-            { status }
+            { status: 500 }
         );
     }
 }
@@ -153,7 +170,9 @@ export async function GET(request: Request) {
 // POST: Cocokkan transaksi bank dengan transaksi buku
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
         const { bankTransactionId, bookTransactionId, action } = body;
 
@@ -266,7 +285,7 @@ export async function POST(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[Reconciliation POST]', error);
+        console.error('[Reconciliation POST]', error instanceof Error ? error.message : 'Unknown error');
         if (error && typeof error === 'object' && 'issues' in error) {
             return NextResponse.json(
                 { success: false, message: 'Validasi gagal', details: error },
@@ -274,12 +293,6 @@ export async function POST(request: Request) {
             );
         }
         const message = error instanceof Error ? error.message : 'Gagal mencocokkan transaksi';
-        if (message.includes('Unauthorized')) {
-            return NextResponse.json({ success: false, message }, { status: 401 });
-        }
-        if (message.includes('Forbidden')) {
-            return NextResponse.json({ success: false, message }, { status: 403 });
-        }
         return NextResponse.json(
             { success: false, message },
             { status: 500 }
@@ -290,7 +303,9 @@ export async function POST(request: Request) {
 // PUT: Batalkan pencocokan transaksi
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const body = await request.json();
         const { bankTransactionId } = body;
 
@@ -341,7 +356,7 @@ export async function PUT(request: Request) {
             data: { bankTransactionId: validated.bankTransactionId },
         });
     } catch (error) {
-        console.error('[Reconciliation PUT]', error);
+        console.error('[Reconciliation PUT]', error instanceof Error ? error.message : 'Unknown error');
         if (error && typeof error === 'object' && 'issues' in error) {
             return NextResponse.json(
                 { success: false, message: 'Validasi gagal', details: error },
@@ -349,12 +364,6 @@ export async function PUT(request: Request) {
             );
         }
         const message = error instanceof Error ? error.message : 'Gagal membatalkan pencocokan';
-        if (message.includes('Unauthorized')) {
-            return NextResponse.json({ success: false, message }, { status: 401 });
-        }
-        if (message.includes('Forbidden')) {
-            return NextResponse.json({ success: false, message }, { status: 403 });
-        }
         return NextResponse.json(
             { success: false, message },
             { status: 500 }

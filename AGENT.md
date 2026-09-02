@@ -238,18 +238,18 @@ docs/UI_UX.md     ← Aturan UI/UX
 
 ## 5. Current Architecture Summary
 
-> **Arsitektur aktual per 30 Agustus 2026.**
+> **Arsitektur aktual per 1 September 2026.**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                     PLATFORMS                            │
 │  Web (Next.js 14)  │  Desktop (Electron)  │ Mobile (RN) │
-│  ✅ Production     │  ⚠️ Placeholder      │ ⚠️ No Auth  │
+│  ✅ Production     │  ⚠️ Placeholder      │ ✅ Auth (JWT)│
 └──────────────────────────┬──────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                    API LAYER                             │
-│  Next.js Route Handlers (35 routes, 19 files)           │
+│  Next.js Route Handlers (51+ routes, 35+ files)         │
 │  + Middleware RBAC + Zod Validation + Audit Logging      │
 └──────────────────────────┬──────────────────────────────┘
                            │
@@ -261,7 +261,7 @@ docs/UI_UX.md     ← Aturan UI/UX
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                  DATA LAYER                              │
-│  Prisma 5.15 → PostgreSQL (26 models, 57 indexes)      │
+│  Prisma 5.15 → PostgreSQL (34 models, 57+ indexes)     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -279,36 +279,45 @@ docs/UI_UX.md     ← Aturan UI/UX
 | **Validation** | Zod (14+ schemas) | ✅ Active |
 | **Monorepo** | pnpm workspaces | ✅ Active |
 | **Desktop** | Electron | ⚠️ Placeholder |
-| **Mobile** | React Native / Expo | ⚠️ Partial |
+| **Mobile** | React Native / Expo | ✅ Active (JWT auth) |
 | **i18n** | Custom provider | ✅ Active |
 
 ### Shared Packages Status
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| `@qalcuity/db` | ✅ Active | Prisma schema + migrations |
+| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (45+ models) |
 | `@qalcuity/types` | ✅ Active | Shared TypeScript types |
 | `@qalcuity/utils` | ✅ Active | Utility functions |
 | `@qalcuity/config` | ✅ Active | App constants + env config |
-| `@qalcuity/validation` | ✅ Active | Zod schemas |
+| `@qalcuity/validation` | ✅ Active | Zod schemas (14+ schemas) |
 | `@qalcuity/i18n` | ✅ Active | i18n utilities |
-| `@qalcuity/ui` | ⚠️ Partial | Tokens only, no React components |
-| `@qalcuity/api` | ❌ Not created | Mentioned but not yet implemented |
+| `@qalcuity/ui` | ✅ Active | 11 React components + theme system |
+| `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with ~90 API routes |
+| `@qalcuity/workflow` | ✅ Active | Workflow engine (state machine) — integrated with 5 entities |
+| `@qalcuity/industry-config` | ✅ Active | Industry configuration engine |
+| `@qalcuity/redis` | ✅ Active | Redis client + rate limiter (production-ready) |
 
-### Codebase Stats (Audit: 30 Agustus 2026)
+### Codebase Stats (Audit: 1 September 2026 — Updated)
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files (apps/web) | ~95+ |
-| TypeScript files (packages) | ~15 |
-| API route files | 19 |
-| API routes | 35 |
-| Pages | 22+ |
-| Prisma models | 26 |
-| Database indexes | 57 |
-| Zod schemas | 14+ |
-| i18n keys | 200+ |
+| TypeScript files (apps/web) | ~120+ |
+| TypeScript files (packages) | ~40+ |
+| API route files | 40+ |
+| API routes | 70+ |
+| Pages | 35+ |
+| Prisma models | 45+ |
+| Database indexes | 57+ |
+| Zod schemas | 16+ |
+| i18n keys | 433+ |
+| Loading states | 28+ |
 | E2E tests | 63 (63 PASS) |
+| Shared packages | 12 |
+| Foundation engine packages | 3 |
+| UI components | 11 |
+| Validation schemas (apps/web) | 14+ |
+| Rate limit configs | 3 |
 
 ---
 
@@ -530,10 +539,12 @@ Setiap API route harus:
 
 | Gap | Severity | Status |
 |-----|----------|--------|
-| Hardcoded NEXTAUTH_SECRET fallback | 🔴 High | ⚠️ Perlu fix — gunakan env var mandatory |
-| No CSP (Content-Security-Policy) headers | 🟠 Medium | ⚠️ Perlu implement |
-| No explicit CORS config | 🟠 Medium | ⚠️ Perlu konfigurasi |
-| Rate limiter in-memory only | 🟡 Low | ⚠️ Tidak suitable untuk multi-instance |
+| Hardcoded NEXTAUTH_SECRET fallback | 🔴 High | ✅ Fixed — env var mandatory, throw error di production |
+| No CSP (Content-Security-Policy) headers | 🟠 Medium | ✅ Fixed — CSP di middleware.ts + next.config.js, `unsafe-eval` removed |
+| No explicit CORS config | 🟠 Medium | ✅ Fixed — explicit CORS di middleware.ts + next.config.js |
+| Prisma logging uncontrolled | 🟡 Low | ✅ Fixed — toggle via `ENABLE_PRISMA_LOGGING` env var |
+| Rate limiter in-memory only | 🟡 Low | ✅ Fixed — Redis-backed with in-memory fallback (Batch 7D) |
+| .env in git history | 🟡 Low | ✅ Fixed — .env removed from git history, .gitignore hardened |
 
 ---
 
@@ -906,6 +917,6 @@ Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap a
 
 ---
 
-**Last Updated:** August 31, 2026
+**Last Updated:** September 1, 2026 (Improvement Sprint Complete)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 4.0 — Business Operating System Architecture
+**Document Version:** 6.0 — Improvement Sprint Complete (Batches 7A-7E)

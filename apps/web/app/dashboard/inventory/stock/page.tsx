@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Package, AlertTriangle } from 'lucide-react'
+import { Search, Plus, Package, AlertTriangle, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 type StockItem = {
@@ -45,6 +45,12 @@ export default function StockPage() {
     const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
+    const [showAdjustModal, setShowAdjustModal] = useState(false)
+    const [adjustProductId, setAdjustProductId] = useState('')
+    const [adjustQuantity, setAdjustQuantity] = useState<number>(0)
+    const [adjustReason, setAdjustReason] = useState('')
+    const [adjustSubmitting, setAdjustSubmitting] = useState(false)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
         fetchStock()
@@ -100,6 +106,43 @@ export default function StockPage() {
         out: t('inventory.stock.out'),
     }
 
+    const handleAdjustStock = async () => {
+        if (!adjustProductId || adjustQuantity === 0 || !adjustReason.trim()) return
+        setAdjustSubmitting(true)
+        try {
+            const product = stock.find(s => s.id === adjustProductId)
+            if (!product) {
+                setToast({ message: t('inventory.stock.adjustError'), type: 'error' })
+                return
+            }
+            const newStock = product.stock + adjustQuantity
+            if (newStock < 0) {
+                setToast({ message: t('inventory.stock.adjustNegative'), type: 'error' })
+                return
+            }
+            const res = await fetch(`/api/inventory/products/${adjustProductId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stock: newStock }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('inventory.stock.adjustSuccess'), type: 'success' })
+                setShowAdjustModal(false)
+                setAdjustProductId('')
+                setAdjustQuantity(0)
+                setAdjustReason('')
+                fetchStock()
+            } else {
+                setToast({ message: data.error || t('inventory.stock.adjustError'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('inventory.stock.adjustError'), type: 'error' })
+        } finally {
+            setAdjustSubmitting(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="space-y-6 p-6">
@@ -141,7 +184,10 @@ export default function StockPage() {
                     <p className="text-gray-500">{t('inventory.stock.subtitle')}</p>
                 </div>
                 {canMutate && (
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <button
+                        onClick={() => setShowAdjustModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
                         <Plus className="h-4 w-4" />
                         {t('inventory.stock.adjustStok')}
                     </button>
@@ -293,6 +339,87 @@ export default function StockPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Stock Adjustment Modal */}
+            {showAdjustModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">{t('inventory.stock.adjustStok')}</h3>
+                            <button
+                                onClick={() => setShowAdjustModal(false)}
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('inventory.stock.product')}</label>
+                                <select
+                                    value={adjustProductId}
+                                    onChange={(e) => setAdjustProductId(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    {stock.map((item) => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name} ({item.sku}) — {item.stock} {item.unit}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('inventory.stock.adjustQuantity')}</label>
+                                <input
+                                    type="number"
+                                    value={adjustQuantity || ''}
+                                    onChange={(e) => setAdjustQuantity(parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <p className="mt-1 text-xs text-gray-500">{t('inventory.stock.adjustQuantityHint')}</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('inventory.stock.adjustReason')}</label>
+                                <textarea
+                                    value={adjustReason}
+                                    onChange={(e) => setAdjustReason(e.target.value)}
+                                    placeholder={t('inventory.stock.adjustReasonPlaceholder')}
+                                    rows={3}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowAdjustModal(false)}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                            <button
+                                onClick={handleAdjustStock}
+                                disabled={adjustSubmitting || !adjustProductId || adjustQuantity === 0 || !adjustReason.trim()}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {adjustSubmitting ? t('common.loading') : t('common.save')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {toast.message}
+                    <button onClick={() => setToast(null)} className="ml-2"><X className="h-4 w-4 inline" /></button>
+                </div>
+            )}
         </div>
     )
 }

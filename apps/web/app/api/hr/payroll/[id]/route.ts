@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updatePayrollSchema, formatZodError } from '@/lib/validation-schemas';
 
@@ -9,7 +9,9 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { tenantId } = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { id } = params;
 
         const record = await prisma.payrollRecord.findFirst({
@@ -62,7 +64,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
 
@@ -92,7 +96,38 @@ export async function PUT(
         if (validatedData.allowances !== undefined) data.allowances = validatedData.allowances;
         if (validatedData.deductions !== undefined) data.deductions = validatedData.deductions;
         if (validatedData.bonus !== undefined) data.bonus = validatedData.bonus;
-        if (validatedData.status !== undefined) data.status = validatedData.status.toUpperCase();
+        if (validatedData.status !== undefined) {
+            const newStatus = validatedData.status.toUpperCase();
+            const currentStatus = existing.status;
+            if (newStatus !== currentStatus) {
+                try {
+                    const { canTransitionSafe, logWorkflowHistory } = await import('@/lib/workflow');
+                    const isValid = canTransitionSafe('PAYROLL', currentStatus, newStatus, tenantId);
+                    if (!isValid) {
+                        return NextResponse.json(
+                            { success: false, error: `Transisi status tidak valid: ${currentStatus} → ${newStatus}` },
+                            { status: 400 }
+                        );
+                    }
+                    // Log workflow history dengan backward compatibility
+                    await logWorkflowHistory({
+                        tenantId,
+                        entityType: 'PAYROLL',
+                        entityId: id,
+                        fromState: currentStatus,
+                        toState: newStatus,
+                        action: newStatus.toLowerCase(),
+                        userId,
+                        notes: validatedData.notes || null,
+                    });
+                } catch (workflowError: unknown) {
+                    // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan status
+                    const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
+                    console.warn(`[Workflow] Payroll workflow validation gagal, mengizinkan transisi: ${msg}`);
+                }
+            }
+            data.status = newStatus;
+        }
         if (validatedData.notes !== undefined) data.notes = validatedData.notes;
 
         // Recalculate netSalary if any compensation field changed
@@ -122,9 +157,6 @@ export async function PUT(
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -134,7 +166,9 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
         const { id } = params;
 
         const existing = await prisma.payrollRecord.findFirst({
@@ -163,9 +197,6 @@ export async function DELETE(
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

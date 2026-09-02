@@ -56,7 +56,44 @@
         "darkMode": "Dark Mode",
         "lightMode": "Light Mode",
         "switchToLight": "Switch to light mode",
-        "switchToDark": "Switch to dark mode"
+        "switchToDark": "Switch to dark mode",
+        "paymentNotifications": "Payment Notifications",
+        "noNewNotifications": "No new notifications",
+        "viewAllPayments": "View All Payments",
+        "tryAgain": "Try Again",
+        "errorOccurred": "An Error Occurred",
+        "errorDefaultDescription": "Sorry, an error occurred while loading data. Please try again.",
+        "comingSoon": "Coming Soon"
+    },
+    "errors": {
+        "hr": {
+            "title": "HR Module Error",
+            "description": "An error occurred while loading HR data. Please try again."
+        },
+        "finance": {
+            "title": "Finance Module Error",
+            "description": "An error occurred while loading finance data. Please try again."
+        },
+        "crm": {
+            "title": "CRM Module Error",
+            "description": "An error occurred while loading CRM data. Please try again."
+        },
+        "inventory": {
+            "title": "Inventory Module Error",
+            "description": "An error occurred while loading inventory data. Please try again."
+        },
+        "settings": {
+            "title": "Settings Module Error",
+            "description": "An error occurred while loading settings. Please try again."
+        },
+        "reports": {
+            "title": "Reports Module Error",
+            "description": "An error occurred while loading report data. Please try again."
+        },
+        "analytics": {
+            "title": "Analytics Error",
+            "description": "An error occurred while loading analytics data. Please try again."
+        }
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -91,7 +128,12 @@
         "notifications": "Notifications",
         "integrations": "Integrations",
         "billing": "Billing",
-        "auditTrail": "Audit Trail"
+        "auditTrail": "Audit Trail",
+        "analytics": "Analytics",
+        "dataExplorer": "Data Explorer",
+        "kpi": "KPI",
+        "savedReports": "Saved Reports",
+        "alerts": "Alerts"
     },
     "dashboard": {
         "welcome": "Welcome back! Here's a summary of your business today.",
@@ -540,6 +582,7 @@
             "differenceDesc": "Needs reconciliation",
             "searchPlaceholder": "Search transactions...",
             "allTypes": "All Types",
+            "type": "Type",
             "income": "Income",
             "expense": "Expense",
             "noDataAllMatched": "All transactions are matched",
@@ -846,7 +889,15 @@
             "noData": "No stock data found",
             "error": "Failed to load stock data",
             "errorHint": "An error occurred while loading data",
-            "retry": "Try Again"
+            "retry": "Try Again",
+            "product": "Product",
+            "adjustQuantity": "Adjustment Quantity",
+            "adjustQuantityHint": "Enter positive to add, negative to subtract",
+            "adjustReason": "Reason",
+            "adjustReasonPlaceholder": "Enter reason for stock adjustment...",
+            "adjustSuccess": "Stock adjusted successfully",
+            "adjustError": "Failed to adjust stock",
+            "adjustNegative": "Stock cannot be negative"
         },
         "categories": {
             "title": "Product Categories",
@@ -938,7 +989,9 @@
             "delete": "Delete",
             "confirmDelete": "Are you sure you want to delete this product? This action cannot be undone.",
             "deleteSuccess": "Product deleted successfully",
-            "deleteError": "Failed to delete product"
+            "deleteError": "Failed to delete product",
+            "updateSuccess": "Product updated successfully",
+            "updateError": "Failed to update product"
         },
         "supplierDetail": {
             "backToSuppliers": "Back to Suppliers",
@@ -1148,7 +1201,10 @@
             "endDate": "End Date",
             "days": "Days",
             "payroll": "Payroll",
-            "netSalary": "Net Salary"
+            "netSalary": "Net Salary",
+            "name": "Name",
+            "updateSuccess": "Employee profile updated successfully",
+            "updateError": "Failed to update employee profile"
         }
     },
     "settings": {
@@ -1772,5 +1828,552 @@
             "totalSpending": "Total Spending",
             "emptyState": "No supplier data yet"
         }
+    },
+    "analytics": {
+        "layout": {
+            "tabs": {
+                "overview": "Overview",
+                "explorer": "Explorer",
+                "charts": "Charts",
+                "dashboards": "Dashboards",
+                "kpi": "KPI",
+                "reports": "Reports",
+                "dictionary": "Dictionary",
+                "history": "History",
+                "scheduled": "Scheduled",
+                "alerts": "Alerts"
+            }
+        },
+        "overview": {
+            "title": "Analytics Workspace",
+            "subtitle": "Real-time insights across your business",
+            "totalQueries": "Total Queries",
+            "savedCharts": "Saved Charts",
+            "activeDashboards": "Active Dashboards",
+            "totalKPIs": "Total KPIs",
+            "recentQueries": "Recent Queries",
+            "viewAll": "View All",
+            "noQueries": "No recent queries",
+            "newQuery": "New Query",
+            "newChart": "New Chart",
+            "newDashboard": "New Dashboard"
+        },
+        "charts": {
+            "title": "Charts",
+            "subtitle": "Manage and visualize your data with interactive charts",
+            "create": "Create Chart",
+            "revenueTrend": "Revenue Trend",
+            "expenseTrend": "Expense Trend",
+            "cashFlowTrend": "Cash Flow Trend",
+            "empty": {
+                "title": "No Charts Yet",
+                "description": "Create your first chart to start visualizing your data."
+            },
+            "types": {
+                "bar": "Bar Chart",
+                "line": "Line Chart",
+                "pie": "Pie Chart",
+                "donut": "Donut Chart",
+                "area": "Area Chart",
+                "scatter": "Scatter Plot",
+                "heatmap": "Heatmap",
+                "kpi_card": "KPI Card",
+                "table": "Table"
+            },
+            "deleteConfirm": "Are you sure you want to delete this chart?"
+        },
+        "dashboards": {
+            "title": "Dashboards",
+            "subtitle": "Create and manage custom dashboards with widgets",
+            "create": "Create Dashboard",
+            "widgets": "widgets",
+            "empty": {
+                "title": "No Dashboards Yet",
+                "description": "Create your first dashboard to start organizing your analytics."
+            },
+            "default": "Default",
+            "template": "Template",
+            "deleteConfirm": "Are you sure you want to delete this dashboard?"
+        },
+        "dictionary": {
+            "title": "Data Dictionary",
+            "subtitle": "Browse metrics, dimensions, and data definitions across your modules",
+            "searchPlaceholder": "Search metrics, dimensions...",
+            "categories": {
+                "all": "All Categories",
+                "finance": "Finance",
+                "sales": "Sales",
+                "inventory": "Inventory",
+                "hr": "HR",
+                "crm": "CRM"
+            },
+            "types": {
+                "metric": "Metric",
+                "dimension": "Dimension",
+                "measure": "Measure",
+                "dataset": "Dataset",
+                "field": "Field"
+            },
+            "fields": {
+                "definition": "Definition",
+                "technicalDef": "Technical Definition",
+                "source": "Source",
+                "formula": "Formula",
+                "freshness": "Freshness",
+                "reliability": "Reliability",
+                "owner": "Owner"
+            },
+            "freshness": {
+                "REALTIME": "Real-time",
+                "HOURLY": "Hourly",
+                "DAILY": "Daily",
+                "WEEKLY": "Weekly"
+            },
+            "reliability": {
+                "HIGH": "High",
+                "MEDIUM": "Medium",
+                "LOW": "Low"
+            },
+            "empty": {
+                "title": "No Entries Found",
+                "description": "No data dictionary entries match your search."
+            }
+        },
+        "history": {
+            "title": "Query History",
+            "subtitle": "View and manage your past query executions",
+            "rerun": "Rerun",
+            "duplicate": "Duplicate",
+            "sql": "SQL",
+            "executionTime": "Execution Time",
+            "rowsReturned": "Rows Returned",
+            "status": {
+                "SUCCESS": "Success",
+                "FAILED": "Failed",
+                "TIMEOUT": "Timeout",
+                "BLOCKED": "Blocked"
+            },
+            "types": {
+                "SQL": "SQL",
+                "VISUAL": "Visual",
+                "AI": "AI",
+                "DASHBOARD": "Dashboard",
+                "KPI": "KPI"
+            },
+            "empty": {
+                "title": "No Query History",
+                "description": "Your query execution history will appear here."
+            },
+            "fromCache": "From Cache",
+            "deleteConfirm": "Are you sure you want to delete this history entry?"
+        },
+        "scheduled": {
+            "title": "Scheduled Queries",
+            "subtitle": "Manage automated query executions and reports",
+            "create": "Create Schedule",
+            "frequency": "Frequency",
+            "nextRun": "Next Run",
+            "lastRun": "Last Run",
+            "lastStatus": "Last Status",
+            "runCount": "Run Count",
+            "active": "Active",
+            "paused": "Paused",
+            "frequencies": {
+                "daily": "Daily",
+                "weekly": "Weekly",
+                "monthly": "Monthly",
+                "quarterly": "Quarterly"
+            },
+            "empty": {
+                "title": "No Scheduled Queries",
+                "description": "Create your first scheduled query to automate data analysis."
+            },
+            "deleteConfirm": "Are you sure you want to delete this scheduled query?"
+        },
+        "topMetrics": {
+            "title": "Top Metrics"
+        },
+        "metrics": {
+            "winRate": "Win Rate",
+            "pipeline": "Pipeline Value",
+            "headcount": "Headcount",
+            "stockValue": "Stock Value",
+            "revenue": "Revenue",
+            "expenses": "Expenses",
+            "netIncome": "Net Income",
+            "cashFlow": "Cash Flow",
+            "attendanceRate": "Attendance Rate",
+            "conversionRate": "Conversion Rate"
+        },
+        "quickActions": {
+            "title": "Quick Actions"
+        },
+        "actions": {
+            "explorer": "Data Explorer",
+            "kpi": "KPI Builder",
+            "reports": "Reports",
+            "alerts": "Alerts",
+            "createReport": "Create New Report"
+        },
+        "errors": {
+            "loadFailed": "Failed to Load Analytics",
+            "queryFailed": "Failed to Execute Query",
+            "saveFailed": "Failed to Save",
+            "deleteFailed": "Failed to Delete",
+            "networkError": "A network error occurred",
+            "unknownError": "An unknown error occurred"
+        },
+        "common": {
+            "loading": "Loading...",
+            "refresh": "Refresh",
+            "export": "Export",
+            "save": "Save",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "edit": "Edit",
+            "create": "Create",
+            "search": "Search...",
+            "noData": "No data",
+            "rows": "rows",
+            "executionTime": "execution time",
+            "generatedAt": "generated at",
+            "totalRows": "Total Rows",
+            "appliedFilters": "Applied Filters",
+            "clearAll": "Clear All",
+            "selectDataset": "Select Dataset",
+            "name": "Name",
+            "description": "Description",
+            "tags": "Tags",
+            "createdAt": "Created",
+            "updatedAt": "Updated",
+            "owner": "Owner",
+            "type": "Type",
+            "status": "Status",
+            "active": "Active",
+            "inactive": "Inactive",
+            "all": "All",
+            "actions": "Actions",
+            "confirmDelete": "Are you sure you want to delete this item?",
+            "close": "Close",
+            "back": "Back",
+            "next": "Next",
+            "previous": "Previous",
+            "lastUpdated": "Last Updated",
+            "never": "Never"
+        },
+        "periods": {
+            "daily": "Daily",
+            "weekly": "Weekly",
+            "monthly": "Monthly",
+            "quarterly": "Quarterly",
+            "yearly": "Yearly"
+        },
+        "explorer": {
+            "title": "Data Explorer",
+            "subtitle": "Explore and analyze your data with a point-and-click interface",
+            "dataset": "Dataset",
+            "dimensions": "Dimensions",
+            "measures": "Measures",
+            "filters": "Filters",
+            "addFilter": "Add Filter",
+            "analyze": "Analyze",
+            "results": "Results",
+            "saveReport": "Save Report",
+            "saveAsReport": "Save as Report",
+            "empty": {
+                "title": "Configure & Analyze",
+                "description": "Select a dataset, choose dimensions and measures, then click Analyze to explore your data."
+            },
+            "error": {
+                "queryFailed": "Failed to execute query. Please try again."
+            },
+            "filterOperators": {
+                "equals": "Equals",
+                "not_equals": "Not equals",
+                "greater_than": "Greater than",
+                "less_than": "Less than",
+                "contains": "Contains",
+                "not_contains": "Does not contain"
+            },
+            "datasets": {
+                "invoices": "Sales Invoices",
+                "payments": "Payments",
+                "contacts": "Contacts",
+                "deals": "Deals",
+                "products": "Products",
+                "stockMovements": "Stock Movements",
+                "employees": "Employees",
+                "attendance": "Attendance",
+                "leads": "Leads",
+                "purchaseOrders": "Purchase Orders",
+                "quotations": "Quotations",
+                "leaves": "Leaves",
+                "payroll": "Payroll",
+                "categories": "Categories",
+                "suppliers": "Suppliers"
+            },
+            "export": {
+                "csv": "Export CSV",
+                "excel": "Export Excel",
+                "print": "Print"
+            }
+        },
+        "kpi": {
+            "title": "KPI Management",
+            "subtitle": "Track and manage your Key Performance Indicators",
+            "create": "Create KPI",
+            "createTitle": "Create New KPI",
+            "editTitle": "Edit KPI",
+            "revenue": "Revenue",
+            "expenses": "Expenses",
+            "netIncome": "Net Income",
+            "cashFlow": "Cash Flow",
+            "empty": {
+                "title": "No KPIs Yet",
+                "description": "Create your first KPI to start tracking performance metrics."
+            },
+            "form": {
+                "name": "Name",
+                "description": "Description",
+                "category": "Category",
+                "metric": "Metric",
+                "target": "Target",
+                "direction": "Direction",
+                "period": "Period",
+                "warningThreshold": "Warning Threshold",
+                "criticalThreshold": "Critical Threshold"
+            },
+            "categories": {
+                "finance": "Finance",
+                "sales": "Sales",
+                "inventory": "Inventory",
+                "hr": "HR",
+                "crm": "CRM",
+                "cross_module": "Cross-Module"
+            },
+            "statuses": {
+                "above_target": "Above Target",
+                "on_target": "On Target",
+                "below_target": "Below Target",
+                "no_data": "No Data"
+            },
+            "periods": {
+                "daily": "Daily",
+                "weekly": "Weekly",
+                "monthly": "Monthly",
+                "quarterly": "Quarterly",
+                "yearly": "Yearly"
+            },
+            "directions": {
+                "gte": "≥ Greater than",
+                "lte": "≤ Less than"
+            },
+            "deleteConfirm": "Are you sure you want to delete this KPI?"
+        },
+        "reports": {
+            "title": "Saved Reports",
+            "subtitle": "Manage and run your saved analytics reports",
+            "create": "Create Report",
+            "run": "Run",
+            "edit": "Edit",
+            "share": "Share",
+            "star": "Favorite",
+            "unstar": "Remove Favorite",
+            "folder": "Folder",
+            "goToExplorer": "Go to Data Explorer",
+            "empty": {
+                "title": "No Saved Reports",
+                "description": "Create your first analysis from Data Explorer and save it here."
+            },
+            "tabs": {
+                "all": "All",
+                "starred": "Starred",
+                "folders": "Folders"
+            },
+            "types": {
+                "chart": "Chart",
+                "pivot": "Pivot",
+                "query": "Query",
+                "dashboard": "Dashboard",
+                "report": "Report"
+            },
+            "lastRun": "Last Run"
+        },
+        "alerts": {
+            "title": "Data Alerts",
+            "subtitle": "Monitor metrics and get notified when thresholds are breached",
+            "create": "Create Alert",
+            "createTitle": "Create Alert Rule",
+            "editTitle": "Edit Alert Rule",
+            "active": "Active Alerts",
+            "rules": "Alert Rules",
+            "history": "Alert History",
+            "acknowledge": "Acknowledge",
+            "acknowledged": "Acknowledged",
+            "empty": {
+                "title": "No Alert Rules",
+                "description": "Create your first alert rule to get notified when metrics cross thresholds."
+            },
+            "form": {
+                "name": "Name",
+                "description": "Description",
+                "metric": "Metric",
+                "condition": "Condition",
+                "threshold": "Threshold",
+                "severity": "Severity",
+                "cooldown": "Cooldown (min)",
+                "channels": "Notification Channels",
+                "recipients": "Recipients"
+            },
+            "conditions": {
+                "below": "Below threshold",
+                "above": "Above threshold",
+                "equals": "Equals",
+                "not_equals": "Not equals",
+                "changes_by": "Changes by %"
+            },
+            "severities": {
+                "low": "Low",
+                "medium": "Medium",
+                "high": "High",
+                "critical": "Critical"
+            },
+            "deleteConfirm": "Are you sure you want to delete this alert rule?"
+        },
+        "datasets": {
+            "invoices": {
+                "name": "Sales Invoices",
+                "dimensions": {
+                    "date": "Date",
+                    "status": "Status",
+                    "customer": "Customer",
+                    "dueDate": "Due Date"
+                },
+                "measures": {
+                    "invoice_total": "Invoice Total",
+                    "tax_amount": "Tax Amount",
+                    "invoice_count": "Invoice Count",
+                    "avg_invoice": "Average Invoice"
+                }
+            },
+            "payments": {
+                "name": "Payments",
+                "dimensions": {
+                    "date": "Date",
+                    "method": "Method",
+                    "status": "Status"
+                },
+                "measures": {
+                    "payment_total": "Payment Total",
+                    "payment_count": "Payment Count",
+                    "avg_payment": "Average Payment"
+                }
+            },
+            "contacts": {
+                "name": "Contacts",
+                "dimensions": {
+                    "type": "Type",
+                    "createdAt": "Created Date",
+                    "company": "Company"
+                },
+                "measures": {
+                    "contact_count": "Contact Count"
+                }
+            },
+            "deals": {
+                "name": "Deals",
+                "dimensions": {
+                    "stage": "Stage",
+                    "createdAt": "Created Date",
+                    "contact": "Contact"
+                },
+                "measures": {
+                    "deal_count": "Deal Count",
+                    "deal_value": "Deal Value",
+                    "avg_deal": "Average Deal"
+                }
+            },
+            "products": {
+                "name": "Products",
+                "dimensions": {
+                    "category": "Category",
+                    "supplier": "Supplier",
+                    "status": "Status"
+                },
+                "measures": {
+                    "product_count": "Product Count",
+                    "stock_value": "Stock Value",
+                    "avg_price": "Average Price"
+                }
+            },
+            "employees": {
+                "name": "Employees",
+                "dimensions": {
+                    "department": "Department",
+                    "position": "Position",
+                    "status": "Status"
+                },
+                "measures": {
+                    "employee_count": "Employee Count"
+                }
+            },
+            "attendance": {
+                "name": "Attendance",
+                "dimensions": {
+                    "date": "Date",
+                    "status": "Status",
+                    "employee": "Employee"
+                },
+                "measures": {
+                    "attendance_count": "Attendance Count",
+                    "late_count": "Late Count",
+                    "attendance_rate": "Attendance Rate"
+                }
+            }
+        }
+    },
+    "platform": {
+        "dashboard": "Dashboard",
+        "tenants": "Tenants",
+        "billingPlans": "Billing & Plans",
+        "monitoring": "Monitoring",
+        "support": "Support",
+        "security": "Security",
+        "settings": "Settings",
+        "platformAdmin": "Platform Admin",
+        "customerDashboard": "Customer Dashboard"
+    },
+    "search": {
+        "placeholder": "Search invoices, deals, contacts, products...",
+        "searching": "Searching...",
+        "noResults": "No results for",
+        "minChars": "Type at least 2 characters to start searching",
+        "navigate": "navigate",
+        "open": "open",
+        "close": "close"
+    },
+    "onboarding": {
+        "welcome": "Welcome to Qalcuity!",
+        "description": "Start with demo data to explore all features, or start fresh with your own data.",
+        "loadDemo": "Load Demo Data",
+        "demoDescription": "15 products, 20 contacts, 10 invoices, 12 employees, and more",
+        "startFresh": "Start from Scratch",
+        "freshDescription": "Clear workspace and add your own data",
+        "hint": "You can always load demo data later from the Settings menu.",
+        "loadingDemo": "Loading Demo Data",
+        "preparingData": "Preparing demo data...",
+        "loadingCategories": "Loading categories & products...",
+        "demoLoaded": "Demo data loaded successfully!",
+        "demoFailed": "Failed to load data:",
+        "error": "An error occurred. Please try again."
+    },
+    "ai": {
+        "welcomeMessage": "Hello! I'm the Qalcuity AI Assistant. I can help you with:\n\n• Displaying sales data\n• Creating invoices\n• Analyzing profit & loss\n• Providing business insights\n\nHow can I help you?",
+        "askSomething": "Ask something...",
+        "errorContacting": "Failed to contact AI service",
+        "errorProcessing": "Sorry, an error occurred while processing your request. Please try again.",
+        "penjualan": "Sales",
+        "invoice": "Invoice",
+        "profit": "Profit"
     }
 }

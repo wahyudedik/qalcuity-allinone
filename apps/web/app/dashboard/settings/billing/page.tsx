@@ -18,6 +18,10 @@ import {
     Send,
     Eye,
     Copy,
+    Shield,
+    BarChart3,
+    Zap,
+    Lock,
 } from 'lucide-react'
 
 interface SubscriptionPlan {
@@ -68,6 +72,101 @@ interface TenantSubscription {
     trialEndsAt: string | null
 }
 
+interface EntitlementFeature {
+    id: string
+    featureKey: string
+    enabled: boolean
+    limit: number | null
+}
+
+interface EntitlementPlan {
+    id: string
+    name: string
+    slug: string
+    priceMonthly: number
+    priceYearly: number | null
+    maxUsers: number
+    maxStorage: number | null
+    features: EntitlementFeature[]
+}
+
+interface EntitlementData {
+    id: string
+    tenantId: string
+    planId: string
+    billingCycle: string
+    status: string
+    trialEndsAt: string | null
+    currentPeriodStart: string
+    currentPeriodEnd: string
+    plan: EntitlementPlan
+}
+
+interface UsageStats {
+    [featureKey: string]: number
+}
+
+const FEATURE_GROUPS: Record<string, { label: string; features: string[] }> = {
+    finance: {
+        label: 'Finance',
+        features: ['finance.invoices', 'finance.payments', 'finance.purchase-orders', 'finance.journal-entries', 'finance.reports', 'finance.reconciliation'],
+    },
+    crm: {
+        label: 'CRM',
+        features: ['crm.contacts', 'crm.leads', 'crm.deals', 'crm.pipeline'],
+    },
+    inventory: {
+        label: 'Inventory',
+        features: ['inventory.products', 'inventory.stock', 'inventory.suppliers', 'inventory.categories'],
+    },
+    hr: {
+        label: 'HR',
+        features: ['hr.employees', 'hr.attendance', 'hr.leaves', 'hr.payroll'],
+    },
+    ai: {
+        label: 'AI Features',
+        features: ['ai.chat', 'ai.document-extraction', 'ai.predictions'],
+    },
+    integrations: {
+        label: 'Integrations',
+        features: ['integration.whatsapp', 'integration.email', 'integration.payment'],
+    },
+    platform: {
+        label: 'Platform',
+        features: ['platform.admin', 'platform.billing', 'platform.monitoring'],
+    },
+}
+
+const FEATURE_LABELS: Record<string, string> = {
+    'finance.invoices': 'Invoices',
+    'finance.payments': 'Payments',
+    'finance.purchase-orders': 'Purchase Orders',
+    'finance.journal-entries': 'Journal Entries',
+    'finance.reports': 'Finance Reports',
+    'finance.reconciliation': 'Reconciliation',
+    'crm.contacts': 'Contacts',
+    'crm.leads': 'Leads',
+    'crm.deals': 'Deals',
+    'crm.pipeline': 'Pipeline',
+    'inventory.products': 'Products',
+    'inventory.stock': 'Stock Management',
+    'inventory.suppliers': 'Suppliers',
+    'inventory.categories': 'Categories',
+    'hr.employees': 'Employees',
+    'hr.attendance': 'Attendance',
+    'hr.leaves': 'Leave Management',
+    'hr.payroll': 'Payroll',
+    'ai.chat': 'AI Chat',
+    'ai.document-extraction': 'Document Extraction',
+    'ai.predictions': 'Predictions',
+    'integration.whatsapp': 'WhatsApp Integration',
+    'integration.email': 'Email Integration',
+    'integration.payment': 'Payment Integration',
+    'platform.admin': 'Platform Admin',
+    'platform.billing': 'Billing Management',
+    'platform.monitoring': 'Monitoring',
+}
+
 const BANK_ACCOUNTS = [
     { bank: 'BRI', number: '2118 0100 8728 508' },
     { bank: 'JAGO', number: '106818913479' },
@@ -99,6 +198,8 @@ export default function BillingSettingsPage() {
     const [subscription, setSubscription] = useState<Subscription | null>(null)
     const [tenantSub, setTenantSub] = useState<TenantSubscription | null>(null)
     const [payments, setPayments] = useState<BillingPayment[]>([])
+    const [entitlement, setEntitlement] = useState<EntitlementData | null>(null)
+    const [usage, setUsage] = useState<UsageStats>({})
     const [loading, setLoading] = useState(true)
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
     const [showPaymentForm, setShowPaymentForm] = useState(false)
@@ -120,15 +221,19 @@ export default function BillingSettingsPage() {
     const fetchData = useCallback(async () => {
         try {
             setLoading(true)
-            const [plansRes, subRes, paymentsRes] = await Promise.all([
+            const [plansRes, subRes, paymentsRes, entitlementRes, usageRes] = await Promise.all([
                 fetch('/api/billing/plans'),
                 fetch('/api/billing/subscription'),
                 fetch('/api/billing/payments'),
+                fetch('/api/billing/entitlement'),
+                fetch('/api/billing/usage'),
             ])
 
             const plansData = await plansRes.json()
             const subData = await subRes.json()
             const paymentsData = await paymentsRes.json()
+            const entitlementData = await entitlementRes.json()
+            const usageData = await usageRes.json()
 
             if (plansData.success) setPlans(plansData.data)
             if (subData.success) {
@@ -136,6 +241,8 @@ export default function BillingSettingsPage() {
                 setTenantSub(subData.data.tenant)
             }
             if (paymentsData.success) setPayments(paymentsData.data)
+            if (entitlementData.success) setEntitlement(entitlementData.data)
+            if (usageData.success) setUsage(usageData.data || {})
         } catch {
             console.error('Error fetching billing data')
         } finally {
@@ -325,7 +432,111 @@ export default function BillingSettingsPage() {
                 </div>
             </div>
 
-            {/* Section 2: Plan Selection */}
+            {/* Section 2: Entitlement Features & Usage */}
+            {entitlement && (
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">{t('settings.billing.featureAccess')}</h2>
+                            <p className="text-sm text-gray-600 mt-1">
+                                {t('settings.billing.currentPlan')}: <span className="font-medium text-gray-900">{entitlement.plan.name}</span>
+                                {entitlement.status === 'trial' && entitlement.trialEndsAt && (
+                                    <span className="ml-2 text-blue-600">
+                                        ({t('settings.billing.trialEnds')} {formatDate(entitlement.trialEndsAt)})
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${entitlement.status === 'active' ? 'bg-green-100 text-green-700' : entitlement.status === 'trial' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                                {entitlement.status === 'active' ? <CheckCircle className="w-4 h-4" /> : entitlement.status === 'trial' ? <Clock className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                                {entitlement.status === 'active' ? t('settings.billing.statusActive') : entitlement.status === 'trial' ? t('settings.billing.statusTrial') : entitlement.status}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Plan Limits Summary */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">{t('settings.billing.maxUsers')}</div>
+                            <div className="text-lg font-bold text-gray-900 mt-1">
+                                {entitlement.plan.maxUsers === -1 ? t('settings.billing.unlimited') : entitlement.plan.maxUsers}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">{t('settings.billing.storage')}</div>
+                            <div className="text-lg font-bold text-gray-900 mt-1">
+                                {entitlement.plan.maxStorage ? `${entitlement.plan.maxStorage} MB` : '-'}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">{t('settings.billing.billingCycle')}</div>
+                            <div className="text-lg font-bold text-gray-900 mt-1 capitalize">{entitlement.billingCycle}</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">{t('settings.billing.periodEnd')}</div>
+                            <div className="text-lg font-bold text-gray-900 mt-1">{formatDate(entitlement.currentPeriodEnd)}</div>
+                        </div>
+                    </div>
+
+                    {/* Feature Groups */}
+                    <div className="space-y-5">
+                        {Object.entries(FEATURE_GROUPS).map(([groupKey, group]) => (
+                            <div key={groupKey}>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Shield className="w-4 h-4 text-gray-400" />
+                                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{group.label}</h3>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    {group.features.map((featureKey) => {
+                                        const feature = entitlement.plan.features.find((f) => f.featureKey === featureKey)
+                                        const isEnabled = feature?.enabled ?? false
+                                        const limit = feature?.limit ?? null
+                                        const used = usage[featureKey] ?? 0
+
+                                        return (
+                                            <div
+                                                key={featureKey}
+                                                className={`flex items-center justify-between p-3 rounded-lg border ${isEnabled ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {isEnabled ? (
+                                                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                    ) : (
+                                                        <Lock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                                    )}
+                                                    <span className={`text-sm ${isEnabled ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                        {FEATURE_LABELS[featureKey] || featureKey}
+                                                    </span>
+                                                </div>
+                                                <div className="text-right">
+                                                    {isEnabled && limit !== null && limit > 0 ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <BarChart3 className="w-3 h-3 text-gray-400" />
+                                                            <span className={`text-xs font-medium ${used >= limit ? 'text-red-600' : 'text-gray-600'}`}>
+                                                                {used}/{limit}
+                                                            </span>
+                                                        </div>
+                                                    ) : isEnabled ? (
+                                                        <span className="flex items-center gap-1 text-xs text-green-600">
+                                                            <Zap className="w-3 h-3" />
+                                                            {t('settings.billing.unlimited')}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">-</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Section 3: Plan Selection */}
             <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.availablePlans')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -392,7 +603,7 @@ export default function BillingSettingsPage() {
                 </div>
             </div>
 
-            {/* Section 3: Payment Instructions */}
+            {/* Section 4: Payment Instructions */}
             {showPaymentForm && selectedPlan && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.billing.paymentInstructions')}</h2>
@@ -566,7 +777,7 @@ export default function BillingSettingsPage() {
                 </div>
             )}
 
-            {/* Section 4: Payment Status (latest pending payment) */}
+            {/* Section 5: Payment Status (latest pending payment) */}
             {payments.some((p) => p.status === 'PENDING' || p.status === 'REJECTED') && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.billing.lastPaymentStatus')}</h2>
@@ -621,7 +832,7 @@ export default function BillingSettingsPage() {
                 </div>
             )}
 
-            {/* Section 5: Payment History */}
+            {/* Section 6: Payment History */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.billing.paymentHistory')}</h2>
                 {payments.length === 0 ? (
@@ -630,46 +841,80 @@ export default function BillingSettingsPage() {
                         <p className="text-sm text-gray-500">{t('settings.billing.noPaymentHistory')}</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-gray-200">
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.date')}</th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.amount')}</th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.bank')}</th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.statusLabel')}</th>
-                                    <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.action')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {payments.map((payment) => (
-                                    <tr key={payment.id}>
-                                        <td className="py-3 px-4 text-sm text-gray-900">{formatDate(payment.createdAt)}</td>
-                                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">{formatCurrency(Number(payment.amount))}</td>
-                                        <td className="py-3 px-4 text-sm text-gray-600">{payment.bankName || '-'}</td>
-                                        <td className="py-3 px-4">
-                                            <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[payment.status]?.color || 'bg-gray-100 text-gray-700'}`}>
-                                                {STATUS_CONFIG[payment.status]?.icon}
-                                                {STATUS_CONFIG[payment.status]?.label || payment.status}
-                                            </span>
-                                        </td>
-                                        <td className="py-3 px-4 text-right">
-                                            {payment.proofFileUrl && (
-                                                <a
-                                                    href={payment.proofFileUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-sm text-blue-600 hover:text-blue-700"
-                                                >
-                                                    {t('settings.billing.viewProofShort')}
-                                                </a>
-                                            )}
-                                        </td>
+                    <>
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-3">
+                            {payments.map((payment) => (
+                                <div key={payment.id} className="border border-gray-200 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">{formatDate(payment.createdAt)}</span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[payment.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                            {STATUS_CONFIG[payment.status]?.icon}
+                                            {STATUS_CONFIG[payment.status]?.label || payment.status}
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-900">{formatCurrency(Number(payment.amount))}</span>
+                                        <span className="text-sm text-gray-600">{payment.bankName || '-'}</span>
+                                    </div>
+                                    {payment.proofFileUrl && (
+                                        <div className="mt-2">
+                                            <a
+                                                href={payment.proofFileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm text-blue-600 hover:text-blue-700"
+                                            >
+                                                {t('settings.billing.viewProofShort')}
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.date')}</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.amount')}</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.bank')}</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.statusLabel')}</th>
+                                        <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">{t('settings.billing.action')}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {payments.map((payment) => (
+                                        <tr key={payment.id}>
+                                            <td className="py-3 px-4 text-sm text-gray-900">{formatDate(payment.createdAt)}</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900 font-medium">{formatCurrency(Number(payment.amount))}</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">{payment.bankName || '-'}</td>
+                                            <td className="py-3 px-4">
+                                                <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[payment.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                                                    {STATUS_CONFIG[payment.status]?.icon}
+                                                    {STATUS_CONFIG[payment.status]?.label || payment.status}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-right">
+                                                {payment.proofFileUrl && (
+                                                    <a
+                                                        href={payment.proofFileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        {t('settings.billing.viewProofShort')}
+                                                    </a>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
         </div>

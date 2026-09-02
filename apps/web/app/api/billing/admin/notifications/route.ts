@@ -58,7 +58,7 @@ export async function GET() {
             })),
         });
     } catch (error) {
-        console.error('Error fetching notifications:', error);
+        console.error('Error fetching notifications:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengambil notifikasi' },
             { status: 500 }

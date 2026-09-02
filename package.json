@@ -11,7 +11,10 @@
     "db:generate": "pnpm --filter @qalcuity/db generate",
     "db:push": "pnpm --filter @qalcuity/db push",
     "db:seed": "pnpm --filter @qalcuity/db seed",
-    "db:studio": "pnpm --filter @qalcuity/db studio"
+    "db:studio": "pnpm --filter @qalcuity/db studio",
+    "db:migrate": "pnpm --filter @qalcuity/db exec prisma migrate deploy",
+    "db:migrate:status": "pnpm --filter @qalcuity/db exec prisma migrate status",
+    "db:migrate:reset": "pnpm --filter @qalcuity/db exec prisma migrate reset --force"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

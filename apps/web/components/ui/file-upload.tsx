@@ -122,14 +122,14 @@ export function FileUpload({
         <div className={`space-y-2 ${className}`}>
             <div
                 className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-all ${disabled
-                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                        : dragActive
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : selectedFile && uploadStatus === 'success'
-                                ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
-                                : selectedFile && uploadStatus === 'error'
-                                    ? 'border-red-300 bg-red-50 dark:bg-red-900/20'
-                                    : 'border-gray-300 hover:border-gray-400 cursor-pointer'
+                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60 dark:border-gray-700 dark:bg-gray-800/50'
+                    : dragActive
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : selectedFile && uploadStatus === 'success'
+                            ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
+                            : selectedFile && uploadStatus === 'error'
+                                ? 'border-red-300 bg-red-50 dark:bg-red-900/20'
+                                : 'border-gray-300 hover:border-gray-400 cursor-pointer dark:border-gray-600 dark:hover:border-gray-500'
                     }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}

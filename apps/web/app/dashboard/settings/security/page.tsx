@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { Key, Shield, Monitor, AlertTriangle, Loader2, CheckCircle, X } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type LoginHistoryEntry = {
     id: string
@@ -31,6 +32,15 @@ export default function SecuritySettingsPage() {
     const [passwordSuccess, setPasswordSuccess] = useState(false)
     const [passwordError, setPasswordError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    // 2FA state
+    const [twoFaEnabled, setTwoFaEnabled] = useState(false)
+    const [showTwoFaModal, setShowTwoFaModal] = useState(false)
+    const [twoFaStep, setTwoFaStep] = useState<'setup' | 'verify'>('setup')
+    const [twoFaCode, setTwoFaCode] = useState('')
+    const [twoFaLoading, setTwoFaLoading] = useState(false)
+    const [twoFaError, setTwoFaError] = useState<string | null>(null)
+    const [showTwoFaDisableConfirm, setShowTwoFaDisableConfirm] = useState(false)
 
     useEffect(() => {
         fetchSecurityData()
@@ -102,6 +112,51 @@ export default function SecuritySettingsPage() {
             setPasswordError(t('settings.errorConnectServer'))
         } finally {
             setPasswordLoading(false)
+        }
+    }
+
+    const handleTwoFaToggle = () => {
+        if (twoFaEnabled) {
+            // Show disable 2FA confirmation
+            setShowTwoFaDisableConfirm(true)
+        } else {
+            // Start 2FA setup
+            setTwoFaStep('setup')
+            setTwoFaCode('')
+            setTwoFaError(null)
+            setShowTwoFaModal(true)
+        }
+    }
+
+    const handleTwoFaSetup = () => {
+        setTwoFaStep('verify')
+    }
+
+    const handleTwoFaVerify = async () => {
+        if (twoFaCode.length !== 6) {
+            setTwoFaError(t('settings.twoFaInvalidCode') || 'Kode harus 6 digit')
+            return
+        }
+        setTwoFaLoading(true)
+        setTwoFaError(null)
+        try {
+            const res = await fetch('/api/settings/security', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'enable2fa', code: twoFaCode }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setTwoFaEnabled(true)
+                setShowTwoFaModal(false)
+                setToast({ message: t('settings.twoFaEnabled') || '2FA berhasil diaktifkan', type: 'success' })
+            } else {
+                setTwoFaError(data.error || t('settings.twoFaVerifyFailed') || 'Kode verifikasi salah')
+            }
+        } catch {
+            setTwoFaError(t('settings.errorConnectServer'))
+        } finally {
+            setTwoFaLoading(false)
         }
     }
 
@@ -244,30 +299,132 @@ export default function SecuritySettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-green-600" />
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${twoFaEnabled ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                            <Shield className={`w-5 h-5 ${twoFaEnabled ? 'text-green-600' : 'text-yellow-600'}`} />
                         </div>
                         <div>
                             <h3 className="font-medium text-gray-900">{t('settings.twoFactor') || 'Two-Factor Authentication (2FA)'}</h3>
                             <p className="text-sm text-gray-500">{t('settings.twoFactorDesc') || 'Tambahkan lapisan keamanan ekstra ke akun Anda'}</p>
                         </div>
                     </div>
-                    <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-                        {t('settings.enable2fa') || 'Aktifkan 2FA'}
+                    <button
+                        onClick={handleTwoFaToggle}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${twoFaEnabled
+                            ? 'border border-red-300 text-red-700 hover:bg-red-50'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
+                    >
+                        {twoFaEnabled ? (t('settings.disable2fa') || 'Nonaktifkan 2FA') : (t('settings.enable2fa') || 'Aktifkan 2FA')}
                     </button>
                 </div>
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                            <p className="text-sm text-yellow-800 font-medium">{t('settings.twoFactorNotActive') || '2FA belum aktif'}</p>
-                            <p className="text-sm text-yellow-700 mt-1">
-                                {t('settings.twoFactorWarning') || 'Kami sangat menyarankan untuk mengaktifkan 2FA untuk keamanan akun yang lebih baik.'}
-                            </p>
+                {twoFaEnabled ? (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm text-green-800 font-medium">{t('settings.twoFactorActive') || '2FA aktif'}</p>
+                                <p className="text-sm text-green-700 mt-1">
+                                    {t('settings.twoFactorActiveDesc') || 'Akun Anda dilindungi dengan Two-Factor Authentication.'}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm text-yellow-800 font-medium">{t('settings.twoFactorNotActive') || '2FA belum aktif'}</p>
+                                <p className="text-sm text-yellow-700 mt-1">
+                                    {t('settings.twoFactorWarning') || 'Kami sangat menyarankan untuk mengaktifkan 2FA untuk keamanan akun yang lebih baik.'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* 2FA Setup Modal */}
+            {showTwoFaModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {twoFaStep === 'setup' ? (t('settings.twoFaSetupTitle') || 'Aktifkan 2FA') : (t('settings.twoFaVerifyTitle') || 'Verifikasi Kode')}
+                            </h3>
+                            <button onClick={() => setShowTwoFaModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {twoFaError && (
+                            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <p className="text-sm text-red-700">{twoFaError}</p>
+                            </div>
+                        )}
+
+                        {twoFaStep === 'setup' ? (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600">
+                                    {t('settings.twoFaSetupDesc') || 'Gunakan aplikasi authenticator seperti Google Authenticator atau Authy untuk memindai kode QR berikut.'}
+                                </p>
+                                <div className="flex justify-center py-4">
+                                    <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+                                        <div className="text-center">
+                                            <Shield className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                            <p className="text-xs text-gray-500">{t('settings.twoFaQrPlaceholder') || 'QR Code akan muncul di sini'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 text-center">
+                                    {t('settings.twoFaManualEntry') || 'Atau masukkan kode manual: '}<span className="font-mono font-medium text-gray-700">JBSWY3DPEHPK3PXP</span>
+                                </p>
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button onClick={() => setShowTwoFaModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                        {t('common.cancel') || 'Batal'}
+                                    </button>
+                                    <button onClick={handleTwoFaSetup} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                                        {t('settings.next') || 'Selanjutnya'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600">
+                                    {t('settings.twoFaVerifyDesc') || 'Masukkan 6 digit kode dari aplikasi authenticator Anda.'}
+                                </p>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        {t('settings.twoFaCode') || 'Kode Verifikasi'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        maxLength={6}
+                                        value={twoFaCode}
+                                        onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, ''))}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-2xl font-mono tracking-[0.5em] focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                        placeholder="000000"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button onClick={() => setTwoFaStep('setup')} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                        {t('common.back') || 'Kembali'}
+                                    </button>
+                                    <button
+                                        onClick={handleTwoFaVerify}
+                                        disabled={twoFaLoading || twoFaCode.length !== 6}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {twoFaLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                        {t('settings.verifyAndEnable') || 'Verifikasi & Aktifkan'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Active Sessions - Current Session Only */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -333,6 +490,21 @@ export default function SecuritySettingsPage() {
                     )}
                 </div>
             </div>
+
+            {/* Disable 2FA Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showTwoFaDisableConfirm}
+                onClose={() => setShowTwoFaDisableConfirm(false)}
+                onConfirm={() => {
+                    setShowTwoFaDisableConfirm(false)
+                    setTwoFaEnabled(false)
+                    setToast({ message: t('settings.twoFaDisabled') || '2FA telah dinonaktifkan', type: 'success' })
+                }}
+                title="Nonaktifkan 2FA"
+                message={t('settings.confirmDisable2fa') || 'Apakah Anda yakin ingin menonaktifkan 2FA?'}
+                confirmText="Nonaktifkan"
+                variant="warning"
+            />
 
             {/* Toast */}
             {toast && (

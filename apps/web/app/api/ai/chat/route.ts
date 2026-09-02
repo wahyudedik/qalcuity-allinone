@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ response });
     } catch (error) {
-        console.error('AI Chat error:', error);
+        console.error('AI Chat error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { error: 'AI service unavailable' },
             { status: 500 }

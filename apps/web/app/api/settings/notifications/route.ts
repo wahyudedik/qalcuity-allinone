@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth, requireMutateAuth } from '@/lib/session'
+import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
+import { updateNotificationPreferencesSchema, formatZodError } from '@/lib/validation-schemas'
 
 interface NotificationPreferences {
     emailInvoice: boolean
@@ -37,92 +38,133 @@ const defaultPreferences: NotificationPreferences = {
     smsPayment: false,
 }
 
-export async function GET() {
+/**
+ * GET /api/settings/notifications
+ *
+ * Ambil notification settings dari database (TenantNotificationSettings).
+ * Jika belum ada record, return defaults dan buat record baru.
+ */
+export async function GET(request: Request) {
     try {
-        const { tenantId } = await requireAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+        }
+        const { tenantId } = auth
 
-        const tenant = await prisma.tenant.findUnique({
-            where: { id: tenantId },
-            select: { settings: true },
+        let settings = await prisma.tenantNotificationSettings.findUnique({
+            where: { tenantId },
         })
 
-        if (!tenant) {
-            return NextResponse.json(
-                { success: false, error: 'Tenant not found' },
-                { status: 404 }
-            )
+        // Auto-create with defaults if not exists
+        if (!settings) {
+            settings = await prisma.tenantNotificationSettings.create({
+                data: { tenantId },
+            })
         }
-
-        let settings: Record<string, unknown> = {}
-        try {
-            settings = JSON.parse(String(tenant.settings || '{}'))
-        } catch {
-            settings = {}
-        }
-
-        const notifications = (settings.notifications as NotificationPreferences) || defaultPreferences
 
         return NextResponse.json({
             success: true,
-            data: { ...defaultPreferences, ...notifications },
+            data: {
+                emailInvoice: settings.emailInvoice,
+                emailPayment: settings.emailPayment,
+                emailOverdue: settings.emailOverdue,
+                emailWeeklyReport: settings.emailWeeklyReport,
+                emailMarketing: settings.emailMarketing,
+                pushInvoice: settings.pushInvoice,
+                pushPayment: settings.pushPayment,
+                pushOverdue: settings.pushOverdue,
+                pushMention: settings.pushMention,
+                whatsappInvoice: settings.whatsappInvoice,
+                whatsappPayment: settings.whatsappPayment,
+                whatsappOverdue: settings.whatsappOverdue,
+                smsOverdue: settings.smsOverdue,
+                smsPayment: settings.smsPayment,
+            },
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }
 
+/**
+ * PUT /api/settings/notifications
+ *
+ * Update notification settings di database.
+ */
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+        }
+        const { userId, tenantId } = auth
         const body = await request.json()
 
-        // Get current settings
-        const tenant = await prisma.tenant.findUnique({
-            where: { id: tenantId },
-            select: { settings: true },
+        const validation = updateNotificationPreferencesSchema.safeParse(body)
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            )
+        }
+
+        // Get current settings for audit trail
+        const currentSettings = await prisma.tenantNotificationSettings.findUnique({
+            where: { tenantId },
         })
 
-        let currentSettings: Record<string, unknown> = {}
-        try {
-            currentSettings = JSON.parse(String(tenant?.settings || '{}'))
-        } catch {
-            currentSettings = {}
-        }
-
-        const currentNotifications = (currentSettings.notifications as Record<string, unknown>) || {}
-
-        // Merge with new values (only accept known boolean keys)
-        // Start from defaults, overlay current stored values, then apply body overrides
-        const newNotifications: Record<string, boolean> = { ...defaultPreferences }
-        for (const key of Object.keys(defaultPreferences)) {
-            if (typeof currentNotifications[key] === 'boolean') {
-                newNotifications[key] = currentNotifications[key] as boolean
+        const oldValues = currentSettings
+            ? {
+                emailInvoice: currentSettings.emailInvoice,
+                emailPayment: currentSettings.emailPayment,
+                emailOverdue: currentSettings.emailOverdue,
+                emailWeeklyReport: currentSettings.emailWeeklyReport,
+                emailMarketing: currentSettings.emailMarketing,
+                pushInvoice: currentSettings.pushInvoice,
+                pushPayment: currentSettings.pushPayment,
+                pushOverdue: currentSettings.pushOverdue,
+                pushMention: currentSettings.pushMention,
+                whatsappInvoice: currentSettings.whatsappInvoice,
+                whatsappPayment: currentSettings.whatsappPayment,
+                whatsappOverdue: currentSettings.whatsappOverdue,
+                smsOverdue: currentSettings.smsOverdue,
+                smsPayment: currentSettings.smsPayment,
             }
-        }
-        const validKeys = Object.keys(defaultPreferences)
+            : defaultPreferences
+
+        // Build update data from validated body (only boolean fields)
+        const updateData: Record<string, boolean> = {}
+        const validKeys = Object.keys(defaultPreferences) as (keyof NotificationPreferences)[]
         for (const key of validKeys) {
-            if (typeof body[key] === 'boolean') {
-                newNotifications[key] = body[key]
+            if (typeof validation.data[key] === 'boolean') {
+                updateData[key] = validation.data[key]!
             }
         }
 
-        currentSettings.notifications = newNotifications
-
-        const updatedTenant = await prisma.tenant.update({
-            where: { id: tenantId },
-            data: { settings: JSON.stringify(currentSettings) },
-            select: { settings: true },
+        // Upsert notification settings
+        const updated = await prisma.tenantNotificationSettings.upsert({
+            where: { tenantId },
+            create: { tenantId, ...updateData },
+            update: updateData,
         })
 
-        let updatedSettings: Record<string, unknown> = {}
-        try {
-            updatedSettings = JSON.parse(String(updatedTenant.settings || '{}'))
-        } catch {
-            updatedSettings = {}
+        const newData = {
+            emailInvoice: updated.emailInvoice,
+            emailPayment: updated.emailPayment,
+            emailOverdue: updated.emailOverdue,
+            emailWeeklyReport: updated.emailWeeklyReport,
+            emailMarketing: updated.emailMarketing,
+            pushInvoice: updated.pushInvoice,
+            pushPayment: updated.pushPayment,
+            pushOverdue: updated.pushOverdue,
+            pushMention: updated.pushMention,
+            whatsappInvoice: updated.whatsappInvoice,
+            whatsappPayment: updated.whatsappPayment,
+            whatsappOverdue: updated.whatsappOverdue,
+            smsOverdue: updated.smsOverdue,
+            smsPayment: updated.smsPayment,
         }
 
         // Non-blocking audit log
@@ -130,21 +172,19 @@ export async function PUT(request: Request) {
             userId,
             tenantId,
             action: 'UPDATE',
-            entity: 'Tenant',
-            entityId: tenantId,
-            oldValues: { notifications: currentNotifications },
-            newValues: { notifications: newNotifications },
+            entity: 'TenantNotificationSettings',
+            entityId: updated.id,
+            oldValues: oldValues as unknown as Record<string, unknown>,
+            newValues: newData as unknown as Record<string, unknown>,
+            request,
         })
 
         return NextResponse.json({
             success: true,
-            data: (updatedSettings.notifications as NotificationPreferences) || defaultPreferences,
+            data: newData,
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }

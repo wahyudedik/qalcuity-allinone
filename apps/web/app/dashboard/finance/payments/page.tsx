@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, DollarSign, Clock, XCircle, BarChart3 } from 'lucide-react'
+import { Search, Plus, DollarSign, Clock, XCircle, BarChart3, Check, Trash2, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Payment = {
     id: string
@@ -32,10 +33,59 @@ export default function PaymentsPage() {
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
     const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
     const [searchQuery, setSearchQuery] = useState('')
+    const [showRecordModal, setShowRecordModal] = useState(false)
+    const [recordForm, setRecordForm] = useState({
+        invoiceNumber: '',
+        customerName: '',
+        amount: '',
+        method: 'bank_transfer',
+        reference: '',
+        notes: '',
+    })
+    const [recordLoading, setRecordLoading] = useState(false)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
 
     useEffect(() => {
         fetchPayments()
     }, [])
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
+
+    const handleDelete = async (id: string) => {
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus pembayaran ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/finance/payments/${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchPayments()
+                    setToast({ message: 'Pembayaran berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus pembayaran', type: 'error' })
+            }
+        })
+        setShowConfirmDialog(true)
+    }
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
 
     const fetchPayments = async () => {
         try {
@@ -138,7 +188,10 @@ export default function PaymentsPage() {
                     <p className="text-gray-500">{t('finance.payments.subtitle')}</p>
                 </div>
                 {canMutate && (
-                    <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    <button
+                        onClick={() => { setRecordForm({ invoiceNumber: '', customerName: '', amount: '', method: 'bank_transfer', reference: '', notes: '' }); setShowRecordModal(true) }}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    >
                         <Plus className="h-4 w-4" />
                         {t('finance.payments.recordPayment')}
                     </button>
@@ -233,6 +286,19 @@ export default function PaymentsPage() {
                                     </Link>
                                 </div>
                             </div>
+                            <div className="mt-3 flex gap-2">
+                                <Link href={`/dashboard/finance/payments/${payment.id}`} className="text-sm text-blue-600 hover:text-blue-800">
+                                    {t('common.view') || 'Lihat'}
+                                </Link>
+                                {canMutate && (
+                                    <button
+                                        onClick={() => handleDelete(payment.id)}
+                                        className="text-sm text-red-600 hover:text-red-800"
+                                    >
+                                        {t('common.delete') || 'Hapus'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ))
                 )}
@@ -252,12 +318,13 @@ export default function PaymentsPage() {
                                 <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.invoice')}</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-500">{t('finance.payments.table.amount')}</th>
                                 <th className="px-4 py-3 text-center font-medium text-gray-500">{t('finance.payments.table.status')}</th>
+                                <th className="hidden md:table-cell px-4 py-3 text-right font-medium text-gray-500"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredPayments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                                    <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                                         {t('finance.payments.empty')}
                                     </td>
                                 </tr>
@@ -284,6 +351,17 @@ export default function PaymentsPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatCurrency(Number(payment.amount))}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-center">{getStatusBadge(payment.status)}</td>
+                                        <td className="hidden md:table-cell whitespace-nowrap px-4 py-3 text-right">
+                                            {canMutate && (
+                                                <button
+                                                    onClick={() => handleDelete(payment.id)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -291,6 +369,165 @@ export default function PaymentsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Record Payment Modal */}
+            {showRecordModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {t('finance.payments.recordPayment') || 'Catat Pembayaran'}
+                            </h3>
+                            <button
+                                onClick={() => setShowRecordModal(false)}
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <XCircle className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Nomor Invoice</label>
+                                <input
+                                    type="text"
+                                    value={recordForm.invoiceNumber}
+                                    onChange={(e) => setRecordForm({ ...recordForm, invoiceNumber: e.target.value })}
+                                    placeholder="INV-2026-001"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Nama Pelanggan</label>
+                                <input
+                                    type="text"
+                                    value={recordForm.customerName}
+                                    onChange={(e) => setRecordForm({ ...recordForm, customerName: e.target.value })}
+                                    placeholder="PT Maju Jaya"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Jumlah (Rp)</label>
+                                <input
+                                    type="number"
+                                    value={recordForm.amount}
+                                    onChange={(e) => setRecordForm({ ...recordForm, amount: e.target.value })}
+                                    placeholder="5000000"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Metode Pembayaran</label>
+                                <select
+                                    value={recordForm.method}
+                                    onChange={(e) => setRecordForm({ ...recordForm, method: e.target.value })}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="bank_transfer">Transfer Bank</option>
+                                    <option value="credit_card">Kartu Kredit</option>
+                                    <option value="cash">Tunai</option>
+                                    <option value="e_wallet">E-Wallet</option>
+                                    <option value="check">Cek</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Referensi</label>
+                                <input
+                                    type="text"
+                                    value={recordForm.reference}
+                                    onChange={(e) => setRecordForm({ ...recordForm, reference: e.target.value })}
+                                    placeholder="TRF-20260901-001"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Catatan</label>
+                                <textarea
+                                    value={recordForm.notes}
+                                    onChange={(e) => setRecordForm({ ...recordForm, notes: e.target.value })}
+                                    placeholder="Catatan tambahan..."
+                                    rows={2}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowRecordModal(false)}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!recordForm.invoiceNumber || !recordForm.customerName || !recordForm.amount) {
+                                        setToast({ message: 'Lengkapi semua field wajib', type: 'error' })
+                                        return
+                                    }
+                                    setRecordLoading(true)
+                                    try {
+                                        const res = await fetch('/api/finance/payments', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                invoiceNumber: recordForm.invoiceNumber,
+                                                customerName: recordForm.customerName,
+                                                amount: Number(recordForm.amount),
+                                                method: recordForm.method,
+                                                reference: recordForm.reference,
+                                                notes: recordForm.notes,
+                                            }),
+                                        })
+                                        const data = await res.json()
+                                        if (data.success) {
+                                            setToast({ message: 'Pembayaran berhasil dicatat', type: 'success' })
+                                            setShowRecordModal(false)
+                                            fetchPayments()
+                                        } else {
+                                            setToast({ message: data.error || 'Gagal mencatat pembayaran', type: 'error' })
+                                        }
+                                    } catch {
+                                        setToast({ message: 'Gagal mencatat pembayaran', type: 'error' })
+                                    } finally {
+                                        setRecordLoading(false)
+                                    }
+                                }}
+                                disabled={recordLoading}
+                                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {recordLoading ? (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                ) : (
+                                    <Check className="h-4 w-4" />
+                                )}
+                                Simpan Pembayaran
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+                    <span className="inline-flex items-center gap-1.5">
+                        {toast.type === 'success' ? <Check className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                        {toast.message}
+                    </span>
+                </div>
+            )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

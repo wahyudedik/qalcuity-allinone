@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
+import { BarChart3, TrendingUp, Bot } from 'lucide-react'
 
 export const metadata: Metadata = {
     title: 'Masuk - Qalcuity',
     description: 'Masuk ke akun Qalcuity Anda',
+    robots: 'noindex, nofollow', // Prevent indexing of login page
 }
 
 export default function AuthLayout({
@@ -33,7 +35,7 @@ export default function AuthLayout({
                 <div className="space-y-6">
                     <div className="flex items-start gap-4">
                         <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span>📊</span>
+                            <BarChart3 className="h-4 w-4 text-blue-200" />
                         </div>
                         <div>
                             <h3 className="font-semibold mb-1">Finance & Accounting</h3>
@@ -43,7 +45,7 @@ export default function AuthLayout({
 
                     <div className="flex items-start gap-4">
                         <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span>📈</span>
+                            <TrendingUp className="h-4 w-4 text-blue-200" />
                         </div>
                         <div>
                             <h3 className="font-semibold mb-1">Sales & CRM</h3>
@@ -53,7 +55,7 @@ export default function AuthLayout({
 
                     <div className="flex items-start gap-4">
                         <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span>🤖</span>
+                            <Bot className="h-4 w-4 text-blue-200" />
                         </div>
                         <div>
                             <h3 className="font-semibold mb-1">AI Built-in</h3>

@@ -22,6 +22,9 @@ import {
     Filter,
     ExternalLink,
     MessageSquare,
+    Zap,
+    Shield,
+    ArrowRight,
 } from 'lucide-react'
 
 interface PaymentWithDetails {
@@ -68,6 +71,28 @@ interface BillingStats {
     monthlyRevenue: number
 }
 
+interface SubscriptionData {
+    id: string
+    status: string
+    startDate: string
+    endDate: string | null
+    nextBillingDate: string | null
+    paymentMethod: string | null
+    plan: {
+        id: string
+        name: string
+        slug: string
+        price: number
+        features: string[]
+    }
+}
+
+interface TenantBilling {
+    subscriptionStatus: string
+    currentPlanSlug: string | null
+    trialEndsAt: string | null
+}
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
     PENDING: { label: 'Menunggu Verifikasi', color: 'text-yellow-700', bg: 'bg-yellow-100' },
     VERIFIED: { label: 'Diverifikasi', color: 'text-green-700', bg: 'bg-green-100' },
@@ -94,6 +119,12 @@ export default function BillingManagementPage() {
     const [proofModal, setProofModal] = useState<PaymentWithDetails | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
+    // Subscription & Midtrans states
+    const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
+    const [tenantBilling, setTenantBilling] = useState<TenantBilling | null>(null)
+    const [midtransLoading, setMidtransLoading] = useState(false)
+    const [paymentSuccess, setPaymentSuccess] = useState(false)
+
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 3000)
@@ -107,6 +138,17 @@ export default function BillingManagementPage() {
             router.push('/login')
         }
     }, [sessionStatus, router])
+
+    // Check for payment success callback from Midtrans redirect
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('payment') === 'success') {
+            setPaymentSuccess(true)
+            setToast({ message: 'Pembayaran berhasil! Langganan Anda sedang diproses.', type: 'success' })
+            // Clean URL
+            window.history.replaceState({}, '', '/dashboard/billing')
+        }
+    }, [])
 
     const fetchStats = useCallback(async () => {
         try {
@@ -140,10 +182,56 @@ export default function BillingManagementPage() {
         }
     }, [page, filter])
 
+    const fetchSubscription = useCallback(async () => {
+        try {
+            const res = await fetch('/api/billing/subscription')
+            const data = await res.json()
+            if (data.success) {
+                setSubscription(data.data.subscription)
+                setTenantBilling(data.data.tenant)
+            }
+        } catch {
+            console.error('Error fetching subscription')
+        }
+    }, [])
+
     useEffect(() => {
         fetchStats()
         fetchPayments()
-    }, [fetchStats, fetchPayments])
+        fetchSubscription()
+    }, [fetchStats, fetchPayments, fetchSubscription])
+
+    // Handle Midtrans payment
+    const handleMidtransPayment = async () => {
+        if (!subscription?.id) {
+            setToast({ message: 'Tidak ada langganan aktif untuk dibayar', type: 'error' })
+            return
+        }
+
+        try {
+            setMidtransLoading(true)
+            const res = await fetch('/api/billing/payments/midtrans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subscriptionId: subscription.id }),
+            })
+            const data = await res.json()
+
+            if (data.success && data.data?.redirectUrl) {
+                // Redirect ke Midtrans Snap payment page
+                window.location.href = data.data.redirectUrl
+            } else {
+                setToast({
+                    message: data.error || 'Gagal membuat pembayaran Midtrans',
+                    type: 'error',
+                })
+            }
+        } catch {
+            setToast({ message: 'Gagal terhubung ke Midtrans', type: 'error' })
+        } finally {
+            setMidtransLoading(false)
+        }
+    }
 
     const handleApprove = async (payment: PaymentWithDetails) => {
         try {
@@ -230,6 +318,104 @@ export default function BillingManagementPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     Kelola pembayaran dan langganan tenant
                 </p>
+            </div>
+
+            {/* Payment Success Banner */}
+            {paymentSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 dark:bg-green-900/20 dark:border-green-800">
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div>
+                        <p className="text-sm font-medium text-green-800 dark:text-green-300">Pembayaran Berhasil</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                            Pembayaran Anda telah diterima. Langganan akan diaktifkan setelah verifikasi.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setPaymentSuccess(false)}
+                        className="ml-auto text-green-600 hover:text-green-800 dark:text-green-400"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Subscription & Payment Section */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-blue-600" />
+                        Langganan & Pembayaran
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Kelola langganan dan lakukan pembayaran untuk tenant ini
+                    </p>
+                </div>
+                <div className="p-6">
+                    {subscription ? (
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                        <Shield className="w-3 h-3" />
+                                        {subscription.plan.name}
+                                    </span>
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${subscription.status === 'ACTIVE'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                        : subscription.status === 'PENDING_PAYMENT'
+                                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                            : subscription.status === 'TRIAL'
+                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+                                        }`}>
+                                        {subscription.status === 'ACTIVE' && 'Aktif'}
+                                        {subscription.status === 'PENDING_PAYMENT' && 'Menunggu Pembayaran'}
+                                        {subscription.status === 'TRIAL' && 'Trial'}
+                                        {subscription.status === 'SUSPENDED' && 'Suspended'}
+                                        {subscription.status === 'CANCELLED' && 'Dibatalkan'}
+                                        {!['ACTIVE', 'PENDING_PAYMENT', 'TRIAL', 'SUSPENDED', 'CANCELLED'].includes(subscription.status) && subscription.status}
+                                    </span>
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                        {formatCurrency(Number(subscription.plan.price))}
+                                    </span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">/ bulan</span>
+                                </div>
+                                {subscription.nextBillingDate && (
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        Tagihan berikutnya: {formatDate(subscription.nextBillingDate)}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleMidtransPayment}
+                                    disabled={midtransLoading || subscription.status === 'ACTIVE'}
+                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                >
+                                    {midtransLoading ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Memproses...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CreditCard className="w-4 h-4" />
+                                            Bayar dengan Midtrans
+                                            <ArrowRight className="w-4 h-4" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8">
+                            <CreditCard className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">Belum ada langganan aktif</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Pilih paket untuk memulai</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -324,92 +510,164 @@ export default function BillingManagementPage() {
                         <p className="text-gray-500 dark:text-gray-400">Belum ada data pembayaran</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tanggal</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tenant</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Paket</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Jumlah</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bank</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {payments.map((payment) => {
-                                    const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.PENDING
-                                    return (
-                                        <tr
-                                            key={payment.id}
-                                            className="hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition"
-                                            onClick={() => setDetailModal(payment)}
-                                        >
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {formatDate(payment.createdAt)}
-                                            </td>
-                                            <td className="px-4 py-3">
+                    <>
+                        {/* Mobile Cards */}
+                        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                            {payments.map((payment) => {
+                                const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.PENDING
+                                return (
+                                    <div
+                                        key={payment.id}
+                                        className="p-4 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition"
+                                        onClick={() => setDetailModal(payment)}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1 min-w-0">
                                                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                                     {payment.tenant.name}
                                                 </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                                     {payment.tenant.email}
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {payment.subscription.plan.name}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                            </div>
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
+                                                {statusCfg.label}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                 {formatCurrency(Number(payment.amount))}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {payment.bankName || '-'}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
-                                                    {statusCfg.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex items-center justify-end gap-1">
-                                                    {payment.proofFileUrl && (
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                {payment.subscription.plan.name}
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                {formatDate(payment.createdAt)} &middot; {payment.bankName || '-'}
+                                            </div>
+                                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                {payment.proofFileUrl && (
+                                                    <button
+                                                        onClick={() => setProofModal(payment)}
+                                                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                {payment.status === 'PENDING' && (
+                                                    <>
                                                         <button
-                                                            onClick={() => setProofModal(payment)}
-                                                            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
-                                                            title="Lihat Bukti"
+                                                            onClick={() => setApproveModal(payment)}
+                                                            disabled={processingId === payment.id}
+                                                            className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
                                                         >
-                                                            <Eye className="w-4 h-4" />
+                                                            <Check className="w-4 h-4" />
                                                         </button>
-                                                    )}
-                                                    {payment.status === 'PENDING' && (
-                                                        <>
+                                                        <button
+                                                            onClick={() => { setRejectModal(payment); setRejectReason('') }}
+                                                            disabled={processingId === payment.id}
+                                                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tanggal</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tenant</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Paket</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Jumlah</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bank</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {payments.map((payment) => {
+                                        const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.PENDING
+                                        return (
+                                            <tr
+                                                key={payment.id}
+                                                className="hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition"
+                                                onClick={() => setDetailModal(payment)}
+                                            >
+                                                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                    {formatDate(payment.createdAt)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                        {payment.tenant.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {payment.tenant.email}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                    {payment.subscription.plan.name}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                    {formatCurrency(Number(payment.amount))}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                    {payment.bankName || '-'}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
+                                                        {statusCfg.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        {payment.proofFileUrl && (
                                                             <button
-                                                                onClick={() => setApproveModal(payment)}
-                                                                disabled={processingId === payment.id}
-                                                                className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
-                                                                title="Approve"
+                                                                onClick={() => setProofModal(payment)}
+                                                                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+                                                                title="Lihat Bukti"
                                                             >
-                                                                <Check className="w-4 h-4" />
+                                                                <Eye className="w-4 h-4" />
                                                             </button>
-                                                            <button
-                                                                onClick={() => { setRejectModal(payment); setRejectReason('') }}
-                                                                disabled={processingId === payment.id}
-                                                                className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
-                                                                title="Reject"
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                        )}
+                                                        {payment.status === 'PENDING' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => setApproveModal(payment)}
+                                                                    disabled={processingId === payment.id}
+                                                                    className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
+                                                                    title="Approve"
+                                                                >
+                                                                    <Check className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => { setRejectModal(payment); setRejectReason('') }}
+                                                                    disabled={processingId === payment.id}
+                                                                    className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                                                                    title="Reject"
+                                                                >
+                                                                    <X className="w-4 h-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
 
                 {/* Pagination */}

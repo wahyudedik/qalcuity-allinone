@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { ArrowLeft, Printer, DollarSign, FileText, Download, Send } from 'lucide-react'
+import { ArrowLeft, Printer, Download, Send, Loader2 } from 'lucide-react'
 
 interface PaymentDetail {
     id: string
@@ -34,6 +34,10 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
     const [payment, setPayment] = useState<PaymentDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [showSendModal, setShowSendModal] = useState(false)
+    const [sendEmail, setSendEmail] = useState('')
+    const [sending, setSending] = useState(false)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
         const fetchPayment = async () => {
@@ -54,6 +58,62 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
         }
         fetchPayment()
     }, [params.id, t])
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [toast])
+
+    const handlePrintReceipt = () => {
+        window.print()
+    }
+
+    const handleDownloadReceipt = async () => {
+        try {
+            const res = await fetch(`/api/finance/payments/${params.id}/receipt`)
+            if (res.ok) {
+                const blob = await res.blob()
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `receipt-${payment?.paymentNumber || params.id}.pdf`
+                document.body.appendChild(a)
+                a.click()
+                window.URL.revokeObjectURL(url)
+                document.body.removeChild(a)
+                setToast({ message: t('finance.paymentDetail.toastDownloaded'), type: 'success' })
+            } else {
+                setToast({ message: t('finance.paymentDetail.toastDownloadFailed'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('finance.paymentDetail.toastDownloadFailed'), type: 'error' })
+        }
+    }
+
+    const handleSendToCustomer = async () => {
+        if (!sendEmail) return
+        try {
+            setSending(true)
+            const res = await fetch(`/api/finance/payments/${params.id}/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sendEmail }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('finance.paymentDetail.toastSent'), type: 'success' })
+                setShowSendModal(false)
+            } else {
+                setToast({ message: data.error || t('finance.paymentDetail.toastSendFailed'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('finance.paymentDetail.toastSendFailed'), type: 'error' })
+        } finally {
+            setSending(false)
+        }
+    }
 
     if (loading) {
         return (
@@ -82,6 +142,14 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
 
     return (
         <div className="space-y-6">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                    {toast.message}
+                </div>
+            )}
+
             {/* Back Button */}
             <Link href="/dashboard/finance/payments" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4" />
@@ -89,16 +157,19 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
             </Link>
 
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.paymentDetail.title')} {payment.id}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('finance.paymentDetail.title')} {payment.id}</h1>
                     <p className="text-gray-500 mt-1">{payment.paymentDate}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${statusColors[payment.status] || 'bg-gray-100 text-gray-700'}`}>
                         {getStatusLabel(payment.status)}
                     </span>
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <button
+                        onClick={handlePrintReceipt}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
                         <Printer className="h-4 w-4" />
                         {t('finance.paymentDetail.printReceipt')}
                     </button>
@@ -111,7 +182,7 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                     {/* Payment Info */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('finance.paymentDetail.paymentInfo')}</h2>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.paymentDetail.paymentId')}</p>
                                 <p className="font-medium text-gray-900">{payment.id}</p>
@@ -136,7 +207,7 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                     {/* Payment Method */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('finance.paymentDetail.paymentMethod')}</h2>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-gray-500">{t('finance.paymentDetail.method')}</p>
                                 <p className="font-medium text-gray-900">{payment.method}</p>
@@ -149,6 +220,12 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                                 <p className="text-sm text-gray-500">{t('finance.paymentDetail.accountNumber')}</p>
                                 <p className="font-medium text-gray-900 font-mono">{payment.accountNumber}</p>
                             </div>
+                            {payment.reference && (
+                                <div>
+                                    <p className="text-sm text-gray-500">{t('finance.paymentDetail.reference')}</p>
+                                    <p className="font-medium text-gray-900 font-mono">{payment.reference}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -165,11 +242,17 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('finance.paymentDetail.actions')}</h3>
                         <div className="space-y-2">
-                            <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={handleDownloadReceipt}
+                                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <Download className="h-4 w-4" />
                                 {t('finance.paymentDetail.downloadReceipt')}
                             </button>
-                            <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={() => { setSendEmail(''); setShowSendModal(true) }}
+                                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <Send className="h-4 w-4" />
                                 {t('finance.paymentDetail.sendToCustomer')}
                             </button>
@@ -177,6 +260,44 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
                     </div>
                 </div>
             </div>
+
+            {/* Send Modal */}
+            {showSendModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowSendModal(false)} />
+                    <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('finance.paymentDetail.sendModalTitle')}</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('finance.paymentDetail.emailLabel')}</label>
+                                <input
+                                    type="email"
+                                    value={sendEmail}
+                                    onChange={(e) => setSendEmail(e.target.value)}
+                                    placeholder={t('finance.paymentDetail.emailPlaceholder')}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowSendModal(false)}
+                                    className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    {t('common.cancel')}
+                                </button>
+                                <button
+                                    onClick={handleSendToCustomer}
+                                    disabled={sending || !sendEmail}
+                                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {sending && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {t('common.send')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

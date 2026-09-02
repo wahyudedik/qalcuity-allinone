@@ -7,6 +7,7 @@ import { QuotationForm } from '@/components/finance/quotation-form'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, ChevronRight, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Quotation = {
     id: string
@@ -41,6 +42,10 @@ export default function QuotationsPage() {
     const [search, setSearch] = useState('')
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
 
     useEffect(() => {
         if (toast) {
@@ -106,19 +111,23 @@ export default function QuotationsPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus quotation ini?')) return
-        try {
-            const response = await fetch(`/api/finance/quotations/${id}`, { method: 'DELETE' })
-            const result = await response.json()
-            if (result.success) {
-                fetchQuotations()
-                setToast({ message: 'Quotation berhasil dihapus', type: 'success' })
-            } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus quotation ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/finance/quotations/${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchQuotations()
+                    setToast({ message: 'Quotation berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus quotation', type: 'error' })
             }
-        } catch {
-            setToast({ message: 'Gagal menghapus quotation', type: 'error' })
-        }
+        })
+        setShowConfirmDialog(true)
     }
 
     if (loading) {
@@ -354,6 +363,18 @@ export default function QuotationsPage() {
                     </span>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

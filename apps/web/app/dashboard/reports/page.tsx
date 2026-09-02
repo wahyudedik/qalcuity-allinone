@@ -26,6 +26,7 @@ import {
     Loader2,
     AlertCircle,
     RefreshCw,
+    Star,
 } from 'lucide-react'
 
 /* ============================================
@@ -568,36 +569,67 @@ function RevenueReport({ data }: { data: RevenueData[] }) {
 
             {/* Table */}
             {data.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.month')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.revenue')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.revenue.invoice')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.revenue.avgPerInvoice')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((d, i) => (
-                                <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.month}</td>
-                                    <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(d.revenue)}</td>
-                                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.invoiceCount}</td>
-                                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.invoiceCount > 0 ? formatCurrency(Math.round(d.revenue / d.invoiceCount)) : '-'}</td>
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.month}</span>
+                                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{formatCurrency(d.revenue)}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.revenue.invoice')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.invoiceCount}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.revenue.avgPerInvoice')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.invoiceCount > 0 ? formatCurrency(Math.round(d.revenue / d.invoiceCount)) : '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center justify-between text-sm font-semibold">
+                                <span className="text-gray-900 dark:text-gray-100">{t('reports.common.total')}</span>
+                                <span className="text-gray-900 dark:text-gray-100">{formatCurrency(totalRevenue)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.month')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.revenue')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.revenue.invoice')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.revenue.avgPerInvoice')}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600">
-                                <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{t('reports.common.total')}</td>
-                                <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatCurrency(totalRevenue)}</td>
-                                <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{totalInvoices}</td>
-                                <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{totalInvoices > 0 ? formatCurrency(Math.round(totalRevenue / totalInvoices)) : '-'}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {data.map((d, i) => (
+                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.month}</td>
+                                        <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(d.revenue)}</td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.invoiceCount}</td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.invoiceCount > 0 ? formatCurrency(Math.round(d.revenue / d.invoiceCount)) : '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600">
+                                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{t('reports.common.total')}</td>
+                                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatCurrency(totalRevenue)}</td>
+                                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{totalInvoices}</td>
+                                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{totalInvoices > 0 ? formatCurrency(Math.round(totalRevenue / totalInvoices)) : '-'}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <EmptyState message={t('reports.revenue.empty')} />
             )}
@@ -640,7 +672,29 @@ function ExpenseReport({ data }: { data: ExpenseData[] }) {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.category}</span>
+                                    <span className="text-sm font-bold text-red-600 dark:text-red-400">{formatCurrency(d.amount)}</span>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {t('reports.common.percentOfTotal')}: {totalExpenses > 0 ? (d.amount / totalExpenses * 100).toFixed(1) : 0}%
+                                </div>
+                            </div>
+                        ))}
+                        <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center justify-between text-sm font-semibold">
+                                <span className="text-gray-900 dark:text-gray-100">{t('reports.common.total')}</span>
+                                <span className="text-gray-900 dark:text-gray-100">{formatCurrency(totalExpenses)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -737,47 +791,78 @@ function ProfitLossReport({ revenue, expenses }: { revenue: RevenueData[]; expen
             )}
 
             {plData.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.month')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.revenue')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.expenses')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.profitLoss.profitLoss')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.profitLoss.margin')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {plData.map((d, i) => (
-                                <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.month}</td>
-                                    <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(d.revenue)}</td>
-                                    <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(d.expense)}</td>
-                                    <td className={`py-3 px-4 text-right font-medium ${d.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {plData.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.month}</span>
+                                    <span className={`text-sm font-bold ${d.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                         {formatCurrency(d.profit)}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.common.revenue')}: </span>
+                                        <span className="text-green-600 dark:text-green-400">{formatCurrency(d.revenue)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.common.expenses')}: </span>
+                                        <span className="text-red-600 dark:text-red-400">{formatCurrency(d.expense)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.profitLoss.margin')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.revenue > 0 ? (d.profit / d.revenue * 100).toFixed(1) : 0}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.month')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.revenue')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.expenses')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.profitLoss.profitLoss')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.profitLoss.margin')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {plData.map((d, i) => (
+                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.month}</td>
+                                        <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(d.revenue)}</td>
+                                        <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(d.expense)}</td>
+                                        <td className={`py-3 px-4 text-right font-medium ${d.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {formatCurrency(d.profit)}
+                                        </td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
+                                            {d.revenue > 0 ? (d.profit / d.revenue * 100).toFixed(1) : 0}%
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600">
+                                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{t('reports.common.total')}</td>
+                                    <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(totalRevenue)}</td>
+                                    <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(totalExpenses)}</td>
+                                    <td className={`py-3 px-4 text-right ${totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {formatCurrency(totalProfit)}
                                     </td>
                                     <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
-                                        {d.revenue > 0 ? (d.profit / d.revenue * 100).toFixed(1) : 0}%
+                                        {totalRevenue > 0 ? (totalProfit / totalRevenue * 100).toFixed(1) : 0}%
                                     </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600">
-                                <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{t('reports.common.total')}</td>
-                                <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(totalRevenue)}</td>
-                                <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(totalExpenses)}</td>
-                                <td className={`py-3 px-4 text-right ${totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                    {formatCurrency(totalProfit)}
-                                </td>
-                                <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
-                                    {totalRevenue > 0 ? (totalProfit / totalRevenue * 100).toFixed(1) : 0}%
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                            </tfoot>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <EmptyState message={t('reports.profitLoss.emptyState')} />
             )}
@@ -821,30 +906,57 @@ function CashFlowReport({ revenue, expenses }: { revenue: RevenueData[]; expense
             )}
 
             {cashFlowData.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.month')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.cashFlow.cashIn')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.cashFlow.cashOut')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.cashFlow.net')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {cashFlowData.map((d, i) => (
-                                <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.month}</td>
-                                    <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(d.income)}</td>
-                                    <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(d.expense)}</td>
-                                    <td className={`py-3 px-4 text-right font-medium ${d.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {cashFlowData.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.month}</span>
+                                    <span className={`text-sm font-bold ${d.net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                         {formatCurrency(d.net)}
-                                    </td>
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.cashFlow.cashIn')}: </span>
+                                        <span className="text-green-600 dark:text-green-400">{formatCurrency(d.income)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.cashFlow.cashOut')}: </span>
+                                        <span className="text-red-600 dark:text-red-400">{formatCurrency(d.expense)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.month')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.cashFlow.cashIn')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.cashFlow.cashOut')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.cashFlow.net')}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {cashFlowData.map((d, i) => (
+                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.month}</td>
+                                        <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(d.income)}</td>
+                                        <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(d.expense)}</td>
+                                        <td className={`py-3 px-4 text-right font-medium ${d.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {formatCurrency(d.net)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <EmptyState message={t('reports.cashFlow.emptyState')} />
             )}
@@ -891,7 +1003,37 @@ function SalesByCustomerReport({ data }: { data: SalesByCustomerData[] }) {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs mr-1">#{i + 1}</span>
+                                        {d.customer}
+                                    </span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(d.totalSales)}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.salesByCustomer.transactions')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.transactions}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.common.percentOfTotal')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{totalSales > 0 ? (d.totalSales / totalSales * 100).toFixed(1) : 0}%</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.salesByCustomer.lastOrder')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.lastOrder}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -950,7 +1092,37 @@ function SalesByProductReport({ data }: { data: SalesByProductData[] }) {
                         />
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs mr-1">#{i + 1}</span>
+                                        {d.product}
+                                    </span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(d.revenue)}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.salesByProduct.unitsSold')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.totalSold}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.salesByProduct.pricePerUnit')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.totalSold > 0 ? formatCurrency(Math.round(d.revenue / d.totalSold)) : '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.salesByProduct.percentRevenue')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{totalRevenue > 0 ? (d.revenue / totalRevenue * 100).toFixed(1) : 0}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1031,7 +1203,36 @@ function EmployeeSummaryReport({ data }: { data: EmployeeData[] }) {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((emp, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{emp.name}</span>
+                                    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${emp.status === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                                        {emp.status}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.common.department')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{emp.department}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.employeeSummary.position')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{emp.position}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.employeeSummary.salary')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{formatCurrency(emp.salary)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1087,42 +1288,82 @@ function AttendanceSummaryReport({ data }: { data: AttendanceData[] }) {
             </div>
 
             {data.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.name')}</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.department')}</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.present')}</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.late')}</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.absent')}</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.wfh')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.rate')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((a, i) => {
-                                const totalDays = a.present + a.late + a.absent + a.wfh
-                                const rate = totalDays > 0 ? ((a.present + a.wfh) / totalDays * 100) : 0
-                                return (
-                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{a.name}</td>
-                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{a.department}</td>
-                                        <td className="py-3 px-4 text-center text-green-600 dark:text-green-400">{a.present}</td>
-                                        <td className="py-3 px-4 text-center text-yellow-600 dark:text-yellow-400">{a.late}</td>
-                                        <td className="py-3 px-4 text-center text-red-600 dark:text-red-400">{a.absent}</td>
-                                        <td className="py-3 px-4 text-center text-blue-600 dark:text-blue-400">{a.wfh}</td>
-                                        <td className="py-3 px-4 text-right">
-                                            <span className={`font-medium ${rate >= 90 ? 'text-green-600 dark:text-green-400' : rate >= 80 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                {rate.toFixed(1)}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((a, i) => {
+                            const totalDays = a.present + a.late + a.absent + a.wfh
+                            const rate = totalDays > 0 ? ((a.present + a.wfh) / totalDays * 100) : 0
+                            return (
+                                <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{a.name}</span>
+                                        <span className={`text-sm font-bold ${rate >= 90 ? 'text-green-600 dark:text-green-400' : rate >= 80 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {rate.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{a.department}</div>
+                                    <div className="grid grid-cols-4 gap-2 text-xs">
+                                        <div className="text-center">
+                                            <div className="text-green-600 dark:text-green-400 font-medium">{a.present}</div>
+                                            <div className="text-gray-500 dark:text-gray-400">{t('reports.attendance.present')}</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-yellow-600 dark:text-yellow-400 font-medium">{a.late}</div>
+                                            <div className="text-gray-500 dark:text-gray-400">{t('reports.attendance.late')}</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-red-600 dark:text-red-400 font-medium">{a.absent}</div>
+                                            <div className="text-gray-500 dark:text-gray-400">{t('reports.attendance.absent')}</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-blue-600 dark:text-blue-400 font-medium">{a.wfh}</div>
+                                            <div className="text-gray-500 dark:text-gray-400">{t('reports.attendance.wfh')}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.name')}</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.department')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.present')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.late')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.absent')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.wfh')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.attendance.rate')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.map((a, i) => {
+                                    const totalDays = a.present + a.late + a.absent + a.wfh
+                                    const rate = totalDays > 0 ? ((a.present + a.wfh) / totalDays * 100) : 0
+                                    return (
+                                        <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                            <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{a.name}</td>
+                                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{a.department}</td>
+                                            <td className="py-3 px-4 text-center text-green-600 dark:text-green-400">{a.present}</td>
+                                            <td className="py-3 px-4 text-center text-yellow-600 dark:text-yellow-400">{a.late}</td>
+                                            <td className="py-3 px-4 text-center text-red-600 dark:text-red-400">{a.absent}</td>
+                                            <td className="py-3 px-4 text-center text-blue-600 dark:text-blue-400">{a.wfh}</td>
+                                            <td className="py-3 px-4 text-right">
+                                                <span className={`font-medium ${rate >= 90 ? 'text-green-600 dark:text-green-400' : rate >= 80 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                    {rate.toFixed(1)}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <EmptyState message={t('reports.attendance.emptyState')} />
             )}
@@ -1166,7 +1407,40 @@ function PayrollSummaryReport({ data }: { data: PayrollData[] }) {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.department}</span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(d.totalSalary)}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.payroll.employees')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.headcount}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.payroll.average')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{formatCurrency(d.avgSalary)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.common.percentOfTotal')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{totalPayroll > 0 ? (d.totalSalary / totalPayroll * 100).toFixed(1) : 0}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center justify-between text-sm font-semibold">
+                                <span className="text-gray-900 dark:text-gray-100">{t('reports.common.total')}</span>
+                                <span className="text-gray-900 dark:text-gray-100">{formatCurrency(totalPayroll)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1226,34 +1500,64 @@ function StockSummaryReport({ data }: { data: StockData[] }) {
             </div>
 
             {data.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">SKU</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.product')}</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.category')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.stock')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.minStock')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.price')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.stockValue')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((d, i) => (
-                                <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td className="py-3 px-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{d.sku}</td>
-                                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{d.name}</td>
-                                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{d.category}</td>
-                                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{d.stock}</td>
-                                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.minStock}</td>
-                                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{formatCurrency(d.price)}</td>
-                                    <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(d.stock * d.cost)}</td>
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.name}</span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(d.stock * d.cost)}</span>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">{d.sku} · {d.category}</div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.stockSummary.stock')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.stock}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.stockSummary.minStock')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.minStock}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.stockSummary.price')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{formatCurrency(d.price)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">SKU</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.product')}</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.category')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.stock')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.minStock')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.price')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.stockValue')}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {data.map((d, i) => (
+                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{d.sku}</td>
+                                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{d.name}</td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{d.category}</td>
+                                        <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{d.stock}</td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.minStock}</td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{formatCurrency(d.price)}</td>
+                                        <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(d.stock * d.cost)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <EmptyState message={t('reports.stockSummary.emptyState')} />
             )}
@@ -1278,39 +1582,74 @@ function LowStockReport({ data }: { data: StockData[] }) {
                     <p className="text-gray-600 dark:text-gray-400">{t('reports.lowStock.allStockSafe')}</p>
                 </div>
             ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">SKU</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.product')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.lowStock.currentStock')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.lowStock.minimumStock')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.lowStock.shortage')}</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.status')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {lowStockItems.map((d, i) => {
-                                const shortage = d.minStock - d.stock
-                                return (
-                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/10">
-                                        <td className="py-3 px-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{d.sku}</td>
-                                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{d.name}</td>
-                                        <td className="py-3 px-4 text-right text-red-600 dark:text-red-400 font-medium">{d.stock}</td>
-                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.minStock}</td>
-                                        <td className="py-3 px-4 text-right text-red-600 dark:text-red-400 font-medium">-{shortage}</td>
-                                        <td className="py-3 px-4 text-center">
-                                            <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                                {d.stock === 0 ? t('reports.lowStock.outOfStock') : t('reports.lowStock.critical')}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {lowStockItems.map((d, i) => {
+                            const shortage = d.minStock - d.stock
+                            return (
+                                <div key={i} className="p-4 rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-gray-800">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.name}</span>
+                                        <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                            {d.stock === 0 ? t('reports.lowStock.outOfStock') : t('reports.lowStock.critical')}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">{d.sku}</div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('reports.lowStock.currentStock')}: </span>
+                                            <span className="text-red-600 dark:text-red-400 font-medium">{d.stock}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('reports.lowStock.minimumStock')}: </span>
+                                            <span className="text-gray-700 dark:text-gray-300">{d.minStock}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('reports.lowStock.shortage')}: </span>
+                                            <span className="text-red-600 dark:text-red-400 font-medium">-{shortage}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">SKU</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.stockSummary.product')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.lowStock.currentStock')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.lowStock.minimumStock')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.lowStock.shortage')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.common.status')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {lowStockItems.map((d, i) => {
+                                    const shortage = d.minStock - d.stock
+                                    return (
+                                        <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/10">
+                                            <td className="py-3 px-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{d.sku}</td>
+                                            <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{d.name}</td>
+                                            <td className="py-3 px-4 text-right text-red-600 dark:text-red-400 font-medium">{d.stock}</td>
+                                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.minStock}</td>
+                                            <td className="py-3 px-4 text-right text-red-600 dark:text-red-400 font-medium">-{shortage}</td>
+                                            <td className="py-3 px-4 text-center">
+                                                <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                                    {d.stock === 0 ? t('reports.lowStock.outOfStock') : t('reports.lowStock.critical')}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
         </div>
     )
@@ -1329,43 +1668,80 @@ function SupplierPerformanceReport({ data }: { data: SupplierData[] }) {
             </div>
 
             {data.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">#</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.supplier')}</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.rating')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.totalOrders')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.onTime')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.onTimePercent')}</th>
-                                <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.totalSpending')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((d, i) => (
-                                <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{i + 1}</td>
-                                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{d.name}</td>
-                                    <td className="py-3 px-4 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <span className="text-yellow-500">★</span>
-                                            <span className="font-medium text-gray-900 dark:text-gray-100">{d.rating}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.orders}</td>
-                                    <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{d.onTime}</td>
-                                    <td className="py-3 px-4 text-right">
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.map((d, i) => (
+                            <div key={i} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs mr-1">#{i + 1}</span>
+                                        {d.name}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{d.rating}</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.supplierPerformance.totalOrders')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{d.orders}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.supplierPerformance.onTimePercent')}: </span>
                                         <span className={`font-medium ${d.orders > 0 && (d.onTime / d.orders * 100) >= 90 ? 'text-green-600 dark:text-green-400' : d.orders > 0 && (d.onTime / d.orders * 100) >= 75 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
                                             {d.orders > 0 ? (d.onTime / d.orders * 100).toFixed(1) : 0}%
                                         </span>
-                                    </td>
-                                    <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(d.totalSpent)}</td>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.supplierPerformance.totalSpending')}: </span>
+                                        <span className="text-gray-700 dark:text-gray-300">{formatCurrency(d.totalSpent)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">#</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.supplier')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.rating')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.totalOrders')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.onTime')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.onTimePercent')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.supplierPerformance.totalSpending')}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {data.map((d, i) => (
+                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{i + 1}</td>
+                                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{d.name}</td>
+                                        <td className="py-3 px-4 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                                <span className="font-medium text-gray-900 dark:text-gray-100">{d.rating}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{d.orders}</td>
+                                        <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{d.onTime}</td>
+                                        <td className="py-3 px-4 text-right">
+                                            <span className={`font-medium ${d.orders > 0 && (d.onTime / d.orders * 100) >= 90 ? 'text-green-600 dark:text-green-400' : d.orders > 0 && (d.onTime / d.orders * 100) >= 75 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {d.orders > 0 ? (d.onTime / d.orders * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(d.totalSpent)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <EmptyState message={t('reports.supplierPerformance.emptyState')} />
             )}

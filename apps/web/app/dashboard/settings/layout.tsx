@@ -59,6 +59,26 @@ export default function SettingsLayout({
             description: 'Kelola anggota tim',
         },
         {
+            name: t('settings.roles') || 'Roles & Permission',
+            href: '/dashboard/settings/roles',
+            description: 'Kelola role dan permission',
+        },
+        {
+            name: t('settings.industry') || 'Industri',
+            href: '/dashboard/settings/industry',
+            description: 'Konfigurasi industri',
+        },
+        {
+            name: t('settings.customFields') || 'Custom Fields',
+            href: '/dashboard/settings/custom-fields',
+            description: 'Field kustom per entitas',
+        },
+        {
+            name: t('settings.workflow') || 'Workflow',
+            href: '/dashboard/settings/workflow',
+            description: 'Alur kerja transaksi',
+        },
+        {
             name: t('settings.billing') || 'Billing',
             href: '/dashboard/settings/billing',
             description: 'Pembayaran dan langganan',

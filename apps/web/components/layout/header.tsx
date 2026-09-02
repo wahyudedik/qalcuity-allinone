@@ -53,17 +53,23 @@ export function Header({ title, onMenuClick }: HeaderProps) {
 
     const fetchNotifications = useCallback(async () => {
         if (!isAdmin) return;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         try {
             const [notifRes, statsRes] = await Promise.all([
-                fetch("/api/billing/admin/notifications"),
-                fetch("/api/billing/admin/stats"),
+                fetch("/api/billing/admin/notifications", { signal: controller.signal }),
+                fetch("/api/billing/admin/stats", { signal: controller.signal }),
             ]);
             const notifData = await notifRes.json();
             const statsData = await statsRes.json();
             if (notifData.success) setNotifications(notifData.data);
             if (statsData.success) setPendingCount(statsData.data.pendingCount);
-        } catch {
-            // Silently fail
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                console.warn('Billing polling timeout after 10s');
+            }
+        } finally {
+            clearTimeout(timeoutId);
         }
     }, [isAdmin]);
 
@@ -185,7 +191,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                     <div className="absolute right-0 top-full mt-1 w-80 sm:w-96 rounded-xl border border-gray-200 bg-white shadow-xl z-50 dark:border-gray-700 dark:bg-gray-800">
                                         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                                             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                Notifikasi Pembayaran
+                                                {t('common.paymentNotifications')}
                                             </h3>
                                             <button
                                                 onClick={() => setShowNotifications(false)}
@@ -198,7 +204,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                             {notifications.length === 0 ? (
                                                 <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                                     <Bell className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-                                                    Tidak ada notifikasi baru
+                                                    {t('common.noNewNotifications')}
                                                 </div>
                                             ) : (
                                                 notifications.map((notif) => (
@@ -233,7 +239,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                                     className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
                                                     onClick={() => setShowNotifications(false)}
                                                 >
-                                                    Lihat Semua Pembayaran
+                                                    {t('common.viewAllPayments')}
                                                 </Link>
                                             </div>
                                         )}

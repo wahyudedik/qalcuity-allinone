@@ -7,6 +7,7 @@ import { PurchaseOrderForm } from '@/components/finance/purchase-order-form'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type PurchaseOrder = {
     id: string
@@ -50,6 +51,10 @@ export default function PurchaseOrdersPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
 
     useEffect(() => {
         if (toast) {
@@ -115,19 +120,23 @@ export default function PurchaseOrdersPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus Purchase Order ini?')) return
-        try {
-            const response = await fetch(`/api/finance/purchase-orders/${id}`, { method: 'DELETE' })
-            const result = await response.json()
-            if (result.success) {
-                fetchOrders()
-                setToast({ message: 'Purchase Order berhasil dihapus', type: 'success' })
-            } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus Purchase Order ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/finance/purchase-orders/${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchOrders()
+                    setToast({ message: 'Purchase Order berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus Purchase Order', type: 'error' })
             }
-        } catch {
-            setToast({ message: 'Gagal menghapus Purchase Order', type: 'error' })
-        }
+        })
+        setShowConfirmDialog(true)
     }
 
     const i18nStatusLabels: Record<string, string> = {
@@ -368,6 +377,18 @@ export default function PurchaseOrdersPage() {
                     </span>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }

@@ -4,8 +4,17 @@ import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import prisma from "./db";
 
-if (!process.env.NEXTAUTH_SECRET) {
-    console.error('[AUTH] NEXTAUTH_SECRET is not set in environment variables!');
+// ─── Security: NEXTAUTH_SECRET is MANDATORY in ALL environments ────────────────
+// Previously, development mode used an insecure fallback. This is now removed
+// to prevent accidental deployment to production without a proper secret.
+// See: docs/SECURITY.md — H01 (Hardcoded NEXTAUTH_SECRET)
+const secret = process.env.NEXTAUTH_SECRET;
+if (!secret) {
+    throw new Error(
+        '[AUTH] CRITICAL: NEXTAUTH_SECRET is not set! ' +
+        'Set it in apps/web/.env (or .env.local). ' +
+        'Generate one with: openssl rand -base64 32'
+    );
 }
 
 export const authOptions: NextAuthOptions = {
@@ -182,5 +191,5 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
-    secret: process.env.NEXTAUTH_SECRET!,
+    secret,
 };

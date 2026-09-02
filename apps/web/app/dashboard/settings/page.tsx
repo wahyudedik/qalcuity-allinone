@@ -1,22 +1,29 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { getInitials } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { useSearchParams } from 'next/navigation'
-import { Check, X } from 'lucide-react'
+import { Check, X, Loader2, Trash2, Download, Upload } from 'lucide-react'
 
 export default function ProfileSettingsPage() {
     const { t } = useTranslation()
     const { update: updateSession } = useSession()
     const searchParams = useSearchParams()
+    const fileInputRef = useRef<HTMLInputElement>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
     const [demoLoading, setDemoLoading] = useState(false)
     const [demoStatus, setDemoStatus] = useState<string | null>(null)
     const [showDemoConfirm, setShowDemoConfirm] = useState(false)
+    const [photoUploading, setPhotoUploading] = useState(false)
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+    const [downloadingData, setDownloadingData] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deletingAccount, setDeletingAccount] = useState(false)
+    const [deleteConfirmText, setDeleteConfirmText] = useState('')
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -128,6 +135,115 @@ export default function ProfileSettingsPage() {
         }
     }
 
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
+        if (!allowedTypes.includes(file.type)) {
+            setSaveMessage({ type: 'error', text: 'Format file tidak didukung. Gunakan JPG, PNG, atau GIF.' })
+            return
+        }
+
+        // Validate file size (2MB max)
+        if (file.size > 2 * 1024 * 1024) {
+            setSaveMessage({ type: 'error', text: 'Ukuran file terlalu besar. Maksimal 2MB.' })
+            return
+        }
+
+        setPhotoUploading(true)
+        setSaveMessage(null)
+
+        try {
+            // Convert to base64 for preview and upload
+            const reader = new FileReader()
+            reader.onload = async () => {
+                const base64 = reader.result as string
+                setPhotoPreview(base64)
+
+                try {
+                    const res = await fetch('/api/settings/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: formData.name, image: base64 }),
+                    })
+                    const data = await res.json()
+                    if (data.success) {
+                        setSaveMessage({ type: 'success', text: 'Foto profil berhasil diubah!' })
+                        await updateSession({ image: base64 })
+                    } else {
+                        setSaveMessage({ type: 'error', text: data.error || 'Gagal mengubah foto' })
+                    }
+                } catch {
+                    setSaveMessage({ type: 'error', text: 'Gagal mengunggah foto' })
+                } finally {
+                    setPhotoUploading(false)
+                }
+            }
+            reader.readAsDataURL(file)
+        } catch {
+            setPhotoUploading(false)
+            setSaveMessage({ type: 'error', text: 'Gagal membaca file' })
+        }
+
+        // Reset input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
+    }
+
+    const handleDownloadData = async () => {
+        setDownloadingData(true)
+        try {
+            const res = await fetch('/api/settings/profile/export')
+            if (!res.ok) {
+                throw new Error('Export failed')
+            }
+            const blob = await res.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `qalcuity-data-export-${new Date().toISOString().split('T')[0]}.json`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            window.URL.revokeObjectURL(url)
+            setSaveMessage({ type: 'success', text: 'Data berhasil diunduh!' })
+            setTimeout(() => setSaveMessage(null), 3000)
+        } catch {
+            setSaveMessage({ type: 'error', text: 'Gagal mengunduh data' })
+            setTimeout(() => setSaveMessage(null), 3000)
+        } finally {
+            setDownloadingData(false)
+        }
+    }
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmText !== 'HAPUS') {
+            setSaveMessage({ type: 'error', text: 'Ketik "HAPUS" untuk mengkonfirmasi' })
+            return
+        }
+
+        setDeletingAccount(true)
+        try {
+            const res = await fetch('/api/settings/profile', {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (data.success) {
+                // Redirect to login page after account deletion
+                window.location.href = '/auth/login?deleted=true'
+            } else {
+                setSaveMessage({ type: 'error', text: data.error || 'Gagal menghapus akun' })
+                setDeletingAccount(false)
+            }
+        } catch {
+            setSaveMessage({ type: 'error', text: 'Gagal menghapus akun' })
+            setDeletingAccount(false)
+        }
+    }
+
     const initials = formData.name ? getInitials(formData.name) : 'U'
 
     if (loading) {
@@ -160,15 +276,38 @@ export default function ProfileSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.profilePicture') || 'Foto Profil'}</h2>
                 <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                        {initials}
-                    </div>
+                    {photoPreview ? (
+                        <img src={photoPreview} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
+                    ) : (
+                        <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                            {initials}
+                        </div>
+                    )}
                     <div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                        />
                         <button
                             type="button"
-                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={photoUploading}
+                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
-                            {t('settings.uploadPhoto') || 'Ubah Foto'}
+                            {photoUploading ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Mengunggah...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="w-4 h-4" />
+                                    {t('settings.uploadPhoto') || 'Ubah Foto'}
+                                </>
+                            )}
                         </button>
                         <p className="text-xs text-gray-500 mt-2">
                             JPG, PNG atau GIF. Maksimal 2MB.
@@ -284,8 +423,8 @@ export default function ProfileSettingsPage() {
 
                 {demoStatus && (
                     <div className={`rounded-lg px-4 py-3 text-sm font-medium mb-4 ${demoStatus.startsWith('Berhasil')
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                         }`}>
                         {demoStatus}
                     </div>
@@ -329,14 +468,79 @@ export default function ProfileSettingsPage() {
                 <p className="text-sm text-gray-600 mb-4">
                     {t('settings.deleteAccountDesc') || 'Tindakan berikut tidak dapat dibatalkan. Pastikan Anda sudah yakin.'}
                 </p>
-                <div className="flex items-center gap-4">
-                    <button className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                        Unduh Data Saya
+                <div className="flex flex-wrap items-center gap-4">
+                    <button
+                        onClick={handleDownloadData}
+                        disabled={downloadingData}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {downloadingData ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Mengunduh...
+                            </>
+                        ) : (
+                            <>
+                                <Download className="w-4 h-4" />
+                                Unduh Data Saya
+                            </>
+                        )}
                     </button>
-                    <button className="px-4 py-2.5 border border-red-300 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2.5 border border-red-300 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                    >
+                        <Trash2 className="w-4 h-4" />
                         {t('settings.deleteAccount') || 'Hapus Akun'}
                     </button>
                 </div>
+
+                {/* Delete Account Confirmation Modal */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}>
+                        <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-lg font-semibold text-red-600 mb-2">Hapus Akun</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus secara permanen.
+                            </p>
+                            <p className="text-sm text-gray-700 mb-2">
+                                Ketik <strong>HAPUS</strong> untuk mengkonfirmasi:
+                            </p>
+                            <input
+                                type="text"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                placeholder="HAPUS"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none mb-4"
+                            />
+                            <div className="flex items-center gap-3 justify-end">
+                                <button
+                                    onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    disabled={deletingAccount || deleteConfirmText !== 'HAPUS'}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {deletingAccount ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Menghapus...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trash2 className="w-4 h-4" />
+                                            Hapus Akun Secara Permanen
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

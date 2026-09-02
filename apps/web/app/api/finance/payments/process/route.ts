@@ -1,25 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { getPaymentProvider } from '@/lib/payment/provider';
+import { processPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 
 // ============================================================
 // Payment Gateway Process API
 // Menggunakan Payment Provider abstraction layer.
 // Mendukung Midtrans, Xendit, dan Mock (development).
 // ============================================================
-
-interface PaymentProcessRequest {
-  invoiceId: string;
-  amount: number;
-  method: string;
-  provider?: 'midtrans' | 'xendit';
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-}
 
 export async function POST(request: Request) {
   try {
@@ -33,35 +24,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Auth check (require ADMIN or SUPERADMIN)
-    const { userId, tenantId } = await requireMutateAuth();
-    const body: PaymentProcessRequest = await request.json();
+    // Auth check (permission-based with role fallback)
+    const auth = await requirePermissionForRoute(request);
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const { userId, tenantId } = auth;
+    const body = await request.json();
 
-    // Validasi input
-    if (!body.invoiceId) {
+    // Validasi input dengan Zod schema
+    const validation = processPaymentSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Invoice ID wajib diisi' },
+        { success: false, ...formatZodError(validation.error) },
         { status: 400 }
       );
     }
 
-    if (!body.amount || body.amount <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Jumlah pembayaran harus lebih dari 0' },
-        { status: 400 }
-      );
-    }
-
-    if (!body.method) {
-      return NextResponse.json(
-        { success: false, error: 'Metode pembayaran wajib dipilih' },
-        { status: 400 }
-      );
-    }
+    const validatedData = validation.data;
 
     // Verify invoice exists and belongs to tenant
     const invoice = await prisma.invoice.findFirst({
-      where: { id: body.invoiceId, tenantId },
+      where: { id: validatedData.invoiceId, tenantId },
       include: {
         contact: { select: { name: true, email: true, phone: true } },
         payments: { where: { status: 'COMPLETED' } },
@@ -79,7 +61,7 @@ export async function POST(request: Request) {
     const totalPaid = invoice.payments.reduce((sum: any, p: any) => sum + Number(p.amount), 0);
     const remainingAmount = Number(invoice.total) - Number(totalPaid);
 
-    if (body.amount > remainingAmount) {
+    if (validatedData.amount > remainingAmount) {
       return NextResponse.json(
         { success: false, error: `Jumlah pembayaran melebihi sisa tagihan. Sisa: ${remainingAmount}` },
         { status: 400 }
@@ -87,20 +69,20 @@ export async function POST(request: Request) {
     }
 
     // Determine provider from request or env
-    const providerName = body.provider || process.env.PAYMENT_PROVIDER || 'mock';
+    const providerName = validatedData.provider || process.env.PAYMENT_PROVIDER || 'mock';
 
     // Create order ID
     const orderId = `ORD-${invoice.invoiceNumber}-${Date.now()}`;
 
     // Use Payment Provider abstraction
     const paymentProvider = getPaymentProvider();
-    const customerName = body.customerName || invoice.contact?.name || 'Customer';
-    const customerEmail = body.customerEmail || invoice.contact?.email || '';
-    const customerPhone = body.customerPhone || invoice.contact?.phone || undefined;
+    const customerName = validatedData.customerName || invoice.contact?.name || 'Customer';
+    const customerEmail = validatedData.customerEmail || invoice.contact?.email || '';
+    const customerPhone = validatedData.customerPhone || invoice.contact?.phone || undefined;
 
     const gatewayResult = await paymentProvider.createPayment({
       orderId,
-      amount: body.amount,
+      amount: validatedData.amount,
       currency: 'IDR',
       customerName,
       customerEmail,
@@ -108,7 +90,7 @@ export async function POST(request: Request) {
       items: [
         {
           name: `Payment for ${invoice.invoiceNumber}`,
-          price: body.amount,
+          price: validatedData.amount,
           quantity: 1,
         },
       ],
@@ -126,14 +108,14 @@ export async function POST(request: Request) {
     const payment = await prisma.payment.create({
       data: {
         paymentNumber: gatewayResult.paymentToken || `PAY-${Date.now()}`,
-        amount: body.amount,
+        amount: validatedData.amount,
         paymentDate: new Date(),
-        method: body.method.toUpperCase().replace('-', '_'),
+        method: validatedData.method.toUpperCase().replace('-', '_'),
         status: 'PENDING',
         type: 'INCOME',
         reference: gatewayResult.paymentUrl || gatewayResult.paymentToken || '',
-        notes: `Payment via ${providerName} - ${body.method} | OrderID: ${orderId}`,
-        invoiceId: body.invoiceId,
+        notes: `Payment via ${providerName} - ${validatedData.method} | OrderID: ${orderId}`,
+        invoiceId: validatedData.invoiceId,
         tenantId,
       },
       include: {
@@ -171,16 +153,13 @@ export async function POST(request: Request) {
         status: 'PENDING',
         paymentUrl: gatewayResult.paymentUrl,
         paymentToken: gatewayResult.paymentToken,
-        amount: body.amount,
-        method: body.method,
+        amount: validatedData.amount,
+        method: validatedData.method,
         provider: providerName,
       },
     }, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    if (message === 'Unauthorized') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

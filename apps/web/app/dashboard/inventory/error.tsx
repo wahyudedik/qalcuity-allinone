@@ -1,6 +1,7 @@
 'use client'
 
 import { ModuleError } from '@/components/ui/error-boundary'
+import { useTranslation } from '@/lib/i18n'
 
 export default function InventoryError({
     error,
@@ -9,12 +10,13 @@ export default function InventoryError({
     error: Error & { digest?: string }
     reset: () => void
 }) {
+    const { t } = useTranslation()
     return (
         <ModuleError
             error={error}
             reset={reset}
-            title="Kesalahan Modul Inventory"
-            description="Terjadi kesalahan saat memuat data inventaris. Silakan coba lagi."
+            title={t('errors.inventory.title')}
+            description={t('errors.inventory.description')}
         />
     )
 }

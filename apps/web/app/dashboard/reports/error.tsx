@@ -1,6 +1,7 @@
 'use client'
 
 import { ModuleError } from '@/components/ui/error-boundary'
+import { useTranslation } from '@/lib/i18n'
 
 export default function ReportsError({
     error,
@@ -9,12 +10,13 @@ export default function ReportsError({
     error: Error & { digest?: string }
     reset: () => void
 }) {
+    const { t } = useTranslation()
     return (
         <ModuleError
             error={error}
             reset={reset}
-            title="Kesalahan Modul Reports"
-            description="Terjadi kesalahan saat memuat data laporan. Silakan coba lagi."
+            title={t('errors.reports.title')}
+            description={t('errors.reports.description')}
         />
     )
 }

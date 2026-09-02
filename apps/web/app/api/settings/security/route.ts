@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth, requireMutateAuth } from '@/lib/session'
+import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
+import { changePasswordSchema, formatZodError } from '@/lib/validation-schemas'
 
 // GET /api/settings/security — Fetch user security info + login history
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const { userId, tenantId } = await requireAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId } = auth
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -73,9 +76,6 @@ export async function GET() {
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }
@@ -83,35 +83,20 @@ export async function GET() {
 // PUT /api/settings/security — Change password
 export async function PUT(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth()
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId } = auth
         const body = await request.json()
 
-        const { currentPassword, newPassword } = body as {
-            currentPassword?: string
-            newPassword?: string
-        }
-
-        // Validation
-        if (!currentPassword || !newPassword) {
+        const validation = changePasswordSchema.safeParse(body)
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Password saat ini dan password baru harus diisi' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             )
         }
 
-        if (newPassword.length < 8) {
-            return NextResponse.json(
-                { success: false, error: 'Password baru minimal 8 karakter' },
-                { status: 400 }
-            )
-        }
-
-        if (currentPassword === newPassword) {
-            return NextResponse.json(
-                { success: false, error: 'Password baru harus berbeda dari password saat ini' },
-                { status: 400 }
-            )
-        }
+        const { currentPassword, newPassword } = validation.data
 
         // Get current user
         const user = await prisma.user.findUnique({
@@ -159,9 +144,6 @@ export async function PUT(request: Request) {
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
 }

@@ -34,6 +34,7 @@ model Tenant {
   currentPlanSlug    String?   // starter, growth, business
 
   users          User[]
+  roles          Role[]
   contacts       Contact[]
   products       Product[]
   categories     Category[]
@@ -54,6 +55,42 @@ model Tenant {
   billingPayments BillingPayment[]
   coaAccounts     CoAAccount[]
   bankTransactions BankTransaction[]
+  journalEntries  JournalEntry[]
+  journalEntryItems JournalEntryItem[]
+  savedReports      SavedReport[]
+  scheduledReports  ScheduledReport[]
+  kpis              KPI[]
+  alertRules        AlertRule[]
+  userDashboards    UserDashboard[]
+
+  // Entitlement Engine
+  entitlement   TenantEntitlement?
+  usageRecords  UsageRecord[]
+
+  // Rate Limiting
+  rateLimitLogs     RateLimitLog[]
+
+  // Settings
+  notificationSettings  TenantNotificationSettings?
+  integrations          TenantIntegration[]
+
+  // Analytics Studio
+  analyticsDatasets     AnalyticsDataset[]
+  analyticsQueryHistory AnalyticsQueryHistory[]
+  analyticsCharts       AnalyticsChart[]
+  analyticsDashboards   AnalyticsDashboard[]
+  analyticsWidgets      AnalyticsDashboardWidget[]
+  dataDictionaryEntries DataDictionaryEntry[]
+  scheduledQueries      ScheduledQuery[]
+  metricDefinitions     MetricDefinition[]
+
+  // Workflow Engine
+  workflowDefinitions   WorkflowDefinition[]
+  workflowHistory       WorkflowHistory[]
+
+  // Industry Configuration Engine
+  industryConfig    IndustryConfiguration?
+  customFields      TenantCustomField[]
 }
 
 model User {
@@ -73,8 +110,46 @@ model User {
   tenantId      String
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
 
-  auditLogs     AuditLog[]
+  // Custom role reference (optional — system roles use the `role` string field)
+  roleId        String?
+  customRole    Role?     @relation(fields: [roleId], references: [id])
 
+  auditLogs     AuditLog[]
+  savedReports  SavedReport[]
+  userDashboards UserDashboard[]
+
+  // Analytics Studio
+  analyticsQueryHistory AnalyticsQueryHistory[]
+  analyticsCharts       AnalyticsChart[]
+  analyticsDashboards   AnalyticsDashboard[]
+  analyticsDatasets     AnalyticsDataset[]
+  scheduledQueries      ScheduledQuery[]
+
+  // Workflow Engine
+  workflowHistory       WorkflowHistory[]
+
+  @@index([tenantId])
+  @@index([roleId])
+}
+
+// ============================================
+// PERMISSION & ROLE MANAGEMENT
+// ============================================
+
+model Role {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)  // System roles (SUPERADMIN, ADMIN, MEMBER, VIEWER) cannot be deleted
+  permissions Json     @default("[]")   // Array of permission strings, e.g. ["finance:view", "crm:*"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+
+  @@unique([tenantId, name])
   @@index([tenantId])
 }
 
@@ -618,6 +693,7 @@ model CoAAccount {
   parent          CoAAccount?  @relation("CoATree", fields: [parentId], references: [id])
   children        CoAAccount[] @relation("CoATree")
   matchedTransactions BankTransaction[]
+  journalEntryItems  JournalEntryItem[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -643,4 +719,819 @@ model BankTransaction {
 
   @@index([tenantId, status])
   @@index([matchedAccountId])
+}
+
+// ============================================
+// ANALYTICS & DECISION INTELLIGENCE
+// ============================================
+
+model SavedReport {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   @default("report") // report | chart | pivot | query | dashboard
+  config      Json     // AnalyticsQueryConfig, ChartConfig, atau PivotConfig
+  ownerId     String
+  tenantId    String
+  isStarred   Boolean  @default(false)
+  tags        String[] @default([])
+  folder      String?
+  lastRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner      User                  @relation(fields: [ownerId], references: [id])
+  tenant     Tenant                @relation(fields: [tenantId], references: [id])
+  schedules  ScheduledReport[]
+  executions SavedReportExecution[]
+
+  @@index([tenantId])
+  @@index([ownerId])
+  @@index([tenantId, type])
+  @@index([tenantId, isStarred])
+}
+
+model SavedReportExecution {
+  id           String   @id @default(cuid())
+  reportId     String
+  tenantId     String
+  executedBy   String
+  status       String   @default("completed") // running | completed | failed
+  result       Json?    // execution result metadata
+  rowcount     Int      @default(0)
+  durationMs   Int      @default(0)
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  report SavedReport @relation(fields: [reportId], references: [id])
+
+  @@index([tenantId])
+  @@index([reportId])
+}
+
+model ScheduledReport {
+  id              String   @id @default(cuid())
+  name            String
+  reportId        String
+  tenantId        String
+  frequency       String   // daily | weekly | monthly | quarterly | yearly
+  dayOfWeek       Int?     // 0-6 for weekly
+  dayOfMonth      Int?     // 1-31 for monthly
+  time            String   @default("08:00") // HH:mm
+  outputFormats   String[] @default(["email"]) // pdf | excel | csv | email
+  recipients      String[] @default([]) // user IDs or emails
+  isActive        Boolean  @default(true)
+  lastExecutedAt  DateTime?
+  nextExecutionAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  report     SavedReport               @relation(fields: [reportId], references: [id])
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id])
+  executions ScheduledReportExecution[]
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([nextExecutionAt])
+}
+
+model ScheduledReportExecution {
+  id             String   @id @default(cuid())
+  scheduleId     String
+  tenantId       String
+  status         String   @default("completed") // running | completed | failed | sent
+  outputFormat   String?
+  outputUrl      String?  // URL ke file output
+  errorMessage   String?
+  executedAt     DateTime @default(now())
+  completedAt    DateTime?
+
+  schedule ScheduledReport @relation(fields: [scheduleId], references: [id])
+
+  @@index([tenantId])
+  @@index([scheduleId])
+}
+
+model KPI {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  category          String   // finance | sales | inventory | hr | crm | cross_module
+  metricId          String   // reference to metric definition
+  formula           String?  // custom formula if not using built-in metric
+  target            Decimal  @default(0)
+  targetType        String   @default("gte") // gte (>=), lte (<=), eq (==)
+  warningThreshold  Decimal? @default(10) // % below target
+  criticalThreshold Decimal? @default(25) // % below target
+  period            String   @default("monthly") // daily | weekly | monthly | quarterly | yearly
+  ownerId           String?
+  departmentId      String?
+  tenantId          String
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  evaluations KPIEvaluation[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, isActive])
+}
+
+model KPIEvaluation {
+  id            String   @id @default(cuid())
+  kpiId         String
+  tenantId      String
+  value         Decimal
+  target        Decimal
+  status        String   // above_target | on_target | below_target | critical
+  changePercent Decimal?
+  previousValue Decimal?
+  period        String   // e.g. "2026-08" or "2026-Q3"
+  evaluatedAt   DateTime @default(now())
+
+  kpi KPI @relation(fields: [kpiId], references: [id])
+
+  @@index([tenantId])
+  @@index([kpiId])
+  @@index([kpiId, period])
+}
+
+model AlertRule {
+  id                   String   @id @default(cuid())
+  name                 String
+  description          String?
+  metricId             String
+  condition            String   // below | above | equals | not_equals | changes_by
+  threshold            Decimal
+  severity             String   @default("medium") // low | medium | high | critical
+  notificationChannels String[] @default(["in_app"]) // in_app | email | slack
+  recipients           String[] @default([])
+  cooldownMinutes      Int      @default(60)
+  isActive             Boolean  @default(true)
+  lastTriggeredAt      DateTime?
+  tenantId             String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  triggers  AlertTrigger[]
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model AlertTrigger {
+  id             String   @id @default(cuid())
+  ruleId         String
+  tenantId       String
+  currentValue   Decimal
+  threshold      Decimal
+  severity       String
+  message        String
+  acknowledged   Boolean  @default(false)
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  triggeredAt    DateTime @default(now())
+
+  rule AlertRule @relation(fields: [ruleId], references: [id])
+
+  @@index([tenantId])
+  @@index([ruleId])
+  @@index([tenantId, acknowledged])
+}
+
+model UserDashboard {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  visibility  String   @default("private") // private | team | department | organization
+  layout      Json     // DashboardLayout config
+  widgets     Json     // DashboardWidgetConfig[]
+  ownerId     String
+  tenantId    String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner  User    @relation(fields: [ownerId], references: [id])
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([ownerId])
+  @@index([tenantId, isDefault])
+}
+
+// ============================================
+// ANALYTICS STUDIO — Advanced Models
+// ============================================
+
+model AnalyticsDataset {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  name          String
+  description   String?
+  slug          String
+
+  // Source
+  sourceType    String   @default("QUERY") // QUERY, MATERIALIZED_VIEW, CUSTOM_TABLE
+  sourceQuery   String?  @db.Text // SQL query yang menjadi sumber
+  sourceView    String?  // Materialized view name
+  schemaDef     String?  @db.Text // JSON: column definitions
+
+  // Permissions
+  visibility    String   @default("PRIVATE") // PRIVATE, TEAM, DEPARTMENT, ORGANIZATION
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id])
+  ownerName     String?
+
+  // Metadata
+  columnCount   Int      @default(0)
+  rowCount      Int?
+  lastRefreshed DateTime?
+  refreshFreq   String?  // REALTIME, HOURLY, DAILY
+
+  charts        AnalyticsChart[]
+
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([ownerId])
+}
+
+model AnalyticsQueryHistory {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  userName      String?
+
+  // Query
+  queryType     String   // SQL, VISUAL, AI, DASHBOARD, KPI
+  sql           String   @db.Text
+  visualConfig  String?  @db.Text // JSON: VisualQueryConfig
+  datasetId     String?
+  datasetName   String?
+
+  // Results
+  executionMs   Int
+  rowsReturned  Int
+  rowsScanned   Int?
+  status        String   // SUCCESS, FAILED, TIMEOUT, BLOCKED
+  errorMessage  String?
+  fromCache     Boolean  @default(false)
+
+  // Metadata
+  ipAddress     String?
+  userAgent     String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([queryType])
+  @@index([status])
+}
+
+model AnalyticsChart {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  name          String
+  description   String?
+  slug          String
+
+  // Chart Config
+  chartType     String   // bar, line, pie, donut, area, scatter, heatmap, kpi_card, table
+  config        String   @default("{}") @db.Text // JSON: ChartConfig
+
+  // Data Source
+  dataSource    String   @default("DATASET") // DATASET, QUERY, METRIC
+  datasetId     String?
+  dataset       AnalyticsDataset? @relation(fields: [datasetId], references: [id])
+  queryId       String?
+  metricId      String?
+  queryConfig   String?  @db.Text // JSON: VisualQueryConfig inline
+
+  // Ownership
+  visibility    String   @default("PRIVATE") // PRIVATE, TEAM, DEPARTMENT, ORGANIZATION
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id])
+  ownerName     String?
+
+  // Metadata
+  viewCount     Int      @default(0)
+  lastViewedAt  DateTime?
+  isTemplate    Boolean  @default(false)
+  tags          String?  // JSON array
+
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([ownerId])
+  @@index([datasetId])
+}
+
+model AnalyticsDashboard {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  name          String
+  description   String?
+  slug          String
+
+  // Layout
+  layout        String   @default("{}") @db.Text // JSON: DashboardLayout
+  theme         String?  // LIGHT, DARK, AUTO
+
+  // Visibility & Access
+  visibility    String   @default("PRIVATE") // PRIVATE, TEAM, DEPARTMENT, ORGANIZATION
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id])
+  ownerName     String?
+  department    String?
+  allowedRoles  String?  // JSON array
+  allowedUsers  String?  // JSON array
+
+  // Metadata
+  isDefault     Boolean  @default(false)
+  isTemplate    Boolean  @default(false)
+  tags          String?  // JSON array
+  viewCount     Int      @default(0)
+  lastViewedAt  DateTime?
+  refreshAll    Int?     // Global refresh interval (seconds)
+
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  widgets       AnalyticsDashboardWidget[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([ownerId])
+}
+
+model AnalyticsDashboardWidget {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  dashboardId   String
+  dashboard     AnalyticsDashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  // Widget Config
+  title         String
+  type          String   // CHART, KPI_CARD, TABLE, TEXT, IMAGE, METRIC_COMPARISON
+  chartType     String?  // BAR, PIE, LINE, etc.
+  size          String   @default("MEDIUM") // SMALL, MEDIUM, LARGE, FULL_WIDTH
+
+  // Grid Position
+  gridX         Int      @default(0)
+  gridY         Int      @default(0)
+  gridW         Int      @default(6)  // Column span (1-12)
+  gridH         Int      @default(4)  // Row span
+
+  // Data Source
+  dataSource    String   @default("METRIC") // METRIC, CHART, QUERY, SQL, STATIC
+  metricId      String?
+  chartId       String?
+  queryId       String?
+  sql           String?  @db.Text
+  staticData    String?  @db.Text // JSON: for static widgets
+
+  // Display Config
+  config        String   @default("{}") @db.Text // JSON: colors, labels, formatting
+  refreshInterval Int?   // seconds, null = no auto-refresh
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([dashboardId])
+}
+
+model DataDictionaryEntry {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Identity
+  name          String
+  type          String   // metric, dimension, measure, dataset, field
+  category      String   // finance, sales, inventory, hr, crm
+
+  // Definition
+  businessDef   String   @db.Text
+  technicalDef  String?  @db.Text
+  example       String?  @db.Text
+
+  // Source
+  sourceModule  String
+  sourceModel   String
+  sourceField   String?
+
+  // Formula
+  formula       String?  @db.Text
+  dependencies  String?  // JSON array of entry IDs
+
+  // Lineage
+  upstreamDeps  String?  // JSON array
+  downstreamDeps String? // JSON array
+
+  // Quality
+  freshness     String?  // REALTIME, HOURLY, DAILY, WEEKLY
+  reliability   String?  // HIGH, MEDIUM, LOW
+  lastVerified  DateTime?
+
+  // Ownership
+  owner         String?
+  department    String?
+
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([category])
+  @@index([name])
+}
+
+model ScheduledQuery {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  name            String
+  description     String?
+
+  // Source
+  queryHistoryId  String   // Reference to the query to re-run
+  datasetId       String?
+
+  // Schedule
+  cronExpression  String
+  frequency       String   // DAILY, WEEKLY, MONTHLY, QUARTERLY
+  timeOfDay       String   @default("08:00")
+
+  // Output
+  outputFormat    String   @default("EMAIL") // EMAIL, PDF, EXCEL, CSV, SLACK
+  recipients      String[] @default([])
+
+  // Alert
+  alertOnFailure  Boolean  @default(true)
+  alertOnAnomaly  Boolean  @default(false)
+
+  // Status
+  isActive        Boolean  @default(true)
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  lastRunStatus   String?
+  runCount        Int      @default(0)
+
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([isActive])
+  @@index([nextRunAt])
+  @@index([ownerId])
+}
+
+model MetricDefinition {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  name        String
+  displayName String
+  description String?
+  category    String   // finance, sales, crm, inventory, hr
+  formula     String   @db.Text // SQL expression or reference to other metrics
+  dataType    String   // number, percentage, currency, duration
+  format      String?  // display format
+  unit        String?  // USD, %, etc
+  source      String?  // which table/view
+
+  isSystem    Boolean  @default(false)
+  isCustom    Boolean  @default(true)
+
+  ownerId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([tenantId, category])
+}
+
+// ============================================
+// SETTINGS: NOTIFICATIONS & INTEGRATIONS
+// ============================================
+
+model TenantNotificationSettings {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Email notifications
+  emailInvoice        Boolean @default(true)
+  emailPayment        Boolean @default(true)
+  emailOverdue        Boolean @default(true)
+  emailWeeklyReport   Boolean @default(true)
+  emailMarketing      Boolean @default(false)
+
+  // Push (in-app) notifications
+  pushInvoice         Boolean @default(true)
+  pushPayment         Boolean @default(true)
+  pushOverdue         Boolean @default(true)
+  pushMention         Boolean @default(true)
+
+  // WhatsApp notifications
+  whatsappInvoice     Boolean @default(true)
+  whatsappPayment     Boolean @default(true)
+  whatsappOverdue     Boolean @default(false)
+
+  // SMS notifications
+  smsOverdue          Boolean @default(false)
+  smsPayment          Boolean @default(false)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([tenantId])
+  @@index([tenantId])
+}
+
+model TenantIntegration {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  type          String   // 'whatsapp', 'email', 'payment', 'accounting', 'marketplace', 'logistics'
+  name          String
+  status        String   @default("inactive") // 'active', 'inactive', 'error'
+
+  // Configuration (JSON)
+  config        Json     @default("{}")
+
+  // Credentials (stored as-is — encrypted at rest via DB encryption or app-level)
+  apiKey        String?
+  apiSecret     String?
+  webhookUrl    String?
+
+  lastSyncAt    DateTime?
+  lastErrorAt   DateTime?
+  lastError     String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, type, name])
+  @@index([tenantId])
+  @@index([tenantId, type])
+}
+
+// ============================================
+// WORKFLOW ENGINE
+// ============================================
+
+model WorkflowDefinition {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  entityType  String   // 'INVOICE', 'QUOTATION', 'PURCHASE_ORDER', 'LEAVE_REQUEST', 'PAYROLL', 'DEAL'
+  name        String
+  description String?
+  config      Json     // WorkflowDefinition JSON: { states, transitions, initialState, finalStates }
+  isActive    Boolean  @default(true)
+  isSystem    Boolean  @default(false) // System workflows cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, entityType])
+  @@index([tenantId])
+}
+
+model WorkflowHistory {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  entityType      String
+  entityId        String
+  fromState       String
+  toState         String
+  action          String
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  notes           String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, userId])
+}
+
+// ============================================
+// INDUSTRY CONFIGURATION ENGINE
+// ============================================
+
+model IndustryConfiguration {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  industry      String   // IndustryType: retail, manufacturing, services, etc.
+  config        Json     // IndustryConfig overrides (partial)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId])
+  @@index([tenantId])
+}
+
+model TenantCustomField {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entity        String   // e.g., 'product', 'invoice', 'contact'
+  fieldName     String
+  fieldLabel    String
+  fieldType     String   // 'text', 'number', 'date', 'select', 'boolean'
+  required      Boolean  @default(false)
+  options       Json?    // for select type: ["Option 1", "Option 2"]
+  defaultValue  Json?
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, entity, fieldName])
+  @@index([tenantId, entity])
+  @@index([tenantId])
+}
+
+// ============================================
+// GENERAL LEDGER & JOURNAL ENTRY
+// ============================================
+
+model JournalEntry {
+  id            String   @id @default(cuid())
+  tenantId      String
+  entryNumber   String   @unique
+  date          DateTime @default(now())
+  description   String
+  reference     String?
+  sourceType    String   // 'manual', 'invoice', 'payment', 'purchase_order', 'payroll'
+  sourceId      String?
+  status        String   @default("DRAFT") // DRAFT, POSTED, VOID
+  totalDebit    Decimal  @default(0) @db.Decimal(15, 2)
+  totalCredit   Decimal  @default(0) @db.Decimal(15, 2)
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         JournalEntryItem[]
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, date])
+  @@index([tenantId, status])
+  @@index([tenantId, sourceType, sourceId])
+  @@index([entryNumber])
+}
+
+model JournalEntryItem {
+  id             String   @id @default(cuid())
+  tenantId       String
+  journalEntryId String
+  accountId      String
+  debit          Decimal  @default(0) @db.Decimal(15, 2)
+  credit         Decimal  @default(0) @db.Decimal(15, 2)
+  description    String?
+  createdAt      DateTime @default(now())
+
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account        CoAAccount   @relation(fields: [accountId], references: [id])
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+// ============================================
+// ENTITLEMENT ENGINE — Plan-based Feature Gating
+// ============================================
+
+model Plan {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  slug          String   @unique
+  description   String?
+  priceMonthly  Int      // in Rupiah
+  priceYearly   Int?     // in Rupiah, with discount
+  maxUsers      Int      // -1 = unlimited
+  maxStorage    Int?     // in MB, null = unlimited
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  features      PlanFeature[]
+  entitlements  TenantEntitlement[]
+}
+
+model PlanFeature {
+  id            String   @id @default(cuid())
+  planId        String
+  featureKey    String   // e.g., "finance.invoice", "hr.employees", "ai.chat"
+  enabled       Boolean  @default(true)
+  limit         Int?     // null = unlimited, number = monthly limit
+  plan          Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureKey])
+  @@index([planId])
+  @@index([featureKey])
+}
+
+model TenantEntitlement {
+  id            String    @id @default(cuid())
+  tenantId      String    @unique
+  planId        String
+  billingCycle  String    @default("monthly") // monthly, yearly
+  status        String    @default("active")  // active, trial, suspended, cancelled
+  trialEndsAt   DateTime?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan          Plan      @relation(fields: [planId], references: [id])
+
+  @@index([tenantId])
+  @@index([planId])
+  @@index([status])
+}
+
+model UsageRecord {
+  id            String   @id @default(cuid())
+  tenantId      String
+  featureKey    String
+  count         Int      @default(1)
+  period        String   // YYYY-MM
+  createdAt     DateTime @default(now())
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, featureKey, period])
+  @@index([tenantId])
+  @@index([featureKey])
+  @@index([period])
+}
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+model RateLimitLog {
+  id            String   @id @default(cuid())
+  tenantId      String?
+  ip            String
+  endpoint      String
+  requestCount  Int
+  windowStart   DateTime
+  windowEnd     DateTime
+  blocked       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([ip])
+  @@index([endpoint])
+  @@index([windowStart])
+  @@index([createdAt])
 }

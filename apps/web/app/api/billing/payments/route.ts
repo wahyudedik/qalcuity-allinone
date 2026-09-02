@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { notifySuperadminPayment } from '@/lib/email';
 import { logAudit } from '@/lib/audit';
+import { createBillingPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
-        const auth = await requireAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
@@ -41,7 +45,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('Error fetching payments:', error);
+        console.error('Error fetching payments:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengambil data pembayaran' },
             { status: 500 }
@@ -51,8 +55,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, tenantId } = await requireMutateAuth();
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        const { userId, tenantId } = auth;
         const body = await request.json();
+
+        const validation = createBillingPaymentSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
 
         const {
             subscriptionId,
@@ -64,15 +80,7 @@ export async function POST(request: Request) {
             notes,
             proofFileUrl,
             proofFileName,
-        } = body;
-
-        // Validasi required fields
-        if (!subscriptionId || !amount || !bankName || !accountNumber || !accountName) {
-            return NextResponse.json(
-                { success: false, error: 'Mohon lengkapi semua field yang diperlukan' },
-                { status: 400 }
-            );
-        }
+        } = validation.data;
 
         // Validasi subscription exists dan milik tenant
         const subscription = await prisma.tenantSubscription.findFirst({
@@ -93,7 +101,7 @@ export async function POST(request: Request) {
             data: {
                 subscriptionId,
                 tenantId,
-                amount: parseInt(String(amount)),
+                amount,
                 paymentMethod: 'manual_transfer',
                 bankName: sanitizeInput(bankName),
                 accountNumber: sanitizeInput(accountNumber),
@@ -119,7 +127,7 @@ export async function POST(request: Request) {
 
         // Notify superadmin via email (non-blocking)
         notifySuperadminPayment(payment.id).catch((err) => {
-            console.error('[Billing] Failed to notify superadmin:', err);
+            console.error('[Billing] Failed to notify superadmin:', err instanceof Error ? err.message : 'Unknown error');
         });
 
         // Log audit create
@@ -131,7 +139,7 @@ export async function POST(request: Request) {
             message: 'Bukti transfer berhasil dikirim. Menunggu verifikasi admin.',
         });
     } catch (error) {
-        console.error('Error creating payment:', error);
+        console.error('Error creating payment:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { success: false, error: 'Gagal mengirim bukti transfer' },
             { status: 500 }

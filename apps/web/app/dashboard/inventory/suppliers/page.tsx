@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, Star, AlertTriangle, Building2, Trash2, Check, X, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Supplier = {
     id: string
@@ -76,6 +77,10 @@ export default function SuppliersPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [filterStatus, setFilterStatus] = useState('all')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmMessage, setConfirmMessage] = useState('')
 
     // Form modal state
     const [showForm, setShowForm] = useState(false)
@@ -140,19 +145,23 @@ export default function SuppliersPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Apakah Anda yakin ingin menghapus supplier ini?')) return
-        try {
-            const response = await fetch(`/api/inventory/suppliers?id=${id}`, { method: 'DELETE' })
-            const result = await response.json()
-            if (result.success) {
-                fetchSuppliers()
-                setToast({ message: result.message || 'Supplier berhasil dihapus', type: 'success' })
-            } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+        setConfirmTitle('Konfirmasi Hapus')
+        setConfirmMessage('Apakah Anda yakin ingin menghapus supplier ini?')
+        setConfirmAction(() => async () => {
+            try {
+                const response = await fetch(`/api/inventory/suppliers?id=${id}`, { method: 'DELETE' })
+                const result = await response.json()
+                if (result.success) {
+                    fetchSuppliers()
+                    setToast({ message: result.message || 'Supplier berhasil dihapus', type: 'success' })
+                } else {
+                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus supplier', type: 'error' })
             }
-        } catch {
-            setToast({ message: 'Gagal menghapus supplier', type: 'error' })
-        }
+        })
+        setShowConfirmDialog(true)
     }
 
     const openCreateForm = () => {
@@ -619,6 +628,18 @@ export default function SuppliersPage() {
                     </span>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => { setShowConfirmDialog(false); setConfirmAction(null) }}
+                onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText="Hapus"
+                cancelText="Batal"
+                variant="danger"
+            />
         </div>
     )
 }
