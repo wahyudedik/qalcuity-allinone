@@ -9,6 +9,11 @@ import { requireAdminAuth, isSuperAdmin } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
+
+type PlanWithFeatures = Prisma.PlanGetPayload<{
+    include: { features: true; _count: { select: { entitlements: true } } };
+}>;
 
 const createPlanSchema = z.object({
     name: z.string().min(1, 'Nama plan wajib diisi').max(100),
@@ -44,7 +49,7 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            data: plans.map((plan) => ({
+            data: plans.map((plan: PlanWithFeatures) => ({
                 id: plan.id,
                 name: plan.name,
                 slug: plan.slug,
