@@ -106,11 +106,19 @@ export default withAuth(
     {
         callbacks: {
             authorized: ({ token, req }) => {
-                // Allow public API paths (e.g., /api/health) without auth
                 const pathname = req.nextUrl.pathname;
+
+                // Allow public API paths without auth
                 if (PUBLIC_API_PATHS.some((path) => pathname.startsWith(path))) {
                     return true;
                 }
+
+                // Block /platform/* for non-SUPERADMIN users (defense-in-depth)
+                // Even if layout.tsx checks email, middleware blocks by role as first gate
+                if (pathname.startsWith("/platform")) {
+                    return token?.role === "SUPERADMIN";
+                }
+
                 return !!token;
             },
         },
