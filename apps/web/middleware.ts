@@ -56,6 +56,7 @@ function getRateLimitRule(pathname: string): { maxRequests: number; windowMs: nu
 const PUBLIC_API_PATHS = [
     "/api/auth",
     "/api/billing/payments/midtrans/callback",
+    "/api/health",
 ];
 
 // ─── Main Middleware ──────────────────────────────────────────────────────────
@@ -104,7 +105,14 @@ export default withAuth(
     },
     {
         callbacks: {
-            authorized: ({ token }) => !!token,
+            authorized: ({ token, req }) => {
+                // Allow public API paths (e.g., /api/health) without auth
+                const pathname = req.nextUrl.pathname;
+                if (PUBLIC_API_PATHS.some((path) => pathname.startsWith(path))) {
+                    return true;
+                }
+                return !!token;
+            },
         },
     }
 );
