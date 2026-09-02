@@ -51,9 +51,6 @@ const nextConfig = {
     poweredByHeader: false, // ← Security: sembunyikan X-Powered-By header
     reactStrictMode: true, // ← Best practice untuk production
     transpilePackages: ["@qalcuity/ui", "@qalcuity/db"],
-    // Exclude native Node.js modules from webpack bundling.
-    // ioredis uses `node:diagnostics_channel` which webpack cannot handle.
-    serverExternalPackages: ['ioredis'],
     typescript: {
         // TypeScript errors should NOT be ignored in production builds.
         // Previously set to true as workaround for Prisma engine binary issue on VPS.
@@ -62,6 +59,16 @@ const nextConfig = {
     },
     experimental: {
         optimizePackageImports: ["lucide-react"],
+    },
+    // Exclude native Node.js modules from webpack bundling.
+    // ioredis uses `node:diagnostics_channel` which webpack cannot handle.
+    // NOTE: `serverExternalPackages` is NOT valid in Next.js 14.x.
+    // Using webpack externals instead for reliable server-side externalization.
+    webpack: (config, { isServer }) => {
+        if (isServer) {
+            config.externals.push('ioredis');
+        }
+        return config;
     },
     // ─── Security Headers ──────────────────────────────────────────────────────
     // See: docs/SECURITY.md — H02 (CSP) & H03 (CORS)
