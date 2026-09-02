@@ -173,6 +173,7 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
+| **Tax Rate Management** | ✅ `implemented` | 2026-09-02 | CRUD API + UI — TaxRate model, list/create/edit/delete, type filter, default toggle ([`apps/web/app/api/finance/tax-rates/`](apps/web/app/api/finance/tax-rates/)) |
 | **Coretax-ready** | 📋 `planned` | — | Belum ada kode |
 | **e-Faktur** | 📋 `planned` | — | Belum ada kode |
 | **PPh 21** | 📋 `planned` | — | Belum ada kode |
@@ -703,7 +704,7 @@ Enterprise-grade security untuk data protection.
 | **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN, ADMIN, MEMBER, VIEWER — defense-in-depth |
 | **IP Whitelisting** | 📋 `planned` | — | Belum ada kode |
 | **Data-level Security** | 📋 `planned` | — | Belum ada kode |
-| **Approval Workflow** | 🔄 `partial` | — | Basic approval, belum multi-level conditional |
+| **Approval Workflow** | ✅ `implemented` | 2026-09-02 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models, configurable per entityType ([`apps/web/app/api/approval/`](apps/web/app/api/approval/)) |
 
 ### 11.3 Data Protection
 
@@ -770,8 +771,8 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Approval Engine** | 📋 `planned` | — | Multi-level approval chains [ADR-015] |
-| **Approval Routing** | 📋 `planned` | — | Configurable approval flow per module |
+| **Approval Engine** | ✅ `implemented` | 2026-09-02 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma)) |
+| **Approval Routing** | ✅ `implemented` | 2026-09-02 | Configurable per entityType with level progression ([`apps/web/app/api/approval/`](apps/web/app/api/approval/)) |
 | **Amount-based Routing** | 📋 `planned` | — | Route ke approver berdasarkan nominal transaksi |
 | **Delegation** | 📋 `planned` | — | Delegate approval to another user [ADR-020] |
 
@@ -898,16 +899,16 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Period Closing Wizard** | 📋 `planned` | — | Step-by-step wizard untuk menutup periode akuntansi [ADR-022] |
-| **Pre-checks** | 📋 `planned` | — | Validate unposted, pending, unreconciled transactions |
-| **Exception Resolution** | 📋 `planned` | — | Resolve atau exception approval sebelum closing |
-| **Final Review Summary** | 📋 `planned` | — | Ringkasan lengkap periode ini |
-| **Closing Approval** | 📋 `planned` | — | Director/Finance Manager approve closing |
-| **Period Lock** | 📋 `planned` | — | Auto-lock setelah closing approval |
+| **Period Closing Wizard** | ✅ `implemented` | 2026-09-02 | 4-step wizard — AccountingPeriod model, pre-checks, closing, lock ([`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)) |
+| **Pre-checks** | ✅ `implemented` | 2026-09-02 | Validate unposted transactions sebelum closing ([`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)) |
+| **Exception Resolution** | ✅ `implemented` | 2026-09-02 | Exception notes pada closing ([`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)) |
+| **Final Review Summary** | ✅ `implemented` | 2026-09-02 | Ringkasan periode di closing step ([`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)) |
+| **Closing Approval** | 📋 `planned` | — | Director/Finance Manager approve closing — basic closing implemented, approval routing belum terhubung |
+| **Period Lock** | ✅ `implemented` | 2026-09-02 | Auto-lock setelah closing — status changed to CLOSED ([`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts)) |
 | **Period Report** | 📋 `planned` | — | Generate period summary report |
-| **Monthly Closing** | 📋 `planned` | — | Penutupan bulanan dengan approval Finance Manager |
-| **Quarterly Closing** | 📋 `planned` | — | Penutupan kuartalan dengan approval Director |
-| **Yearly Closing** | 📋 `planned` | — | Penutupan tahunan dengan approval Board/Director |
+| **Monthly Closing** | ✅ `implemented` | 2026-09-02 | Basic monthly closing via AccountingPeriod ([`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)) |
+| **Quarterly Closing** | ✅ `implemented` | 2026-09-02 | Basic quarterly closing via AccountingPeriod ([`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)) |
+| **Yearly Closing** | ✅ `implemented` | 2026-09-02 | Basic yearly closing via AccountingPeriod ([`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)) |
 
 ### 12.17 Permissions
 
@@ -1577,6 +1578,14 @@ Electron-based desktop application.
 
 ---
 
+### v6.0.0 (September 2, 2026) — Feature Sprint (FASE 3C-4C)
+- **Tax Engine MVP** — TaxRate model, CRUD API + UI, invoice integration, Zod validation
+- **Period Closing Wizard** — AccountingPeriod model, 4-step wizard service, CRUD API + UI
+- **Multi-level Approval Engine** — ApprovalLevel + ApprovalRequest models, approval/reject API endpoints
+- **Sidebar Navigation** — 11 new navigation entries for Finance, HR, Inventory sub-pages
+- **Prisma Migrations** — 3 new migrations (Tax Engine, Period Closing, Approval Engine)
+- **Updated Status Labels** — Tax Rate Management, Approval Workflow, Period Closing Wizard marked as implemented
+
 ### v5.0.0 (September 1, 2026) — Foundation Engines Implemented
 - **Permission Engine** — `@qalcuity/permissions` package: `can()` engine, types, roles, permissions
 - **Workflow Engine** — `@qalcuity/workflow` package: configurable state machine, transitions, guards, defaults
@@ -1589,6 +1598,6 @@ Electron-based desktop application.
 
 ---
 
-**Last Updated:** September 1, 2026 (UI Modernization Sprint Complete)
+**Last Updated:** September 2, 2026 (Feature Sprint Complete — FASE 3C-4C)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 5.3 — UI Modernization Sprint Complete
+**Document Version:** 6.0 — Feature Sprint Complete

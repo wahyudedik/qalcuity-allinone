@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { z } from 'zod'
 import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
@@ -14,6 +14,15 @@ interface InvoiceItem {
     unitPrice: number
 }
 
+interface TaxRate {
+    id: string
+    name: string
+    code: string
+    rate: number
+    type: string
+    isDefault: boolean
+}
+
 interface InvoiceFormProps {
     isOpen: boolean
     onClose: () => void
@@ -23,6 +32,9 @@ interface InvoiceFormProps {
         dueDate: string
         items: InvoiceItem[]
         notes: string
+        taxRate?: number
+        taxCode?: string
+        taxAmount?: number
     }) => void
 }
 
@@ -38,6 +50,40 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
     ])
     const [formError, setFormError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Tax rate state
+    const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+    const [selectedTaxRateId, setSelectedTaxRateId] = useState<string>('')
+    const [loadingTaxRates, setLoadingTaxRates] = useState(false)
+
+    // Fetch active tax rates when modal opens
+    useEffect(() => {
+        if (isOpen && taxRates.length === 0) {
+            setLoadingTaxRates(true)
+            fetch('/api/finance/tax-rates?active=true')
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success && data.data) {
+                        setTaxRates(data.data)
+                        // Auto-select default VAT tax rate
+                        const defaultVat = data.data.find(
+                            (t: TaxRate) => t.isDefault && t.type === 'VAT'
+                        )
+                        if (defaultVat) {
+                            setSelectedTaxRateId(defaultVat.id)
+                        } else if (data.data.length > 0) {
+                            setSelectedTaxRateId(data.data[0].id)
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Graceful fallback — no tax rates loaded
+                })
+                .finally(() => setLoadingTaxRates(false))
+        }
+    }, [isOpen, taxRates.length])
+
+    const selectedTaxRate = taxRates.find((t) => t.id === selectedTaxRateId)
 
     const addItem = () => {
         setItems([...items, { description: '', quantity: 1, unitPrice: 0 }])
@@ -56,7 +102,8 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-    const ppn = subtotal * 0.11
+    const taxPercentage = selectedTaxRate ? Number(selectedTaxRate.rate) : 0
+    const ppn = subtotal * (taxPercentage / 100)
     const total = subtotal + ppn
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -70,6 +117,7 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
                 customerEmail: formData.customerEmail || undefined,
                 dueDate: formData.dueDate || undefined,
                 notes: formData.notes || undefined,
+                taxRate: taxPercentage,
                 items: items.map(item => ({
                     description: item.description,
                     quantity: item.quantity,
@@ -86,9 +134,16 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
         }
 
         try {
-            onSubmit({ ...formData, items })
+            onSubmit({
+                ...formData,
+                items,
+                taxRate: taxPercentage,
+                taxCode: selectedTaxRate?.code,
+                taxAmount: ppn,
+            })
             setFormData({ customerName: '', customerEmail: '', dueDate: '', notes: '' })
             setItems([{ description: '', quantity: 1, unitPrice: 0 }])
+            setSelectedTaxRateId('')
             onClose()
         } finally {
             setIsSubmitting(false)
@@ -137,6 +192,22 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
                             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Pajak</label>
+                        <select
+                            value={selectedTaxRateId}
+                            onChange={(e) => setSelectedTaxRateId(e.target.value)}
+                            disabled={loadingTaxRates}
+                            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                            <option value="">Tanpa Pajak</option>
+                            {taxRates.map((tax) => (
+                                <option key={tax.id} value={tax.id}>
+                                    {tax.name} ({tax.code}) — {Number(tax.rate)}%
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
@@ -213,10 +284,20 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
                             <span className="text-gray-600">Subtotal</span>
                             <span className="font-medium">{formatCurrency(subtotal)}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">PPN (11%)</span>
-                            <span className="font-medium">{formatCurrency(ppn)}</span>
-                        </div>
+                        {selectedTaxRate && (
+                            <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                    {selectedTaxRate.name} ({Number(selectedTaxRate.rate)}%)
+                                </span>
+                                <span className="font-medium">{formatCurrency(ppn)}</span>
+                            </div>
+                        )}
+                        {!selectedTaxRate && (
+                            <div className="flex justify-between">
+                                <span className="text-gray-600">Pajak</span>
+                                <span className="font-medium">—</span>
+                            </div>
+                        )}
                         <div className="flex justify-between border-t border-gray-200 pt-2">
                             <span className="font-semibold text-gray-900">Total</span>
                             <span className="font-bold text-gray-900">{formatCurrency(total)}</span>

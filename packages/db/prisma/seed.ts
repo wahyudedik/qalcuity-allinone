@@ -1594,6 +1594,56 @@ async function main() {
     }
   }
 
+  // ============================================
+  // TAX RATES — Default tax rates untuk Indonesia
+  // ============================================
+  const taxRateData = [
+    {
+      code: "PPN",
+      name: "PPN 11%",
+      rate: 11.00,
+      type: "VAT",
+      isDefault: true,
+    },
+    {
+      code: "PPH23",
+      name: "PPh 23 2%",
+      rate: 2.00,
+      type: "INCOME_TAX",
+      isDefault: true,
+    },
+    {
+      code: "PPH21",
+      name: "PPh 21 (Bervariasi)",
+      rate: 0.00,
+      type: "INCOME_TAX",
+      isDefault: false,
+    },
+  ];
+
+  for (const tr of taxRateData) {
+    const existingTaxRate = await prisma.taxRate.findUnique({
+      where: { tenantId_code: { tenantId: tenant.id, code: tr.code } },
+    });
+
+    if (!existingTaxRate) {
+      await prisma.taxRate.create({
+        data: {
+          tenantId: tenant.id,
+          code: tr.code,
+          name: tr.name,
+          rate: tr.rate,
+          type: tr.type,
+          isDefault: tr.isDefault,
+          isActive: true,
+        },
+      });
+      console.log(`✅ Tax Rate created: ${tr.name}`);
+    } else {
+      console.log(`✅ Tax Rate already exists: ${tr.name}`);
+    }
+  }
+
   console.log("\n🎉 Seeding completed!");
   console.log("\n📋 Demo Accounts:");
   console.log("  SuperAdmin: info@qalcuity.com / Wahyu123456789@");

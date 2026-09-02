@@ -146,6 +146,9 @@ export async function PUT(
         if (validatedData.taxRate !== undefined) {
             updateData.taxRate = validatedData.taxRate;
         }
+        if (validatedData.taxCode !== undefined) {
+            updateData.taxCode = validatedData.taxCode || null;
+        }
         if (validatedData.notes !== undefined) {
             updateData.notes = validatedData.notes;
         }
@@ -157,8 +160,9 @@ export async function PUT(
                 0
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
-            const taxAmount = subtotal * (taxRate / 100);
+            const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
             updateData.subtotal = subtotal;
+            updateData.totalBeforeTax = subtotal;
             updateData.taxAmount = taxAmount;
             updateData.total = subtotal + taxAmount;
 

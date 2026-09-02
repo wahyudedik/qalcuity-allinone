@@ -103,6 +103,8 @@ export const createInvoiceSchema = z.object({
     items: z.array(invoiceItemSchema).min(1, 'Minimal 1 item wajib diisi'),
     dueDate: z.string().optional().nullable(),
     taxRate: z.number().min(0).max(100, 'Pajak maksimal 100%').optional(),
+    taxCode: z.string().max(50).optional().nullable(),
+    taxAmount: z.number().min(0).optional(),
     notes: z.string().optional().nullable(),
 }).refine((data) => data.contactId || data.customerName, {
     message: 'Customer wajib diisi (contactId atau customerName)',
@@ -112,6 +114,8 @@ export const updateInvoiceSchema = z.object({
     status: z.string().max(50).optional(),
     dueDate: z.string().optional().nullable(),
     taxRate: z.number().min(0).max(100, 'Pajak maksimal 100%').optional(),
+    taxCode: z.string().max(50).optional().nullable(),
+    taxAmount: z.number().min(0).optional(),
     notes: z.string().optional().nullable(),
     items: z.array(invoiceItemSchema).min(1, 'Minimal 1 item wajib diisi').optional(),
 });
@@ -705,6 +709,72 @@ export const updateJournalEntrySchema = z.object({
     },
     { message: 'Setiap item hanya boleh memiliki debit ATAU credit, bukan keduanya' }
 );
+
+// ============================================
+// Tax Rate Schemas
+// ============================================
+
+const taxTypeEnum = z.enum(['VAT', 'INCOME_TAX', 'OTHER']);
+
+export const createTaxRateSchema = z.object({
+    name: z.string().min(1, 'Nama pajak wajib diisi').max(100, 'Nama pajak maksimal 100 karakter'),
+    code: z.string().min(1, 'Kode pajak wajib diisi').max(20, 'Kode pajak maksimal 20 karakter').regex(/^[A-Z0-9_]+$/, 'Kode pajak hanya boleh huruf besar, angka, dan underscore'),
+    rate: z.number().min(0, 'Tarif pajak tidak boleh negatif').max(100, 'Tarif pajak maksimal 100%'),
+    type: taxTypeEnum.optional(),
+    isActive: z.boolean().optional(),
+    isDefault: z.boolean().optional(),
+});
+
+export const updateTaxRateSchema = z.object({
+    name: z.string().min(1, 'Nama pajak wajib diisi').max(100, 'Nama pajak maksimal 100 karakter').optional(),
+    code: z.string().min(1, 'Kode pajak wajib diisi').max(20, 'Kode pajak maksimal 20 karakter').regex(/^[A-Z0-9_]+$/, 'Kode pajak hanya boleh huruf besar, angka, dan underscore').optional(),
+    rate: z.number().min(0, 'Tarif pajak tidak boleh negatif').max(100, 'Tarif pajak maksimal 100%').optional(),
+    type: taxTypeEnum.optional(),
+    isActive: z.boolean().optional(),
+    isDefault: z.boolean().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+// ============================================
+// Approval Engine Schemas
+// ============================================
+
+const approvalEntityTypeEnum = z.enum(['INVOICE', 'PURCHASE_ORDER', 'QUOTATION']);
+const approvalRoleEnum = z.enum(['ADMIN', 'MEMBER', 'SUPERADMIN']);
+
+export const createApprovalLevelSchema = z.object({
+    entityType: approvalEntityTypeEnum,
+    level: z.number().int().min(1, 'Level minimal 1').max(10, 'Level maksimal 10'),
+    name: z.string().min(1, 'Nama level wajib diisi').max(100, 'Nama level maksimal 100 karakter'),
+    requiredRole: approvalRoleEnum,
+    isActive: z.boolean().optional(),
+});
+
+export const updateApprovalLevelSchema = z.object({
+    level: z.number().int().min(1).max(10).optional(),
+    name: z.string().min(1).max(100).optional(),
+    requiredRole: approvalRoleEnum.optional(),
+    isActive: z.boolean().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const createApprovalRequestSchema = z.object({
+    entityType: approvalEntityTypeEnum,
+    entityId: z.string().min(1, 'Entity ID wajib diisi'),
+});
+
+export const approveRequestSchema = z.object({
+    comments: z.string().max(500, 'Komentar maksimal 500 karakter').optional(),
+});
+
+export const rejectRequestSchema = z.object({
+    comments: z.string().max(500, 'Komentar maksimal 500 karakter').optional().refine(
+        (val) => val !== undefined && val.trim().length > 0,
+        'Komentar wajib diisi saat menolak'
+    ),
+});
 
 // ============================================
 // Helper Function: Format Zod errors

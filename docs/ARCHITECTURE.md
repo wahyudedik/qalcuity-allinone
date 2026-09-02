@@ -1081,16 +1081,17 @@ Layer 5: UI                 → Permission-based rendering, hide/disable actions
 | Module | Routes | Files | Methods |
 |--------|--------|-------|---------|
 | **Auth** | 3 | 2 | POST, GET |
-| **Finance** | 12 | 6 | GET, POST, PUT, DELETE |
+| **Finance** | 18 | 9 | GET, POST, PUT, DELETE |
 | **CRM** | 6 | 4 | GET, POST, PUT, DELETE |
 | **HR** | 8 | 4 | GET, POST, PUT, DELETE |
 | **Inventory** | 8 | 4 | GET, POST, PUT, DELETE |
 | **Reports** | 1 | 1 | GET, POST |
 | **Settings** | 5 | 5 | GET, PUT |
+| **Approval** | 3 | 3 | GET, POST, PUT |
 | **Audit** | 1 | 1 | GET |
 | **Search** | 1 | 1 | GET |
 | **Health** | 1 | 1 | GET |
-| **Total** | **35+** | **19+** | — |
+| **Total** | **55+** | **37+** | — |
 
 ### Response Format
 
@@ -2279,6 +2280,190 @@ interface CustomerSession {
 
 ---
 
-**Last Updated:** September 1, 2026
+## 24. Tax Engine
+
+### 24.1 Overview
+
+Tax Engine MVP menyediakan CRUD management untuk tax rates dengan integrasi ke invoice workflow.
+
+### 24.2 Data Model
+
+```typescript
+// TaxRate (packages/db/prisma/schema.prisma)
+model TaxRate {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String   // Unique per tenant (e.g., "PPN11", "PPN12")
+  rate        Decimal  @db.Decimal(5, 2) // e.g., 11.00
+  type        String   // e.g., "PPN", "PPh21", "PPh23"
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  invoiceItems InvoiceItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+```
+
+### 24.3 API Endpoints
+
+| Endpoint | Method | RBAC | Description |
+|----------|--------|------|-------------|
+| `/api/finance/tax-rates` | GET | Any auth | List tax rates (filter by type, active) |
+| `/api/finance/tax-rates` | POST | ADMIN+ | Create tax rate |
+| `/api/finance/tax-rates/[id]` | GET | Any auth | Get tax rate detail |
+| `/api/finance/tax-rates/[id]` | PUT | ADMIN+ | Update tax rate |
+| `/api/finance/tax-rates/[id]` | DELETE | ADMIN+ | Delete tax rate |
+
+### 24.4 Key Features
+
+- **Tenant Isolation** — All queries filtered by `tenantId`
+- **Default Toggle** — Setting one rate as default unsets others
+- **Duplicate Code Check** — Unique constraint per tenant
+- **Zod Validation** — `createTaxRateSchema`, `updateTaxRateSchema`
+- **Invoice Integration** — Tax rates selectable in invoice form
+- **Rate Limiting** — 30 req/60s per IP
+
+### 24.5 File References
+
+- **Model:** [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma)
+- **API:** [`apps/web/app/api/finance/tax-rates/`](apps/web/app/api/finance/tax-rates/)
+- **UI:** [`apps/web/app/dashboard/finance/tax-rates/`](apps/web/app/dashboard/finance/tax-rates/)
+- **Validation:** [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts)
+- **Migration:** `20260902171400_add_tax_engine`
+
+---
+
+## 25. Period Closing Wizard
+
+### 25.1 Overview
+
+Period Closing Wizard menyediakan step-by-step workflow untuk menutup periode akuntansi, dengan pre-checks, review, dan period lock.
+
+### 25.2 Data Model
+
+```typescript
+// AccountingPeriod (packages/db/prisma/schema.prisma)
+model AccountingPeriod {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String    // e.g., "September 2026"
+  startDate   DateTime
+  endDate     DateTime
+  status      String    @default("OPEN") // OPEN, CLOSING, CLOSED
+  closedBy    String?
+  closedAt    DateTime?
+  closeNotes  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+```
+
+### 25.3 API Endpoints
+
+| Endpoint | Method | RBAC | Description |
+|----------|--------|------|-------------|
+| `/api/finance/periods` | GET | Any auth | List accounting periods |
+| `/api/finance/periods` | POST | ADMIN+ | Create accounting period |
+| `/api/finance/periods/[id]` | GET | Any auth | Get period detail |
+| `/api/finance/periods/[id]` | PUT | ADMIN+ | Update period |
+| `/api/finance/periods/[id]/close` | POST | ADMIN+ | Close period (4-step wizard) |
+
+### 25.4 Closing Wizard Steps
+
+1. **Step 1: Pre-checks** — Validate unposted transactions, pending items
+2. **Step 2: Exception Resolution** — Handle exceptions with notes
+3. **Step 3: Final Review** — Summary of period data
+4. **Step 4: Closing** — Lock period (status → CLOSED)
+
+### 25.5 File References
+
+- **Model:** [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma)
+- **Service:** [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)
+- **API:** [`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)
+- **UI:** [`apps/web/app/dashboard/finance/periods/`](apps/web/app/dashboard/finance/periods/)
+- **Migration:** `20260902173400_add_period_closing`
+
+---
+
+## 26. Approval Engine
+
+### 26.1 Overview
+
+Multi-level Approval Engine menyediakan configurable approval chains per entity type, dengan level progression dan request tracking.
+
+### 26.2 Data Models
+
+```typescript
+// ApprovalLevel (packages/db/prisma/schema.prisma)
+model ApprovalLevel {
+  id           String  @id @default(cuid())
+  tenantId     String
+  entityType   String  // e.g., "INVOICE", "PURCHASE_ORDER"
+  level        Int     // 1, 2, 3...
+  name         String  // e.g., "Manager Approval", "Director Approval"
+  requiredRole String  // e.g., "ADMIN", "SUPERADMIN"
+  isActive     Boolean @default(true)
+  tenant       Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, entityType, level])
+  @@index([tenantId])
+}
+
+// ApprovalRequest (packages/db/prisma/schema.prisma)
+model ApprovalRequest {
+  id           String   @id @default(cuid())
+  tenantId     String
+  entityType   String
+  entityId     String
+  currentLevel Int      @default(1)
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  requestedBy  String
+  resolvedBy   String?
+  comments     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, entityType, entityId])
+}
+```
+
+### 26.3 API Endpoints
+
+| Endpoint | Method | RBAC | Description |
+|----------|--------|------|-------------|
+| `/api/approval/requests` | GET | Any auth | List approval requests |
+| `/api/approval/requests` | POST | Any auth | Create approval request |
+| `/api/approval/requests/[id]` | GET | Any auth | Get request detail |
+| `/api/approval/[id]/approve` | POST | ADMIN+ | Approve request (advance level) |
+| `/api/approval/[id]/reject` | POST | ADMIN+ | Reject request |
+
+### 26.4 Key Features
+
+- **Multi-level Chains** — Configurable per entityType with level progression
+- **Level-based Routing** — Each level has requiredRole constraint
+- **Request Tracking** — Full history of approval/rejection with timestamps
+- **Tenant Isolation** — All queries filtered by `tenantId`
+- **Zod Validation** — Input validation on all endpoints
+
+### 26.5 File References
+
+- **Model:** [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma)
+- **API:** [`apps/web/app/api/approval/`](apps/web/app/api/approval/)
+- **Migration:** `20260902200400_add_approval_engine`
+
+---
+
+**Last Updated:** September 2, 2026
 **Maintainer:** Qalcuity Engineering Team
-**Document Version:** 5.0 — Foundation Engines Implemented
+**Document Version:** 5.1 — Feature Sprint Complete (FASE 3C-4C)

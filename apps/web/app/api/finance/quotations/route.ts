@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createQuotationSchema, updateQuotationSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createApprovalRequest } from '@/lib/approval';
 
 export async function GET(request: Request) {
     try {
@@ -162,6 +163,15 @@ export async function POST(request: Request) {
         });
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Quotation', entityId: quotation.id, newValues: { quotationNumber: quotation.quotationNumber, total: quotation.total, status: quotation.status } as Record<string, unknown>, request });
+
+        // Approval Engine: trigger approval if levels are configured
+        void createApprovalRequest({
+            tenantId,
+            entityType: 'QUOTATION',
+            entityId: quotation.id,
+            userId,
+            request,
+        });
 
         return NextResponse.json({ success: true, data: quotation }, { status: 201 });
     } catch (error: unknown) {

@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
 import { sendInvoiceCreatedEmail } from '@/lib/email';
+import { createApprovalRequest } from '@/lib/approval';
 
 export async function GET(request: Request) {
     try {
@@ -126,8 +127,8 @@ export async function POST(request: Request) {
             (sum, item) => sum + item.quantity * item.unitPrice,
             0
         );
-        const taxRate = validatedData.taxRate || 11;
-        const taxAmount = subtotal * (taxRate / 100);
+        const taxRate = validatedData.taxRate || 0;
+        const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
         const total = subtotal + taxAmount;
 
         // Use transaction for atomicity: contact creation + invoice + items
@@ -160,7 +161,9 @@ export async function POST(request: Request) {
                     notes: validatedData.notes || '',
                     subtotal,
                     taxRate,
+                    taxCode: validatedData.taxCode || null,
                     taxAmount,
+                    totalBeforeTax: subtotal,
                     total,
                     tenantId,
                     contactId,
@@ -178,6 +181,23 @@ export async function POST(request: Request) {
         });
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Invoice', entityId: invoice.id, newValues: invoice as unknown as Record<string, unknown>, request });
+
+        // Approval Engine: trigger approval if levels are configured
+        const approvalResult = await createApprovalRequest({
+            tenantId,
+            entityType: 'INVOICE',
+            entityId: invoice.id,
+            userId,
+            request,
+        });
+
+        // If approval was triggered, update invoice status to PENDING_APPROVAL
+        if (approvalResult) {
+            await prisma.invoice.update({
+                where: { id: invoice.id },
+                data: { status: 'DRAFT' }, // Keep as DRAFT until approved
+            });
+        }
 
         // Fire-and-forget email notification (graceful — never crashes)
         const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, id: true } });
@@ -246,6 +266,9 @@ export async function PUT(request: Request) {
         if (validatedData.taxRate !== undefined) {
             data.taxRate = validatedData.taxRate;
         }
+        if (validatedData.taxCode !== undefined) {
+            data.taxCode = validatedData.taxCode || null;
+        }
         if (validatedData.notes !== undefined) {
             data.notes = validatedData.notes;
         }
@@ -257,8 +280,9 @@ export async function PUT(request: Request) {
                 0
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
-            const taxAmount = subtotal * (taxRate / 100);
+            const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
             data.subtotal = subtotal;
+            data.totalBeforeTax = subtotal;
             data.taxAmount = taxAmount;
             data.total = subtotal + taxAmount;
 
