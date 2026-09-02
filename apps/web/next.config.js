@@ -51,6 +51,9 @@ const nextConfig = {
     poweredByHeader: false, // ← Security: sembunyikan X-Powered-By header
     reactStrictMode: true, // ← Best practice untuk production
     transpilePackages: ["@qalcuity/ui", "@qalcuity/db"],
+    // Exclude native Node.js modules from webpack bundling.
+    // ioredis uses `node:diagnostics_channel` which webpack cannot handle.
+    serverExternalPackages: ['ioredis'],
     typescript: {
         // TypeScript errors should NOT be ignored in production builds.
         // Previously set to true as workaround for Prisma engine binary issue on VPS.
