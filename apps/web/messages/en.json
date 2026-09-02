@@ -605,6 +605,77 @@
             "errorUnmatch": "Failed to unmatch transaction",
             "export": "Export",
             "retry": "Retry"
+        },
+        "journalEntries": {
+            "title": "Journal Entries",
+            "subtitle": "Manage journal entries and general ledger",
+            "createEntry": "Create Journal",
+            "searchPlaceholder": "Search journals...",
+            "stats": {
+                "totalEntries": "Total Entries",
+                "draft": "Draft",
+                "posted": "Posted",
+                "totalDebit": "Total Debit"
+            },
+            "table": {
+                "entryNumber": "Entry Number",
+                "date": "Date",
+                "description": "Description",
+                "source": "Source",
+                "debit": "Debit",
+                "credit": "Credit",
+                "status": "Status"
+            },
+            "filter": {
+                "allStatus": "All Status",
+                "draft": "Draft",
+                "posted": "Posted",
+                "void": "Void"
+            },
+            "empty": "No journal entries found",
+            "error": "Failed to load journal entries",
+            "errorGeneric": "An error occurred while loading data",
+            "form": {
+                "description": "Description",
+                "date": "Date",
+                "sourceType": "Source Type",
+                "reference": "Reference",
+                "items": "Journal Items",
+                "addItem": "Add Item",
+                "total": "Total"
+            },
+            "sourceTypes": {
+                "manual": "Manual",
+                "invoice": "Invoice",
+                "payment": "Payment",
+                "purchaseOrder": "Purchase Order",
+                "payroll": "Payroll"
+            }
+        },
+        "journalEntryDetail": {
+            "error": "Failed to load journal detail",
+            "errorLoad": "An error occurred while loading journal detail",
+            "backToList": "Back to Journal List",
+            "post": "Post",
+            "void": "Void",
+            "entryInfo": "Entry Information",
+            "entryNumber": "Entry Number",
+            "date": "Date",
+            "sourceType": "Source Type",
+            "reference": "Reference",
+            "totalDebit": "Total Debit",
+            "totalCredit": "Total Credit",
+            "status": "Status",
+            "balance": "Balance",
+            "items": "Journal Items",
+            "table": {
+                "account": "Account",
+                "type": "Type",
+                "description": "Description",
+                "debit": "Debit",
+                "credit": "Credit",
+                "total": "Total"
+            }
         }
     },
     "crm": {

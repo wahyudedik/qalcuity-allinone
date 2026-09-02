@@ -605,6 +605,77 @@
             "errorUnmatch": "Gagal membatalkan pencocokan",
             "export": "Ekspor",
             "retry": "Coba Lagi"
+        },
+        "journalEntries": {
+            "title": "Jurnal Umum",
+            "subtitle": "Kelola entri jurnal dan buku besar",
+            "createEntry": "Buat Jurnal",
+            "searchPlaceholder": "Cari jurnal...",
+            "stats": {
+                "totalEntries": "Total Entri",
+                "draft": "Draft",
+                "posted": "Sudah Posting",
+                "totalDebit": "Total Debit"
+            },
+            "table": {
+                "entryNumber": "Nomor Entri",
+                "date": "Tanggal",
+                "description": "Deskripsi",
+                "source": "Sumber",
+                "debit": "Debit",
+                "credit": "Kredit",
+                "status": "Status"
+            },
+            "filter": {
+                "allStatus": "Semua Status",
+                "draft": "Draft",
+                "posted": "Sudah Posting",
+                "void": "Dibatalkan"
+            },
+            "empty": "Tidak ada jurnal ditemukan",
+            "error": "Gagal memuat data jurnal",
+            "errorGeneric": "Terjadi kesalahan saat memuat data",
+            "form": {
+                "description": "Deskripsi",
+                "date": "Tanggal",
+                "sourceType": "Tipe Sumber",
+                "reference": "Referensi",
+                "items": "Item Jurnal",
+                "addItem": "Tambah Item",
+                "total": "Total"
+            },
+            "sourceTypes": {
+                "manual": "Manual",
+                "invoice": "Invoice",
+                "payment": "Pembayaran",
+                "purchaseOrder": "Purchase Order",
+                "payroll": "Payroll"
+            }
+        },
+        "journalEntryDetail": {
+            "error": "Gagal memuat detail jurnal",
+            "errorLoad": "Terjadi kesalahan saat memuat detail jurnal",
+            "backToList": "Kembali ke Daftar Jurnal",
+            "post": "Posting",
+            "void": "Batalkan",
+            "entryInfo": "Informasi Entri",
+            "entryNumber": "Nomor Entri",
+            "date": "Tanggal",
+            "sourceType": "Tipe Sumber",
+            "reference": "Referensi",
+            "totalDebit": "Total Debit",
+            "totalCredit": "Total Kredit",
+            "status": "Status",
+            "balance": "Saldo",
+            "items": "Item Jurnal",
+            "table": {
+                "account": "Akun",
+                "type": "Tipe",
+                "description": "Deskripsi",
+                "debit": "Debit",
+                "credit": "Kredit",
+                "total": "Total"
+            }
         }
     },
     "crm": {

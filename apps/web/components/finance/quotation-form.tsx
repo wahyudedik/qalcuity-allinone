@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
+import { Spinner } from '@qalcuity/ui'
 import { formatCurrency } from '@/lib/utils'
 import { createQuotationSchema } from '@/lib/validation-schemas'
 
@@ -38,6 +39,7 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
         { description: '', quantity: 1, unitPrice: 0 },
     ])
     const [formError, setFormError] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const addItem = () => {
         setItems([...items, { description: '', quantity: 1, unitPrice: 0 }])
@@ -59,8 +61,9 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
     const ppn = subtotal * 0.11
     const total = subtotal + ppn
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setIsSubmitting(true)
 
         // Client-side Zod validation
         try {
@@ -80,14 +83,19 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
             if (error instanceof z.ZodError) {
                 const firstError = error.issues[0]
                 setFormError(firstError.message)
+                setIsSubmitting(false)
                 return
             }
         }
 
-        onSubmit({ ...formData, items })
-        setFormData({ customerName: '', customerEmail: '', validUntil: '', notes: '', terms: 'Pembayaran dalam 30 hari setelah invoice diterbitkan' })
-        setItems([{ description: '', quantity: 1, unitPrice: 0 }])
-        onClose()
+        try {
+            onSubmit({ ...formData, items })
+            setFormData({ customerName: '', customerEmail: '', validUntil: '', notes: '', terms: 'Pembayaran dalam 30 hari setelah invoice diterbitkan' })
+            setItems([{ description: '', quantity: 1, unitPrice: 0 }])
+            onClose()
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     return (
@@ -167,7 +175,7 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
                                         required
                                         min="1"
                                         value={item.quantity}
-                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                                        onChange={(e) => updateItem(index, 'quantity', Number(e.target.value) || 1)}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                         placeholder="Qty"
                                     />
@@ -177,8 +185,9 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
                                         type="number"
                                         required
                                         min="0"
+                                        step="0.01"
                                         value={item.unitPrice || ''}
-                                        onChange={(e) => updateItem(index, 'unitPrice', parseInt(e.target.value) || 0)}
+                                        onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value) || 0)}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                         placeholder="Harga satuan"
                                     />
@@ -252,9 +261,11 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
                     </button>
                     <button
                         type="submit"
-                        className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                        disabled={isSubmitting}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Buat Quotation
+                        {isSubmitting && <Spinner size="sm" className="text-white [&_svg]:text-white" label="" />}
+                        {isSubmitting ? 'Menyimpan...' : 'Buat Quotation'}
                     </button>
                 </div>
             </form>

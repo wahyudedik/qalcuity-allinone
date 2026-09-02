@@ -157,17 +157,24 @@ else
     print_success "Tidak ada perubahan dependency, skip"
 fi
 
-# --- 6. Regenerate Prisma Client (jika schema berubah) ---
-print_step "6/8 - Cek Prisma schema"
+# --- 6. Prisma generate + migrate (SELALU sebelum build) ---
+print_step "6/8 - Prisma generate & migrate"
 
+# Prisma generate SELALU dijalankan — memastikan Prisma Client up-to-date
+# (baik schema berubah maupun tidak, termasuk fresh deploy / corrupted client)
+cd "$APP_DIR/packages/db"
+npx prisma generate
+cd "$APP_DIR"
+print_success "Prisma Client di-generate"
+
+# Prisma migrate deploy hanya jika schema berubah
 if echo "$CHANGED_FILES" | grep -q "schema.prisma"; then
-    pnpm db:generate
-    pnpm db:migrate 2>/dev/null || pnpm db:migrate:deploy
+    cd "$APP_DIR/packages/db"
+    npx prisma migrate deploy
+    cd "$APP_DIR"
     print_success "Prisma migrations di-deploy ke database"
 else
-    pnpm db:generate 2>/dev/null || true
-    pnpm db:migrate 2>/dev/null || true
-    print_success "Prisma Client verified + migrations checked"
+    print_success "Schema tidak berubah, skip migrate"
 fi
 
 # --- 7. Build aplikasi ---

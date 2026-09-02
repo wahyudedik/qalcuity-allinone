@@ -37,6 +37,7 @@ const initialFormState = {
     email: '',
     phone: '',
     type: 'CUSTOMER',
+    company: '',
     address: '',
     city: '',
     province: '',
@@ -155,6 +156,7 @@ export default function ContactsPage() {
                 name: form.name.trim(),
                 type: form.type || 'CUSTOMER',
             }
+            if (form.company.trim()) payload.company = form.company.trim()
             if (form.email.trim()) payload.email = form.email.trim()
             if (form.phone.trim()) payload.phone = form.phone.trim()
             if (form.address.trim()) payload.address = form.address.trim()
@@ -491,6 +493,17 @@ export default function ContactsPage() {
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Perusahaan</label>
+                        <input
+                            type="text"
+                            name="company"
+                            value={form.company}
+                            onChange={handleFormChange}
+                            placeholder="PT Nama Perusahaan"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Kontak</label>

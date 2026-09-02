@@ -66,6 +66,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.payments") || "Payments", href: "/dashboard/finance/payments" },
                 { label: t("nav.purchaseOrders") || "Purchase Orders", href: "/dashboard/finance/purchase-orders" },
                 { label: t("nav.quotations") || "Quotations", href: "/dashboard/finance/quotations" },
+                { label: t("nav.journalEntries") || "Jurnal", href: "/dashboard/finance/journal-entries" },
                 { label: t("nav.chartOfAccount") || "Chart of Account", href: "/dashboard/finance/accounts" },
                 { label: t("nav.reconciliation") || "Rekonsiliasi", href: "/dashboard/finance/reconciliation" },
             ],

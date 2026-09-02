@@ -882,9 +882,9 @@ qalcuity-allinone/
 │   └── platform-admin/         # Qalcuity Admin dashboard [PLANNED]
 ├── packages/
 │   ├── auth/                   # @qalcuity/auth — Auth logic [PLANNED]
-│   ├── permissions/            # @qalcuity/permissions — Permission engine [PLANNED]
-│   ├── workflow/               # @qalcuity/workflow — Workflow engine [PLANNED]
-│   ├── industry-config/        # @qalcuity/industry-config — Industry config engine [PLANNED]
+│   ├── permissions/            # @qalcuity/permissions — Permission engine [ACTIVE]
+│   ├── workflow/               # @qalcuity/workflow — Workflow engine [ACTIVE]
+│   ├── industry-config/        # @qalcuity/industry-config — Industry config engine [ACTIVE]
 │   ├── db/                     # @qalcuity/db — Prisma schema + client
 │   ├── types/                  # @qalcuity/types — Shared TypeScript types
 │   ├── utils/                  # @qalcuity/utils — Shared utilities
@@ -1209,7 +1209,7 @@ Transaction → Day → Month → Quarter → Year
 
 ---
 
-> **Note:** Permission middleware will be added to the security layers during Phase 9 (Permission Engine Foundation).
+> **Note:** Permission middleware sudah diimplementasi di Phase 9 (Permission Engine Foundation) — terintegrasi ke ~90 API routes.
 
 > **Note:** Control Center engines will be implemented in Phase 10 (Control Center Foundation).
 
