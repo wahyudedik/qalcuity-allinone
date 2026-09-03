@@ -5,6 +5,8 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createApprovalRequestSchema, formatZodError } from '@/lib/validation-schemas';
 import { createApprovalRequest, getApprovalLevels } from '@/lib/approval';
+import { checkAutoApproval } from '@/lib/auto-approval';
+import { notifyApprover } from '@/lib/approval-notifications';
 
 export async function GET(request: Request) {
     try {
@@ -132,6 +134,24 @@ export async function POST(request: Request) {
 
         const { entityType, entityId } = validation.data;
 
+        // Check auto-approval rules first
+        const autoApprovalResult = await checkAutoApproval(
+            tenantId,
+            entityType,
+            entityId,
+            userId,
+            request
+        );
+
+        if (autoApprovalResult.autoApproved) {
+            return NextResponse.json({
+                success: true,
+                data: null,
+                message: 'Auto-approved berdasarkan threshold amount',
+                autoApproved: true,
+            });
+        }
+
         const approvalRequest = await createApprovalRequest({
             tenantId,
             entityType,
@@ -147,6 +167,40 @@ export async function POST(request: Request) {
                 data: null,
                 message: 'Tidak ada approval level yang dikonfigurasi — auto-approved',
             });
+        }
+
+        // Send notification to approvers asynchronously
+        // Find eligible approvers for level 1
+        const levels = await getApprovalLevels(tenantId, entityType);
+        const ROLE_HIERARCHY: Record<string, number> = {
+            VIEWER: 0,
+            MEMBER: 1,
+            ADMIN: 2,
+            SUPERADMIN: 3,
+        };
+
+        const firstActiveLevel = levels.find(
+            (l: { isActive: boolean; requiredRole: string; entityType: string; level: number }) => l.isActive
+        );
+        if (firstActiveLevel) {
+            const requiredLevel = ROLE_HIERARCHY[firstActiveLevel.requiredRole] ?? 0;
+            const eligibleUsers = await prisma.user.findMany({
+                where: {
+                    tenantId,
+                    isActive: true,
+                    role: {
+                        in: Object.entries(ROLE_HIERARCHY)
+                            .filter(([, level]) => level >= requiredLevel)
+                            .map(([role]) => role),
+                    },
+                },
+                select: { id: true },
+            });
+
+            // Notify each eligible approver (fire-and-forget)
+            for (const user of eligibleUsers) {
+                void notifyApprover(approvalRequest.id, user.id);
+            }
         }
 
         return NextResponse.json({ success: true, data: approvalRequest }, { status: 201 });
