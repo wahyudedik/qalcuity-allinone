@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Phone, Mail, Handshake, ClipboardList, ArrowLeft, Trash2, Pencil, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Phone, Mail, Handshake, ClipboardList, ArrowLeft, Trash2, Pencil, CheckCircle, XCircle, Loader2, MessageSquare } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ActivityLog } from '@/components/crm/activity-log'
+import { EmailCompose } from '@/components/crm/email-compose'
 
 interface DealDetail {
     id: string
@@ -54,6 +56,8 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
     const [showStageModal, setShowStageModal] = useState(false)
     const [showLoseConfirm, setShowLoseConfirm] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showEmailCompose, setShowEmailCompose] = useState(false)
+    const [activeTab, setActiveTab] = useState<'details' | 'activities'>('details')
 
     const getStageLabel = (stage: string) => t(`crm.deals.stages.${stage}`)
 
@@ -237,6 +241,15 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                 <div className="flex items-center gap-3">
                     {canMutate && (
                         <button
+                            onClick={() => setShowEmailCompose(!showEmailCompose)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <MessageSquare className="h-4 w-4" />
+                            Kirim Email
+                        </button>
+                    )}
+                    {canMutate && (
+                        <button
                             onClick={() => router.push(`/dashboard/crm/deals/${params.id}/edit`)}
                             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
@@ -263,140 +276,164 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                {/* Main Content */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                            <div className="text-sm text-gray-500">{t('crm.dealDetail.value')}</div>
-                            <div className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(Number(deal.value))}</div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                            <div className="text-sm text-gray-500">{t('crm.dealDetail.probability')}</div>
-                            <div className="mt-1 text-xl font-bold text-blue-600">{deal.probability}%</div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                            <div className="text-sm text-gray-500">{t('crm.dealDetail.weightedValue')}</div>
-                            <div className="mt-1 text-xl font-bold text-green-600">{formatCurrency(weightedValue)}</div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                            <div className="text-sm text-gray-500">{t('crm.dealDetail.estClose')}</div>
-                            <div className="mt-1 text-xl font-bold text-gray-900">{deal.expectedCloseDate}</div>
-                        </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.dealDetail.notes')}</h2>
-                        <p className="text-sm text-gray-600">{deal.notes}</p>
-                    </div>
-
-                    {/* Activities */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.dealDetail.activities')}</h2>
-                        <div className="space-y-4">
-                            {deal.activities.map((activity, idx) => (
-                                <div key={idx} className="flex items-start gap-3">
-                                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100">
-                                        {activity.type === 'call' && <Phone className="h-4 w-4 text-blue-600" />}
-                                        {activity.type === 'email' && <Mail className="h-4 w-4 text-purple-600" />}
-                                        {activity.type === 'meeting' && <Handshake className="h-4 w-4 text-green-600" />}
-                                        {activity.type === 'task' && <ClipboardList className="h-4 w-4 text-orange-600" />}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-900">{activity.description}</p>
-                                        <p className="text-xs text-gray-500">{activity.date}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+            {/* Email Compose Panel */}
+            {showEmailCompose && (
+                <div className="rounded-xl border border-gray-200 bg-white p-6">
+                    <EmailCompose
+                        to={''}
+                        entityType="DEAL"
+                        entityId={deal.id}
+                        onClose={() => setShowEmailCompose(false)}
+                    />
                 </div>
+            )}
 
-                {/* Sidebar */}
-                <div className="space-y-6">
-                    {/* Deal Info */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('crm.dealDetail.dealInfo')}</h3>
-                        <div className="space-y-3">
-                            <div>
-                                <p className="text-xs text-gray-500">{t('crm.dealDetail.company')}</p>
-                                <Link href="/dashboard/crm/contacts" className="text-sm font-medium text-blue-600 hover:underline">{deal.company}</Link>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">{t('crm.dealDetail.contact')}</p>
-                                <Link href="/dashboard/crm/contacts" className="text-sm font-medium text-blue-600 hover:underline">{deal.contactName}</Link>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">{t('crm.dealDetail.stage')}</p>
-                                <p className="text-sm font-medium text-gray-900">{getStageLabel(deal.stage)}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">{t('crm.dealDetail.probability')}</p>
-                                <p className="text-sm font-medium text-gray-900">{deal.probability}%</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">{t('crm.dealDetail.estClose')}</p>
-                                <p className="text-sm font-medium text-gray-900">{deal.expectedCloseDate}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500">{t('crm.dealDetail.created')}</p>
-                                <p className="text-sm font-medium text-gray-900">{deal.createdAt}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Weighted Value */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('crm.dealDetail.analysis')}</h3>
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">{t('crm.dealDetail.value')}</span>
-                                <span className="text-sm font-medium text-gray-900">{formatCurrency(Number(deal.value))}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">{t('crm.dealDetail.probability')}</span>
-                                <span className="text-sm font-medium text-gray-900">{deal.probability}%</span>
-                            </div>
-                            <div className="flex justify-between border-t border-gray-200 pt-2">
-                                <span className="text-sm font-medium text-gray-900">{t('crm.dealDetail.weightedValue')}</span>
-                                <span className="text-sm font-bold text-green-600">{formatCurrency(weightedValue)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('crm.dealDetail.actions')}</h3>
-                        <div className="space-y-2">
-                            {!isClosed && canMutate && (
-                                <>
-                                    <button
-                                        onClick={() => setShowStageModal(true)}
-                                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                    >
-                                        {t('crm.dealDetail.changeStage')}
-                                    </button>
-                                    <button
-                                        onClick={() => setShowLoseConfirm(true)}
-                                        className="w-full rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
-                                    >
-                                        {t('crm.dealDetail.loseDeal')}
-                                    </button>
-                                </>
-                            )}
-                            {isClosed && (
-                                <div className="text-center py-2">
-                                    <p className="text-sm text-gray-500">
-                                        {deal.stage === 'CLOSED_WON' ? t('crm.dealDetail.dealWon') : t('crm.dealDetail.dealLost')}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+                <nav className="flex gap-6">
+                    <button
+                        onClick={() => setActiveTab('details')}
+                        className={`border-b-2 pb-3 text-sm font-medium transition-colors ${activeTab === 'details'
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Detail
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('activities')}
+                        className={`border-b-2 pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'activities'
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <MessageSquare className="h-4 w-4" />
+                        Aktivitas
+                    </button>
+                </nav>
             </div>
+
+            {/* Tab Content: Details */}
+            {activeTab === 'details' && (
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    {/* Main Content */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                            <div className="rounded-xl border border-gray-200 bg-white p-4">
+                                <div className="text-sm text-gray-500">{t('crm.dealDetail.value')}</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(Number(deal.value))}</div>
+                            </div>
+                            <div className="rounded-xl border border-gray-200 bg-white p-4">
+                                <div className="text-sm text-gray-500">{t('crm.dealDetail.probability')}</div>
+                                <div className="mt-1 text-xl font-bold text-blue-600">{deal.probability}%</div>
+                            </div>
+                            <div className="rounded-xl border border-gray-200 bg-white p-4">
+                                <div className="text-sm text-gray-500">{t('crm.dealDetail.weightedValue')}</div>
+                                <div className="mt-1 text-xl font-bold text-green-600">{formatCurrency(weightedValue)}</div>
+                            </div>
+                            <div className="rounded-xl border border-gray-200 bg-white p-4">
+                                <div className="text-sm text-gray-500">{t('crm.dealDetail.estClose')}</div>
+                                <div className="mt-1 text-xl font-bold text-gray-900">{deal.expectedCloseDate}</div>
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div className="rounded-xl border border-gray-200 bg-white p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.dealDetail.notes')}</h2>
+                            <p className="text-sm text-gray-600">{deal.notes}</p>
+                        </div>
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="space-y-6">
+                        {/* Deal Info */}
+                        <div className="rounded-xl border border-gray-200 bg-white p-6">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('crm.dealDetail.dealInfo')}</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.dealDetail.company')}</p>
+                                    <Link href="/dashboard/crm/contacts" className="text-sm font-medium text-blue-600 hover:underline">{deal.company}</Link>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.dealDetail.contact')}</p>
+                                    <Link href="/dashboard/crm/contacts" className="text-sm font-medium text-blue-600 hover:underline">{deal.contactName}</Link>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.dealDetail.stage')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{getStageLabel(deal.stage)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.dealDetail.probability')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{deal.probability}%</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.dealDetail.estClose')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{deal.expectedCloseDate}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500">{t('crm.dealDetail.created')}</p>
+                                    <p className="text-sm font-medium text-gray-900">{deal.createdAt}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Weighted Value */}
+                        <div className="rounded-xl border border-gray-200 bg-white p-6">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('crm.dealDetail.analysis')}</h3>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">{t('crm.dealDetail.value')}</span>
+                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(Number(deal.value))}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-600">{t('crm.dealDetail.probability')}</span>
+                                    <span className="text-sm font-medium text-gray-900">{deal.probability}%</span>
+                                </div>
+                                <div className="flex justify-between border-t border-gray-200 pt-2">
+                                    <span className="text-sm font-medium text-gray-900">{t('crm.dealDetail.weightedValue')}</span>
+                                    <span className="text-sm font-bold text-green-600">{formatCurrency(weightedValue)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="rounded-xl border border-gray-200 bg-white p-6">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('crm.dealDetail.actions')}</h3>
+                            <div className="space-y-2">
+                                {!isClosed && canMutate && (
+                                    <>
+                                        <button
+                                            onClick={() => setShowStageModal(true)}
+                                            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            {t('crm.dealDetail.changeStage')}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowLoseConfirm(true)}
+                                            className="w-full rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                                        >
+                                            {t('crm.dealDetail.loseDeal')}
+                                        </button>
+                                    </>
+                                )}
+                                {isClosed && (
+                                    <div className="text-center py-2">
+                                        <p className="text-sm text-gray-500">
+                                            {deal.stage === 'CLOSED_WON' ? t('crm.dealDetail.dealWon') : t('crm.dealDetail.dealLost')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Tab Content: Activities */}
+            {activeTab === 'activities' && (
+                <ActivityLog entityType="DEAL" entityId={deal.id} />
+            )}
 
             {/* Change Stage Modal */}
             {showStageModal && (

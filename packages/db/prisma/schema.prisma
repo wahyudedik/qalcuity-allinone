@@ -92,6 +92,9 @@ model Tenant {
   scheduledQueries      ScheduledQuery[]
   metricDefinitions     MetricDefinition[]
 
+  // CRM Activities
+  activities        Activity[]
+
   // Workflow Engine
   workflowDefinitions   WorkflowDefinition[]
   workflowHistory       WorkflowHistory[]
@@ -1762,4 +1765,27 @@ model ApprovalRequest {
   @@index([tenantId])
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, status])
+}
+
+// ============================================
+// CRM ACTIVITIES
+// ============================================
+
+model Activity {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  entityType  String    // CONTACT, LEAD, DEAL
+  entityId    String
+  type        String    // CALL, EMAIL, MEETING, NOTE, TASK
+  subject     String
+  description String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId])
 }

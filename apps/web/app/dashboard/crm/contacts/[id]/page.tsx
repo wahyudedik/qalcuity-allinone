@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Trash2, Pencil } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Trash2, Pencil, MessageSquare } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ActivityLog } from '@/components/crm/activity-log'
+import { EmailCompose } from '@/components/crm/email-compose'
 
 interface ContactDetail {
     id: string
@@ -45,6 +47,8 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showEmailCompose, setShowEmailCompose] = useState(false)
+    const [activeTab, setActiveTab] = useState<'details' | 'activities'>('details')
 
     useEffect(() => {
         const contactId = params?.id
@@ -110,6 +114,13 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
     }
     return (
         <div className="space-y-6">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                    {toast.message}
+                </div>
+            )}
+
             {/* Back Button */}
             <Link href="/dashboard/crm/contacts" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4" />
@@ -145,6 +156,15 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                         </button>
                     )}
                     {canMutate && (
+                        <button
+                            onClick={() => setShowEmailCompose(!showEmailCompose)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <Mail className="h-4 w-4" />
+                            Kirim Email
+                        </button>
+                    )}
+                    {canMutate && (
                         <button onClick={handleDelete} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
                             <Trash2 className="inline h-4 w-4 mr-1" />
                             {t('crm.contactDetail.delete')}
@@ -162,34 +182,78 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Contact Details */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.contactDetail.title')}</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-500">{t('crm.contactDetail.name')}</p>
-                                <p className="font-medium text-gray-900">{contact.name}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">{t('crm.contactDetail.company')}</p>
-                                <p className="font-medium text-gray-900">{contact.company}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">{t('crm.contactDetail.position')}</p>
-                                <p className="font-medium text-gray-900">{contact.position}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">{t('crm.contactDetail.type')}</p>
-                                <p className="font-medium text-gray-900">{t(`crm.contactDetail.${(contact.type || 'customer').toLowerCase()}`)}</p>
-                            </div>
-                        </div>
+                    {/* Email Compose */}
+                    {showEmailCompose && (
+                        <EmailCompose
+                            to={contact.email || ''}
+                            entityType="CONTACT"
+                            entityId={params.id}
+                            onClose={() => setShowEmailCompose(false)}
+                        />
+                    )}
+
+                    {/* Tab Navigation */}
+                    <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1">
+                        <button
+                            onClick={() => setActiveTab('details')}
+                            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'details'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            Detail
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('activities')}
+                            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'activities'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            <MessageSquare className="inline h-4 w-4 mr-1" />
+                            Aktivitas
+                        </button>
                     </div>
 
-                    {/* Notes */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.contactDetail.notes')}</h2>
-                        <p className="text-sm text-gray-600">{contact.notes || t('crm.contactDetail.noNotes')}</p>
-                    </div>
+                    {/* Contact Details Tab */}
+                    {activeTab === 'details' && (
+                        <>
+                            <div className="rounded-xl border border-gray-200 bg-white p-6">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.contactDetail.title')}</h2>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-500">{t('crm.contactDetail.name')}</p>
+                                        <p className="font-medium text-gray-900">{contact.name}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">{t('crm.contactDetail.company')}</p>
+                                        <p className="font-medium text-gray-900">{contact.company}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">{t('crm.contactDetail.position')}</p>
+                                        <p className="font-medium text-gray-900">{contact.position}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">{t('crm.contactDetail.type')}</p>
+                                        <p className="font-medium text-gray-900">{t(`crm.contactDetail.${(contact.type || 'customer').toLowerCase()}`)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            <div className="rounded-xl border border-gray-200 bg-white p-6">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('crm.contactDetail.notes')}</h2>
+                                <p className="text-sm text-gray-600">{contact.notes || t('crm.contactDetail.noNotes')}</p>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Activities Tab */}
+                    {activeTab === 'activities' && (
+                        <div className="rounded-xl border border-gray-200 bg-white p-6">
+                            <ActivityLog entityType="CONTACT" entityId={params.id} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar */}
