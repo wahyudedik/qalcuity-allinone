@@ -74,6 +74,7 @@ export async function GET(request: Request) {
             entityId: log.entityId,
             description: `${log.action} ${log.entity}${log.entityId ? ` #${log.entityId}` : ''}`,
             details: log.newValues || null,
+            oldValues: log.oldValues || null,
             ipAddress: log.ipAddress || '-',
             timestamp: log.createdAt.toISOString(),
         }));
