@@ -47,6 +47,9 @@ type ReportType =
     | 'low-stock'
     | 'supplier-performance'
     | 'cash-flow'
+    | 'trial-balance'
+    | 'balance-sheet'
+    | 'income-statement'
 
 interface ReportConfig {
     id: ReportType
@@ -135,6 +138,101 @@ interface ReportsData {
     suppliers: SupplierData[]
 }
 
+// Trial Balance types
+interface TrialBalanceAccount {
+    accountId: string
+    accountCode: string
+    accountName: string
+    accountType: string
+    totalDebit: number
+    totalCredit: number
+    balance: number
+    balanceType: 'debit' | 'credit'
+}
+
+interface TrialBalanceData {
+    accounts: TrialBalanceAccount[]
+    totalDebit: number
+    totalCredit: number
+    isBalanced: boolean
+    dateFrom: string | null
+    dateTo: string | null
+    generatedAt: string
+}
+
+// Balance Sheet types
+interface BalanceSheetAccount {
+    accountId: string
+    accountCode: string
+    accountName: string
+    balance: number
+}
+
+interface BalanceSheetSection {
+    label: string
+    accounts: BalanceSheetAccount[]
+    total: number
+}
+
+interface BalanceSheetData {
+    assets: {
+        current: BalanceSheetSection
+        nonCurrent: BalanceSheetSection
+        total: number
+    }
+    liabilities: {
+        current: BalanceSheetSection
+        longTerm: BalanceSheetSection
+        total: number
+    }
+    equity: BalanceSheetSection
+    totalLiabilitiesAndEquity: number
+    isBalanced: boolean
+    date: string
+    generatedAt: string
+}
+
+// Income Statement types
+interface IncomeStatementAccount {
+    accountId: string
+    accountCode: string
+    accountName: string
+    amount: number
+}
+
+interface IncomeStatementSection {
+    label: string
+    accounts: IncomeStatementAccount[]
+    total: number
+}
+
+interface PeriodData {
+    period: string
+    revenue: number
+    cogs: number
+    grossProfit: number
+    operatingExpenses: number
+    operatingIncome: number
+    nonOperatingIncome: number
+    nonOperatingExpenses: number
+    netIncome: number
+}
+
+interface IncomeStatementData {
+    revenue: IncomeStatementSection
+    cogs: IncomeStatementSection
+    grossProfit: number
+    operatingExpenses: IncomeStatementSection
+    operatingIncome: number
+    nonOperatingIncome: IncomeStatementSection
+    nonOperatingExpenses: IncomeStatementSection
+    netIncome: number
+    byPeriod: PeriodData[]
+    dateFrom: string | null
+    dateTo: string | null
+    generatedAt: string
+}
+
 /* ============================================
    REPORT DEFINITIONS
    ============================================ */
@@ -159,6 +257,9 @@ const REPORT_TYPE_CONFIG: { id: ReportType; nameKey: string; descKey: string; ca
     { id: 'stock-summary', nameKey: 'reports.types.stockSummary.name', descKey: 'reports.types.stockSummary.desc', category: 'inventory' },
     { id: 'low-stock', nameKey: 'reports.types.lowStock.name', descKey: 'reports.types.lowStock.desc', category: 'inventory' },
     { id: 'supplier-performance', nameKey: 'reports.types.supplierPerformance.name', descKey: 'reports.types.supplierPerformance.desc', category: 'inventory' },
+    { id: 'trial-balance', nameKey: 'reports.types.trialBalance.name', descKey: 'reports.types.trialBalance.desc', category: 'finance' },
+    { id: 'balance-sheet', nameKey: 'reports.types.balanceSheet.name', descKey: 'reports.types.balanceSheet.desc', category: 'finance' },
+    { id: 'income-statement', nameKey: 'reports.types.incomeStatement.name', descKey: 'reports.types.incomeStatement.desc', category: 'finance' },
 ]
 
 /* ============================================
@@ -187,6 +288,9 @@ export default function ReportsPage() {
 
     // Data state
     const [data, setData] = useState<ReportsData | null>(null)
+    const [trialBalanceData, setTrialBalanceData] = useState<TrialBalanceData | null>(null)
+    const [balanceSheetData, setBalanceSheetData] = useState<BalanceSheetData | null>(null)
+    const [incomeStatementData, setIncomeStatementData] = useState<IncomeStatementData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -217,9 +321,91 @@ export default function ReportsPage() {
         }
     }, [dateFrom, dateTo])
 
+    // Fetch Trial Balance data
+    const fetchTrialBalance = useCallback(async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            const params = new URLSearchParams()
+            if (dateFrom) params.set('dateFrom', dateFrom)
+            if (dateTo) params.set('dateTo', dateTo)
+
+            const response = await fetch(`/api/finance/reports/trial-balance?${params.toString()}`)
+            const result = await response.json()
+
+            if (!result.success) {
+                throw new Error(result.error || 'Gagal memuat trial balance')
+            }
+
+            setTrialBalanceData(result.data)
+        } catch (err) {
+            console.error('Failed to fetch trial balance:', err)
+            setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }, [dateFrom, dateTo])
+
+    // Fetch Balance Sheet data
+    const fetchBalanceSheet = useCallback(async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            const params = new URLSearchParams()
+            if (dateTo) params.set('date', dateTo)
+
+            const response = await fetch(`/api/finance/reports/balance-sheet?${params.toString()}`)
+            const result = await response.json()
+
+            if (!result.success) {
+                throw new Error(result.error || 'Gagal memuat neraca')
+            }
+
+            setBalanceSheetData(result.data)
+        } catch (err) {
+            console.error('Failed to fetch balance sheet:', err)
+            setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }, [dateTo])
+
+    // Fetch Income Statement data
+    const fetchIncomeStatement = useCallback(async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            const params = new URLSearchParams()
+            if (dateFrom) params.set('dateFrom', dateFrom)
+            if (dateTo) params.set('dateTo', dateTo)
+
+            const response = await fetch(`/api/finance/reports/income-statement?${params.toString()}`)
+            const result = await response.json()
+
+            if (!result.success) {
+                throw new Error(result.error || 'Gagal memuat laporan laba rugi')
+            }
+
+            setIncomeStatementData(result.data)
+        } catch (err) {
+            console.error('Failed to fetch income statement:', err)
+            setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
+        } finally {
+            setLoading(false)
+        }
+    }, [dateFrom, dateTo])
+
     useEffect(() => {
-        fetchData()
-    }, [fetchData])
+        if (selectedReport === 'trial-balance') {
+            fetchTrialBalance()
+        } else if (selectedReport === 'balance-sheet') {
+            fetchBalanceSheet()
+        } else if (selectedReport === 'income-statement') {
+            fetchIncomeStatement()
+        } else {
+            fetchData()
+        }
+    }, [selectedReport, fetchData, fetchTrialBalance, fetchBalanceSheet, fetchIncomeStatement])
 
     const filteredReports = REPORTS.filter(r => !selectedCategory || r.category === selectedCategory)
 
@@ -230,8 +416,18 @@ export default function ReportsPage() {
         inventory: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
     }
 
+    // Determine if we need financial report data
+    const isFinancialReport = selectedReport === 'trial-balance' || selectedReport === 'balance-sheet' || selectedReport === 'income-statement'
+
+    // Check if we have data for the current report type
+    const hasData = isFinancialReport
+        ? (selectedReport === 'trial-balance' && trialBalanceData) ||
+        (selectedReport === 'balance-sheet' && balanceSheetData) ||
+        (selectedReport === 'income-statement' && incomeStatementData)
+        : !!data
+
     // Loading state
-    if (loading && !data) {
+    if (loading && !hasData) {
         return (
             <div className="space-y-6">
                 <div>
@@ -249,7 +445,11 @@ export default function ReportsPage() {
     }
 
     // Error state
-    if (error && !data) {
+    if (error && !hasData) {
+        const retryFn = isFinancialReport
+            ? (selectedReport === 'trial-balance' ? fetchTrialBalance :
+                selectedReport === 'balance-sheet' ? fetchBalanceSheet : fetchIncomeStatement)
+            : fetchData
         return (
             <div className="space-y-6">
                 <div>
@@ -263,7 +463,7 @@ export default function ReportsPage() {
                     <p className="text-gray-900 dark:text-gray-100 font-medium mb-2">{t('reports.errorLoad')}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
                     <button
-                        onClick={fetchData}
+                        onClick={retryFn}
                         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                     >
                         <RefreshCw className="h-4 w-4" />
@@ -364,11 +564,11 @@ export default function ReportsPage() {
             <div className="flex flex-wrap gap-2">
                 <button
                     onClick={() => {
-                        if (!data) return
-                        const exportData = getExportData(selectedReport, data, t)
+                        if (!hasData || !data) return
+                        const exportData = getExportData(selectedReport, data as ReportsData, t)
                         exportToCSV(exportData.rows, `${currentReport?.name || 'report'}_${dateTo}`)
                     }}
-                    disabled={!data}
+                    disabled={!hasData}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                     <Download className="h-4 w-4" />
@@ -376,11 +576,11 @@ export default function ReportsPage() {
                 </button>
                 <button
                     onClick={() => {
-                        if (!data) return
-                        const exportData = getExportData(selectedReport, data, t)
+                        if (!hasData || !data) return
+                        const exportData = getExportData(selectedReport, data as ReportsData, t)
                         exportToExcel(exportData.rows, `${currentReport?.name || 'report'}_${dateTo}`)
                     }}
-                    disabled={!data}
+                    disabled={!hasData}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                     <Download className="h-4 w-4" />
@@ -418,14 +618,15 @@ export default function ReportsPage() {
 
                 <div className="p-4 sm:p-6">
                     {/* Inline loading indicator when refetching */}
-                    {loading && data && (
+                    {loading && hasData && (
                         <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                             <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
                             <span className="text-sm text-blue-600 dark:text-blue-400">{t('reports.updating')}</span>
                         </div>
                     )}
 
-                    {data && (
+                    {/* Standard reports */}
+                    {data && !isFinancialReport && (
                         <>
                             {selectedReport === 'revenue' && <RevenueReport data={data.revenue} />}
                             {selectedReport === 'expense' && <ExpenseReport data={data.expenses} />}
@@ -440,6 +641,17 @@ export default function ReportsPage() {
                             {selectedReport === 'low-stock' && <LowStockReport data={data.stock} />}
                             {selectedReport === 'supplier-performance' && <SupplierPerformanceReport data={data.suppliers} />}
                         </>
+                    )}
+
+                    {/* Financial statements */}
+                    {selectedReport === 'trial-balance' && trialBalanceData && (
+                        <TrialBalanceReport data={trialBalanceData} />
+                    )}
+                    {selectedReport === 'balance-sheet' && balanceSheetData && (
+                        <BalanceSheetReport data={balanceSheetData} />
+                    )}
+                    {selectedReport === 'income-statement' && incomeStatementData && (
+                        <IncomeStatementReport data={incomeStatementData} />
                     )}
                 </div>
             </div>
@@ -1797,6 +2009,438 @@ function EmptyState({ message }: { message: string }) {
             <FileText className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
             <p className="text-gray-500 dark:text-gray-400">{message}</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('reports.common.emptyStateHint')}</p>
+        </div>
+    )
+}
+
+/* ============================================
+   FINANCIAL STATEMENTS: TRIAL BALANCE
+   ============================================ */
+
+function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
+    const { t } = useTranslation()
+
+    const accountTypeLabels: Record<string, string> = {
+        ASSET: 'Aset',
+        LIABILITY: 'Kewajiban',
+        EQUITY: 'Ekuitas',
+        REVENUE: 'Pendapatan',
+        EXPENSE: 'Beban',
+    }
+
+    const accountTypeColors: Record<string, string> = {
+        ASSET: 'text-blue-600 dark:text-blue-400',
+        LIABILITY: 'text-red-600 dark:text-red-400',
+        EQUITY: 'text-purple-600 dark:text-purple-400',
+        REVENUE: 'text-green-600 dark:text-green-400',
+        EXPENSE: 'text-orange-600 dark:text-orange-400',
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KPICard label="Total Debit" value={formatCurrency(data.totalDebit)} icon={<ArrowUpRight className="h-5 w-5" />} color="blue" />
+                <KPICard label="Total Kredit" value={formatCurrency(data.totalCredit)} icon={<ArrowDownRight className="h-5 w-5" />} color="red" />
+                <KPICard label="Selisih" value={formatCurrency(Math.abs(data.totalDebit - data.totalCredit))} icon={<DollarSign className="h-5 w-5" />} color={data.isBalanced ? 'green' : 'red'} />
+                <KPICard label="Status" value={data.isBalanced ? 'Seimbang ✓' : 'Tidak Seimbang ✗'} icon={<ClipboardList className="h-5 w-5" />} color={data.isBalanced ? 'green' : 'red'} />
+            </div>
+
+            {/* Balance indicator */}
+            {!data.isBalanced && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-700 dark:text-red-400 font-medium">
+                            Trial Balance tidak seimbang! Selisih: {formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Table */}
+            {data.accounts.length > 0 ? (
+                <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                        {data.accounts.map((acc) => (
+                            <div key={acc.accountId} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{acc.accountCode}</span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{acc.accountName}</span>
+                                    </div>
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${accountTypeColors[acc.accountType]} bg-gray-100 dark:bg-gray-700`}>
+                                        {accountTypeLabels[acc.accountType] || acc.accountType}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Debit: </span>
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{acc.totalDebit > 0 ? formatCurrency(acc.totalDebit) : '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Kredit: </span>
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium">{acc.totalCredit > 0 ? formatCurrency(acc.totalCredit) : '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Saldo: </span>
+                                        <span className={`font-bold ${acc.balanceType === 'debit' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {formatCurrency(acc.balance)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {/* Totals */}
+                        <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="grid grid-cols-3 gap-2 text-sm font-semibold">
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">Total Debit: </span>
+                                    <span className="text-blue-600 dark:text-blue-400">{formatCurrency(data.totalDebit)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">Total Kredit: </span>
+                                    <span className="text-red-600 dark:text-red-400">{formatCurrency(data.totalCredit)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">Selisih: </span>
+                                    <span className={data.isBalanced ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                        {formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Kode Akun</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Nama Akun</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Tipe</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Debit</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Kredit</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.accounts.map((acc) => (
+                                    <tr key={acc.accountId} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 font-mono text-xs text-gray-500 dark:text-gray-400">{acc.accountCode}</td>
+                                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{acc.accountName}</td>
+                                        <td className="py-3 px-4 text-center">
+                                            <span className={`text-xs font-medium ${accountTypeColors[acc.accountType]}`}>
+                                                {accountTypeLabels[acc.accountType] || acc.accountType}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
+                                            {acc.totalDebit > 0 ? formatCurrency(acc.totalDebit) : '-'}
+                                        </td>
+                                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
+                                            {acc.totalCredit > 0 ? formatCurrency(acc.totalCredit) : '-'}
+                                        </td>
+                                        <td className="py-3 px-4 text-right font-bold">
+                                            <span className={acc.balanceType === 'debit' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}>
+                                                {formatCurrency(acc.balance)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600">
+                                    <td colSpan={3} className="py-3 px-4 text-gray-900 dark:text-gray-100">Total</td>
+                                    <td className="py-3 px-4 text-right text-blue-600 dark:text-blue-400">{formatCurrency(data.totalDebit)}</td>
+                                    <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(data.totalCredit)}</td>
+                                    <td className="py-3 px-4 text-right">
+                                        <span className={data.isBalanced ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                            {data.isBalanced ? 'Seimbang ✓' : formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </>
+            ) : (
+                <EmptyState message="Tidak ada data akun untuk periode ini" />
+            )}
+        </div>
+    )
+}
+
+/* ============================================
+   FINANCIAL STATEMENTS: BALANCE SHEET (NERACA)
+   ============================================ */
+
+function BalanceSheetReport({ data }: { data: BalanceSheetData }) {
+    const { t } = useTranslation()
+
+    function renderSection(section: BalanceSheetSection, color: string) {
+        if (section.accounts.length === 0) return null
+        return (
+            <div className="mb-6">
+                <h4 className={`text-sm font-semibold ${color} mb-3`}>{section.label}</h4>
+                <div className="space-y-2">
+                    {section.accounts.map((acc) => (
+                        <div key={acc.accountId} className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono text-gray-400 dark:text-gray-500 w-16">{acc.accountCode}</span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{acc.accountName}</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(acc.balance)}</span>
+                        </div>
+                    ))}
+                </div>
+                <div className={`flex items-center justify-between py-2 px-3 mt-1 border-t ${color === 'text-blue-600' ? 'border-blue-200 dark:border-blue-800' : color === 'text-red-600' ? 'border-red-200 dark:border-red-800' : 'border-purple-200 dark:border-purple-800'}`}>
+                    <span className={`text-sm font-semibold ${color}`}>Total {section.label.split('(')[0].trim()}</span>
+                    <span className={`text-sm font-bold ${color}`}>{formatCurrency(section.total)}</span>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <KPICard label="Total Aset" value={formatCurrency(data.assets.total)} icon={<DollarSign className="h-5 w-5" />} color="blue" />
+                <KPICard label="Total Kewajiban" value={formatCurrency(data.liabilities.total)} icon={<ArrowDownRight className="h-5 w-5" />} color="red" />
+                <KPICard label="Total Ekuitas" value={formatCurrency(data.equity.total)} icon={<ArrowUpRight className="h-5 w-5" />} color="green" />
+            </div>
+
+            {/* Balance indicator */}
+            {!data.isBalanced && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-700 dark:text-red-400 font-medium">
+                            Neraca tidak seimbang! Aset: {formatCurrency(data.assets.total)} ≠ Kewajiban + Ekuitas: {formatCurrency(data.totalLiabilitiesAndEquity)}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Balance Sheet Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Assets */}
+                <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-blue-500" />
+                        Aset (Assets)
+                    </h3>
+                    {renderSection(data.assets.current, 'text-blue-600 dark:text-blue-400')}
+                    {renderSection(data.assets.nonCurrent, 'text-blue-600 dark:text-blue-400')}
+                    <div className="flex items-center justify-between py-3 px-3 mt-2 border-t-2 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <span className="text-sm font-bold text-blue-700 dark:text-blue-300">Total Aset</span>
+                        <span className="text-base font-bold text-blue-700 dark:text-blue-300">{formatCurrency(data.assets.total)}</span>
+                    </div>
+                </div>
+
+                {/* Liabilities + Equity */}
+                <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-red-500" />
+                        Kewajiban & Ekuitas
+                    </h3>
+                    {renderSection(data.liabilities.current, 'text-red-600 dark:text-red-400')}
+                    {renderSection(data.liabilities.longTerm, 'text-red-600 dark:text-red-400')}
+                    {renderSection(data.equity, 'text-purple-600 dark:text-purple-400')}
+                    <div className="flex items-center justify-between py-3 px-3 mt-2 border-t-2 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <span className="text-sm font-bold text-red-700 dark:text-red-300">Total Kewajiban + Ekuitas</span>
+                        <span className="text-base font-bold text-red-700 dark:text-red-300">{formatCurrency(data.totalLiabilitiesAndEquity)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+/* ============================================
+   FINANCIAL STATEMENTS: INCOME STATEMENT (LABA RUGI)
+   ============================================ */
+
+function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
+    const { t } = useTranslation()
+
+    return (
+        <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KPICard label="Pendapatan" value={formatCurrency(data.revenue.total)} icon={<ArrowUpRight className="h-5 w-5" />} color="green" />
+                <KPICard label="HPP" value={formatCurrency(data.cogs.total)} icon={<ArrowDownRight className="h-5 w-5" />} color="orange" />
+                <KPICard label="Laba Kotor" value={formatCurrency(data.grossProfit)} icon={<DollarSign className="h-5 w-5" />} color={data.grossProfit >= 0 ? 'blue' : 'red'} />
+                <KPICard label="Laba Bersih" value={formatCurrency(data.netIncome)} icon={<DollarSign className="h-5 w-5" />} color={data.netIncome >= 0 ? 'green' : 'red'} />
+            </div>
+
+            {/* Main Income Statement */}
+            <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="space-y-4">
+                    {/* Revenue */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">Pendapatan Usaha (Revenue)</h4>
+                        {data.revenue.accounts.length > 0 ? (
+                            <div className="space-y-1 ml-4">
+                                {data.revenue.accounts.map((acc) => (
+                                    <div key={acc.accountId} className="flex items-center justify-between py-1">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="text-xs font-mono mr-2">{acc.accountCode}</span>
+                                            {acc.accountName}
+                                        </span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(acc.amount)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">Tidak ada data</p>
+                        )}
+                        <div className="flex items-center justify-between py-2 px-4 mt-1 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <span className="text-sm font-semibold text-green-700 dark:text-green-300">Total Pendapatan</span>
+                            <span className="text-sm font-bold text-green-700 dark:text-green-300">{formatCurrency(data.revenue.total)}</span>
+                        </div>
+                    </div>
+
+                    {/* COGS */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-orange-600 dark:text-orange-400 mb-2">Harga Pokok Penjualan (COGS)</h4>
+                        {data.cogs.accounts.length > 0 ? (
+                            <div className="space-y-1 ml-4">
+                                {data.cogs.accounts.map((acc) => (
+                                    <div key={acc.accountId} className="flex items-center justify-between py-1">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="text-xs font-mono mr-2">{acc.accountCode}</span>
+                                            {acc.accountName}
+                                        </span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(acc.amount)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">Tidak ada data</p>
+                        )}
+                        <div className="flex items-center justify-between py-2 px-4 mt-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                            <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">Total HPP</span>
+                            <span className="text-sm font-bold text-orange-700 dark:text-orange-300">{formatCurrency(data.cogs.total)}</span>
+                        </div>
+                    </div>
+
+                    {/* Gross Profit */}
+                    <div className="flex items-center justify-between py-3 px-4 border-t-2 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Laba Kotor (Gross Profit)</span>
+                        <span className={`text-base font-bold ${data.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {formatCurrency(data.grossProfit)}
+                        </span>
+                    </div>
+
+                    {/* Operating Expenses */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Biaya Operasional</h4>
+                        {data.operatingExpenses.accounts.length > 0 ? (
+                            <div className="space-y-1 ml-4">
+                                {data.operatingExpenses.accounts.map((acc) => (
+                                    <div key={acc.accountId} className="flex items-center justify-between py-1">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="text-xs font-mono mr-2">{acc.accountCode}</span>
+                                            {acc.accountName}
+                                        </span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(acc.amount)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">Tidak ada data</p>
+                        )}
+                        <div className="flex items-center justify-between py-2 px-4 mt-1 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <span className="text-sm font-semibold text-red-700 dark:text-red-300">Total Biaya Operasional</span>
+                            <span className="text-sm font-bold text-red-700 dark:text-red-300">{formatCurrency(data.operatingExpenses.total)}</span>
+                        </div>
+                    </div>
+
+                    {/* Operating Income */}
+                    <div className="flex items-center justify-between py-3 px-4 border-t-2 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Laba Operasional (Operating Income)</span>
+                        <span className={`text-base font-bold ${data.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {formatCurrency(data.operatingIncome)}
+                        </span>
+                    </div>
+
+                    {/* Non-Operating Income */}
+                    {(data.nonOperatingIncome.total !== 0 || data.nonOperatingExpenses.total !== 0) && (
+                        <>
+                            <div className="grid grid-cols-2 gap-4">
+                                {data.nonOperatingIncome.total !== 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">Pendapatan Non-Operasional</h4>
+                                        {data.nonOperatingIncome.accounts.map((acc) => (
+                                            <div key={acc.accountId} className="flex items-center justify-between py-1 ml-4">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">{acc.accountName}</span>
+                                                <span className="text-sm font-medium text-green-600 dark:text-green-400">{formatCurrency(acc.amount)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {data.nonOperatingExpenses.total !== 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Beban Non-Operasional</h4>
+                                        {data.nonOperatingExpenses.accounts.map((acc) => (
+                                            <div key={acc.accountId} className="flex items-center justify-between py-1 ml-4">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">{acc.accountName}</span>
+                                                <span className="text-sm font-medium text-red-600 dark:text-red-400">{formatCurrency(acc.amount)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Net Income */}
+                    <div className="flex items-center justify-between py-4 px-4 border-t-2 border-gray-300 dark:border-gray-500 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <span className="text-base font-bold text-gray-900 dark:text-gray-100">Laba Bersih (Net Income)</span>
+                        <span className={`text-xl font-bold ${data.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {formatCurrency(data.netIncome)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Period Breakdown */}
+            {data.byPeriod.length > 1 && (
+                <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">Breakdown Periode</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Periode</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Pendapatan</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">HPP</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Laba Kotor</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Biaya Ops</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Laba Bersih</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.byPeriod.map((pd) => (
+                                    <tr key={pd.period} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{pd.period}</td>
+                                        <td className="py-3 px-4 text-right text-green-600 dark:text-green-400">{formatCurrency(pd.revenue)}</td>
+                                        <td className="py-3 px-4 text-right text-orange-600 dark:text-orange-400">{formatCurrency(pd.cogs)}</td>
+                                        <td className="py-3 px-4 text-right text-blue-600 dark:text-blue-400">{formatCurrency(pd.grossProfit)}</td>
+                                        <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(pd.operatingExpenses)}</td>
+                                        <td className={`py-3 px-4 text-right font-bold ${pd.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {formatCurrency(pd.netIncome)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
