@@ -18,10 +18,13 @@ import {
     TrendingUp,
     TrendingDown,
     Loader2,
+    Receipt,
+    Briefcase,
     type LucideIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { BarChart, PieChart, LineChart } from '@/components/ui/charts'
 
 interface DashboardStats {
     revenue: { current: number; previous: number; change: number; currency: string }
@@ -46,28 +49,21 @@ interface DashboardStats {
     }>
 }
 
-interface PaymentData {
-    id: string
-    amount: number | string
-    type: string
-    date: string
-    status: string
+interface KpiData {
+    revenue: { current: number; previous: number; change: number }
+    expenses: { current: number; previous: number; change: number }
+    profit: { current: number; previous: number; change: number }
+    outstandingInvoices: { count: number; total: number }
+    lowStockProducts: { count: number; items: Array<{ id: string; name: string; stock: number; minStock: number }> }
+    activeEmployees: number
+    activeDeals: number
 }
 
-interface InvoiceData {
-    id: string
-    invoiceNumber: string
-    status: string
-    dueDate: string
-    total: number | string
-}
-
-interface ProductData {
-    id: string
-    name: string
-    sku: string
-    stock: number
-    minStock: number
+interface ChartsData {
+    revenueByMonth: { labels: string[]; data: number[] }
+    expenseByCategory: { labels: string[]; data: number[] }
+    topProducts: { labels: string[]; data: number[] }
+    orderTrend: { labels: string[]; data: number[] }
 }
 
 const alertIconMap: Record<string, LucideIcon> = {
@@ -82,8 +78,6 @@ const alertColorMap: Record<string, string> = {
     info: 'text-blue-500',
 }
 
-const statIcons: LucideIcon[] = [DollarSign, ShoppingCart, Users, ClipboardList]
-
 const quickActionIcons: Record<string, LucideIcon> = {
     invoice: FileText,
     lead: UserCheck,
@@ -91,17 +85,12 @@ const quickActionIcons: Record<string, LucideIcon> = {
     payment: Banknote,
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
-    const [revenueChartData, setRevenueChartData] = useState<number[]>([])
-    const [revenueChartLabels, setRevenueChartLabels] = useState<string[]>([])
-    const [overdueCount, setOverdueCount] = useState(0)
-    const [overdueTotal, setOverdueTotal] = useState(0)
-    const [lowStockCount, setLowStockCount] = useState(0)
-    const [lowStockNames, setLowStockNames] = useState<string[]>([])
-    const [revenueChangePercent, setRevenueChangePercent] = useState(0)
+    const [kpi, setKpi] = useState<KpiData | null>(null)
+    const [charts, setCharts] = useState<ChartsData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { t } = useTranslation()
@@ -112,87 +101,29 @@ export default function DashboardPage() {
                 setLoading(true)
                 setError(null)
 
-                // Fetch dashboard stats + supporting data in parallel
-                const [statsRes, paymentsRes, invoicesRes, productsRes] = await Promise.all([
+                // Fetch dashboard stats + KPI + charts in parallel
+                const [statsRes, kpiRes, chartsRes] = await Promise.all([
                     fetch('/api/dashboard/stats'),
-                    fetch('/api/finance/payments?limit=1000&type=INCOME'),
-                    fetch('/api/finance/invoices?limit=1000'),
-                    fetch('/api/inventory/products?limit=1000'),
+                    fetch('/api/dashboard/kpi'),
+                    fetch('/api/dashboard/charts'),
                 ])
 
-                const [statsJson, paymentsJson, invoicesJson, productsJson] = await Promise.all([
+                const [statsJson, kpiJson, chartsJson] = await Promise.all([
                     statsRes.json(),
-                    paymentsRes.json(),
-                    invoicesRes.json(),
-                    productsRes.json(),
+                    kpiRes.json(),
+                    chartsRes.json(),
                 ])
 
                 if (statsJson.success) {
                     setStats(statsJson.data)
                 }
 
-                // Process payments for revenue chart (last 6 months)
-                if (paymentsJson.success) {
-                    const payments: PaymentData[] = paymentsJson.data
-                    const now = new Date()
-                    const chartData: number[] = []
-                    const chartLabels: string[] = []
-
-                    for (let i = 5; i >= 0; i--) {
-                        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
-                        const month = monthDate.getMonth()
-                        const year = monthDate.getFullYear()
-
-                        const monthTotal = payments
-                            .filter((p) => {
-                                const pDate = new Date(p.date)
-                                return pDate.getMonth() === month && pDate.getFullYear() === year && p.status === 'completed'
-                            })
-                            .reduce((sum, p) => sum + Number(p.amount || 0), 0)
-
-                        chartData.push(monthTotal)
-                        chartLabels.push(MONTH_LABELS[month])
-                    }
-
-                    setRevenueChartData(chartData)
-                    setRevenueChartLabels(chartLabels)
-
-                    // Calculate revenue change (this month vs last month)
-                    const thisMonth = payments.filter((p) => {
-                        const pDate = new Date(p.date)
-                        return pDate.getMonth() === now.getMonth() && pDate.getFullYear() === now.getFullYear() && p.status === 'completed'
-                    }).reduce((sum, p) => sum + Number(p.amount || 0), 0)
-
-                    const lastMonth = payments.filter((p) => {
-                        const pDate = new Date(p.date)
-                        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-                        return pDate.getMonth() === lastMonthDate.getMonth() && pDate.getFullYear() === lastMonthDate.getFullYear() && p.status === 'completed'
-                    }).reduce((sum, p) => sum + Number(p.amount || 0), 0)
-
-                    if (lastMonth > 0) {
-                        setRevenueChangePercent(Math.round(((thisMonth - lastMonth) / lastMonth) * 100))
-                    } else if (thisMonth > 0) {
-                        setRevenueChangePercent(100)
-                    }
+                if (kpiJson.success) {
+                    setKpi(kpiJson.data)
                 }
 
-                // Process invoices for overdue count
-                if (invoicesJson.success) {
-                    const invoices: InvoiceData[] = invoicesJson.data
-                    const now = new Date()
-                    const overdue = invoices.filter((inv) =>
-                        ['sent', 'overdue'].includes(inv.status) && new Date(inv.dueDate) < now
-                    )
-                    setOverdueCount(overdue.length)
-                    setOverdueTotal(overdue.reduce((sum, inv) => sum + Number(inv.total || 0), 0))
-                }
-
-                // Process products for low stock
-                if (productsJson.success) {
-                    const products: ProductData[] = productsJson.data
-                    const lowStock = products.filter((p) => p.stock <= p.minStock)
-                    setLowStockCount(lowStock.length)
-                    setLowStockNames(lowStock.slice(0, 3).map((p) => p.name))
+                if (chartsJson.success) {
+                    setCharts(chartsJson.data)
                 }
             } catch {
                 setError(t('dashboard.failedToLoad'))
@@ -251,12 +182,56 @@ export default function DashboardPage() {
         hr: '/dashboard/hr',
     }
 
+    // KPI stat values — use real KPI data from API when available
     const statValues = [
-        { title: t('dashboard.totalRevenue'), value: formatCurrency(stats.revenue.current), change: stats.revenue.change },
-        { title: t('dashboard.totalOrders'), value: stats.orders.current.toString(), change: stats.orders.change },
-        { title: t('dashboard.customers'), value: stats.customers.current.toString(), change: stats.customers.change },
-        { title: t('dashboard.products'), value: stats.products.current.toString(), change: stats.products.change },
+        {
+            title: t('dashboard.totalRevenue'),
+            value: formatCurrency(kpi?.revenue?.current ?? stats.revenue.current),
+            change: kpi?.revenue?.change ?? stats.revenue.change,
+        },
+        {
+            title: t('dashboard.totalOrders'),
+            value: stats.orders.current.toString(),
+            change: stats.orders.change,
+        },
+        {
+            title: t('dashboard.customers'),
+            value: stats.customers.current.toString(),
+            change: stats.customers.change,
+        },
+        {
+            title: t('dashboard.products'),
+            value: stats.products.current.toString(),
+            change: stats.products.change,
+        },
     ]
+
+    // Extended KPI row
+    const extendedKpis = kpi ? [
+        {
+            title: 'Profit Bulanan',
+            value: formatCurrency(kpi.profit.current),
+            change: kpi.profit.change,
+            icon: DollarSign,
+        },
+        {
+            title: 'Pengeluaran',
+            value: formatCurrency(kpi.expenses.current),
+            change: kpi.expenses.change,
+            icon: Receipt,
+        },
+        {
+            title: 'Invoice Overdue',
+            value: kpi.outstandingInvoices.count.toString(),
+            subtitle: formatCurrency(kpi.outstandingInvoices.total),
+            icon: FileText,
+        },
+        {
+            title: 'Karyawan Aktif',
+            value: kpi.activeEmployees.toString(),
+            icon: Users,
+        },
+    ] : []
 
     const quickActions = [
         { href: '/dashboard/finance/invoices', iconKey: 'invoice', label: t('dashboard.createInvoice') },
@@ -265,10 +240,8 @@ export default function DashboardPage() {
         { href: '/dashboard/finance/payments', iconKey: 'payment', label: t('dashboard.recordPayment') },
     ]
 
-    // Calculate max value for chart scaling
-    const maxChartValue = Math.max(...revenueChartData, 1)
-
-    // AI Insights from real data
+    // AI Insights from real KPI data
+    const revenueChangePercent = kpi?.revenue?.change ?? 0
     const revenueInsightText = revenueChangePercent >= 0
         ? `↑ ${revenueChangePercent}% dari bulan lalu`
         : `↓ ${Math.abs(revenueChangePercent)}% dari bulan lalu`
@@ -278,6 +251,8 @@ export default function DashboardPage() {
             ? 'Pertumbuhan stabil. Pertimbangkan promosi untuk mencapai target Q3.'
             : 'Revenue menurun. Perlu evaluasi strategi penjualan.'
 
+    const overdueCount = kpi?.outstandingInvoices?.count ?? 0
+    const overdueTotal = kpi?.outstandingInvoices?.total ?? 0
     const cashFlowInsightText = overdueCount > 0
         ? `${overdueCount} invoice overdue`
         : 'Tidak ada invoice overdue'
@@ -285,11 +260,13 @@ export default function DashboardPage() {
         ? `Total ${formatCurrency(overdueTotal)} perlu follow up segera.`
         : 'Semua invoice sudah sesuai jadwal.'
 
+    const lowStockCount = kpi?.lowStockProducts?.count ?? 0
+    const lowStockNames = kpi?.lowStockProducts?.items?.map((p) => p.name) ?? []
     const stockInsightText = lowStockCount > 0
         ? `${lowStockCount} produk low stock`
         : 'Semua stok produk aman'
     const stockInsightDesc = lowStockCount > 0
-        ? `${lowStockNames.join(', ')}${lowStockCount > 3 ? ` dan ${lowStockCount - 3} lainnya` : ''} perlu restock.`
+        ? `${lowStockNames.slice(0, 3).join(', ')}${lowStockCount > 3 ? ` dan ${lowStockCount - 3} lainnya` : ''} perlu restock.`
         : 'Tidak ada produk yang perlu restock saat ini.'
 
     return (
@@ -302,10 +279,13 @@ export default function DashboardPage() {
                 </p>
             </div>
 
-            {/* Stats Cards */}
+            {/* Primary Stats Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {statValues.map((stat, i) => {
-                    const Icon = statIcons[i]
+                {statValues.map((stat) => {
+                    const Icon = stat === statValues[0] ? DollarSign
+                        : stat === statValues[1] ? ShoppingCart
+                            : stat === statValues[2] ? Users
+                                : ClipboardList
                     return (
                         <StatCard
                             key={stat.title}
@@ -318,6 +298,23 @@ export default function DashboardPage() {
                     )
                 })}
             </div>
+
+            {/* Extended KPI Row */}
+            {extendedKpis.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {extendedKpis.map((item) => (
+                        <StatCard
+                            key={item.title}
+                            title={item.title}
+                            value={item.value}
+                            subtitle={item.subtitle}
+                            change={item.change !== undefined ? `${item.change >= 0 ? '+' : ''}${item.change}%` : undefined}
+                            changeType={item.change !== undefined ? (item.change >= 0 ? 'positive' : 'negative') : 'neutral'}
+                            icon={item.icon}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Alerts */}
             {stats.alerts.length > 0 && (
@@ -362,69 +359,125 @@ export default function DashboardPage() {
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Revenue Chart — Dynamic from payments data */}
+                {/* Revenue Chart — from KPI charts API */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.revenue')}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.lastSixMonths')}</p>
-                    <div className="mt-4 flex h-48 items-end gap-2">
-                        {revenueChartData.length > 0 ? revenueChartData.map((value, i) => {
-                            const heightPercent = maxChartValue > 0 ? (value / maxChartValue) * 100 : 0
-                            return (
-                                <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                                    <div
-                                        className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-600"
-                                        style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                                        title={formatCurrency(value)}
-                                    />
-                                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                                        {revenueChartLabels[i]}
-                                    </span>
-                                </div>
-                            )
-                        }) : (
-                            <div className="flex w-full items-center justify-center">
+                    <div className="mt-4">
+                        {charts?.revenueByMonth && charts.revenueByMonth.data.length > 0 ? (
+                            <BarChart
+                                data={charts.revenueByMonth.data}
+                                labels={charts.revenueByMonth.labels}
+                                colors={CHART_COLORS}
+                                height={200}
+                            />
+                        ) : (
+                            <div className="flex h-48 items-center justify-center">
                                 <p className="text-sm text-gray-400 dark:text-gray-500">{t('common.noData') || 'Belum ada data'}</p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Recent Activity */}
+                {/* Expense by Category Chart */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.recentActivity')}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.latestActivity')}</p>
-                    <div className="mt-4 space-y-4">
-                        {stats.recentActivities.length > 0 ? (
-                            stats.recentActivities.map((activity) => (
-                                <div key={activity.id} className="flex items-start gap-3">
-                                    <span className="mt-0.5 text-lg">{activity.icon}</span>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.title}</p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">{activity.description}</p>
-                                        <div className="mt-1 flex items-center gap-2">
-                                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                                                {formatDateTime(activity.timestamp)}
-                                            </span>
-                                            {moduleLinks[activity.moduleId] && (
-                                                <Link
-                                                    href={moduleLinks[activity.moduleId]}
-                                                    className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                >
-                                                    {activity.moduleId}
-                                                </Link>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pengeluaran per Kategori</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Bulan ini</p>
+                    <div className="mt-4">
+                        {charts?.expenseByCategory && charts.expenseByCategory.data.length > 0 ? (
+                            <PieChart
+                                data={charts.expenseByCategory.data}
+                                labels={charts.expenseByCategory.labels}
+                                colors={CHART_COLORS}
+                                size={200}
+                            />
                         ) : (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.noActivity')}</p>
+                            <div className="flex h-48 items-center justify-center">
+                                <p className="text-sm text-gray-400 dark:text-gray-500">{t('common.noData') || 'Belum ada data'}</p>
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* AI Insights — Dynamic from real data */}
+            {/* Second Charts Row */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Top Products Chart */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Produk Terlaris</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">6 bulan terakhir</p>
+                    <div className="mt-4">
+                        {charts?.topProducts && charts.topProducts.data.length > 0 ? (
+                            <BarChart
+                                data={charts.topProducts.data}
+                                labels={charts.topProducts.labels}
+                                colors={['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']}
+                                height={200}
+                            />
+                        ) : (
+                            <div className="flex h-48 items-center justify-center">
+                                <p className="text-sm text-gray-400 dark:text-gray-500">{t('common.noData') || 'Belum ada data'}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Order Trend Chart */}
+                <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tren Order</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Invoice per bulan</p>
+                    <div className="mt-4">
+                        {charts?.orderTrend && charts.orderTrend.data.length > 0 ? (
+                            <LineChart
+                                data={charts.orderTrend.data}
+                                labels={charts.orderTrend.labels}
+                                color="#8B5CF6"
+                                height={200}
+                            />
+                        ) : (
+                            <div className="flex h-48 items-center justify-center">
+                                <p className="text-sm text-gray-400 dark:text-gray-500">{t('common.noData') || 'Belum ada data'}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.recentActivity')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.latestActivity')}</p>
+                <div className="mt-4 space-y-4">
+                    {stats.recentActivities.length > 0 ? (
+                        stats.recentActivities.map((activity) => (
+                            <div key={activity.id} className="flex items-start gap-3">
+                                <span className="mt-0.5 text-lg">{activity.icon}</span>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.title}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">{activity.description}</p>
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                                            {formatDateTime(activity.timestamp)}
+                                        </span>
+                                        {moduleLinks[activity.moduleId] && (
+                                            <Link
+                                                href={moduleLinks[activity.moduleId]}
+                                                className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                            >
+                                                {activity.moduleId}
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.noActivity')}</p>
+                    )}
+                </div>
+            </div>
+
+            {/* AI Insights — Dynamic from real KPI data */}
             <div className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
                 <div className="mb-4 flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
@@ -490,13 +543,15 @@ export default function DashboardPage() {
 function StatCard({
     title,
     value,
+    subtitle,
     change,
     changeType,
     icon: Icon,
 }: {
     title: string
     value: string
-    change: string
+    subtitle?: string
+    change?: string
     changeType: 'positive' | 'negative' | 'warning' | 'neutral'
     icon: LucideIcon
 }) {
@@ -515,7 +570,12 @@ function StatCard({
             </div>
             <div className="mt-2">
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-                <p className={`mt-1 text-sm ${changeColors[changeType]}`}>{change}</p>
+                {subtitle && (
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+                )}
+                {change && (
+                    <p className={`mt-1 text-sm ${changeColors[changeType]}`}>{change}</p>
+                )}
             </div>
         </div>
     )
