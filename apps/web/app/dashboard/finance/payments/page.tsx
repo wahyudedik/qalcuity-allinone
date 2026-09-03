@@ -35,10 +35,11 @@ export default function PaymentsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [showRecordModal, setShowRecordModal] = useState(false)
     const [recordForm, setRecordForm] = useState({
-        invoiceNumber: '',
-        customerName: '',
+        invoiceId: '',
         amount: '',
-        method: 'bank_transfer',
+        method: 'BANK_TRANSFER',
+        type: 'INCOME',
+        date: '',
         reference: '',
         notes: '',
     })
@@ -139,10 +140,13 @@ export default function PaymentsPage() {
 
     const getMethodLabel = (method: string) => {
         const methods: Record<string, string> = {
-            bank_transfer: t('finance.payments.methods.bank_transfer'),
-            credit_card: t('finance.payments.methods.credit_card'),
-            ewallet: t('finance.payments.methods.ewallet'),
-            cash: t('finance.payments.methods.cash'),
+            BANK_TRANSFER: t('finance.payments.methods.bank_transfer'),
+            CREDIT_CARD: t('finance.payments.methods.credit_card'),
+            E_WALLET: t('finance.payments.methods.ewallet'),
+            CASH: t('finance.payments.methods.cash'),
+            DEBIT_CARD: 'Kartu Debit',
+            CHECK: 'Cek',
+            OTHER: 'Lainnya',
         }
         return methods[method] || method
     }
@@ -189,7 +193,7 @@ export default function PaymentsPage() {
                 </div>
                 {canMutate && (
                     <button
-                        onClick={() => { setRecordForm({ invoiceNumber: '', customerName: '', amount: '', method: 'bank_transfer', reference: '', notes: '' }); setShowRecordModal(true) }}
+                        onClick={() => { setRecordForm({ invoiceId: '', amount: '', method: 'BANK_TRANSFER', type: 'INCOME', date: '', reference: '', notes: '' }); setShowRecordModal(true) }}
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
                         <Plus className="h-4 w-4" />
@@ -387,22 +391,21 @@ export default function PaymentsPage() {
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Nomor Invoice</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Invoice ID (opsional)</label>
                                 <input
                                     type="text"
-                                    value={recordForm.invoiceNumber}
-                                    onChange={(e) => setRecordForm({ ...recordForm, invoiceNumber: e.target.value })}
-                                    placeholder="INV-2026-001"
+                                    value={recordForm.invoiceId}
+                                    onChange={(e) => setRecordForm({ ...recordForm, invoiceId: e.target.value })}
+                                    placeholder="ID Invoice (opsional)"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Nama Pelanggan</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal</label>
                                 <input
-                                    type="text"
-                                    value={recordForm.customerName}
-                                    onChange={(e) => setRecordForm({ ...recordForm, customerName: e.target.value })}
-                                    placeholder="PT Maju Jaya"
+                                    type="date"
+                                    value={recordForm.date}
+                                    onChange={(e) => setRecordForm({ ...recordForm, date: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                             </div>
@@ -417,17 +420,30 @@ export default function PaymentsPage() {
                                 />
                             </div>
                             <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Tipe Transaksi</label>
+                                <select
+                                    value={recordForm.type}
+                                    onChange={(e) => setRecordForm({ ...recordForm, type: e.target.value })}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="INCOME">Pemasukan</option>
+                                    <option value="EXPENSE">Pengeluaran</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Metode Pembayaran</label>
                                 <select
                                     value={recordForm.method}
                                     onChange={(e) => setRecordForm({ ...recordForm, method: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                    <option value="bank_transfer">Transfer Bank</option>
-                                    <option value="credit_card">Kartu Kredit</option>
-                                    <option value="cash">Tunai</option>
-                                    <option value="e_wallet">E-Wallet</option>
-                                    <option value="check">Cek</option>
+                                    <option value="BANK_TRANSFER">Transfer Bank</option>
+                                    <option value="CREDIT_CARD">Kartu Kredit</option>
+                                    <option value="DEBIT_CARD">Kartu Debit</option>
+                                    <option value="CASH">Tunai</option>
+                                    <option value="E_WALLET">E-Wallet</option>
+                                    <option value="CHECK">Cek</option>
+                                    <option value="OTHER">Lainnya</option>
                                 </select>
                             </div>
                             <div>
@@ -460,8 +476,8 @@ export default function PaymentsPage() {
                             </button>
                             <button
                                 onClick={async () => {
-                                    if (!recordForm.invoiceNumber || !recordForm.customerName || !recordForm.amount) {
-                                        setToast({ message: 'Lengkapi semua field wajib', type: 'error' })
+                                    if (!recordForm.amount) {
+                                        setToast({ message: 'Lengkapi jumlah pembayaran', type: 'error' })
                                         return
                                     }
                                     setRecordLoading(true)
@@ -470,10 +486,11 @@ export default function PaymentsPage() {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
-                                                invoiceNumber: recordForm.invoiceNumber,
-                                                customerName: recordForm.customerName,
                                                 amount: Number(recordForm.amount),
                                                 method: recordForm.method,
+                                                type: recordForm.type,
+                                                date: recordForm.date || undefined,
+                                                invoiceId: recordForm.invoiceId || undefined,
                                                 reference: recordForm.reference,
                                                 notes: recordForm.notes,
                                             }),
