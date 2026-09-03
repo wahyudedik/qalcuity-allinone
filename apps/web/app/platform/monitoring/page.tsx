@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Activity,
     Server,
@@ -15,6 +15,12 @@ import {
     HardDrive,
     Wifi,
     Zap,
+    Users,
+    FileText,
+    Shield,
+    TrendingUp,
+    ArrowDownRight,
+    ArrowUpRight,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,13 +30,19 @@ interface SystemHealth {
     apiLatency: number;
     errorRate: number;
     requestsPerMinute: number;
-    activeConnections: number;
-    dbConnections: number;
-    dbLatency: number;
-    memoryUsage: number;
-    cpuUsage: number;
-    diskUsage: number;
-    lastDeploy: string;
+    activeSessions: number;
+    lastChecked: string;
+}
+
+interface DatabaseMetrics {
+    totalTenants: number;
+    activeTenants: number;
+    totalUsers: number;
+    activeUsersToday: number;
+    totalInvoices: number;
+    invoicesLastHour: number;
+    totalAuditLogs: number;
+    auditLogsLastHour: number;
 }
 
 interface ServiceStatus {
@@ -40,73 +52,44 @@ interface ServiceStatus {
     uptime: number;
 }
 
-interface RecentIncident {
+interface RecentAlert {
     id: string;
-    title: string;
-    severity: "critical" | "high" | "medium" | "low";
-    status: "investigating" | "identified" | "monitoring" | "resolved";
-    startedAt: string;
-    resolvedAt?: string;
-    description: string;
+    action: string;
+    entity: string;
+    entityId: string;
+    ipAddress: string;
+    createdAt: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockHealth: SystemHealth = {
-    status: "healthy",
-    uptime: 99.97,
-    apiLatency: 145,
-    errorRate: 0.12,
-    requestsPerMinute: 2450,
-    activeConnections: 189,
-    dbConnections: 42,
-    dbLatency: 12,
-    memoryUsage: 67,
-    cpuUsage: 34,
-    diskUsage: 45,
-    lastDeploy: "31 Agustus 2026, 14:30",
-};
+interface SubscriptionDist {
+    status: string;
+    count: number;
+}
 
-const mockServices: ServiceStatus[] = [
-    { name: "API Gateway", status: "operational", latency: 45, uptime: 99.99 },
-    { name: "Authentication", status: "operational", latency: 23, uptime: 99.99 },
-    { name: "Database (PostgreSQL)", status: "operational", latency: 12, uptime: 99.98 },
-    { name: "File Storage", status: "operational", latency: 89, uptime: 99.95 },
-    { name: "Email Service", status: "degraded", latency: 234, uptime: 99.80 },
-    { name: "Payment Gateway", status: "operational", latency: 156, uptime: 99.97 },
-    { name: "CDN", status: "operational", latency: 18, uptime: 99.99 },
-    { name: "Cron Jobs", status: "operational", latency: 0, uptime: 99.95 },
-];
-
-const mockIncidents: RecentIncident[] = [
-    {
-        id: "i1",
-        title: "Email Service Latency Increased",
-        severity: "medium",
-        status: "monitoring",
-        startedAt: "1 Sep 2026, 08:00",
-        description: "Email delivery latency meningkat dari 50ms ke 234ms. Tim sedang investigation.",
-    },
-    {
-        id: "i2",
-        title: "Database Connection Pool Exhausted",
-        severity: "critical",
-        status: "resolved",
-        startedAt: "31 Ags 2026, 14:00",
-        resolvedAt: "31 Ags 2026, 14:15",
-        description: "Connection pool mencapai limit karena traffic spike. Pool size ditingkatkan.",
-    },
-    {
-        id: "i3",
-        title: "API Rate Limiting Triggered",
-        severity: "low",
-        status: "resolved",
-        startedAt: "30 Ags 2026, 10:00",
-        resolvedAt: "30 Ags 2026, 10:30",
-        description: "Beberapa tenant mencapai rate limit. Normalized setelah traffic menurun.",
-    },
-];
+interface MonitoringData {
+    systemHealth: SystemHealth;
+    database: DatabaseMetrics;
+    services: ServiceStatus[];
+    recentAlerts: RecentAlert[];
+    subscriptionDistribution: SubscriptionDist[];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatTime(iso: string): string {
+    try {
+        const d = new Date(iso);
+        return d.toLocaleString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    } catch {
+        return iso;
+    }
+}
+
 function StatusDot({ status }: { status: "operational" | "degraded" | "down" }) {
     switch (status) {
         case "operational":
@@ -118,16 +101,51 @@ function StatusDot({ status }: { status: "operational" | "degraded" | "down" }) 
     }
 }
 
-function SeverityBadge({ severity }: { severity: RecentIncident["severity"] }) {
-    const colors = {
-        critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-        high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-        medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-        low: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-    };
+function HealthStatusBadge({ status }: { status: string }) {
+    switch (status) {
+        case "healthy":
+            return (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Healthy
+                </span>
+            );
+        case "degraded":
+            return (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    <AlertTriangle className="h-4 w-4" />
+                    Degraded
+                </span>
+            );
+        case "down":
+            return (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                    <XCircle className="h-4 w-4" />
+                    Down
+                </span>
+            );
+        default:
+            return (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                    Unknown
+                </span>
+            );
+    }
+}
+
+function AlertActionBadge({ action }: { action: string }) {
+    const upper = action.toUpperCase();
+    let colors = "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+    if (upper.includes("ERROR")) {
+        colors = "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+    } else if (upper.includes("FAILED")) {
+        colors = "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400";
+    } else if (upper.includes("SUSPENDED")) {
+        colors = "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+    }
     return (
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[severity]}`}>
-            {severity.charAt(0).toUpperCase() + severity.slice(1)}
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors}`}>
+            {action}
         </span>
     );
 }
@@ -144,7 +162,7 @@ function UsageBar({ label, value, icon: Icon }: { label: string; value: number; 
                 <span className="text-sm font-medium text-gray-900 dark:text-white">{value}%</span>
             </div>
             <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                <div className={`h-2 rounded-full ${color}`} style={{ width: `${value}%` }} />
+                <div className={`h-2 rounded-full ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
             </div>
         </div>
     );
@@ -152,30 +170,104 @@ function UsageBar({ label, value, icon: Icon }: { label: string; value: number; 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformMonitoringPage() {
-    const [health, setHealth] = useState<SystemHealth>(mockHealth);
-    const [services, setServices] = useState<ServiceStatus[]>(mockServices);
-    const [incidents, setIncidents] = useState<RecentIncident[]>(mockIncidents);
+    const [data, setData] = useState<MonitoringData | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [autoRefresh, setAutoRefresh] = useState(false);
 
-    useEffect(() => {
-        const timer = setTimeout(() => setLoading(false), 500);
-        return () => clearTimeout(timer);
+    const fetchMonitoring = useCallback(async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/platform/monitoring");
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const json = await res.json();
+            if (json.success && json.data) {
+                setData(json.data);
+            } else {
+                throw new Error(json.error || "Failed to fetch monitoring data");
+            }
+        } catch (err) {
+            console.error("[Monitoring Fetch Error]", err);
+            setError(err instanceof Error ? err.message : "Failed to load monitoring data");
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     }, []);
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await new Promise((r) => setTimeout(r, 1000));
-        setRefreshing(false);
+    useEffect(() => {
+        fetchMonitoring();
+    }, [fetchMonitoring]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        if (!autoRefresh) return;
+        const interval = setInterval(() => {
+            fetchMonitoring(true);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [autoRefresh, fetchMonitoring]);
+
+    const handleRefresh = () => {
+        fetchMonitoring(true);
     };
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
+            <div className="space-y-6">
+                {/* Loading skeleton */}
+                <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                        <div className="h-8 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                        <div className="h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                    </div>
+                    <div className="h-10 w-24 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+                </div>
+                <div className="h-16 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="h-80 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+                    <div className="h-80 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+                </div>
             </div>
         );
     }
+
+    if (error && !data) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                <XCircle className="h-12 w-12 text-red-500" />
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <button
+                    onClick={handleRefresh}
+                    className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
+                >
+                    <RefreshCw className="h-4 w-4" />
+                    Coba Lagi
+                </button>
+            </div>
+        );
+    }
+
+    const health = data?.systemHealth;
+    const db = data?.database;
+    const services = data?.services || [];
+    const alerts = data?.recentAlerts || [];
+    const subDist = data?.subscriptionDistribution || [];
+
+    // Calculate estimated resource usage from DB metrics
+    const estimatedCpu = health ? Math.min(95, Math.round(health.requestsPerMinute / 30)) : 0;
+    const estimatedMemory = db ? Math.min(95, Math.round((db.totalAuditLogs / 10000) * 100)) : 0;
+    const estimatedDisk = db ? Math.min(95, Math.round((db.totalInvoices / 500) * 100)) : 0;
+    const estimatedDbConn = db ? Math.min(100, Math.round((db.activeTenants / Math.max(db.totalTenants, 1)) * 100)) : 0;
 
     return (
         <div className="space-y-6">
@@ -189,80 +281,137 @@ export default function PlatformMonitoringPage() {
                         Real-time system health dan performance metrics
                     </p>
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                    <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                    Refresh
-                </button>
-            </div>
-
-            {/* Overall Status */}
-            <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
                 <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
-                    <div>
-                        <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                            All Systems Operational
-                        </p>
-                        <p className="text-xs text-green-600 dark:text-green-400">
-                            Uptime: {health.uptime}% · Last deploy: {health.lastDeploy}
-                        </p>
-                    </div>
+                    <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <input
+                            type="checkbox"
+                            checked={autoRefresh}
+                            onChange={(e) => setAutoRefresh(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        Auto-refresh
+                    </label>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                        Refresh
+                    </button>
                 </div>
             </div>
+
+            {/* Error banner (if data exists but refresh failed) */}
+            {error && data && (
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                    {error} — menampilkan data terakhir.
+                </div>
+            )}
+
+            {/* Overall Status Banner */}
+            {health && (
+                <div className={`rounded-xl border p-4 ${health.status === "healthy"
+                        ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
+                        : health.status === "degraded"
+                            ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20"
+                            : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
+                    }`}>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            {health.status === "healthy" ? (
+                                <CheckCircle2 className="h-6 w-6 text-green-500" />
+                            ) : health.status === "degraded" ? (
+                                <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                            ) : (
+                                <XCircle className="h-6 w-6 text-red-500" />
+                            )}
+                            <div>
+                                <p className={`text-sm font-semibold ${health.status === "healthy"
+                                        ? "text-green-800 dark:text-green-300"
+                                        : health.status === "degraded"
+                                            ? "text-yellow-800 dark:text-yellow-300"
+                                            : "text-red-800 dark:text-red-300"
+                                    }`}>
+                                    {health.status === "healthy"
+                                        ? "All Systems Operational"
+                                        : health.status === "degraded"
+                                            ? "System Performance Degraded"
+                                            : "System Down"
+                                    }
+                                </p>
+                                <p className={`text-xs ${health.status === "healthy"
+                                        ? "text-green-600 dark:text-green-400"
+                                        : health.status === "degraded"
+                                            ? "text-yellow-600 dark:text-yellow-400"
+                                            : "text-red-600 dark:text-red-400"
+                                    }`}>
+                                    Uptime: {health.uptime}% · Last checked: {formatTime(health.lastChecked)}
+                                </p>
+                            </div>
+                        </div>
+                        <HealthStatusBadge status={health.status} />
+                    </div>
+                </div>
+            )}
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-                            <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            {health && (
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+                                <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">API Latency</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white">{health.apiLatency}ms</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">API Latency</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">{health.apiLatency}ms</p>
+                    </div>
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
+                                <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Requests/min</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white">{health.requestsPerMinute.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
+                                <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Active Sessions</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white">{health.activeSessions}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="flex items-center gap-3">
+                            <div className={`rounded-lg p-2 ${health.errorRate > 5
+                                    ? "bg-red-100 dark:bg-red-900/30"
+                                    : "bg-yellow-100 dark:bg-yellow-900/30"
+                                }`}>
+                                <AlertTriangle className={`h-5 w-5 ${health.errorRate > 5
+                                        ? "text-red-600 dark:text-red-400"
+                                        : "text-yellow-600 dark:text-yellow-400"
+                                    }`} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Error Rate</p>
+                                <p className="text-lg font-bold text-gray-900 dark:text-white">{health.errorRate}%</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/30">
-                            <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Requests/min</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">{health.requestsPerMinute.toLocaleString()}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
-                            <Wifi className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Connections</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">{health.activeConnections}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30">
-                            <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Error Rate</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">{health.errorRate}%</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            )}
 
-            {/* Services + Resources */}
+            {/* Services + Resources + DB Metrics */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Services Status */}
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
@@ -303,52 +452,201 @@ export default function PlatformMonitoringPage() {
                         </h2>
                     </div>
                     <div className="p-6 space-y-5">
-                        <UsageBar label="CPU" value={health.cpuUsage} icon={Cpu} />
-                        <UsageBar label="Memory" value={health.memoryUsage} icon={HardDrive} />
-                        <UsageBar label="Disk" value={health.diskUsage} icon={Server} />
-                        <UsageBar label="DB Connections" value={Math.round((health.dbConnections / 100) * 100)} icon={Database} />
+                        <UsageBar label="CPU (estimated)" value={estimatedCpu} icon={Cpu} />
+                        <UsageBar label="Memory (estimated)" value={estimatedMemory} icon={HardDrive} />
+                        <UsageBar label="Disk (estimated)" value={estimatedDisk} icon={Server} />
+                        <UsageBar label="DB Connection Pool" value={estimatedDbConn} icon={Database} />
                     </div>
                 </div>
             </div>
 
-            {/* Recent Incidents */}
-            <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-                <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Recent Incidents
-                    </h2>
-                </div>
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {incidents.map((incident) => (
-                        <div key={incident.id} className="px-6 py-4">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
+            {/* Database Metrics + Subscription Distribution */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Database Metrics */}
+                {db && (
+                    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                Database Metrics
+                            </h2>
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {incident.title}
-                                        </h3>
-                                        <SeverityBadge severity={incident.severity} />
+                                        <Globe className="h-4 w-4 text-blue-500" />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Total Tenants</span>
                                     </div>
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        {incident.description}
-                                    </p>
+                                    <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalTenants}</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">{db.activeTenants} active</p>
                                 </div>
-                                <div className="text-right ml-4">
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                        incident.status === "resolved"
-                                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                    }`}>
-                                        {incident.status}
-                                    </span>
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        {incident.startedAt}
-                                    </p>
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4 text-purple-500" />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Total Users</span>
+                                    </div>
+                                    <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalUsers}</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">{db.activeUsersToday} active today</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-green-500" />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Invoices</span>
+                                    </div>
+                                    <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalInvoices.toLocaleString()}</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">+{db.invoicesLastHour} last hour</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-orange-500" />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Audit Logs</span>
+                                    </div>
+                                    <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalAuditLogs.toLocaleString()}</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">+{db.auditLogsLastHour} last hour</p>
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    </div>
+                )}
+
+                {/* Subscription Distribution */}
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                    <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Subscription Distribution
+                        </h2>
+                    </div>
+                    <div className="p-6">
+                        {subDist.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No subscription data available.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {subDist.map((item) => {
+                                    const total = subDist.reduce((sum, s) => sum + s.count, 0);
+                                    const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                                    const statusColors: Record<string, string> = {
+                                        ACTIVE: "bg-green-500",
+                                        TRIAL: "bg-blue-500",
+                                        SUSPENDED: "bg-yellow-500",
+                                        CANCELLED: "bg-red-500",
+                                        PENDING: "bg-gray-400",
+                                    };
+                                    const barColor = statusColors[item.status] || "bg-gray-400";
+                                    return (
+                                        <div key={item.status}>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    {item.status}
+                                                </span>
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {item.count} ({pct}%)
+                                                </span>
+                                            </div>
+                                            <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                                                <div
+                                                    className={`h-2.5 rounded-full ${barColor}`}
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
+            </div>
+
+            {/* Recent Alerts / Errors */}
+            <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Recent Alerts & Errors
+                    </h2>
+                </div>
+                {alerts.length === 0 ? (
+                    <div className="px-6 py-8 text-center">
+                        <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            No alerts in the last 24 hours. All clear!
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Desktop table */}
+                        <div className="hidden md:block overflow-hidden">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Action
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Entity
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Entity ID
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            IP Address
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Time
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    {alerts.map((alert) => (
+                                        <tr key={alert.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                            <td className="px-6 py-3">
+                                                <AlertActionBadge action={alert.action} />
+                                            </td>
+                                            <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {alert.entity}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm font-mono text-gray-500 dark:text-gray-400">
+                                                {alert.entityId ? alert.entityId.substring(0, 8) + "..." : "-"}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                                {alert.ipAddress || "-"}
+                                            </td>
+                                            <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                                {formatTime(alert.createdAt)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile cards */}
+                        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+                            {alerts.map((alert) => (
+                                <div key={alert.id} className="p-4 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <AlertActionBadge action={alert.action} />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {formatTime(alert.createdAt)}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                                        {alert.entity}
+                                        {alert.entityId && (
+                                            <span className="ml-1 font-mono text-xs text-gray-400">
+                                                ({alert.entityId.substring(0, 8)}...)
+                                            </span>
+                                        )}
+                                    </div>
+                                    {alert.ipAddress && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            IP: {alert.ipAddress}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

@@ -19,9 +19,12 @@ import {
     FileText,
     Package,
     Shield,
-    AlertTriangle,
     Globe,
     MapPin,
+    Send,
+    ArrowRightLeft,
+    TrendingUp,
+    TrendingDown,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -154,6 +157,12 @@ export default function PlatformTenantDetailPage() {
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const [showNotificationModal, setShowNotificationModal] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState("");
+    const [notificationSubject, setNotificationSubject] = useState("");
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState("");
+    const [plans, setPlans] = useState<{ id: string; name: string; slug: string; price: number }[]>([]);
 
     const fetchTenant = useCallback(async () => {
         if (!tenantId) return;
@@ -174,9 +183,27 @@ export default function PlatformTenantDetailPage() {
         }
     }, [tenantId]);
 
+    const fetchPlans = useCallback(async () => {
+        try {
+            const res = await fetch("/api/platform/plans");
+            const data = await res.json();
+            if (data.success) {
+                setPlans(data.data.map((p: { id: string; name: string; slug: string; priceMonthly: number }) => ({
+                    id: p.id,
+                    name: p.name,
+                    slug: p.slug,
+                    price: p.priceMonthly,
+                })));
+            }
+        } catch {
+            // Silent fail for plans
+        }
+    }, []);
+
     useEffect(() => {
         fetchTenant();
-    }, [fetchTenant]);
+        fetchPlans();
+    }, [fetchTenant, fetchPlans]);
 
     const handleSuspend = async () => {
         if (!tenant) return;
@@ -212,7 +239,6 @@ export default function PlatformTenantDetailPage() {
             });
             const data = await res.json();
             if (data.success) {
-                // Re-fetch to get updated data
                 fetchTenant();
                 setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
             } else {
@@ -220,6 +246,62 @@ export default function PlatformTenantDetailPage() {
             }
         } catch {
             setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleSendNotification = async () => {
+        if (!notificationSubject || !notificationMessage) {
+            setToast({ message: "Subjek dan pesan wajib diisi", type: "error" });
+            return;
+        }
+        setActionLoading(true);
+        try {
+            // Use the existing email system
+            const res = await fetch("/api/platform/tenants/" + tenantId + "/notify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    subject: notificationSubject,
+                    message: notificationMessage,
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setToast({ message: "Notifikasi berhasil dikirim", type: "success" });
+                setShowNotificationModal(false);
+                setNotificationMessage("");
+                setNotificationSubject("");
+            } else {
+                setToast({ message: data.error || "Gagal mengirim notifikasi", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal mengirim notifikasi", type: "error" });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleChangePlan = async () => {
+        if (!selectedPlan || !tenant) return;
+        setActionLoading(true);
+        try {
+            const res = await fetch(`/api/platform/tenants/${tenant.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ currentPlanSlug: selectedPlan }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchTenant();
+                setShowPlanModal(false);
+                setToast({ message: "Plan berhasil diubah", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal mengubah plan", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal mengubah plan", type: "error" });
         } finally {
             setActionLoading(false);
         }
@@ -277,6 +359,23 @@ export default function PlatformTenantDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowNotificationModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        <Send className="h-4 w-4" />
+                        Send Notification
+                    </button>
+                    <button
+                        onClick={() => {
+                            setSelectedPlan(tenant.plan);
+                            setShowPlanModal(true);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        <ArrowRightLeft className="h-4 w-4" />
+                        Change Plan
+                    </button>
                     {tenant.status === "active" || tenant.status === "trial" ? (
                         <button
                             onClick={handleSuspend}
@@ -432,7 +531,7 @@ export default function PlatformTenantDetailPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Subscriptions
+                                Subscriptions & Billing
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -454,9 +553,11 @@ export default function PlatformTenantDetailPage() {
                                             </div>
                                             <div className="text-right">
                                                 <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sub.status === "ACTIVE"
-                                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                        : sub.status === "TRIAL"
-                                                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                    : sub.status === "TRIAL"
+                                                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                        : sub.status === "SUSPENDED"
+                                                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                                                             : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                                     }`}>
                                                     {sub.status}
@@ -516,8 +617,22 @@ export default function PlatformTenantDetailPage() {
                     </h2>
                 </div>
                 <div className="flex flex-wrap gap-3 p-4">
+                    <button
+                        onClick={() => setShowNotificationModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                        <Send className="h-4 w-4 text-blue-500" />
+                        Send Notification
+                    </button>
+                    <button
+                        onClick={() => setShowPlanModal(true)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                        <ArrowRightLeft className="h-4 w-4 text-purple-500" />
+                        Change Plan
+                    </button>
                     <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                        <Shield className="h-4 w-4 text-blue-500" />
+                        <Shield className="h-4 w-4 text-orange-500" />
                         Reset Password Admin
                     </button>
                     <Link
@@ -533,6 +648,144 @@ export default function PlatformTenantDetailPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Notification Modal */}
+            {showNotificationModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+                        <div className="mb-6 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Kirim Notifikasi
+                            </h2>
+                            <button
+                                onClick={() => setShowNotificationModal(false)}
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Kepada
+                                </label>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    {tenant.email}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Subjek *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={notificationSubject}
+                                    onChange={(e) => setNotificationSubject(e.target.value)}
+                                    placeholder="Subjek notifikasi..."
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Pesan *
+                                </label>
+                                <textarea
+                                    value={notificationMessage}
+                                    onChange={(e) => setNotificationMessage(e.target.value)}
+                                    rows={4}
+                                    placeholder="Tulis pesan notifikasi..."
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowNotificationModal(false)}
+                                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleSendNotification}
+                                    disabled={actionLoading || !notificationSubject || !notificationMessage}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                                >
+                                    {actionLoading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Send className="h-4 w-4" />
+                                    )}
+                                    Kirim
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Change Plan Modal */}
+            {showPlanModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+                        <div className="mb-6 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Ubah Plan
+                            </h2>
+                            <button
+                                onClick={() => setShowPlanModal(false)}
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Plan Saat Ini
+                                </label>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    {tenant.plan}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Plan Baru
+                                </label>
+                                <select
+                                    value={selectedPlan}
+                                    onChange={(e) => setSelectedPlan(e.target.value)}
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                >
+                                    {plans.map((plan) => (
+                                        <option key={plan.slug} value={plan.slug}>
+                                            {plan.name} - {plan.price > 0 ? formatRupiah(plan.price) : "Free"}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowPlanModal(false)}
+                                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleChangePlan}
+                                    disabled={actionLoading || !selectedPlan || selectedPlan === tenant.plan}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                                >
+                                    {actionLoading ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <ArrowRightLeft className="h-4 w-4" />
+                                    )}
+                                    Ubah Plan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toast */}
             {toast && (

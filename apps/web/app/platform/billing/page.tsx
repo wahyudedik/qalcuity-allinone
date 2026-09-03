@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
     CreditCard,
     TrendingUp,
+    TrendingDown,
     CheckCircle2,
     Clock,
     XCircle,
@@ -16,7 +17,15 @@ import {
     Users,
     Package,
     Loader2,
+    AlertTriangle,
+    Download,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    DollarSign,
+    BarChart3,
 } from "lucide-react";
+import { exportToCSV } from "@/lib/export";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PlanFeature {
@@ -43,6 +52,35 @@ interface Plan {
     updatedAt: string;
 }
 
+interface BillingOverview {
+    mrr: number;
+    arr: number;
+    churnRate: number;
+    totalActiveSubscriptions: number;
+    totalTenants: number;
+    totalOverdueAmount: number;
+    overdueCount: number;
+}
+
+interface PaymentRecord {
+    id: string;
+    invoiceNumber: string;
+    tenantName: string;
+    tenantEmail: string;
+    amount: number;
+    status: string;
+    dueDate: string | null;
+    createdAt: string;
+}
+
+interface OverdueInvoice {
+    id: string;
+    invoiceNumber: string;
+    tenantName: string;
+    amount: number;
+    dueDate: string | null;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatRupiah(amount: number): string {
     return new Intl.NumberFormat("id-ID", {
@@ -51,6 +89,39 @@ function formatRupiah(amount: number): string {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(amount);
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+    switch (status.toUpperCase()) {
+        case "PAID":
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Paid
+                </span>
+            );
+        case "UNPAID":
+        case "PARTIAL":
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    <Clock className="h-3 w-3" />
+                    {status}
+                </span>
+            );
+        case "OVERDUE":
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                    <XCircle className="h-3 w-3" />
+                    Overdue
+                </span>
+            );
+        default:
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {status}
+                </span>
+            );
+    }
 }
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -93,14 +164,29 @@ const FEATURE_GROUPS = [
     { label: "Platform", keys: ["platform.admin", "platform.billing", "platform.monitoring"] },
 ];
 
+type BillingTab = "overview" | "plans" | "payments" | "overdue";
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformBillingPage() {
-    const [plans, setPlans] = useState<Plan[]>([]);
+    const [activeTab, setActiveTab] = useState<BillingTab>("overview");
     const [loading, setLoading] = useState(true);
+
+    // Billing overview state
+    const [billing, setBilling] = useState<BillingOverview | null>(null);
+
+    // Plans state
+    const [plans, setPlans] = useState<Plan[]>([]);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+    // Payment history state
+    const [payments, setPayments] = useState<PaymentRecord[]>([]);
+    const [paymentsPagination, setPaymentsPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+    const [paymentFilter, setPaymentFilter] = useState("");
+    const [paymentPage, setPaymentPage] = useState(1);
+    const [overdueInvoices, setOverdueInvoices] = useState<OverdueInvoice[]>([]);
 
     // Form state
     const [formName, setFormName] = useState("");
@@ -112,9 +198,31 @@ export default function PlatformBillingPage() {
     const [formMaxStorage, setFormMaxStorage] = useState<number | null>(null);
     const [formFeatures, setFormFeatures] = useState<Record<string, { enabled: boolean; limit: number | null }>>({});
 
-    const fetchPlans = useCallback(async () => {
+    const fetchBilling = useCallback(async () => {
         try {
             setLoading(true);
+            const params = new URLSearchParams();
+            if (paymentFilter) params.set("status", paymentFilter);
+            params.set("page", String(paymentPage));
+            params.set("limit", "20");
+
+            const res = await fetch(`/api/platform/billing?${params.toString()}`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                setBilling(data.data.overview);
+                setPayments(data.data.paymentHistory);
+                setPaymentsPagination(data.data.pagination);
+                setOverdueInvoices(data.data.overdueInvoices);
+            }
+        } catch {
+            console.error("Error fetching billing data");
+        } finally {
+            setLoading(false);
+        }
+    }, [paymentFilter, paymentPage]);
+
+    const fetchPlans = useCallback(async () => {
+        try {
             const res = await fetch("/api/platform/plans");
             const data = await res.json();
             if (data.success) {
@@ -122,10 +230,12 @@ export default function PlatformBillingPage() {
             }
         } catch {
             console.error("Error fetching plans");
-        } finally {
-            setLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        fetchBilling();
+    }, [fetchBilling]);
 
     useEffect(() => {
         fetchPlans();
@@ -251,6 +361,20 @@ export default function PlatformBillingPage() {
         }));
     };
 
+    const handleExportPayments = () => {
+        const exportData = payments.map((p) => ({
+            invoiceNumber: p.invoiceNumber,
+            tenantName: p.tenantName,
+            tenantEmail: p.tenantEmail,
+            amount: p.amount,
+            status: p.status,
+            dueDate: p.dueDate || "",
+            createdAt: p.createdAt,
+        }));
+        exportToCSV(exportData, `billing-payments-${new Date().toISOString().split("T")[0]}`);
+        setMessage({ type: "success", text: "Data pembayaran berhasil diekspor" });
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -259,32 +383,32 @@ export default function PlatformBillingPage() {
         );
     }
 
+    const tabs: { id: BillingTab; label: string; icon: React.ElementType }[] = [
+        { id: "overview", label: "Overview", icon: BarChart3 },
+        { id: "plans", label: "Plans", icon: Package },
+        { id: "payments", label: "Payments", icon: CreditCard },
+        { id: "overdue", label: "Overdue", icon: AlertTriangle },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Plan Management
+                        Billing & Plans
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Kelola paket langganan dan entitlement tenants
+                        Kelola paket langganan, pembayaran, dan revenue
                     </p>
                 </div>
                 <div className="flex gap-2">
                     <button
-                        onClick={fetchPlans}
+                        onClick={() => { fetchBilling(); fetchPlans(); }}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <RefreshCw className="h-4 w-4" />
                         Refresh
-                    </button>
-                    <button
-                        onClick={handleCreate}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Buat Plan
                     </button>
                 </div>
             </div>
@@ -307,132 +431,527 @@ export default function PlatformBillingPage() {
                 </div>
             )}
 
-            {/* Plans Grid */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {plans.map((plan) => (
-                    <div
-                        key={plan.id}
-                        className={`relative rounded-xl border-2 p-6 ${plan.isActive
-                            ? "border-blue-200 bg-white dark:border-blue-800 dark:bg-gray-800"
-                            : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 opacity-60"
-                            }`}
-                    >
-                        {/* Plan Header */}
-                        <div className="mb-4">
+            {/* Tabs */}
+            <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800">
+                {tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${activeTab === tab.id
+                                    ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                }`}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {tab.label}
+                            {tab.id === "overdue" && overdueInvoices.length > 0 && (
+                                <span className="ml-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                    {overdueInvoices.length}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === "overview" && billing && (
+                <div className="space-y-6">
+                    {/* Revenue Stats */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {plan.name}
-                                </h3>
-                                <span
-                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${plan.isActive
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                                        }`}
-                                >
-                                    {plan.isActive ? "Active" : "Inactive"}
-                                </span>
-                            </div>
-                            {plan.description && (
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    {plan.description}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Pricing */}
-                        <div className="mb-4">
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {plan.priceMonthly === 0
-                                    ? "Gratis"
-                                    : formatRupiah(plan.priceMonthly)}
-                                {plan.priceMonthly > 0 && (
-                                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                                        /bulan
-                                    </span>
-                                )}
-                            </div>
-                            {plan.priceYearly && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Tahunan: {formatRupiah(plan.priceYearly)} (hemat{" "}
-                                    {Math.round(
-                                        ((plan.priceMonthly * 12 - plan.priceYearly) /
-                                            (plan.priceMonthly * 12)) *
-                                        100
-                                    )}
-                                    %)
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Limits */}
-                        <div className="mb-4 space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                                <Users className="h-4 w-4" />
-                                <span>
-                                    {plan.maxUsers === -1
-                                        ? "Unlimited"
-                                        : `${plan.maxUsers} users`}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                                <Package className="h-4 w-4" />
-                                <span>
-                                    {plan.maxStorage
-                                        ? `${plan.maxStorage} MB storage`
-                                        : "Unlimited storage"}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                                <CreditCard className="h-4 w-4" />
-                                <span>{plan.tenantCount} tenant aktif</span>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                        MRR
+                                    </p>
+                                    <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                                        {formatRupiah(billing.mrr)}
+                                    </p>
+                                    <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                        <TrendingUp className="h-3 w-3" />
+                                        Monthly Recurring Revenue
+                                    </p>
+                                </div>
+                                <div className="rounded-lg bg-green-100 p-3 dark:bg-green-900/30">
+                                    <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+                                </div>
                             </div>
                         </div>
-
-                        {/* Features Summary */}
-                        <div className="mb-4">
-                            <p className="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
-                                Features
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                                {plan.features
-                                    .filter((f) => f.enabled)
-                                    .slice(0, 6)
-                                    .map((f) => (
-                                        <span
-                                            key={f.id}
-                                            className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                                        >
-                                            <CheckCircle2 className="h-3 w-3" />
-                                            {FEATURE_LABELS[f.featureKey] || f.featureKey}
-                                        </span>
-                                    ))}
-                                {plan.features.filter((f) => f.enabled).length > 6 && (
-                                    <span className="text-xs text-gray-500">
-                                        +{plan.features.filter((f) => f.enabled).length - 6} lainnya
-                                    </span>
-                                )}
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                        ARR
+                                    </p>
+                                    <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                                        {formatRupiah(billing.arr)}
+                                    </p>
+                                    <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <TrendingUp className="h-3 w-3" />
+                                        Annual Recurring Revenue
+                                    </p>
+                                </div>
+                                <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/30">
+                                    <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                                </div>
                             </div>
                         </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => handleEdit(plan)}
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                            >
-                                <Edit3 className="h-4 w-4" />
-                                Edit
-                            </button>
-                            <button
-                                onClick={() => handleDelete(plan)}
-                                className="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-gray-700 dark:text-red-400 dark:hover:bg-red-900/20"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                        Churn Rate
+                                    </p>
+                                    <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                                        {billing.churnRate}%
+                                    </p>
+                                    <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <TrendingDown className="h-3 w-3" />
+                                        Last 30 days
+                                    </p>
+                                </div>
+                                <div className="rounded-lg bg-yellow-100 p-3 dark:bg-yellow-900/30">
+                                    <Users className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                        Active Subscriptions
+                                    </p>
+                                    <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                                        {billing.totalActiveSubscriptions}
+                                    </p>
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        dari {billing.totalTenants} tenants
+                                    </p>
+                                </div>
+                                <div className="rounded-lg bg-purple-100 p-3 dark:bg-purple-900/30">
+                                    <CreditCard className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                ))}
-            </div>
+
+                    {/* Overdue Alert */}
+                    {billing.overdueCount > 0 && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+                            <div className="flex items-center gap-3">
+                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                                <div>
+                                    <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+                                        {billing.overdueCount} invoice overdue
+                                    </p>
+                                    <p className="text-xs text-red-600 dark:text-red-400">
+                                        Total: {formatRupiah(billing.totalOverdueAmount)} perlu perhatian segera
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab("overdue")}
+                                    className="ml-auto rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                                >
+                                    Lihat Detail
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === "plans" && (
+                <div className="space-y-6">
+                    <div className="flex justify-end">
+                        <button
+                            onClick={handleCreate}
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Buat Plan
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {plans.map((plan) => (
+                            <div
+                                key={plan.id}
+                                className={`relative rounded-xl border-2 p-6 ${plan.isActive
+                                    ? "border-blue-200 bg-white dark:border-blue-800 dark:bg-gray-800"
+                                    : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 opacity-60"
+                                    }`}
+                            >
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                            {plan.name}
+                                        </h3>
+                                        <span
+                                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${plan.isActive
+                                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                                                }`}
+                                        >
+                                            {plan.isActive ? "Active" : "Inactive"}
+                                        </span>
+                                    </div>
+                                    {plan.description && (
+                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                            {plan.description}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="mb-4">
+                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        {plan.priceMonthly === 0
+                                            ? "Gratis"
+                                            : formatRupiah(plan.priceMonthly)}
+                                        {plan.priceMonthly > 0 && (
+                                            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                                                /bulan
+                                            </span>
+                                        )}
+                                    </div>
+                                    {plan.priceYearly && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            Tahunan: {formatRupiah(plan.priceYearly)} (hemat{" "}
+                                            {Math.round(
+                                                ((plan.priceMonthly * 12 - plan.priceYearly) /
+                                                    (plan.priceMonthly * 12)) *
+                                                100
+                                            )}
+                                            %)
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="mb-4 space-y-2 text-sm">
+                                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                                        <Users className="h-4 w-4" />
+                                        <span>
+                                            {plan.maxUsers === -1
+                                                ? "Unlimited"
+                                                : `${plan.maxUsers} users`}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                                        <Package className="h-4 w-4" />
+                                        <span>
+                                            {plan.maxStorage
+                                                ? `${plan.maxStorage} MB storage`
+                                                : "Unlimited storage"}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                                        <CreditCard className="h-4 w-4" />
+                                        <span>{plan.tenantCount} tenant aktif</span>
+                                    </div>
+                                </div>
+
+                                <div className="mb-4">
+                                    <p className="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                                        Features
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {plan.features
+                                            .filter((f) => f.enabled)
+                                            .slice(0, 6)
+                                            .map((f) => (
+                                                <span
+                                                    key={f.id}
+                                                    className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                                                >
+                                                    <CheckCircle2 className="h-3 w-3" />
+                                                    {FEATURE_LABELS[f.featureKey] || f.featureKey}
+                                                </span>
+                                            ))}
+                                        {plan.features.filter((f) => f.enabled).length > 6 && (
+                                            <span className="text-xs text-gray-500">
+                                                +{plan.features.filter((f) => f.enabled).length - 6} lainnya
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleEdit(plan)}
+                                        className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                                    >
+                                        <Edit3 className="h-4 w-4" />
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(plan)}
+                                        className="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-gray-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === "payments" && (
+                <div className="space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex gap-2">
+                            <select
+                                value={paymentFilter}
+                                onChange={(e) => { setPaymentFilter(e.target.value); setPaymentPage(1); }}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                <option value="">Semua Status</option>
+                                <option value="PAID">Paid</option>
+                                <option value="UNPAID">Unpaid</option>
+                                <option value="PARTIAL">Partial</option>
+                                <option value="OVERDUE">Overdue</option>
+                            </select>
+                        </div>
+                        <button
+                            onClick={handleExportPayments}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                            <Download className="h-4 w-4" />
+                            Export CSV
+                        </button>
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Invoice
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Tenant
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Amount
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Status
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Due Date
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Created
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {payments.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                            Tidak ada data pembayaran
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    payments.map((payment) => (
+                                        <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                            <td className="px-4 py-3">
+                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                    {payment.invoiceNumber}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div>
+                                                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                                                        {payment.tenantName}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {payment.tenantEmail}
+                                                    </p>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                    {formatRupiah(payment.amount)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <PaymentStatusBadge status={payment.status} />
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {payment.dueDate
+                                                        ? new Date(payment.dueDate).toLocaleDateString("id-ID")
+                                                        : "-"}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {new Date(payment.createdAt).toLocaleDateString("id-ID")}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="space-y-3 md:hidden">
+                        {payments.length === 0 ? (
+                            <div className="rounded-xl border border-gray-200 bg-white py-8 text-center dark:border-gray-700 dark:bg-gray-900">
+                                <CreditCard className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
+                                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                    Tidak ada data pembayaran
+                                </p>
+                            </div>
+                        ) : (
+                            payments.map((payment) => (
+                                <div
+                                    key={payment.id}
+                                    className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                {payment.invoiceNumber}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {payment.tenantName}
+                                            </p>
+                                        </div>
+                                        <PaymentStatusBadge status={payment.status} />
+                                    </div>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {formatRupiah(payment.amount)}
+                                        </span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {payment.dueDate
+                                                ? `Due: ${new Date(payment.dueDate).toLocaleDateString("id-ID")}`
+                                                : new Date(payment.createdAt).toLocaleDateString("id-ID")}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Pagination */}
+                    {paymentsPagination.totalPages > 1 && (
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Halaman {paymentPage} dari {paymentsPagination.totalPages} · {paymentsPagination.total} total
+                            </p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPaymentPage((p) => Math.max(1, p - 1))}
+                                    disabled={paymentPage === 1}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Prev
+                                </button>
+                                <button
+                                    onClick={() => setPaymentPage((p) => Math.min(paymentsPagination.totalPages, p + 1))}
+                                    disabled={paymentPage === paymentsPagination.totalPages}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === "overdue" && (
+                <div className="space-y-4">
+                    {overdueInvoices.length === 0 ? (
+                        <div className="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
+                            <CheckCircle2 className="mx-auto h-12 w-12 text-green-400" />
+                            <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                Tidak ada invoice overdue
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Semua pembayaran tepat waktu
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                                    <div>
+                                        <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+                                            {overdueInvoices.length} invoice overdue — total {formatRupiah(
+                                                overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0)
+                                            )}
+                                        </p>
+                                        <p className="text-xs text-red-600 dark:text-red-400">
+                                            Perlu perhatian segera untuk menghindari churn
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                Invoice
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                Tenant
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                Amount
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                Due Date
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                        {overdueInvoices.map((inv) => (
+                                            <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <td className="px-4 py-3">
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                        {inv.invoiceNumber}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                                        {inv.tenantName}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                                                        {formatRupiah(inv.amount)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="text-sm text-red-600 dark:text-red-400">
+                                                        {inv.dueDate
+                                                            ? new Date(inv.dueDate).toLocaleDateString("id-ID")
+                                                            : "-"}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Create/Edit Modal */}
             {showCreateForm && (
@@ -451,7 +970,6 @@ export default function PlatformBillingPage() {
                         </div>
 
                         <div className="space-y-4">
-                            {/* Basic Info */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -489,7 +1007,6 @@ export default function PlatformBillingPage() {
                                 />
                             </div>
 
-                            {/* Pricing */}
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -530,7 +1047,6 @@ export default function PlatformBillingPage() {
                                 </div>
                             </div>
 
-                            {/* Features */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Features
@@ -584,7 +1100,6 @@ export default function PlatformBillingPage() {
                                 </div>
                             </div>
 
-                            {/* Save Button */}
                             <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => setShowCreateForm(false)}
@@ -607,26 +1122,6 @@ export default function PlatformBillingPage() {
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Empty State */}
-            {plans.length === 0 && !loading && (
-                <div className="rounded-xl border-2 border-dashed border-gray-300 p-12 text-center dark:border-gray-600">
-                    <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-                        Belum ada plan
-                    </h3>
-                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Buat plan pertama untuk mengontrol akses fitur tenants.
-                    </p>
-                    <button
-                        onClick={handleCreate}
-                        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Buat Plan
-                    </button>
                 </div>
             )}
         </div>
