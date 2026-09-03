@@ -290,6 +290,26 @@ export const approvePayrollSchema = z.object({
     }),
 });
 
+export const calculatePayrollSchema = z.object({
+    employeeId: z.string().min(1, 'ID karyawan wajib diisi'),
+    period: z.string().min(1, 'Periode wajib diisi').max(50),
+    baseSalary: z.number().min(0, 'Gaji pokok tidak boleh negatif'),
+    allowances: z.number().min(0, 'Tunjangan tidak boleh negatif').optional().default(0),
+    transportAllowance: z.number().min(0).optional().default(0),
+    mealAllowance: z.number().min(0).optional().default(0),
+    otherAllowance: z.number().min(0).optional().default(0),
+    deductions: z.number().min(0, 'Potongan tidak boleh negatif').optional().default(0),
+    lateDeduction: z.number().min(0).optional().default(0),
+    absentDeduction: z.number().min(0).optional().default(0),
+    otherDeduction: z.number().min(0).optional().default(0),
+    bonus: z.number().min(0, 'Bonus tidak boleh negatif').optional().default(0),
+    statusKawin: z.enum(['TK/0', 'TK/1', 'TK/2', 'TK/3', 'K/0', 'K/1', 'K/2', 'K/3'], {
+        message: 'Status kawin harus salah satu dari: TK/0, TK/1, TK/2, TK/3, K/0, K/1, K/2, K/3',
+    }),
+    jkkRiskLevel: z.enum(['low', 'medium', 'high']).optional().default('low'),
+    notes: z.string().optional().nullable(),
+});
+
 // ============================================
 // Inventory Schemas
 // ============================================
