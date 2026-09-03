@@ -40,6 +40,8 @@ model Tenant {
   categories     Category[]
   suppliers      Supplier[]
   stockMovements StockMovement[]
+  warehouses     Warehouse[]
+  stockOpnames   StockOpname[]
   invoices       Invoice[]
   payments       Payment[]
   purchaseOrders PurchaseOrder[]
@@ -540,8 +542,11 @@ model Product {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id])
+  warehouseId String?
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
 
-  stockMovements StockMovement[]
+  stockMovements    StockMovement[]
+  stockOpnameItems  StockOpnameItem[]
 
   @@unique([sku, tenantId])
   @@index([tenantId])
@@ -564,6 +569,74 @@ model StockMovement {
   @@index([tenantId])
   @@index([productId])
   @@index([type])
+}
+
+// ============================================
+// WAREHOUSE & STOCK OPNAME
+// ============================================
+
+model Warehouse {
+  id          String   @id @default(cuid())
+  name        String
+  code        String
+  address     String?
+  city        String?
+  phone       String?
+  email       String?
+  manager     String?
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  products      Product[]
+  stockOpnames  StockOpname[]
+
+  @@unique([code, tenantId])
+  @@index([tenantId])
+}
+
+model StockOpname {
+  id              String   @id @default(cuid())
+  opnameNumber    String
+  status          String   @default("DRAFT") // DRAFT, IN_PROGRESS, COMPLETED, CANCELLED
+  opnameDate      DateTime @default(now())
+  notes           String?
+  totalDifference  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  warehouseId     String?
+  warehouse       Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  items           StockOpnameItem[]
+
+  @@unique([opnameNumber, tenantId])
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([status])
+}
+
+model StockOpnameItem {
+  id              String   @id @default(cuid())
+  systemQuantity  Int
+  physicalQuantity Int
+  difference      Int
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  stockOpnameId   String
+  stockOpname     StockOpname @relation(fields: [stockOpnameId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+
+  @@index([stockOpnameId])
+  @@index([productId])
 }
 
 // ============================================

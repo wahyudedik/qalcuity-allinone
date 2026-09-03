@@ -36,14 +36,22 @@ const statusStyles: Record<string, string> = {
     out: 'bg-red-100 text-red-800',
 }
 
+type WarehouseOption = {
+    id: string
+    name: string
+    code: string
+}
+
 export default function StockPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
     const canMutate = session?.user?.role !== 'VIEWER'
     const [stock, setStock] = useState<StockItem[]>([])
+    const [warehouses, setWarehouses] = useState<WarehouseOption[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState<string>('all')
+    const [filterWarehouse, setFilterWarehouse] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [showAdjustModal, setShowAdjustModal] = useState(false)
     const [adjustProductId, setAdjustProductId] = useState('')
@@ -54,12 +62,25 @@ export default function StockPage() {
 
     useEffect(() => {
         fetchStock()
+        fetchWarehouses()
     }, [])
+
+    const fetchWarehouses = async () => {
+        try {
+            const response = await fetch('/api/inventory/warehouses?activeOnly=true&limit=100')
+            const data = await response.json()
+            if (data.success) {
+                setWarehouses(data.data)
+            }
+        } catch {
+            // silent fail for warehouses
+        }
+    }
 
     const fetchStock = async () => {
         try {
             setLoading(true)
-            const response = await fetch('/api/inventory/products')
+            const response = await fetch('/api/inventory/products?limit=1000')
             const data = await response.json()
             if (data.success) {
                 const stockItems: StockItem[] = data.data.map((product: Product) => ({
@@ -239,6 +260,18 @@ export default function StockPage() {
                             {s === 'all' ? t('inventory.stock.allStatuses') : statusLabels[s] || s}
                         </button>
                     ))}
+                    {warehouses.length > 0 && (
+                        <select
+                            value={filterWarehouse}
+                            onChange={(e) => setFilterWarehouse(e.target.value)}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium focus:border-blue-500 focus:outline-none"
+                        >
+                            <option value="all">Semua Gudang</option>
+                            {warehouses.map((w) => (
+                                <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
             </div>
 

@@ -374,6 +374,44 @@ export const updateSupplierSchema = z.object({
 });
 
 // ============================================
+// Warehouse & Stock Opname Schemas
+// ============================================
+
+export const createWarehouseSchema = z.object({
+    name: z.string().min(1, 'Nama gudang wajib diisi').max(255, 'Nama gudang maksimal 255 karakter'),
+    code: z.string().min(1, 'Kode gudang wajib diisi').max(50, 'Kode gudang maksimal 50 karakter').regex(/^[A-Z0-9-]+$/, 'Kode gudang hanya boleh huruf besar, angka, dan strip'),
+    address: z.string().optional().nullable(),
+    city: z.string().max(100).optional().nullable(),
+    phone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    email: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    manager: z.string().max(255).optional().nullable(),
+    isDefault: z.boolean().optional(),
+});
+
+export const updateWarehouseSchema = z.object({
+    name: z.string().min(1, 'Nama gudang wajib diisi').max(255, 'Nama gudang maksimal 255 karakter').optional(),
+    code: z.string().min(1, 'Kode gudang wajib diisi').max(50, 'Kode gudang maksimal 50 karakter').regex(/^[A-Z0-9-]+$/, 'Kode gudang hanya boleh huruf besar, angka, dan strip').optional(),
+    address: z.string().optional().nullable(),
+    city: z.string().max(100).optional().nullable(),
+    phone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    email: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    manager: z.string().max(255).optional().nullable(),
+    isDefault: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+});
+
+export const createStockOpnameSchema = z.object({
+    warehouseId: z.string().optional().nullable(),
+    opnameDate: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    items: z.array(z.object({
+        productId: z.string().min(1, 'Produk wajib dipilih'),
+        physicalQuantity: z.number().int('Jumlah fisik harus bilangan bulat').min(0, 'Jumlah fisik tidak boleh negatif'),
+        notes: z.string().optional().nullable(),
+    })).min(1, 'Minimal 1 item stock opname'),
+});
+
+// ============================================
 // CoA (Chart of Accounts) Schemas
 // ============================================
 

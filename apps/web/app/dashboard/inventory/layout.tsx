@@ -8,6 +8,8 @@ import {
     ClipboardList,
     Tag,
     Factory,
+    Warehouse,
+    ClipboardCheck,
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
@@ -22,6 +24,8 @@ const inventoryTabs: TabItem[] = [
     { href: '/dashboard/inventory', labelKey: 'inventory.layout.tabs.overview', icon: BarChart3 },
     { href: '/dashboard/inventory/products', labelKey: 'inventory.layout.tabs.products', icon: Package },
     { href: '/dashboard/inventory/stock', labelKey: 'inventory.layout.tabs.stock', icon: ClipboardList },
+    { href: '/dashboard/inventory/warehouses', labelKey: 'inventory.layout.tabs.warehouses', icon: Warehouse },
+    { href: '/dashboard/inventory/stock-opname', labelKey: 'inventory.layout.tabs.stockOpname', icon: ClipboardCheck },
     { href: '/dashboard/inventory/categories', labelKey: 'inventory.layout.tabs.categories', icon: Tag },
     { href: '/dashboard/inventory/suppliers', labelKey: 'inventory.layout.tabs.suppliers', icon: Factory },
 ]
