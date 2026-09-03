@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateLeadSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -84,8 +85,7 @@ export async function PUT(
 
         return NextResponse.json({ success: true, data: lead });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 

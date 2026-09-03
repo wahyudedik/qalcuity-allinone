@@ -730,7 +730,7 @@ export const createJournalEntrySchema = z.object({
     description: z.string().min(1, 'Deskripsi wajib diisi'),
     reference: z.string().optional().nullable(),
     sourceType: z.enum(['manual', 'invoice', 'payment', 'purchase_order', 'payroll'], {
-        error: 'Tipe sumber tidak valid',
+        message: 'Tipe sumber tidak valid',
     }),
     sourceId: z.string().optional().nullable(),
     date: z.string().optional(),
