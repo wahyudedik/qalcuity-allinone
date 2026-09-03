@@ -777,6 +777,26 @@ export const rejectRequestSchema = z.object({
 });
 
 // ============================================
+// Security Schemas
+// ============================================
+
+export const enable2faSchema = z.object({
+    code: z.string().length(6, 'Kode verifikasi harus 6 digit').regex(/^\d+$/, 'Kode verifikasi hanya boleh berisi angka'),
+});
+
+export const disable2faSchema = z.object({
+    password: z.string().min(1, 'Password wajib diisi untuk menonaktifkan 2FA'),
+});
+
+export const verify2faSchema = z.object({
+    code: z.string().length(6, 'Kode verifikasi harus 6 digit').regex(/^\d+$/, 'Kode verifikasi hanya boleh berisi angka'),
+});
+
+export const revokeSessionSchema = z.object({
+    sessionId: z.string().min(1, 'Session ID wajib diisi'),
+});
+
+// ============================================
 // Helper Function: Format Zod errors
 // ============================================
 

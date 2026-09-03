@@ -1,20 +1,26 @@
-> **Last Updated:** 2 September 2026 (Batch 1A — Fix Decimal Type + VPS Deployment Fix)
-> **Version:** v6.1.1
-> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine Implemented, Decimal Type Fixed
+> **Last Updated:** 3 September 2026 (Batch 1C — 2FA Setup + Session Management)
+> **Version:** v6.1.2
+> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine Implemented, Decimal Type Fixed, 2FA + Session Management
 
 ---
 
 ## 🎯 Current Sprint
 
-**Fokus:** Batch 1A — Fix Decimal Type + VPS Deployment Fix
+**Fokus:** Batch 1C — Security Critical: 2FA Setup + Session Management
 
-- ✅ **Batch 1A:** Fix Decimal Type — All monetary fields upgraded to `Decimal(19,4)`, Int→Decimal conversion, TypeScript fixes
-- ✅ Prisma schema updated: 15+ models with monetary fields upgraded from `Decimal(15,2)` to `Decimal(19,4)`
-- ✅ 4 Int fields converted to Decimal: `SubscriptionPlan.price`, `BillingPayment.amount`, `Plan.priceMonthly`, `Plan.priceYearly`
-- ✅ Migration SQL created: `20260902221200_fix_decimal_types/migration.sql`
-- ✅ Utility functions updated: `toNumber()`, `formatCurrency()`, `roundMoney()` handle Prisma Decimal
+- ✅ **Batch 1C:** 2FA Setup + Session Management — TOTP-based 2FA, session tracking, login history
+- ✅ Prisma schema updated: `twoFactorEnabled`, `twoFactorSecret`, `twoFactorBackupCodes` added to User model
+- ✅ New models: `UserSession` (session tracking), `LoginLog` (login history)
+- ✅ Migration SQL: `20260903031900_add_2fa_sessions_login_logs/migration.sql`
+- ✅ TOTP utility: `apps/web/lib/totp.ts` — RFC 6238 compliant, no external dependencies
+- ✅ API routes: `/api/settings/security/password`, `/sessions`, `/login-history`, `/2fa`
+- ✅ Security page enhanced: Real 2FA flow, session management, login history with pagination
+- ✅ Zod schemas: `enable2faSchema`, `disable2faSchema`, `verify2faSchema`, `revokeSessionSchema`
 - ✅ TypeScript check PASS (0 errors)
-- ✅ Documentation updated
+
+### Previous Batches
+- ✅ **Batch 1A:** Fix Decimal Type — All monetary fields upgraded to `Decimal(19,4)`
+- ✅ **Batch 1B:** (if applicable)
 
 ### Previous Milestones
 - ✅ **FASE 3C:** Sidebar Navigation — 11 new pages added to sidebar
