@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { parseCsv } from '@/lib/csv-parser'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -283,6 +284,7 @@ export default function ChartOfAccountsPage() {
 
     // Import
     const importInputRef = useRef<HTMLInputElement>(null)
+    const [importing, setImporting] = useState(false)
 
     // Toast
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -908,12 +910,101 @@ export default function ChartOfAccountsPage() {
                 type="file"
                 accept=".csv,.xlsx,.xls"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                     const file = e.target.files?.[0]
-                    if (file) {
-                        setToast({ message: `Mengimpor file "${file.name}"...`, type: 'success' })
-                        // TODO: Process imported file
-                        e.target.value = ''
+                    if (!file) return
+                    e.target.value = ''
+
+                    if (!file.name.endsWith('.csv')) {
+                        showToast('Hanya file CSV yang didukung', 'error')
+                        return
+                    }
+
+                    setImporting(true)
+                    showToast(`Mengimpor file "${file.name}"...`, 'success')
+
+                    try {
+                        const text = await file.text()
+                        const result = parseCsv(text)
+
+                        if (result.rows.length === 0) {
+                            showToast('File CSV kosong atau format tidak sesuai', 'error')
+                            return
+                        }
+
+                        // Validate required columns
+                        const headers = result.headers.map((h) => h.toLowerCase().trim())
+                        const codeIdx = headers.findIndex((h) => h === 'code' || h === 'kode' || h === 'account_code' || h === 'kode_akun')
+                        const nameIdx = headers.findIndex((h) => h === 'name' || h === 'nama' || h === 'account_name' || h === 'nama_akun')
+                        const typeIdx = headers.findIndex((h) => h === 'type' || h === 'tipe' || h === 'account_type' || h === 'tipe_akun')
+
+                        if (codeIdx === -1 || nameIdx === -1) {
+                            showToast('CSV harus memiliki kolom "code" (kode) dan "name" (nama akun)', 'error')
+                            return
+                        }
+
+                        // Type mapping from common labels
+                        const typeMap: Record<string, Account['type']> = {
+                            'ASSET': 'ASSET', 'aset': 'ASSET', 'Aset': 'ASSET',
+                            'LIABILITY': 'LIABILITY', 'kewajiban': 'LIABILITY', 'Kewajiban': 'LIABILITY',
+                            'EQUITY': 'EQUITY', 'ekuitas': 'EQUITY', 'Ekuitas': 'EQUITY',
+                            'REVENUE': 'REVENUE', 'pendapatan': 'REVENUE', 'Pendapatan': 'REVENUE',
+                            'EXPENSE': 'EXPENSE', 'beban': 'EXPENSE', 'Beban': 'EXPENSE',
+                        }
+
+                        let imported = 0
+                        let skipped = 0
+                        const errors: string[] = []
+
+                        for (let i = 0; i < result.rows.length; i++) {
+                            const row = result.rows[i]
+                            const code = (row[result.headers[codeIdx]] || '').trim()
+                            const name = (row[result.headers[nameIdx]] || '').trim()
+                            const rawType = typeIdx !== -1 ? (row[result.headers[typeIdx]] || '').trim().toUpperCase() : ''
+
+                            if (!code || !name) {
+                                skipped++
+                                continue
+                            }
+
+                            const type = typeMap[rawType] || 'ASSET'
+
+                            try {
+                                const res = await fetch('/api/finance/accounts', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ code, name, type, description: '', balance: 0 }),
+                                })
+                                const json = await res.json()
+                                if (json.success) {
+                                    imported++
+                                } else {
+                                    skipped++
+                                    if (json.message && !json.message.includes('sudah digunakan')) {
+                                        errors.push(`Baris ${i + 1}: ${json.message}`)
+                                    }
+                                }
+                            } catch {
+                                skipped++
+                                errors.push(`Baris ${i + 1}: Gagal mengirim data`)
+                            }
+                        }
+
+                        // Refresh data
+                        await fetchAccounts()
+
+                        const summary = `Impor selesai: ${imported} akun berhasil, ${skipped} dilewati`
+                        if (errors.length > 0 && errors.length <= 5) {
+                            showToast(`${summary}. ${errors[0]}`, imported > 0 ? 'success' : 'error')
+                        } else if (errors.length > 5) {
+                            showToast(`${summary}. ${errors.length} error lainnya`, imported > 0 ? 'success' : 'error')
+                        } else {
+                            showToast(summary, imported > 0 ? 'success' : 'error')
+                        }
+                    } catch {
+                        showToast('Gagal membaca file CSV', 'error')
+                    } finally {
+                        setImporting(false)
                     }
                 }}
             />
@@ -921,9 +1012,8 @@ export default function ChartOfAccountsPage() {
             {/* Toast */}
             {toast && (
                 <div className="fixed bottom-4 right-4 z-50">
-                    <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
-                        toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-                    }`}>
+                    <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                        }`}>
                         {toast.type === 'success' ? <Download className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                         {toast.message}
                         <button onClick={() => setToast(null)} className="ml-2 hover:opacity-75">
