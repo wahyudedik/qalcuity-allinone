@@ -101,6 +101,10 @@ model Tenant {
   // Approval Engine
   approvalLevels    ApprovalLevel[]
   approvalRequests  ApprovalRequest[]
+
+  // Security: Sessions & Login History
+  userSessions      UserSession[]
+  loginLogs         LoginLog[]
 }
 
 model User {
@@ -124,9 +128,18 @@ model User {
   roleId        String?
   customRole    Role?     @relation(fields: [roleId], references: [id])
 
+  // Two-Factor Authentication (2FA)
+  twoFactorEnabled   Boolean    @default(false)
+  twoFactorSecret    String?
+  twoFactorBackupCodes String?  // JSON array of hashed backup codes
+
   auditLogs     AuditLog[]
   savedReports  SavedReport[]
   userDashboards UserDashboard[]
+
+  // Sessions & Login History
+  sessions      UserSession[]
+  loginLogs     LoginLog[]
 
   // Analytics Studio
   analyticsQueryHistory AnalyticsQueryHistory[]
@@ -140,6 +153,52 @@ model User {
 
   @@index([tenantId])
   @@index([roleId])
+}
+
+// ============================================
+// SECURITY: SESSIONS & LOGIN HISTORY
+// ============================================
+
+model UserSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  token       String   @unique
+  device      String?
+  ipAddress   String?
+  userAgent   String?
+  isActive    Boolean  @default(true)
+  lastActiveAt DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([token])
+  @@index([isActive])
+}
+
+model LoginLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  email       String   // Email yang dicoba login (bisa dari user yang tidak ada)
+  success     Boolean  @default(false)
+  ipAddress   String?
+  userAgent   String?
+  failureReason String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([email])
+  @@index([createdAt])
 }
 
 // ============================================
