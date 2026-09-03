@@ -174,6 +174,7 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
                                         type="number"
                                         required
                                         min="1"
+                                        step="1"
                                         value={item.quantity}
                                         onChange={(e) => updateItem(index, 'quantity', Number(e.target.value) || 1)}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
