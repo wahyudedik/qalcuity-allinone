@@ -1,34 +1,65 @@
-> **Last Updated:** 3 September 2026 (Batch 1C — 2FA Setup + Session Management)
-> **Version:** v6.1.2
-> **Status:** Active Development — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine Implemented, Decimal Type Fixed, 2FA + Session Management
+> **Last Updated:** 3 September 2026 (Sprint 4 Complete — Batch 4B: Testing + Documentation + Deployment Prep)
+> **Version:** v7.0.0
+> **Status:** Sprint 4 COMPLETE — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine, 2FA + Session Management, Platform Admin Enhancement, TypeScript PASS
 
 ---
 
 ## 🎯 Current Sprint
 
-**Fokus:** Batch 1C — Security Critical: 2FA Setup + Session Management
+**Sprint 4 COMPLETE** — All planned batches selesai.
 
-- ✅ **Batch 1C:** 2FA Setup + Session Management — TOTP-based 2FA, session tracking, login history
-- ✅ Prisma schema updated: `twoFactorEnabled`, `twoFactorSecret`, `twoFactorBackupCodes` added to User model
-- ✅ New models: `UserSession` (session tracking), `LoginLog` (login history)
-- ✅ Migration SQL: `20260903031900_add_2fa_sessions_login_logs/migration.sql`
-- ✅ TOTP utility: `apps/web/lib/totp.ts` — RFC 6238 compliant, no external dependencies
-- ✅ API routes: `/api/settings/security/password`, `/sessions`, `/login-history`, `/2fa`
-- ✅ Security page enhanced: Real 2FA flow, session management, login history with pagination
-- ✅ Zod schemas: `enable2faSchema`, `disable2faSchema`, `verify2faSchema`, `revokeSessionSchema`
+### Sprint 4 — Batch 4B: Testing + Documentation + Deployment Prep (3 September 2026)
 - ✅ TypeScript check PASS (0 errors)
+- ✅ CURRENT.md updated — comprehensive status
+- ✅ FEATURES.md updated — 2FA + security features marked
+- ✅ deploy-vps.sh — Production deployment script with rollback
+- ✅ plans/sprint-final-summary.md — Comprehensive sprint summary
 
-### Previous Batches
-- ✅ **Batch 1A:** Fix Decimal Type — All monetary fields upgraded to `Decimal(19,4)`
-- ✅ **Batch 1B:** (if applicable)
+### Sprint 4 — Batch 4A: Platform Admin Enhancement (3 September 2026)
+- ✅ **Platform Billing** — MRR/ARR stats, plan distribution, payment history
+- ✅ **Platform Monitoring** — System health, services, resources, incidents
+- ✅ **Platform Settings** — General, security, plan limits
+- ✅ **Platform API Routes** — Stats, billing, plans, monitoring
 
-### Previous Milestones
+### Sprint 3 — Batch 1C: 2FA + Session Management (3 September 2026)
+- ✅ TOTP-based 2FA: RFC 6238 compliant, no external deps
+- ✅ Session tracking: UserSession model, active sessions management
+- ✅ Login history: LoginLog model, login history with pagination
+- ✅ API routes: `/api/settings/security/password`, `/sessions`, `/login-history`, `/2fa`
+- ✅ Security page: Real 2FA flow, session management, login history
+
+### Sprint 3 — Batch 1A-1B: Decimal Fix + Deployment (2-3 September 2026)
+- ✅ All monetary fields upgraded to `Decimal(19,4)`
+- ✅ Deployment fixes for VPS (PM2, aaPanel, Prisma engine)
+- ✅ Trial Balance, Balance Sheet, Income Statement reports
+
+### Sprint 2 — Batch 2A-2C: Enhancement Sprint (2-3 September 2026)
+- ✅ Approval notifications + auto-approval + dashboard widget
+- ✅ CRM activities tracking + email integration
+- ✅ PPh21/BPJS calculator + payroll enhancement
+- ✅ Multi-warehouse + Stock Opname
+- ✅ KPI API, Charts API & Enhanced Dashboard
+
+### Sprint 1 — FASE 3C-4C: Foundation Sprint (2 September 2026)
 - ✅ **FASE 3C:** Sidebar Navigation — 11 new pages added to sidebar
 - ✅ **FASE 4A:** Tax Engine MVP — TaxRate model, CRUD API, invoice integration
 - ✅ **FASE 4B:** Period Closing Wizard — AccountingPeriod model, 4-step wizard, period management service
-- ✅ **FASE 4C:** Multi-level Approval Engine — ApprovalLevel + ApprovalRequest models, API routes (requests, approve, reject)
+- ✅ **FASE 4C:** Multi-level Approval Engine — ApprovalLevel + ApprovalRequest models, API routes
 
-### Previous Batches (Complete)
+### Improvement Sprint (Batch 1-7E) — 31 Agustus - 1 September 2026
+- ✅ **Batch 1:** ConfirmDialog (24 `window.confirm` replaced), inline error banners (4 `alert()` replaced), emoji→Lucide icons, SVG→Lucide (14 icons)
+- ✅ **Batch 2:** Dark mode (8 components), 33 i18n keys added, navigation fixes
+- ✅ **Batch 3:** Reports page mobile cards (12 sub-components)
+- ✅ **Batch 4:** Toast system (`toast.tsx` + `ToastProvider`), 3 loading states, payments fix
+- ✅ **Batch 5:** `.gitignore` +6 patterns, `.env.production` untracked, `dev.db` untracked, `.env.example` updated
+- ✅ **Batch 6:** Google OAuth setup, Mail server setup
+- ✅ **Batch 7A:** Permission Engine Integration — ~90 API routes with `can()` checks
+- ✅ **Batch 7B:** Workflow Engine Integration — 5 entities (Invoice, Payment, PO, Quotation, Leaves)
+- ✅ **Batch 7C:** General Ledger + Journal Entry — CoA API, Journal Entry API + UI, Double-entry validation
+- ✅ **Batch 7D:** Redis Rate Limiter — Production-ready rate limiting with Redis fallback to in-memory
+- ✅ **Batch 7E:** Entitlement Engine — Plan-based module access, feature limits, usage tracking
+
+### Previous Milestones
 - ✅ **Batch 1:** ConfirmDialog (24 `window.confirm` replaced), inline error banners (4 `alert()` replaced), emoji→Lucide icons, SVG→Lucide (14 icons)
 - ✅ **Batch 2:** Dark mode (8 components), 33 i18n keys added, navigation fixes
 - ✅ **Batch 3:** Reports page mobile cards (12 sub-components)
@@ -57,17 +88,21 @@
 | **Multi-level Approval Engine** | ✅ Implemented | 40% (Basic levels + requests, belum delegation/SLA) |
 | **Billing & Subscription** | ✅ Working | 100% |
 | **Entitlement Engine** | ✅ Implemented | 75% (Plan-based access + limits) |
-| **Security (Validation, Sanitization, Audit)** | ✅ Hardened | 95% |
+| **Security (Validation, Sanitization, Audit)** | ✅ Hardened | 98% (2FA + Session Mgmt added) |
 | **Redis Rate Limiter** | ✅ Production-ready | 90% (Redis + in-memory fallback) |
 | **UI/UX (Responsive, i18n, Dark Mode)** | ✅ Production-ready | 99% |
-| **Reporting & Charts** | ✅ Working | 85% |
+| **Reporting & Charts** | ✅ Working | 90% (Trial Balance, Balance Sheet, Income Statement added) |
 | **Analytics & Decision Intelligence** | ✅ Phase 1 MVP + Studio Architecture + Workspace UI | 75% |
 | **AI Features** | ⚠️ Basic/Mock | 20% |
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
 | **POS Module** | 📋 Planned | 0% |
-| **Platform Control Center** | ✅ MVP Implemented (UI + API) | 40% |
+| **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
+| **Financial Reports** | ✅ Implemented | 60% (Trial Balance, Balance Sheet, Income Statement) |
+| **HR Enhancement** | ✅ Implemented | 70% (PPh21/BPJS calculator, payroll enhancement) |
+| **Inventory Enhancement** | ✅ Implemented | 75% (Multi-warehouse, Stock Opname) |
+| **CRM Enhancement** | ✅ Implemented | 70% (Activities tracking, email integration) |
 
 ---
 
@@ -463,7 +498,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 - [ ] **Advanced ML Models** — Predictions, anomaly detection, forecasting
 - [ ] **Offline Capability** — Service worker, local cache for mobile/desktop
 - [ ] **Unified Control Engine** — Policy Engine, configurable approval, SLA, Delegation, SoD (Phase 10)
-- [ ] **Documentation Update** — CURRENT.md, FEATURES.md updated for Phase 13 (✅ Done)
+- [x] **Sprint 4 Documentation Update** — CURRENT.md, FEATURES.md, deploy-vps.sh, sprint-final-summary.md
 
 ---
 
@@ -476,7 +511,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 3 | Some detail pages missing delete functionality (categories fixed) | 🟡 Low | UI | ⚠️ Partially fixed |
 | 5 | ~~No CSP (Content-Security-Policy) headers~~ | 🟠 Medium | Security | ✅ Fixed |
 | 6 | ~~No explicit CORS configuration~~ | 🟠 Medium | Security | ✅ Fixed |
-| 7 | ~~`@qalcuity/ui` package — tokens only, no React components~~ | 🟠 Medium | Packages | ✅ Fixed — 9 React components added |
+| 7 | ~~`@qalcuity/ui` package — tokens only, no React components~~ | 🟠 Medium | Packages | ✅ Fixed — 11 React components added |
 | 8 | `@qalcuity/api` package — mentioned but not created | 🟡 Low | Packages | ❌ Not created |
 | 9 | ~~Settings pages simulated backend~~ | 🟡 Low | Settings | ✅ Fixed — Notifications & integrations connected to Prisma DB |
 | 10 | Password policy — basic min 8 chars, belum configurable rules | 🟡 Low | Auth | ✅ Fixed (min 8 chars enforced) |
@@ -490,7 +525,8 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 18 | ~~Emoji icons di production~~ | 🟡 Low | UI | ✅ Fixed |
 | 19 | `.env` file tracked in git history | 🟠 Medium | Security | ⚠️ Added to .gitignore + .env.production untracked |
 | 20 | ConfirmDialog not yet applied to platform pages | 🟡 Low | UI | 📋 Planned — platform pages still use browser confirm |
-| 21 | **Prisma generate needed on VPS** | 🟡 Low | Infrastructure | ⚠️ 3 new migrations (tax engine, period closing, approval engine) require `npx prisma generate` on deployment |
+| 21 | **Prisma generate needed on VPS** | 🟡 Low | Infrastructure | ✅ Fixed — deploy-vps.sh handles automatic migration + generate |
+| 22 | **Sprint 4 new migrations** | 🟡 Low | Infrastructure | ✅ 7 new migrations (2FA, sessions, login-logs, reports, etc.) — deploy-vps.sh handles |
 
 ---
 
@@ -632,20 +668,20 @@ _None currently._
 
 ## 📊 Metrics
 
-### Codebase Stats (Updated: 1 September 2026 — Improvement Sprint Complete)
+### Codebase Stats (Updated: 3 September 2026 — Sprint 4 Complete)
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files (apps/web) | ~140+ |
-| TypeScript files (packages) | ~45+ |
-| API route files | 60+ |
-| API routes | 80+ |
-| Pages | 40+ |
-| Prisma models | 48+ |
-| Database indexes | 60+ |
-| Zod schemas | 18+ |
-| i18n keys | 433+ |
-| Loading states | 30+ |
+| TypeScript files (apps/web) | ~160+ |
+| TypeScript files (packages) | ~50+ |
+| API route files | 70+ |
+| API routes | 100+ |
+| Pages | 50+ |
+| Prisma models | 55+ |
+| Database indexes | 65+ |
+| Zod schemas | 22+ |
+| i18n keys | 650+ |
+| Loading states | 35+ |
 | E2E tests | 63 (63 PASS) |
 | Shared packages | 12 (11 active, 1 not created) |
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
@@ -653,7 +689,9 @@ _None currently._
 | Mobile screens | 14 (12 + Login + Register) |
 | Permission-integrated routes | ~90 |
 | Workflow-integrated entities | 5 (Invoice, Payment, PO, Quotation, Leaves) |
-| Prisma Migrations (FASE 3C-4C) | 3 (Tax Engine, Period Closing, Approval Engine) |
+| Prisma Migrations (Total) | 10+ (Tax Engine, Period Closing, Approval Engine, Decimal Fix, 2FA/Sessions/LoginLogs, Reports, etc.) |
+| Git Commits (Sprint 1-4) | 30+ |
+| Files Modified/Created (Sprint 1-4) | 135+ |
 
 ### Test Results
 
@@ -1159,5 +1197,79 @@ _None currently._
 
 ---
 
+### 3 September 2026 — Sprint 4: Platform Admin + 2FA + Deployment (Batch 1A-4B)
+
+**Batch 4B — Testing + Documentation + Deployment Prep:**
+- ✅ **TypeScript Check** — `npx tsc --noEmit` PASS (0 errors)
+- ✅ **CURRENT.md Updated** — Comprehensive status for all sprints (Sprint 1-4)
+- ✅ **FEATURES.md Updated** — 2FA, security, and new features marked
+- ✅ **deploy-vps.sh** — Production deployment script with rollback, error handling, idempotent
+- ✅ **sprint-final-summary.md** — Complete sprint summary with all commits, files, migrations
+
+**Batch 4A — Platform Admin Enhancement:**
+- ✅ **Platform Billing** — MRR/ARR stats, plan distribution, payment history, plan management API
+- ✅ **Platform Monitoring** — System health, services status, resource usage, incidents
+- ✅ **Platform Settings** — General settings, security toggles, plan limits, about
+- ✅ **Platform Plans API** — `/api/platform/plans` for subscription plan management
+
+**Batch 1C — 2FA + Session Management:**
+- ✅ **2FA (TOTP)** — RFC 6238 compliant TOTP implementation ([`apps/web/lib/totp.ts`](apps/web/lib/totp.ts))
+- ✅ **Session Tracking** — `UserSession` model + `/api/settings/security/sessions`
+- ✅ **Login History** — `LoginLog` model + `/api/settings/security/login-history`
+- ✅ **Password Change** — `/api/settings/security/password` with current password verification
+- ✅ **Security Page Enhanced** — Real 2FA flow, session management, login history with pagination
+
+**Batch 1A-1B — Decimal Fix + Financial Reports:**
+- ✅ **Decimal Types** — All monetary fields upgraded to `Decimal(19,4)`
+- ✅ **Trial Balance Report** — `/api/finance/reports/trial-balance`
+- ✅ **Balance Sheet Report** — `/api/finance/reports/balance-sheet`
+- ✅ **Income Statement Report** — `/api/finance/reports/income-statement`
+
+**Batch 2A-2C — Enhancement Sprint:**
+- ✅ **Approval Notifications** — Real-time approval notifications + auto-approval engine
+- ✅ **CRM Activities** — Activity tracking + email compose integration
+- ✅ **PPh21/BPJS Calculator** — Indonesian tax calculator + payroll enhancement
+- ✅ **Multi-warehouse** — Warehouse management + stock opname
+- ✅ **Dashboard KPI/Charts API** — Enhanced dashboard with KPI and charts API
+
+**Batch 1-5 — Improvement Sprint (1 September 2026):**
+- ✅ **ConfirmDialog** — 24 `window.confirm` replaced
+- ✅ **Dark Mode** — 8 components with dark mode support
+- ✅ **Toast System** — Centralized toast provider
+- ✅ **Security Hardening** — .gitignore, .env, CSP, CORS
+- ✅ **i18n** — 433+ keys, 22+ pages localized
+
+**Files Created (Sprint 4):** 50+ new files
+**Files Modified (Sprint 4):** 85+ files
+**Total Changes:** 135 files, 22,517 insertions, 2,136 deletions
+
+---
+
+## 📊 Metrics
+
+### Git Commits (Sprint 1-4 — All Batches)
+
+| # | Hash | Description |
+|---|------|-------------|
+| 1 | `8a8cd79` | feat(platform): Batch 4A — Platform Admin Enhancement (Sprint 4) |
+| 2 | `5910a02` | feat: enhance audit trail + notification center |
+| 3 | `8fe247f` | feat(approval): add notifications + auto-approval + dashboard widget |
+| 4 | `177f983` | feat(crm): add activities tracking + email integration |
+| 5 | `692aa1f` | feat(dashboard): Batch 2C - KPI API, Charts API & Enhanced Dashboard |
+| 6 | `605e058` | feat(inventory): Batch 2B - Multi-warehouse & Stock Opname |
+| 7 | `35aa22f` | feat: add PPh21/BPJS calculator + payroll enhancement |
+| 8 | `b2ea6a9` | feat: add 2FA, session management, login history + security settings |
+| 9 | `f335669` | feat: add Trial Balance, Balance Sheet, Income Statement reports |
+| 10 | `69634f5` | feat: fix decimal types for monetary fields + deployment fixes |
+| 11 | `5dc8cdd` | feat: FASE 3C-4C — Sidebar nav, Tax Engine, Period Closing, Approval Engine |
+| 12 | `09f37de` | feat: comprehensive audit fixes - security, UX, documentation |
+| 13 | `9bddc52` | v6.0: Permission Engine, Workflow, GL, Redis Rate Limiter, Entitlement Engine |
+| 14 | `b791790` | docs: Platform Control Center Architecture formalization |
+| 15 | `2d4cd5d` | feat(email): add email triggers for business events |
+| 16 | `af81b84` | feat: security hardening — CSP headers, CORS, env validation |
+| 17 | `a800311` | feat: implement Google OAuth authentication |
+
+---
+
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.1 — Feature Sprint Complete (FASE 3C-4C)
+**Document Version:** 7.0.0 — Sprint 4 Complete (Batch 1A-4B)

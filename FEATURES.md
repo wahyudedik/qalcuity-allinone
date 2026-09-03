@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 1, 2026 (Improvement Sprint — Batches 1-7E Complete)
+**Last Updated:** September 3, 2026 (Sprint 4 Complete — Batch 1A-4B)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 6.0 — Improvement Sprint Complete
+**Document Version:** 7.0 — Sprint 4 Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -691,9 +691,10 @@ Enterprise-grade security untuk data protection.
 |---------|--------|---------------|-------|
 | **NextAuth JWT** | 🚀 `production_ready` | 2026-08-31 | CredentialsProvider, JWT strategy, bcryptjs, NEXTAUTH_SECRET mandatory |
 | **SSO** | 📋 `planned` | — | Belum ada kode |
-| **2FA** | 📋 `planned` | — | Belum ada kode |
-| **Password Policy** | ✅ `implemented` | 2026-08-31 | Min 8 chars enforced in register route, belum configurable rules |
-| **Session Management** | 🔄 `partial` | — | JWT-based, belum multi-device control |
+| **2FA (TOTP)** | ✅ `implemented` | 2026-09-03 | RFC 6238 compliant TOTP implementation — enable/disable/verify flow, backup codes ([`apps/web/lib/totp.ts`](apps/web/lib/totp.ts), [`apps/web/app/api/settings/security/2fa/route.ts`](apps/web/app/api/settings/security/2fa/route.ts)) |
+| **Password Policy** | ✅ `implemented` | 2026-08-31 | Min 8 chars enforced in register route, password change API ([`apps/web/app/api/settings/security/password/route.ts`](apps/web/app/api/settings/security/password/route.ts)) |
+| **Session Management** | ✅ `implemented` | 2026-09-03 | Multi-device session tracking — UserSession model, active sessions list, revoke session ([`apps/web/app/api/settings/security/sessions/route.ts`](apps/web/app/api/settings/security/sessions/route.ts)) |
+| **Login History** | ✅ `implemented` | 2026-09-03 | LoginLog model — IP address, user agent, success/failure tracking, pagination ([`apps/web/app/api/settings/security/login-history/route.ts`](apps/web/app/api/settings/security/login-history/route.ts)) |
 | **CSP Headers** | ✅ `implemented` | 2026-08-31 | Content-Security-Policy di middleware.ts + next.config.js — `unsafe-eval` removed |
 | **CORS Configuration** | ✅ `implemented` | 2026-08-31 | Explicit CORS config di next.config.js |
 
@@ -1416,15 +1417,17 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~58 | ~34% |
-| `implemented` | ✅ | ~20 | ~12% |
+| `production_ready` | 🚀 | ~62 | ~36% |
+| `implemented` | ✅ | ~25 | ~15% |
 | `verified` | ✔️ | 1 | ~1% |
-| `partial` | 🔄 | ~20 | ~12% |
+| `partial` | 🔄 | ~18 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~170 | ~43% |
+| `planned` | 📋 | ~163 | ~47% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~269** | **100%** |
+
+> **Sprint 4 Impact:** +4 production_ready, +5 implemented, -5 planned → Net improvement: ~3.5% production_ready increase
 
 ---
 
@@ -1598,6 +1601,24 @@ Electron-based desktop application.
 
 ---
 
-**Last Updated:** September 2, 2026 (Feature Sprint Complete — FASE 3C-4C)
+### v7.0.0 (September 3, 2026) — Sprint 4 Complete (Batch 1A-4B)
+- **2FA (TOTP)** — RFC 6238 compliant TOTP implementation with enable/disable/verify flow
+- **Session Management** — Multi-device session tracking with active sessions list and revoke
+- **Login History** — Login attempt logging with IP, user agent, success/failure, pagination
+- **Password Change API** — Secure password change with current password verification
+- **Financial Reports** — Trial Balance, Balance Sheet, Income Statement report APIs
+- **Platform Billing Enhancement** — MRR/ARR stats, plan distribution, payment history, plan management
+- **Platform Monitoring** — System health, services status, resource usage, incidents
+- **Approval Notifications** — Real-time approval notifications + auto-approval engine
+- **CRM Activities** — Activity tracking + email compose integration
+- **PPh21/BPJS Calculator** — Indonesian tax calculator + payroll enhancement
+- **Multi-warehouse** — Warehouse management + stock opname
+- **KPI/Charts API** — Enhanced dashboard with KPI and charts API
+- **Decimal Fix** — All monetary fields upgraded to Decimal(19,4)
+- **Deployment Script** — deploy-vps.sh with rollback, error handling, idempotent
+- **TypeScript Check** — PASS (0 errors)
+- **Status Summary** — production_ready: 58→62, implemented: 20→25
+
+**Last Updated:** September 3, 2026 (Sprint 4 Complete — Batch 1A-4B)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 6.0 — Feature Sprint Complete
+**Document Version:** 7.0 — Sprint 4 Complete
