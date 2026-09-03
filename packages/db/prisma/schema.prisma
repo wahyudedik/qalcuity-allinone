@@ -110,6 +110,9 @@ model Tenant {
   // Security: Sessions & Login History
   userSessions      UserSession[]
   loginLogs         LoginLog[]
+
+  // In-App Notifications
+  inAppNotifications InAppNotification[]
 }
 
 model User {
@@ -1788,4 +1791,25 @@ model Activity {
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId])
+}
+
+// ============================================
+// IN-APP NOTIFICATIONS
+// ============================================
+
+model InAppNotification {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  userId      String
+  type        String   // 'approval', 'payment', 'team', 'system', 'audit'
+  title       String
+  message     String
+  link        String?  // Optional URL to navigate to
+  isRead      Boolean  @default(false)
+  metadata    Json?    // Additional context data
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, userId, isRead])
+  @@index([tenantId, userId, createdAt])
 }
