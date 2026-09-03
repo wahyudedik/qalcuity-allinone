@@ -84,6 +84,27 @@ export const updateDealSchema = z.object({
 });
 
 // ============================================
+// CRM Activity Schemas
+// ============================================
+
+export const createActivitySchema = z.object({
+    entityType: z.enum(['CONTACT', 'LEAD', 'DEAL'], { message: 'Jenis entitas tidak valid' }),
+    entityId: z.string().min(1, 'ID entitas wajib diisi'),
+    type: z.enum(['CALL', 'EMAIL', 'MEETING', 'NOTE', 'TASK'], { message: 'Jenis aktivitas tidak valid' }),
+    subject: z.string().min(1, 'Subjek wajib diisi').max(255, 'Subjek maksimal 255 karakter'),
+    description: z.string().optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+});
+
+export const updateActivitySchema = z.object({
+    type: z.enum(['CALL', 'EMAIL', 'MEETING', 'NOTE', 'TASK']).optional(),
+    subject: z.string().min(1, 'Subjek wajib diisi').max(255, 'Subjek maksimal 255 karakter').optional(),
+    description: z.string().optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    completedAt: z.string().optional().nullable(),
+});
+
+// ============================================
 // Finance Schemas
 // ============================================
 
