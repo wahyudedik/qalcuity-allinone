@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { approveRequestSchema, formatZodError } from '@/lib/validation-schemas';
 import { approveRequest } from '@/lib/approval';
+import { notifyRequester, notifyNextLevelApprover } from '@/lib/approval-notifications';
 
 export async function POST(
     request: Request,
@@ -38,6 +40,23 @@ export async function POST(
             comments: validation.data.comments,
             request,
         });
+
+        // Send notifications asynchronously (fire-and-forget)
+        // Check if request is now fully approved or advanced to next level
+        const updatedRequest = await prisma.approvalRequest.findUnique({
+            where: { id: params.id },
+        });
+
+        if (updatedRequest) {
+            if (updatedRequest.status === 'APPROVED') {
+                // Final approval — notify requester
+                void notifyRequester(params.id, 'APPROVED', validation.data.comments);
+            } else if (updatedRequest.status === 'PENDING') {
+                // Advanced to next level — notify requester + next level approvers
+                void notifyRequester(params.id, 'NEW_LEVEL', validation.data.comments);
+                void notifyNextLevelApprover(params.id);
+            }
+        }
 
         return NextResponse.json({ success: true, data: result });
     } catch (error: unknown) {

@@ -20,6 +20,9 @@ import {
     Loader2,
     Receipt,
     Briefcase,
+    ClipboardCheck,
+    Check,
+    X,
     type LucideIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -85,12 +88,34 @@ const quickActionIcons: Record<string, LucideIcon> = {
     payment: Banknote,
 }
 
+interface ApprovalRequest {
+    id: string
+    entityType: string
+    entityDisplay: string
+    entityAmount: number | null
+    currentLevel: number
+    requesterName: string
+    createdAt: string
+}
+
+interface ApprovalsData {
+    count: number
+    requests: ApprovalRequest[]
+}
+
+const ENTITY_LABELS: Record<string, string> = {
+    INVOICE: 'Invoice',
+    PURCHASE_ORDER: 'PO',
+    QUOTATION: 'Quotation',
+}
+
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [kpi, setKpi] = useState<KpiData | null>(null)
     const [charts, setCharts] = useState<ChartsData | null>(null)
+    const [approvals, setApprovals] = useState<ApprovalsData>({ count: 0, requests: [] })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { t } = useTranslation()
@@ -101,17 +126,19 @@ export default function DashboardPage() {
                 setLoading(true)
                 setError(null)
 
-                // Fetch dashboard stats + KPI + charts in parallel
-                const [statsRes, kpiRes, chartsRes] = await Promise.all([
+                // Fetch dashboard stats + KPI + charts + approvals in parallel
+                const [statsRes, kpiRes, chartsRes, approvalsRes] = await Promise.all([
                     fetch('/api/dashboard/stats'),
                     fetch('/api/dashboard/kpi'),
                     fetch('/api/dashboard/charts'),
+                    fetch('/api/dashboard/approvals'),
                 ])
 
-                const [statsJson, kpiJson, chartsJson] = await Promise.all([
+                const [statsJson, kpiJson, chartsJson, approvalsJson] = await Promise.all([
                     statsRes.json(),
                     kpiRes.json(),
                     chartsRes.json(),
+                    approvalsRes.json(),
                 ])
 
                 if (statsJson.success) {
@@ -124,6 +151,10 @@ export default function DashboardPage() {
 
                 if (chartsJson.success) {
                     setCharts(chartsJson.data)
+                }
+
+                if (approvalsJson.success) {
+                    setApprovals(approvalsJson.data)
                 }
             } catch {
                 setError(t('dashboard.failedToLoad'))
@@ -353,6 +384,96 @@ export default function DashboardPage() {
                                 </div>
                             )
                         })}
+                    </div>
+                </div>
+            )}
+
+            {/* Pending Approvals Widget */}
+            {approvals.count > 0 && (
+                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-6 dark:border-yellow-800 dark:bg-yellow-900/20">
+                    <div className="flex items-center justify-between">
+                        <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <ClipboardCheck className="h-5 w-5 text-yellow-600" />
+                            Menunggu Persetujuan
+                            <span className="ml-2 inline-flex items-center justify-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-sm font-bold text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200">
+                                {approvals.count}
+                            </span>
+                        </h3>
+                        <Link
+                            href="/dashboard/settings/workflow"
+                            className="text-sm font-medium text-yellow-700 hover:text-yellow-900 dark:text-yellow-300 dark:hover:text-yellow-100"
+                        >
+                            Lihat Semua →
+                        </Link>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                        {approvals.requests.map((req) => (
+                            <div
+                                key={req.id}
+                                className="flex items-center justify-between rounded-lg border border-yellow-200 bg-white p-4 dark:border-yellow-700 dark:bg-gray-800"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-800/50">
+                                        <ClipboardCheck className="h-5 w-5 text-yellow-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {ENTITY_LABELS[req.entityType] || req.entityType} — {req.entityDisplay}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            Diajukan oleh {req.requesterName}
+                                            {req.entityAmount !== null && (
+                                                <> • {formatCurrency(req.entityAmount)}</>
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch(`/api/approval/requests/${req.id}/approve`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ comments: 'Approved dari dashboard' }),
+                                                })
+                                                if (res.ok) {
+                                                    setApprovals((prev) => ({
+                                                        count: Math.max(0, prev.count - 1),
+                                                        requests: prev.requests.filter((r) => r.id !== req.id),
+                                                    }))
+                                                }
+                                            } catch { /* ignore */ }
+                                        }}
+                                        className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700 transition-colors"
+                                        title="Approve"
+                                    >
+                                        <Check className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch(`/api/approval/requests/${req.id}/reject`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ comments: 'Rejected dari dashboard' }),
+                                                })
+                                                if (res.ok) {
+                                                    setApprovals((prev) => ({
+                                                        count: Math.max(0, prev.count - 1),
+                                                        requests: prev.requests.filter((r) => r.id !== req.id),
+                                                    }))
+                                                }
+                                            } catch { /* ignore */ }
+                                        }}
+                                        className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700 transition-colors"
+                                        title="Reject"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}

@@ -3,6 +3,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { rejectRequestSchema, formatZodError } from '@/lib/validation-schemas';
 import { rejectRequest } from '@/lib/approval';
+import { notifyRequester } from '@/lib/approval-notifications';
 
 export async function POST(
     request: Request,
@@ -38,6 +39,9 @@ export async function POST(
             comments: validation.data.comments,
             request,
         });
+
+        // Send rejection notification to requester (fire-and-forget)
+        void notifyRequester(params.id, 'REJECTED', validation.data.comments);
 
         return NextResponse.json({ success: true, data: result });
     } catch (error: unknown) {
