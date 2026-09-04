@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createPayrollSchema, updatePayrollSchema, approvePayrollSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -87,12 +88,8 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -156,16 +153,8 @@ export async function POST(request: Request) {
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'PayrollRecord', entityId: record.id, newValues: { period: record.period, baseSalary: record.baseSalary, employeeId: record.employeeId } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: record }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        // Handle unique constraint violation
-        if (message.includes('Unique constraint')) {
-            return NextResponse.json(
-                { success: false, error: 'Payroll record already exists for this employee and period' },
-                { status: 409 }
-            );
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -212,9 +201,8 @@ export async function PATCH(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PayrollRecord', entityId: id, oldValues: { status: existing.status } as Record<string, unknown>, newValues: { status: newStatus } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -282,9 +270,8 @@ export async function PUT(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PayrollRecord', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -319,8 +306,7 @@ export async function DELETE(request: Request) {
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'PayrollRecord', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

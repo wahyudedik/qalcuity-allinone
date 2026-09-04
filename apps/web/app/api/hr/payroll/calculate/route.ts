@@ -7,6 +7,7 @@ import { calculatePPh21 } from '@/lib/pph21';
 import { calculateBPJS } from '@/lib/bpjs';
 import type { StatusKawin } from '@/lib/pph21';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 interface PayrollCalculationResult {
     employeeId: string;
@@ -195,8 +196,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: result });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

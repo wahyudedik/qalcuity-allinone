@@ -6,6 +6,7 @@ import {
     reconcileTransactionSchema,
     unreconcileTransactionSchema,
 } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 // GET: Ambil data rekonsiliasi (dengan tenant isolation + pagination)
 export async function GET(request: Request) {
@@ -158,12 +159,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[Reconciliation GET]', error instanceof Error ? error.message : 'Unknown error');
-        const message = error instanceof Error ? error.message : 'Gagal mengambil data rekonsiliasi';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -285,18 +281,7 @@ export async function POST(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[Reconciliation POST]', error instanceof Error ? error.message : 'Unknown error');
-        if (error && typeof error === 'object' && 'issues' in error) {
-            return NextResponse.json(
-                { success: false, message: 'Validasi gagal', details: error },
-                { status: 400 }
-            );
-        }
-        const message = error instanceof Error ? error.message : 'Gagal mencocokkan transaksi';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -356,17 +341,6 @@ export async function PUT(request: Request) {
             data: { bankTransactionId: validated.bankTransactionId },
         });
     } catch (error) {
-        console.error('[Reconciliation PUT]', error instanceof Error ? error.message : 'Unknown error');
-        if (error && typeof error === 'object' && 'issues' in error) {
-            return NextResponse.json(
-                { success: false, message: 'Validasi gagal', details: error },
-                { status: 400 }
-            );
-        }
-        const message = error instanceof Error ? error.message : 'Gagal membatalkan pencocokan';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
