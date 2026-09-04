@@ -113,6 +113,14 @@ model Tenant {
 
   // In-App Notifications
   inAppNotifications InAppNotification[]
+
+  // POS (Point of Sale)
+  posTerminals       PosTerminal[]
+  posSessions        PosSession[]
+  posTransactions    PosTransaction[]
+  posTransactionItems PosTransactionItem[]
+  posPayments        PosPayment[]
+  posRefunds         PosRefund[]
 }
 
 model User {
@@ -1812,4 +1820,144 @@ model InAppNotification {
 
   @@index([tenantId, userId, isRead])
   @@index([tenantId, userId, createdAt])
+}
+
+// ============================================
+// POS (POINT OF SALE)
+// ============================================
+
+model PosTerminal {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  name          String
+  code          String   // Unique per tenant
+  location      String?
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, MAINTENANCE
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      PosSession[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model PosSession {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  terminalId      String
+  terminal        PosTerminal @relation(fields: [terminalId], references: [id])
+  cashierId       String
+  cashierName     String
+  status          String    @default("OPEN") // OPEN, CLOSED
+  openingCash     Decimal   @default(0)
+  closingCash     Decimal?
+  expectedCash    Decimal?
+  variance        Decimal?
+  openedAt        DateTime  @default(now())
+  closedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  transactions    PosTransaction[]
+
+  @@index([tenantId])
+  @@index([tenantId, terminalId])
+  @@index([tenantId, status])
+}
+
+model PosTransaction {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  sessionId       String
+  session         PosSession @relation(fields: [sessionId], references: [id])
+  terminalId      String
+  transactionNo   String    // Auto-generated, unique per tenant
+  customerName    String?
+  customerPhone   String?
+  subtotal        Decimal   @default(0)
+  discountAmount  Decimal   @default(0)
+  discountPercent Decimal?
+  taxAmount       Decimal   @default(0)
+  totalAmount     Decimal   @default(0)
+  paidAmount      Decimal   @default(0)
+  changeAmount    Decimal   @default(0)
+  paymentMethod   String    @default("CASH") // CASH, CARD, QRIS, E_WALLET, BANK_TRANSFER
+  status          String    @default("COMPLETED") // COMPLETED, VOIDED, REFUNDED
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items           PosTransactionItem[]
+  payments        PosPayment[]
+  refunds         PosRefund[]
+
+  @@unique([tenantId, transactionNo])
+  @@index([tenantId])
+  @@index([tenantId, sessionId])
+  @@index([tenantId, createdAt])
+}
+
+model PosTransactionItem {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  transactionId   String
+  transaction     PosTransaction @relation(fields: [transactionId], references: [id])
+  productId       String
+  productName     String
+  productSku      String?
+  quantity        Decimal   @default(1)
+  unitPrice       Decimal
+  discountAmount  Decimal   @default(0)
+  discountPercent Decimal?
+  taxRate         Decimal   @default(0)
+  taxAmount       Decimal   @default(0)
+  subtotal        Decimal   @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, transactionId])
+}
+
+model PosPayment {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  transactionId   String
+  transaction     PosTransaction @relation(fields: [transactionId], references: [id])
+  method          String    // CASH, CARD, QRIS, E_WALLET, BANK_TRANSFER
+  amount          Decimal
+  reference       String?   // Card number last 4, QRIS ref, etc.
+  status          String    @default("COMPLETED") // PENDING, COMPLETED, FAILED
+  createdAt       DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, transactionId])
+}
+
+model PosRefund {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  transactionId   String
+  transaction     PosTransaction @relation(fields: [transactionId], references: [id])
+  refundNo        String    // Auto-generated, unique per tenant
+  amount          Decimal
+  reason          String
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, refundNo])
+  @@index([tenantId])
+  @@index([tenantId, transactionId])
 }
