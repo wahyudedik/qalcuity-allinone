@@ -24,6 +24,7 @@ import {
     Square,
 } from "lucide-react";
 import { exportToCSV } from "@/lib/export";
+import { useTranslation } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Tenant {
@@ -107,6 +108,7 @@ function StatusBadge({ status }: { status: Tenant["status"] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformTenantsPage() {
+    const { t } = useTranslation();
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -144,11 +146,11 @@ export default function PlatformTenantsPage() {
                 setTenants(data.data);
                 setPagination(data.pagination);
             } else {
-                setError(data.error || "Gagal mengambil data tenants");
+                setError(data.error || t('platform.tenantsPage.errorFetch'));
                 setTenants([]);
             }
         } catch {
-            setError("Gagal menghubungi server");
+            setError(t('platform.tenantsPage.errorContact'));
             setTenants([]);
         } finally {
             setLoading(false);
@@ -188,12 +190,12 @@ export default function PlatformTenantsPage() {
                         t.id === tenantId ? { ...t, status: "suspended" as const, mrr: 0 } : t
                     )
                 );
-                setToast({ message: "Tenant berhasil ditangguhkan", type: "success" });
+                setToast({ message: t('platform.tenantsPage.successSuspended'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal menangguhkan tenant", type: "error" });
+                setToast({ message: data.error || t('platform.tenantsPage.errorSuspend'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.tenantsPage.errorContact'), type: "error" });
         } finally {
             setActionLoading(null);
             setMenuTenantId(null);
@@ -211,12 +213,12 @@ export default function PlatformTenantsPage() {
             const data = await res.json();
             if (data.success) {
                 fetchTenants();
-                setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
+                setToast({ message: t('platform.tenantsPage.successReactivated'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal mengaktifkan tenant", type: "error" });
+                setToast({ message: data.error || t('platform.tenantsPage.errorReactivate'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.tenantsPage.errorContact'), type: "error" });
         } finally {
             setActionLoading(null);
             setMenuTenantId(null);
@@ -232,12 +234,12 @@ export default function PlatformTenantsPage() {
             const data = await res.json();
             if (data.success) {
                 setTenants((prev) => prev.filter((t) => t.id !== tenantId));
-                setToast({ message: "Tenant berhasil dihapus", type: "success" });
+                setToast({ message: t('platform.tenantsPage.successDeleted'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal menghapus tenant", type: "error" });
+                setToast({ message: data.error || t('platform.tenantsPage.errorDelete'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.tenantsPage.errorContact'), type: "error" });
         } finally {
             setActionLoading(null);
             setShowDeleteConfirm(null);
@@ -280,9 +282,9 @@ export default function PlatformTenantsPage() {
             await Promise.all(promises);
             setSelectedIds(new Set());
             fetchTenants();
-            setToast({ message: `${selectedIds.size} tenant berhasil ditangguhkan`, type: "success" });
+            setToast({ message: t('platform.tenantsPage.successSuspended'), type: "success" });
         } catch {
-            setToast({ message: "Gagal menangguhkan beberapa tenant", type: "error" });
+            setToast({ message: t('platform.tenantsPage.errorBulkSuspend'), type: "error" });
         } finally {
             setBulkActionLoading(false);
         }
@@ -302,7 +304,7 @@ export default function PlatformTenantsPage() {
             updatedAt: t.updatedAt,
         }));
         exportToCSV(exportData, `tenants-export-${new Date().toISOString().split("T")[0]}`);
-        setToast({ message: "Data tenant berhasil diekspor", type: "success" });
+        setToast({ message: t('platform.tenantsPage.exportSuccess'), type: "success" });
     };
 
     // Client-side sort for current page display
@@ -337,10 +339,10 @@ export default function PlatformTenantsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Tenant Management
+                        {t('platform.tenantsPage.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {pagination.total} total tenants · {totalActive} aktif
+                        {pagination.total} {t('platform.tenantsPage.subtitle')} · {totalActive} {t('platform.tenantsPage.active')}
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -349,11 +351,11 @@ export default function PlatformTenantsPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <Download className="h-4 w-4" />
-                        Export CSV
+                        {t('platform.tenantsPage.exportCsv')}
                     </button>
                     <button className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700">
                         <Plus className="h-4 w-4" />
-                        Add Tenant
+                        {t('platform.tenantsPage.addTenant')}
                     </button>
                 </div>
             </div>
@@ -369,7 +371,7 @@ export default function PlatformTenantsPage() {
                         onClick={fetchTenants}
                         className="mt-2 text-sm font-medium underline hover:no-underline"
                     >
-                        Coba lagi
+                        {t('platform.tenantsPage.retry')}
                     </button>
                 </div>
             )}
@@ -378,7 +380,7 @@ export default function PlatformTenantsPage() {
             {selectedIds.size > 0 && (
                 <div className="flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 dark:border-purple-800 dark:bg-purple-900/20">
                     <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                        {selectedIds.size} tenant dipilih
+                        {selectedIds.size} {t('platform.tenantsPage.selected')}
                     </span>
                     <button
                         onClick={handleBulkSuspend}
@@ -390,13 +392,13 @@ export default function PlatformTenantsPage() {
                         ) : (
                             <Ban className="h-3 w-3" />
                         )}
-                        Suspend Selected
+                        {t('platform.tenantsPage.suspendSelected')}
                     </button>
                     <button
                         onClick={() => setSelectedIds(new Set())}
                         className="text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400"
                     >
-                        Clear Selection
+                        {t('platform.tenantsPage.clearSelection')}
                     </button>
                 </div>
             )}
@@ -407,7 +409,7 @@ export default function PlatformTenantsPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari tenant..."
+                        placeholder={t('platform.tenantsPage.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
@@ -418,19 +420,19 @@ export default function PlatformTenantsPage() {
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="trial">Trial</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="pending_payment">Pending Payment</option>
+                    <option value="all">{t('platform.tenantsPage.allStatus')}</option>
+                    <option value="active">{t('platform.tenantsPage.statusActive')}</option>
+                    <option value="suspended">{t('platform.tenantsPage.statusSuspended')}</option>
+                    <option value="trial">{t('platform.tenantsPage.statusTrial')}</option>
+                    <option value="cancelled">{t('platform.tenantsPage.statusCancelled')}</option>
+                    <option value="pending_payment">{t('platform.tenantsPage.filterPendingPayment')}</option>
                 </select>
                 <select
                     value={filterPlan}
                     onChange={(e) => setFilterPlan(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
-                    <option value="all">Semua Plan</option>
+                    <option value="all">{t('platform.tenantsPage.allPlan')}</option>
                     <option value="starter">Starter</option>
                     <option value="professional">Professional</option>
                     <option value="enterprise">Enterprise</option>
@@ -455,12 +457,12 @@ export default function PlatformTenantsPage() {
                                 </button>
                             </th>
                             {[
-                                { field: "name" as SortField, label: "Tenant" },
-                                { field: "plan" as SortField, label: "Plan" },
-                                { field: "status" as SortField, label: "Status" },
-                                { field: "userCount" as SortField, label: "Users" },
-                                { field: "mrr" as SortField, label: "MRR" },
-                                { field: "createdAt" as SortField, label: "Created" },
+                                { field: "name" as SortField, label: t('platform.tenantsPage.colTenant') },
+                                { field: "plan" as SortField, label: t('platform.tenantsPage.colPlan') },
+                                { field: "status" as SortField, label: t('platform.tenantsPage.colStatus') },
+                                { field: "userCount" as SortField, label: t('platform.tenantsPage.colUsers') },
+                                { field: "mrr" as SortField, label: t('platform.tenantsPage.colMrr') },
+                                { field: "createdAt" as SortField, label: t('platform.tenantsPage.colCreated') },
                             ].map((col) => (
                                 <th
                                     key={col.field}
@@ -477,7 +479,7 @@ export default function PlatformTenantsPage() {
                                 </th>
                             ))}
                             <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Actions
+                                {t('platform.tenantsPage.colActions')}
                             </th>
                         </tr>
                     </thead>
@@ -554,7 +556,7 @@ export default function PlatformTenantsPage() {
                                                         onClick={() => setMenuTenantId(null)}
                                                     >
                                                         <Eye className="h-4 w-4" />
-                                                        Detail
+                                                        {t('platform.tenantsPage.detail')}
                                                     </Link>
                                                     {tenant.status === "active" || tenant.status === "trial" ? (
                                                         <button
@@ -567,7 +569,7 @@ export default function PlatformTenantsPage() {
                                                             ) : (
                                                                 <Ban className="h-4 w-4" />
                                                             )}
-                                                            Suspend
+                                                            {t('platform.tenantsPage.suspend')}
                                                         </button>
                                                     ) : (
                                                         <button
@@ -580,7 +582,7 @@ export default function PlatformTenantsPage() {
                                                             ) : (
                                                                 <CheckCircle2 className="h-4 w-4" />
                                                             )}
-                                                            Reactivate
+                                                            {t('platform.tenantsPage.reactivate')}
                                                         </button>
                                                     )}
                                                     <button
@@ -591,7 +593,7 @@ export default function PlatformTenantsPage() {
                                                         className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
-                                                        Delete
+                                                        {t('platform.tenantsPage.deleteAction')}
                                                     </button>
                                                 </div>
                                             </>
@@ -636,19 +638,19 @@ export default function PlatformTenantsPage() {
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-3 text-center">
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Plan</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantsPage.colPlan')}</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                     {tenant.plan}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Users</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantsPage.colUsers')}</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                     {tenant.userCount}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">MRR</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantsPage.colMrr')}</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                     {tenant.mrr > 0 ? formatRupiah(tenant.mrr) : "-"}
                                 </p>
@@ -660,7 +662,7 @@ export default function PlatformTenantsPage() {
                                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
                                 <Eye className="h-3.5 w-3.5" />
-                                Detail
+                                {t('platform.tenantsPage.detail')}
                             </Link>
                             {tenant.status === "active" || tenant.status === "trial" ? (
                                 <button
@@ -673,7 +675,7 @@ export default function PlatformTenantsPage() {
                                     ) : (
                                         <Ban className="h-3.5 w-3.5" />
                                     )}
-                                    Suspend
+                                    {t('platform.tenantsPage.suspend')}
                                 </button>
                             ) : (
                                 <button
@@ -686,7 +688,7 @@ export default function PlatformTenantsPage() {
                                     ) : (
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                     )}
-                                    Reactivate
+                                    {t('platform.tenantsPage.reactivate')}
                                 </button>
                             )}
                             <button
@@ -705,10 +707,10 @@ export default function PlatformTenantsPage() {
                 <div className="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
                     <Building2 className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
                     <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Tidak ada tenant ditemukan
+                        {t('platform.tenantsPage.noTenants')}
                     </p>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Coba ubah filter atau search query Anda
+                        {t('platform.tenantsPage.noTenantsHint')}
                     </p>
                 </div>
             )}
@@ -717,7 +719,7 @@ export default function PlatformTenantsPage() {
             {totalPages > 1 && (
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Halaman {currentPage} dari {totalPages} · {pagination.total} total
+                        {t('platform.tenantsPage.paginationText')} {currentPage} {t('platform.tenantsPage.paginationOf')} {totalPages} · {pagination.total} {t('platform.tenantsPage.subtitle')}
                     </p>
                     <div className="flex gap-2">
                         <button
@@ -726,14 +728,14 @@ export default function PlatformTenantsPage() {
                             className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
                             <ChevronLeft className="h-4 w-4" />
-                            Prev
+                            {t('platform.tenantsPage.prev')}
                         </button>
                         <button
                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages}
                             className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
-                            Next
+                            {t('platform.tenantsPage.next')}
                             <ChevronRight className="h-4 w-4" />
                         </button>
                     </div>
@@ -750,22 +752,22 @@ export default function PlatformTenantsPage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Hapus Tenant
+                                    {t('platform.tenantsPage.confirmDelete')}
                                 </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Tindakan ini tidak dapat dibatalkan.
+                                    {t('platform.tenantsPage.deleteWarning')}
                                 </p>
                             </div>
                         </div>
                         <p className="mt-4 text-sm text-gray-700 dark:text-gray-300">
-                            Tenant akan dihapus secara permanen beserta semua data terkait. Apakah Anda yakin?
+                            {t('platform.tenantsPage.deleteDescription')}
                         </p>
                         <div className="mt-6 flex justify-end gap-2">
                             <button
                                 onClick={() => setShowDeleteConfirm(null)}
                                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                             >
-                                Batal
+                                {t('platform.tenantsPage.cancel')}
                             </button>
                             <button
                                 onClick={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
@@ -777,7 +779,7 @@ export default function PlatformTenantsPage() {
                                 ) : (
                                     <Trash2 className="h-4 w-4" />
                                 )}
-                                Hapus
+                                {t('platform.tenantsPage.delete')}
                             </button>
                         </div>
                     </div>

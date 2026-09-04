@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "@/lib/i18n";
 import {
     HeadphonesIcon,
     Search,
@@ -74,6 +75,7 @@ function PriorityBadge({ priority }: { priority: SupportTicket["priority"] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformSupportPage() {
+    const { t } = useTranslation();
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -95,14 +97,14 @@ export default function PlatformSupportPage() {
             if (data.success) {
                 setTickets(data.data);
             } else {
-                setToast({ message: data.error || "Gagal memuat tiket", type: "error" });
+                setToast({ message: data.error || t('platform.supportPage.errorFetch'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.supportPage.errorContact'), type: "error" });
         } finally {
             setLoading(false);
         }
-    }, [filterStatus, searchQuery]);
+    }, [filterStatus, searchQuery, t]);
 
     useEffect(() => {
         fetchTickets();
@@ -152,12 +154,12 @@ export default function PlatformSupportPage() {
                     status: "in_progress",
                 });
                 setReplyMessage("");
-                setToast({ message: "Reply berhasil dikirim", type: "success" });
+                setToast({ message: t('platform.supportPage.successReplySent'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal mengirim reply", type: "error" });
+                setToast({ message: data.error || t('platform.supportPage.errorReplyFailed'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.supportPage.errorContact'), type: "error" });
         } finally {
             setSending(false);
         }
@@ -177,7 +179,7 @@ export default function PlatformSupportPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Support Tickets
+                        {t('platform.supportPage.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         {filteredTickets.length} tickets · {filteredTickets.filter((t) => t.status === "open").length} open
@@ -191,7 +193,7 @@ export default function PlatformSupportPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari tiket..."
+                        placeholder={t('platform.supportPage.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
@@ -202,11 +204,11 @@ export default function PlatformSupportPage() {
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
+                    <option value="all">{t('platform.supportPage.allStatus')}</option>
+                    <option value="open">{t('platform.supportPage.statusOpen')}</option>
+                    <option value="in_progress">{t('platform.supportPage.statusInProgress')}</option>
+                    <option value="resolved">{t('platform.supportPage.statusResolved')}</option>
+                    <option value="closed">{t('platform.supportPage.statusClosed')}</option>
                 </select>
             </div>
 
@@ -217,8 +219,8 @@ export default function PlatformSupportPage() {
                         key={ticket.id}
                         onClick={() => setSelectedTicket(ticket)}
                         className={`cursor-pointer rounded-xl border bg-white p-4 transition hover:shadow-md dark:bg-gray-900 ${selectedTicket?.id === ticket.id
-                                ? "border-purple-300 ring-2 ring-purple-100 dark:border-purple-700 dark:ring-purple-900/30"
-                                : "border-gray-200 dark:border-gray-700"
+                            ? "border-purple-300 ring-2 ring-purple-100 dark:border-purple-700 dark:ring-purple-900/30"
+                            : "border-gray-200 dark:border-gray-700"
                             }`}
                     >
                         <div className="flex items-start justify-between">
@@ -258,7 +260,7 @@ export default function PlatformSupportPage() {
                 <div className="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
                     <HeadphonesIcon className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
                     <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Tidak ada tiket ditemukan
+                        {t('platform.supportPage.noTickets')}
                     </p>
                 </div>
             )}
@@ -314,8 +316,8 @@ export default function PlatformSupportPage() {
                                 <div
                                     key={reply.id}
                                     className={`rounded-lg p-4 ${reply.role === "admin"
-                                            ? "bg-purple-50 dark:bg-purple-900/20"
-                                            : "bg-gray-50 dark:bg-gray-800"
+                                        ? "bg-purple-50 dark:bg-purple-900/20"
+                                        : "bg-gray-50 dark:bg-gray-800"
                                         }`}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
@@ -340,7 +342,7 @@ export default function PlatformSupportPage() {
                                 <textarea
                                     value={replyMessage}
                                     onChange={(e) => setReplyMessage(e.target.value)}
-                                    placeholder="Tulis reply..."
+                                    placeholder={t('platform.supportPage.replyPlaceholder')}
                                     rows={2}
                                     className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                                 />
@@ -354,7 +356,7 @@ export default function PlatformSupportPage() {
                                     ) : (
                                         <Send className="h-4 w-4" />
                                     )}
-                                    Send
+                                    {t('platform.supportPage.send')}
                                 </button>
                             </div>
                         </div>

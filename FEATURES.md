@@ -138,8 +138,8 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 | **Chart of Account** | 🚀 `production_ready` | 2026-09-01 | Template CoA + custom, multi-level grouping, Prisma DB |
 | **General Ledger** | ✅ `implemented` | 2026-09-01 | Journal Entry CRUD with double-entry validation, Prisma models |
 | **Journal Entry** | ✅ `implemented` | 2026-09-01 | CRUD + UI page + Zod validation (debit = credit), Batch 7C |
-| **Trial Balance** | 📋 `planned` | — | Belum ada kode |
-| **Financial Statements** | 📋 `planned` | — | Belum ada kode (Balance Sheet, Income Statement, Cash Flow) |
+| **Trial Balance** | ✅ `implemented` | 2026-09-04 | API route + UI page, debet = kredit validation |
+| **Financial Statements** | ✅ `implemented` | 2026-09-04 | Balance Sheet, Income Statement report APIs + UI |
 
 ### 2.2 Accounts Receivable
 
