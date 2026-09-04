@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { updateQuotationSchema, formatZodError } from '@/lib/validation-schemas';
 import { WorkflowEngine } from '@qalcuity/workflow';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError, apiNotFound } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -25,10 +26,7 @@ export async function GET(
         });
 
         if (!quotation) {
-            return NextResponse.json(
-                { success: false, error: 'Quotation not found' },
-                { status: 404 }
-            );
+            return apiNotFound('Quotation');
         }
 
         const data = {
@@ -59,9 +57,8 @@ export async function GET(
         };
 
         return NextResponse.json({ success: true, data });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -90,10 +87,7 @@ export async function PUT(
 
         const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Quotation tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Quotation');
         }
 
         const updateData: Record<string, string | number | boolean | Date | null | undefined> = {};
@@ -190,9 +184,8 @@ export async function PUT(
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Quotation', entityId: id, newValues: updateData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: quotation });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -208,10 +201,7 @@ export async function DELETE(
 
         const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Quotation not found' },
-                { status: 404 }
-            );
+            return apiNotFound('Quotation');
         }
 
         await prisma.quotation.delete({ where: { id } });
@@ -220,8 +210,7 @@ export async function DELETE(
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Quotation', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

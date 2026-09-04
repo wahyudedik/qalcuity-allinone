@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError, apiNotFound } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -27,16 +28,12 @@ export async function GET(
         });
 
         if (!entry) {
-            return NextResponse.json(
-                { success: false, error: 'Journal Entry tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Journal Entry');
         }
 
         return NextResponse.json({ success: true, data: entry });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -64,10 +61,7 @@ export async function PUT(
 
         const existing = await prisma.journalEntry.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Journal Entry tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Journal Entry');
         }
 
         // Cannot modify POSTED or VOID entries
@@ -173,9 +167,8 @@ export async function PUT(
         });
 
         return NextResponse.json({ success: true, data: completeEntry });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -191,10 +184,7 @@ export async function DELETE(
 
         const existing = await prisma.journalEntry.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Journal Entry tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Journal Entry');
         }
 
         // Cannot delete POSTED entries — must VOID first
@@ -223,8 +213,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

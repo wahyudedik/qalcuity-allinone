@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit'
 import { inviteTeamMemberSchema, updateTeamMemberSchema, formatZodError } from '@/lib/validation-schemas'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError, apiNotFound, apiForbidden } from '@/lib/api-error'
 
 export async function GET(request: Request) {
     try {
@@ -50,8 +51,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -69,10 +69,7 @@ export async function POST(request: Request) {
 
         // Only ADMIN and SUPERADMIN can invite team members
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Only admins can invite team members' },
-                { status: 403 }
-            )
+            return apiForbidden()
         }
 
         const body = await request.json()
@@ -146,8 +143,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -165,10 +161,7 @@ export async function PUT(request: Request) {
 
         // Only ADMIN and SUPERADMIN can update team members
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Only admins can update team members' },
-                { status: 403 }
-            )
+            return apiForbidden()
         }
         const body = await request.json()
         const sanitizedBody = sanitizeObject(body)
@@ -219,10 +212,7 @@ export async function PUT(request: Request) {
         })
 
         if (!member) {
-            return NextResponse.json(
-                { success: false, error: 'Member not found' },
-                { status: 404 }
-            )
+            return apiNotFound('Member')
         }
 
         const updated = await prisma.user.update({
@@ -256,8 +246,7 @@ export async function PUT(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -295,10 +284,7 @@ export async function DELETE(request: Request) {
         })
 
         if (!member) {
-            return NextResponse.json(
-                { success: false, error: 'Member not found' },
-                { status: 404 }
-            )
+            return apiNotFound('Member')
         }
 
         // Soft delete
@@ -319,7 +305,6 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ success: true })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }

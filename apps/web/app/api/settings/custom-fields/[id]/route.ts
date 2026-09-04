@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { updateCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError, apiNotFound, apiForbidden } from '@/lib/api-error';
 
 // ─── GET /api/settings/custom-fields/[id] ────────────────────────────────────
 
@@ -34,10 +35,7 @@ export async function GET(
         });
 
         if (!field) {
-            return NextResponse.json(
-                { success: false, error: 'Custom field tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Custom Field');
         }
 
         return NextResponse.json({
@@ -45,8 +43,7 @@ export async function GET(
             data: field,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -74,10 +71,7 @@ export async function PUT(
         const { userId, tenantId, role: callerRole } = auth;
 
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah custom field' },
-                { status: 403 }
-            );
+            return apiForbidden();
         }
 
         const { id } = params;
@@ -98,10 +92,7 @@ export async function PUT(
         });
 
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Custom field tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Custom Field');
         }
 
         // Update field — cast to handle Prisma JSON type
@@ -130,8 +121,7 @@ export async function PUT(
             data: updated,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -160,10 +150,7 @@ export async function DELETE(
         const { userId, tenantId, role: callerRole } = auth;
 
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menghapus custom field' },
-                { status: 403 }
-            );
+            return apiForbidden();
         }
 
         const { id } = params;
@@ -174,10 +161,7 @@ export async function DELETE(
         });
 
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Custom field tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Custom Field');
         }
 
         // Soft delete
@@ -201,7 +185,6 @@ export async function DELETE(
             message: 'Custom field berhasil dihapus',
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

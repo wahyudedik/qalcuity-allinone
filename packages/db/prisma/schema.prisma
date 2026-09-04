@@ -1901,6 +1901,7 @@ model PosTransaction {
   @@index([tenantId])
   @@index([tenantId, sessionId])
   @@index([tenantId, createdAt])
+  @@index([tenantId, status])
 }
 
 model PosTransactionItem {
@@ -1923,6 +1924,7 @@ model PosTransactionItem {
 
   @@index([tenantId])
   @@index([tenantId, transactionId])
+  @@index([tenantId, productId])
 }
 
 model PosPayment {
@@ -1939,6 +1941,7 @@ model PosPayment {
 
   @@index([tenantId])
   @@index([tenantId, transactionId])
+  @@index([tenantId, status])
 }
 
 model PosRefund {
@@ -1960,4 +1963,5 @@ model PosRefund {
   @@unique([tenantId, refundNo])
   @@index([tenantId])
   @@index([tenantId, transactionId])
+  @@index([tenantId, status])
 }
