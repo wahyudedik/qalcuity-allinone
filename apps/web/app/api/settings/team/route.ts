@@ -4,9 +4,16 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { inviteTeamMemberSchema, updateTeamMemberSchema, formatZodError } from '@/lib/validation-schemas'
 import { sanitizeObject } from '@/lib/sanitize'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:team:${ip}`, 60, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
         const { userId, tenantId } = auth
@@ -50,6 +57,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:team:POST:${ip}`, 30, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
         const { userId, tenantId, role: callerRole } = auth
@@ -140,6 +153,12 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:team:PUT:${ip}`, 30, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
         const { userId, tenantId, role: callerRole } = auth
@@ -244,6 +263,12 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:team:DELETE:${ip}`, 30, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
         const { userId, tenantId } = auth

@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { updateNotificationPreferencesSchema, formatZodError } from '@/lib/validation-schemas'
 import { sanitizeObject } from '@/lib/sanitize'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 interface NotificationPreferences {
     emailInvoice: boolean
@@ -47,6 +48,12 @@ const defaultPreferences: NotificationPreferences = {
  */
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:notifications:${ip}`, 60, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -96,6 +103,12 @@ export async function GET(request: Request) {
  */
 export async function PUT(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:notifications:PUT:${ip}`, 30, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })

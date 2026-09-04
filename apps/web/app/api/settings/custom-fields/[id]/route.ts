@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // ─── GET /api/settings/custom-fields/[id] ────────────────────────────────────
 
@@ -15,6 +16,12 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:custom-fields:[id]:${ip}`, 60, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -54,6 +61,12 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:custom-fields:[id]:PUT:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -134,6 +147,12 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:custom-fields:[id]:DELETE:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });

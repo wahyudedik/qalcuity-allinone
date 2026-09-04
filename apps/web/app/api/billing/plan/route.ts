@@ -11,6 +11,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { getEntitlement, changePlan, ensureEntitlement } from '@/lib/entitlement';
 import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const changePlanSchema = z.object({
     planSlug: z.string().min(1, 'Plan slug wajib diisi'),
@@ -19,6 +20,12 @@ const changePlanSchema = z.object({
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`billing:plan:${ip}`, 60, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -66,6 +73,12 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`billing:plan:PUT:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });

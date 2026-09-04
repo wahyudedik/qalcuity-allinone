@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`billing:subscription:${ip}`, 60, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });

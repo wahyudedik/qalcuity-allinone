@@ -6,6 +6,7 @@ import { updateIndustryConfigSchema, formatZodError } from '@/lib/validation-sch
 import { DEFAULT_INDUSTRY_CONFIGS, type IndustryType } from '@qalcuity/industry-config';
 import { getTenantIndustryConfig } from '@/lib/industry-config';
 import { sanitizeObject } from '@/lib/sanitize';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // ─── GET /api/settings/industry ──────────────────────────────────────────────
 
@@ -15,6 +16,12 @@ import { sanitizeObject } from '@/lib/sanitize';
  */
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:industry:${ip}`, 60, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -49,6 +56,12 @@ export async function GET(request: Request) {
  */
 export async function PUT(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:industry:PUT:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });

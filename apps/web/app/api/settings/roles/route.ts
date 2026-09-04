@@ -5,12 +5,19 @@ import { logAudit } from '@/lib/audit'
 import { createRoleSchema, formatZodError } from '@/lib/validation-schemas'
 import { SYSTEM_ROLE_PERMISSIONS, PermissionEngine, ALL_PERMISSIONS } from '@qalcuity/permissions'
 import { sanitizeObject } from '@/lib/sanitize'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ─── GET /api/settings/roles ───────────────────────────────────────────────────
 // List semua roles (system + custom) untuk tenant ini.
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:roles:${ip}`, 60, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -84,6 +91,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rl = checkRateLimit(`settings:roles:POST:${ip}`, 30, 60_000)
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
