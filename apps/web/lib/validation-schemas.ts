@@ -13,6 +13,8 @@ export const createContactSchema = z.object({
     email: z.string().email('Format email tidak valid').max(255).optional().nullable(),
     phone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
     type: z.string().max(50).optional(),
+    company: z.string().max(255).optional().nullable(),
+    position: z.string().max(255).optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().max(100).optional().nullable(),
     province: z.string().max(100).optional().nullable(),
