@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     HeadphonesIcon,
     Search,
@@ -38,93 +38,8 @@ interface TicketReply {
     createdAt: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockTickets: SupportTicket[] = [
-    {
-        id: "t1",
-        tenant: "PT Digital Nusantara",
-        subject: "Tidak bisa generate invoice PDF",
-        message: "Ketika saya klik generate invoice, muncul error 500. Sudah coba refresh tapi tetap sama.",
-        status: "open",
-        priority: "high",
-        category: "Bug Report",
-        createdAt: "1 Sep 2026, 08:30",
-        updatedAt: "1 Sep 2026, 08:30",
-        replies: [],
-    },
-    {
-        id: "t2",
-        tenant: "CV Sejahtera",
-        subject: "Request fitur: Export data ke Excel",
-        message: "Mohon tambahkan fitur export data inventory ke Excel. Saat ini hanya bisa export PDF.",
-        status: "in_progress",
-        priority: "medium",
-        category: "Feature Request",
-        createdAt: "31 Ags 2026, 14:20",
-        updatedAt: "1 Sep 2026, 09:00",
-        replies: [
-            {
-                id: "r1",
-                author: "Platform Admin",
-                role: "admin",
-                message: "Terima kasih atas feedbacknya. Fitur export Excel sedang dalam pengembangan dan dijadwalkan rilis minggu depan.",
-                createdAt: "1 Sep 2026, 09:00",
-            },
-        ],
-    },
-    {
-        id: "t3",
-        tenant: "PT Maju Bersama",
-        subject: "Billing: Invoice belum terbit otomatis",
-        message: "Invoice untuk bulan Agustus seharusnya terbit otomatis tanggal 25, tapi sampai sekarang belum ada.",
-        status: "open",
-        priority: "critical",
-        category: "Billing",
-        createdAt: "30 Ags 2026, 10:15",
-        updatedAt: "30 Ags 2026, 10:15",
-        replies: [],
-    },
-    {
-        id: "t4",
-        tenant: "CV Abadi Makmur",
-        subject: "Cara mengubah format invoice",
-        message: "Bagaimana cara mengubah template invoice? Saya ingin menambahkan logo perusahaan.",
-        status: "resolved",
-        priority: "low",
-        category: "Question",
-        createdAt: "28 Ags 2026, 16:45",
-        updatedAt: "29 Ags 2026, 10:00",
-        replies: [
-            {
-                id: "r2",
-                author: "Platform Admin",
-                role: "admin",
-                message: "Anda bisa mengubah template invoice di Settings > Company > Invoice Template. Untuk menambahkan logo, upload di Settings > Company > Logo.",
-                createdAt: "29 Ags 2026, 10:00",
-            },
-        ],
-    },
-    {
-        id: "t5",
-        tenant: "PT Global Tech",
-        subject: "Slow performance saat load data CRM",
-        message: "Saat membuka halaman contacts dengan 1000+ data, halaman sangat lambat loading.",
-        status: "in_progress",
-        priority: "high",
-        category: "Performance",
-        createdAt: "27 Ags 2026, 09:30",
-        updatedAt: "28 Ags 2026, 14:00",
-        replies: [
-            {
-                id: "r3",
-                author: "Platform Admin",
-                role: "admin",
-                message: "Kami sudah mengidentifikasi masalahnya. Performance optimization untuk large dataset sedang dalam proses.",
-                createdAt: "28 Ags 2026, 14:00",
-            },
-        ],
-    },
-];
+// ─── API Data ────────────────────────────────────────────────────────────────
+// Tickets are now fetched from /api/platform/support/tickets
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: SupportTicket["status"] }) {
@@ -168,13 +83,30 @@ export default function PlatformSupportPage() {
     const [sending, setSending] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setTickets(mockTickets);
+    const fetchTickets = useCallback(async () => {
+        try {
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (filterStatus !== "all") params.set("status", filterStatus);
+            if (searchQuery) params.set("search", searchQuery);
+
+            const res = await fetch(`/api/platform/support/tickets?${params.toString()}`);
+            const data = await res.json();
+            if (data.success) {
+                setTickets(data.data);
+            } else {
+                setToast({ message: data.error || "Gagal memuat tiket", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
             setLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+        }
+    }, [filterStatus, searchQuery]);
+
+    useEffect(() => {
+        fetchTickets();
+    }, [fetchTickets]);
 
     const filteredTickets = tickets.filter((t) => {
         const matchSearch = searchQuery === "" ||
@@ -187,29 +119,48 @@ export default function PlatformSupportPage() {
     const handleSendReply = async () => {
         if (!selectedTicket || !replyMessage.trim()) return;
         setSending(true);
-        await new Promise((r) => setTimeout(r, 1000));
-        const newReply: TicketReply = {
-            id: `r${Date.now()}`,
-            author: "Platform Admin",
-            role: "admin",
-            message: replyMessage,
-            createdAt: new Date().toLocaleString("id-ID"),
-        };
-        setTickets((prev) =>
-            prev.map((t) =>
-                t.id === selectedTicket.id
-                    ? { ...t, replies: [...t.replies, newReply], status: "in_progress" as const, updatedAt: new Date().toLocaleString("id-ID") }
-                    : t
-            )
-        );
-        setSelectedTicket({
-            ...selectedTicket,
-            replies: [...selectedTicket.replies, newReply],
-            status: "in_progress",
-        });
-        setReplyMessage("");
-        setSending(false);
-        setToast({ message: "Reply berhasil dikirim", type: "success" });
+        try {
+            const res = await fetch(`/api/platform/support/tickets`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    subject: `Reply ke: ${selectedTicket.subject}`,
+                    message: replyMessage,
+                    priority: "medium",
+                    category: "Reply",
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                const newReply: TicketReply = {
+                    id: data.data.id || `r${Date.now()}`,
+                    author: "Platform Admin",
+                    role: "admin",
+                    message: replyMessage,
+                    createdAt: new Date().toLocaleString("id-ID"),
+                };
+                setTickets((prev) =>
+                    prev.map((t) =>
+                        t.id === selectedTicket.id
+                            ? { ...t, replies: [...t.replies, newReply], status: "in_progress" as const, updatedAt: new Date().toLocaleString("id-ID") }
+                            : t
+                    )
+                );
+                setSelectedTicket({
+                    ...selectedTicket,
+                    replies: [...selectedTicket.replies, newReply],
+                    status: "in_progress",
+                });
+                setReplyMessage("");
+                setToast({ message: "Reply berhasil dikirim", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal mengirim reply", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menghubungi server", type: "error" });
+        } finally {
+            setSending(false);
+        }
     };
 
     if (loading) {
@@ -265,11 +216,10 @@ export default function PlatformSupportPage() {
                     <div
                         key={ticket.id}
                         onClick={() => setSelectedTicket(ticket)}
-                        className={`cursor-pointer rounded-xl border bg-white p-4 transition hover:shadow-md dark:bg-gray-900 ${
-                            selectedTicket?.id === ticket.id
+                        className={`cursor-pointer rounded-xl border bg-white p-4 transition hover:shadow-md dark:bg-gray-900 ${selectedTicket?.id === ticket.id
                                 ? "border-purple-300 ring-2 ring-purple-100 dark:border-purple-700 dark:ring-purple-900/30"
                                 : "border-gray-200 dark:border-gray-700"
-                        }`}
+                            }`}
                     >
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -363,11 +313,10 @@ export default function PlatformSupportPage() {
                             {selectedTicket.replies.map((reply) => (
                                 <div
                                     key={reply.id}
-                                    className={`rounded-lg p-4 ${
-                                        reply.role === "admin"
+                                    className={`rounded-lg p-4 ${reply.role === "admin"
                                             ? "bg-purple-50 dark:bg-purple-900/20"
                                             : "bg-gray-50 dark:bg-gray-800"
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
                                         <User className="h-4 w-4 text-gray-400" />
@@ -416,9 +365,8 @@ export default function PlatformSupportPage() {
             {/* Toast */}
             {toast && (
                 <div className="fixed bottom-4 right-4 z-50">
-                    <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
-                        toast.type === "success" ? "bg-green-600" : "bg-red-600"
-                    }`}>
+                    <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === "success" ? "bg-green-600" : "bg-red-600"
+                        }`}>
                         {toast.message}
                         <button onClick={() => setToast(null)} className="ml-2 hover:opacity-75">×</button>
                     </div>

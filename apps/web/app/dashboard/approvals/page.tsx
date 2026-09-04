@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
+import { useToast } from '@/components/ui/toast'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
     CheckCircle,
@@ -74,6 +75,7 @@ const roleOptions = [
 export default function ApprovalsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
+    const { addToast } = useToast()
     const canMutate = session?.user?.role !== 'VIEWER'
     const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
 
@@ -90,6 +92,10 @@ export default function ApprovalsPage() {
     const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null)
     const [approvalComments, setApprovalComments] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Reject modal state
+    const [showRejectModal, setShowRejectModal] = useState(false)
+    const [rejectComments, setRejectComments] = useState('')
 
     // Level form state
     const [showLevelForm, setShowLevelForm] = useState(false)
@@ -155,38 +161,46 @@ export default function ApprovalsPage() {
                 setShowApproveModal(false)
                 setSelectedRequest(null)
                 setApprovalComments('')
+                addToast('Berhasil menyetujui permintaan', 'success')
                 fetchRequests()
                 fetchLevels()
             } else {
-                alert(data.error || 'Gagal menyetujui')
+                addToast(data.error || 'Gagal menyetujui', 'error')
             }
         } catch {
-            alert('Gagal menyetujui permintaan')
+            addToast('Gagal menyetujui permintaan', 'error')
         } finally {
             setIsSubmitting(false)
         }
     }
 
-    const handleReject = async (request: ApprovalRequest) => {
-        const comments = window.prompt('Alasan penolakan (wajib):')
-        if (!comments || comments.trim().length === 0) {
-            alert('Komentar wajib diisi saat menolak')
+    const handleReject = async () => {
+        if (!selectedRequest) return
+        if (!rejectComments.trim()) {
+            addToast('Komentar wajib diisi saat menolak', 'error')
             return
         }
+        setIsSubmitting(true)
         try {
-            const res = await fetch(`/api/approval/requests/${request.id}/reject`, {
+            const res = await fetch(`/api/approval/requests/${selectedRequest.id}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ comments }),
+                body: JSON.stringify({ comments: rejectComments }),
             })
             const data = await res.json()
             if (data.success) {
+                setShowRejectModal(false)
+                setSelectedRequest(null)
+                setRejectComments('')
+                addToast('Permintaan berhasil ditolak', 'success')
                 fetchRequests()
             } else {
-                alert(data.error || 'Gagal menolak')
+                addToast(data.error || 'Gagal menolak', 'error')
             }
         } catch {
-            alert('Gagal menolak permintaan')
+            addToast('Gagal menolak permintaan', 'error')
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -205,7 +219,7 @@ export default function ApprovalsPage() {
                 })
                 const data = await res.json()
                 if (!data.success) {
-                    alert(data.error || 'Gagal update level')
+                    addToast(data.error || 'Gagal update level', 'error')
                     return
                 }
             } else {
@@ -216,16 +230,17 @@ export default function ApprovalsPage() {
                 })
                 const data = await res.json()
                 if (!data.success) {
-                    alert(data.error || 'Gagal membuat level')
+                    addToast(data.error || 'Gagal membuat level', 'error')
                     return
                 }
             }
+            addToast(editingLevel ? 'Level berhasil diupdate' : 'Level berhasil dibuat', 'success')
             setShowLevelForm(false)
             setEditingLevel(null)
             setLevelForm({ entityType: 'INVOICE', level: 1, name: '', requiredRole: 'ADMIN' })
             fetchLevels()
         } catch {
-            alert('Gagal menyimpan level')
+            addToast('Gagal menyimpan level', 'error')
         } finally {
             setIsSubmitting(false)
         }
@@ -241,12 +256,13 @@ export default function ApprovalsPage() {
             if (data.success) {
                 setShowDeleteConfirm(false)
                 setDeletingLevel(null)
+                addToast('Level berhasil dihapus', 'success')
                 fetchLevels()
             } else {
-                alert(data.error || 'Gagal menghapus level')
+                addToast(data.error || 'Gagal menghapus level', 'error')
             }
         } catch {
-            alert('Gagal menghapus level')
+            addToast('Gagal menghapus level', 'error')
         }
     }
 
@@ -452,7 +468,11 @@ export default function ApprovalsPage() {
                                                                 Setuju
                                                             </button>
                                                             <button
-                                                                onClick={() => handleReject(req)}
+                                                                onClick={() => {
+                                                                    setSelectedRequest(req)
+                                                                    setRejectComments('')
+                                                                    setShowRejectModal(true)
+                                                                }}
                                                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-xs font-medium"
                                                             >
                                                                 <XCircle className="h-3.5 w-3.5" />
@@ -515,7 +535,11 @@ export default function ApprovalsPage() {
                                                     Setuju
                                                 </button>
                                                 <button
-                                                    onClick={() => handleReject(req)}
+                                                    onClick={() => {
+                                                        setSelectedRequest(req)
+                                                        setRejectComments('')
+                                                        setShowRejectModal(true)
+                                                    }}
                                                     className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-sm font-medium"
                                                 >
                                                     <XCircle className="h-4 w-4" />
@@ -826,6 +850,62 @@ export default function ApprovalsPage() {
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
                             >
                                 {isSubmitting ? (t('common.loading') || 'Memuat...') : (t('common.save') || 'Simpan')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── Reject Modal ────────────────────────────────────── */}
+            {showRejectModal && selectedRequest && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            Tolak Permintaan
+                        </h3>
+                        <div className="text-sm text-gray-600 space-y-2">
+                            <div>
+                                <span className="font-medium">Tipe:</span>{' '}
+                                {entityTypeConfig[selectedRequest.entityType]?.label}
+                            </div>
+                            <div>
+                                <span className="font-medium">Level:</span>{' '}
+                                {selectedRequest.levelName}
+                            </div>
+                            <div>
+                                <span className="font-medium">Diminta oleh:</span>{' '}
+                                {selectedRequest.requesterName}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Alasan penolakan <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={rejectComments}
+                                onChange={(e) => setRejectComments(e.target.value)}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                placeholder="Masukkan alasan penolakan..."
+                            />
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => {
+                                    setShowRejectModal(false)
+                                    setSelectedRequest(null)
+                                    setRejectComments('')
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                {t('common.cancel') || 'Batal'}
+                            </button>
+                            <button
+                                onClick={handleReject}
+                                disabled={isSubmitting || !rejectComments.trim()}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {isSubmitting ? (t('common.loading') || 'Memuat...') : 'Tolak'}
                             </button>
                         </div>
                     </div>
