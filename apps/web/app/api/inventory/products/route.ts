@@ -144,7 +144,8 @@ export async function PUT(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
-        const { id, ...updateData } = body;
+        const sanitizedBody = sanitizeObject(body);
+        const { id, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(

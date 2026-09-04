@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createTaxRateSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
     try {
@@ -74,7 +75,8 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const validation = createTaxRateSchema.safeParse(body);
+        const sanitizedBody = sanitizeObject(body);
+        const validation = createTaxRateSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { createQuotationSchema, updateQuotationSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createApprovalRequest } from '@/lib/approval';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
     try {
@@ -98,8 +99,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
         }
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = createQuotationSchema.safeParse(body);
+        const validation = createQuotationSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -186,7 +188,8 @@ export async function PUT(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
-        const { id, items, ...updateData } = body;
+        const sanitizedBody = sanitizeObject(body);
+        const { id, items, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(

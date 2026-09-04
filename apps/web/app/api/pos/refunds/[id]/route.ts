@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(
     request: Request,
@@ -87,7 +88,8 @@ export async function PUT(
 
         const { id } = params;
         const body = await request.json();
-        const { status: newStatus, notes } = body as { status: string; notes?: string };
+        const sanitizedBody = sanitizeObject(body);
+        const { status: newStatus, notes } = sanitizedBody as { status: string; notes?: string };
 
         if (!newStatus || !['APPROVED', 'REJECTED'].includes(newStatus)) {
             return NextResponse.json(

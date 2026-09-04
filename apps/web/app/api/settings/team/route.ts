@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { inviteTeamMemberSchema, updateTeamMemberSchema, formatZodError } from '@/lib/validation-schemas'
+import { sanitizeObject } from '@/lib/sanitize'
 
 export async function GET(request: Request) {
     try {
@@ -62,8 +63,9 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
 
-        const validation = inviteTeamMemberSchema.safeParse(body)
+        const validation = inviteTeamMemberSchema.safeParse(sanitizedBody)
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -150,8 +152,9 @@ export async function PUT(request: Request) {
             )
         }
         const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
 
-        const validation = updateTeamMemberSchema.safeParse(body)
+        const validation = updateTeamMemberSchema.safeParse(sanitizedBody)
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

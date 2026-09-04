@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createCoAAccountSchema, updateCoAAccountSchema } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 
 // GET: Ambil semua akun CoA (dengan tenant isolation)
 export async function GET(request: Request) {
@@ -72,9 +73,10 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
         // Validasi input dengan Zod
-        const validated = createCoAAccountSchema.parse(body);
+        const validated = createCoAAccountSchema.parse(sanitizedBody);
 
         // Cek duplikat kode dalam scope tenant
         const existing = await prisma.coAAccount.findUnique({
@@ -141,8 +143,9 @@ export async function PUT(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const { id, ...updateData } = body;
+        const { id, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(

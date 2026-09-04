@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { openPosSessionSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
     try {
@@ -89,7 +90,8 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth;
 
         const body = await request.json();
-        const validation = openPosSessionSchema.safeParse(body);
+        const sanitizedBody = sanitizeObject(body);
+        const validation = openPosSessionSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

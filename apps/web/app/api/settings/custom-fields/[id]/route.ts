@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 // ─── GET /api/settings/custom-fields/[id] ────────────────────────────────────
 
@@ -68,8 +69,9 @@ export async function PUT(
 
         const { id } = params;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = updateCustomFieldSchema.safeParse(body);
+        const validation = updateCustomFieldSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

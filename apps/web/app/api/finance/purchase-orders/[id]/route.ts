@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updatePurchaseOrderSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(
     request: Request,
@@ -71,8 +72,9 @@ export async function PUT(
         const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const { items, ...restBody } = body;
+        const { items, ...restBody } = sanitizedBody;
         const validation = updatePurchaseOrderSchema.safeParse({ ...restBody, items });
         if (!validation.success) {
             return NextResponse.json(

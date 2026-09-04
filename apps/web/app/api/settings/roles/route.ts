@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { createRoleSchema, formatZodError } from '@/lib/validation-schemas'
 import { SYSTEM_ROLE_PERMISSIONS, PermissionEngine, ALL_PERMISSIONS } from '@qalcuity/permissions'
+import { sanitizeObject } from '@/lib/sanitize'
 
 // ─── GET /api/settings/roles ───────────────────────────────────────────────────
 // List semua roles (system + custom) untuk tenant ini.
@@ -90,8 +91,9 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth
 
         const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
 
-        const validation = createRoleSchema.safeParse(body)
+        const validation = createRoleSchema.safeParse(sanitizedBody)
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

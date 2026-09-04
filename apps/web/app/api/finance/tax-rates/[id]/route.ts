@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateTaxRateSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(
     request: Request,
@@ -63,7 +64,8 @@ export async function PUT(
         }
 
         const body = await request.json();
-        const validation = updateTaxRateSchema.safeParse(body);
+        const sanitizedBody = sanitizeObject(body);
+        const validation = updateTaxRateSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

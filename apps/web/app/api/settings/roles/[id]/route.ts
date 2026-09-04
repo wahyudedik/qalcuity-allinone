@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { updateRoleSchema, formatZodError } from '@/lib/validation-schemas'
 import { PermissionEngine, SYSTEM_ROLE_PERMISSIONS } from '@qalcuity/permissions'
+import { sanitizeObject } from '@/lib/sanitize'
 
 // ─── GET /api/settings/roles/[id] ──────────────────────────────────────────────
 // Get role details.
@@ -116,8 +117,9 @@ export async function PUT(
         }
 
         const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
 
-        const validation = updateRoleSchema.safeParse(body)
+        const validation = updateRoleSchema.safeParse(sanitizedBody)
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

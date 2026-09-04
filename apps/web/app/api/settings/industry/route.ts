@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { updateIndustryConfigSchema, formatZodError } from '@/lib/validation-schemas';
 import { DEFAULT_INDUSTRY_CONFIGS, type IndustryType } from '@qalcuity/industry-config';
 import { getTenantIndustryConfig } from '@/lib/industry-config';
+import { sanitizeObject } from '@/lib/sanitize';
 
 // ─── GET /api/settings/industry ──────────────────────────────────────────────
 
@@ -62,8 +63,9 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = updateIndustryConfigSchema.safeParse(body);
+        const validation = updateIndustryConfigSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
