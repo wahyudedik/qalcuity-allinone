@@ -1,10 +1,25 @@
-> **Last Updated:** 4 September 2026 (POS Feature Phase 2 — API Routes + UI Pages)
-> **Version:** v7.3.0
-> **Status:** POS Feature Phase 2 COMPLETE — 8 API routes, 4 UI pages, 3 loading states, POS Terminal (kasir) interface functional
+> **Last Updated:** 4 September 2026 (POS Feature Phase 3 — Refunds, Reports, Terminals Management)
+> **Version:** v7.4.0
+> **Status:** POS Feature Phase 3 COMPLETE — 10 API routes, 7 UI pages, 6 loading states, 6-tab POS layout, full refund/reports/terminals management
 
 ---
 
 ## 🎯 Current Sprint
+
+### POS Feature — Phase 3: Refunds, Reports, Terminals Management (4 September 2026)
+- ✅ **API Routes** — 2 new API route files for POS refunds:
+  - [`apps/web/app/api/pos/refunds/route.ts`](apps/web/app/api/pos/refunds/route.ts) — GET (list with status filter) + POST (create refund request with transaction validation)
+  - [`apps/web/app/api/pos/refunds/[id]/route.ts`](apps/web/app/api/pos/refunds/[id]/route.ts) — GET (detail) + PUT (approve/reject, ADMIN+ only, updates transaction status)
+- ✅ **POS Refunds Page** — [`apps/web/app/dashboard/pos/refunds/page.tsx`](apps/web/app/dashboard/pos/refunds/page.tsx) — Refund management with list, filter by status, detail modal, approve/reject modals, responsive (desktop table + mobile cards)
+- ✅ **POS Refunds Loading** — [`apps/web/app/dashboard/pos/refunds/loading.tsx`](apps/web/app/dashboard/pos/refunds/loading.tsx) — PageHeaderSkeleton + FilterBarSkeleton + TableSkeleton
+- ✅ **POS Reports Page** — [`apps/web/app/dashboard/pos/reports/page.tsx`](apps/web/app/dashboard/pos/reports/page.tsx) — Dashboard with summary cards, weekly/monthly panels, daily sales BarChart, payment PieChart, top products table, date range filter
+- ✅ **POS Reports Loading** — [`apps/web/app/dashboard/pos/reports/loading.tsx`](apps/web/app/dashboard/pos/reports/loading.tsx) — PageHeaderSkeleton + StatsCardsSkeleton + chart skeletons
+- ✅ **POS Terminals Management Page** — [`apps/web/app/dashboard/pos/terminals/page.tsx`](apps/web/app/dashboard/pos/terminals/page.tsx) — Terminal CRUD with list, search, status filter, create/edit/delete modals, detail modal with session history, ADMIN+ only actions
+- ✅ **POS Terminals Loading** — [`apps/web/app/dashboard/pos/terminals/loading.tsx`](apps/web/app/dashboard/pos/terminals/loading.tsx) — PageHeaderSkeleton + FilterBarSkeleton + TableSkeleton
+- ✅ **POS Layout Updated** — [`apps/web/app/dashboard/pos/layout.tsx`](apps/web/app/dashboard/pos/layout.tsx) — 6 tabs (Cashier, Sessions, Transactions, Refunds, Reports, Terminals)
+- ✅ **i18n Keys** — 100+ new keys added to both [`en.json`](apps/web/messages/en.json) and [`id.json`](apps/web/messages/id.json) for layout tabs, refunds, reports, and terminals pages
+- ✅ **Security** — Tenant isolation, RBAC (ADMIN+ for mutations), Zod validation, audit trail, rate limiting
+- ✅ **TypeScript Check** — 0 errors
 
 ### POS Feature — Phase 2: API Routes + UI Pages (4 September 2026)
 - ✅ **API Routes** — 8 API route files created for POS:
