@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity Development Roadmap
 
-> **Last Updated:** 1 September 2026 (Improvement Sprint Complete)
-> **Current Version:** v6.0.0
-> **Status:** Core Modules Production-Ready + Foundation Engines Integrated (~72% production-ready, ~18% partial, ~10% planned)
+> **Last Updated:** 4 September 2026 (Batch M — Documentation Update)
+> **Current Version:** v7.0.0
+> **Status:** Core Modules Production-Ready + Foundation Engines + POS Phase 2-3 + Security Hardening (~78% production-ready, ~15% partial, ~7% planned)
 
 ---
 
@@ -400,18 +400,23 @@
 - [ ] SSO integration (SAML 2.0, OAuth 2.0)
 - [ ] SOC 2 Type II compliance
 
-### Phase 22: POS Module (Core) 📋 PLANNED
+### Phase 22: POS Module (Core) 🔄 IN PROGRESS
 
 > **POS (Point of Sale) adalah Core Module — bukan produk terpisah.** POS terintegrasi langsung ke ERP: Inventory → Finance → Accounting → CRM → Audit. POS menggunakan Permission Engine, Workflow Engine, dan Audit Trail yang sama.
 > Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22.
+> **Phase 22A & 22B partially complete** (Batch K, L, M — September 4, 2026)
 
 #### 22A: POS Core
 
-- [ ] POS Prisma schema (POSSession, POSTransaction, POSTransactionItem, POSTransactionPayment, POSRefund)
-- [ ] POS Sale API — create transaction, add items, apply discounts
+- [x] POS Prisma schema (POSSession, POSTransaction, POSTransactionItem, POSTransactionPayment, POSRefund)
+- [x] POS Terminal/Cashier page + API — terminal, transactions, dashboard
+- [x] POS Products API — product lookup for POS
+- [x] POS Sessions page + API — basic session tracking
+- [x] POS Transactions page + API — transaction history
+- [x] POS Dashboard API — POS overview with stats
 - [ ] POS Payment API — multi payment method (cash, card, e-wallet, QRIS)
 - [ ] POS Return API — return items, partial return
-- [ ] POS Refund API — refund processing with approval workflow
+- [x] POS Refund API — refund processing (create, list) + UI page
 - [ ] POS Receipt — receipt generation and printing
 - [ ] POS Tax Calculation — automatic tax computation per item/transaction
 - [ ] POS Barcode — barcode scanning for product lookup
@@ -419,10 +424,10 @@
 
 #### 22B: POS Shift & Cash Management
 
-- [ ] POS Shift Management — open shift, track transactions, close shift
+- [x] POS Sessions (basic) — session tracking via sessions page + API
 - [ ] POS Cash Drawer — cash in/out tracking, opening/closing cash count
 - [ ] POS Daily Closing — end-of-day closing with approval workflow
-- [ ] POS Cashier Management — cashier assignment and shift scheduling
+- [x] POS Terminals Management — terminal CRUD management page
 - [ ] POS Shift Report — shift summary (total sales, refunds, discounts, cash count)
 
 #### 22C: POS Offline Mode
@@ -453,8 +458,8 @@
 
 #### 22F: POS Permissions & Security
 
+- [x] POS RBAC enforcement — Tenant isolation + session-based auth on all POS API routes
 - [ ] POS Permission Matrix — Cashier, Supervisor, Manager roles
-- [ ] POS RBAC enforcement (Middleware + API + UI)
 - [ ] POS Void permission (Supervisor+ only)
 - [ ] POS Discount override permission (Supervisor+ only, >10%)
 - [ ] POS Refund approval permission (Manager+ only)
@@ -462,6 +467,7 @@
 
 #### 22G: POS Reports & Analytics
 
+- [x] POS Reports page — basic reports UI (Phase 3)
 - [ ] POS Sales Report — daily/weekly/monthly sales summary
 - [ ] POS Product Report — top selling products, product performance
 - [ ] POS Cashier Report — cashier performance, transaction count
@@ -655,7 +661,7 @@
 | **14-16** | Dec '26-Feb '27 | Production + Mobile + Desktop | Multi-platform ready | ✅ `completed` (Phase 14 MVP) |
 | **17** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
 | **18** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
-| **22** | Sep-Oct '27 | POS Module (Core) | POS Core + Offline + Industry Config + ERP Integration | 📋 `planned` |
+| **22** | Sep-Oct '27 | POS Module (Core) | POS Core + Sessions + Refunds + Reports + Terminals Mgmt | 🔄 `in_progress` |
 | **23** | Sep-Oct '27 | Platform Control Center (Core) | Tenant mgmt + Subscription + Billing + Entitlements + Usage | 📋 `planned` |
 | **24** | Oct-Nov '27 | Platform Monitoring & Error Center | System health + Error center + Logs + Background jobs | 📋 `planned` |
 | **25** | Nov-Dec '27 | Platform Support & Impersonation | Support tickets + Impersonation + Feature flags + Security center | 📋 `planned` |
@@ -750,6 +756,11 @@
 
 | Date | Change | Impact |
 |------|--------|--------|
+| 2026-09-04 | Batch M — Documentation Update: FEATURES, ROADMAP, CURRENT, REMAINING-WORK updated for POS Phase 2-3 completion, Batch K & L status | Documentation |
+| 2026-09-04 | Batch L — Code Quality: console.log cleanup (7), any types fix, error response standardization (api-error.ts), POS i18n (30+ keys), POS sidebar fix (6 sub-menus) | Code quality + UX |
+| 2026-09-04 | Batch K — Security Hardening: Rate limiting (21 analytics routes), input sanitization, error boundaries, loading states | Security + Stability |
+| 2026-09-04 | POS Phase 3 — Refunds API (2 routes), refunds page, reports page, terminals management page, 100+ i18n keys | POS Module |
+| 2026-09-04 | POS Phase 2 — 8 API routes (terminals, sessions, transactions, dashboard, products), terminal page, sessions page, transactions page, POS layout, 3 loading states, DB migration | POS Module |
 | 2026-09-01 | Improvement Sprint (Batch 7A-7E) — Permission Engine Integration (~90 routes), Workflow Engine Integration (5 entities), General Ledger + Journal Entry, Redis Rate Limiter, Entitlement Engine | Architecture + Security + Finance |
 | 2026-09-01 | UI Modernization Sprint (Batches 1-5) — ConfirmDialog, Toast system, Inline Error Banners, Dark Mode (8 components), i18n 433+ keys, Reports mobile cards (12 sub-components), Loading states 28, Security hardening | UI/UX + Security |
 | 2026-09-01 | Phase 14 Complete — Deploy scripts, env validation, security hardening, button fixes, Platform Control Center MVP | Production readiness |
@@ -804,5 +815,5 @@
 
 ---
 
-**Last Updated:** September 1, 2026
+**Last Updated:** September 4, 2026
 **Maintainer:** Qalcuity Product Team

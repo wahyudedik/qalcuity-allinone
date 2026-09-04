@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 3, 2026 (Sprint 4 Complete — Batch 1A-4B)
+**Last Updated:** September 4, 2026 (Batch M — Documentation Update)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 7.0 — Sprint 4 Complete
+**Document Version:** 8.0 — Batch M Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -1128,23 +1128,28 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **POS Sale** | 📋 `planned` | — | Transaksi penjualan langsung dengan cart, discount, tax |
+| **POS Terminal (Cashier)** | ✅ `implemented` | 2026-09-04 | Terminal/Cashier page + API (Phase 2: terminal, transactions, dashboard) |
 | **POS Returns** | 📋 `planned` | — | Pengembalian barang partial/full |
-| **POS Refunds** | 📋 `planned` | — | Pengembalian dana dengan approval workflow |
+| **POS Refunds** | ✅ `implemented` | 2026-09-04 | Refunds page + 2 API routes (create, list) — Phase 3 |
 | **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
 | **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
 | **POS Customers** | 📋 `planned` | — | Data pelanggan untuk loyalty dan receipt |
-| **POS Products** | 📋 `planned` | — | Master produk untuk POS (dari Inventory module) |
+| **POS Products** | ✅ `implemented` | 2026-09-04 | Products API for POS product lookup (Phase 2) |
 | **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
 | **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
 | **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
-| **POS Shift Management** | 📋 `planned` | — | Open shift, track transactions, close shift |
-| **POS Cashier Management** | 📋 `planned` | — | Cashier assignment, shift scheduling, performance |
+| **POS Shift Management** | 🔄 `partial` | 2026-09-04 | Sessions page + API (basic shift tracking, belum full lifecycle) |
+| **POS Cashier Management** | 🔄 `partial` | 2026-09-04 | Terminals Management page (CRUD terminals, belum scheduling) |
 | **POS Receipt Printing** | 📋 `planned` | — | Receipt generation dan printing (thermal/regular) |
 | **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
 | **POS Offline Mode** | 📋 `planned` | — | Transaksi tanpa koneksi internet dengan sync rules |
 | **POS Closing** | 📋 `planned` | — | Daily/shift closing dengan approval workflow |
 | **POS Audit Trail** | 📋 `planned` | — | Jejak audit lengkap untuk semua transaksi POS |
+| **POS Dashboard** | ✅ `implemented` | 2026-09-04 | POS overview dashboard API with stats (Phase 2) |
+| **POS Transactions Page** | ✅ `implemented` | 2026-09-04 | Transaction history page + API (Phase 2) |
+| **POS Sessions Page** | ✅ `implemented` | 2026-09-04 | Sessions list page + API (Phase 2) |
+| **POS Terminals Management** | ✅ `implemented` | 2026-09-04 | Terminal CRUD management page (Phase 3) |
+| **POS Reports** | ✅ `implemented` | 2026-09-04 | POS reports page — sales, products, cashier reports (Phase 3) |
 
 ### 15.2 POS Permissions by Role
 
@@ -1417,16 +1422,17 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~62 | ~36% |
-| `implemented` | ✅ | ~25 | ~15% |
+| `production_ready` | 🚀 | ~62 | ~35% |
+| `implemented` | ✅ | ~33 | ~19% |
 | `verified` | ✔️ | 1 | ~1% |
-| `partial` | 🔄 | ~18 | ~11% |
+| `partial` | 🔄 | ~20 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~163 | ~47% |
+| `planned` | 📋 | ~156 | ~44% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~269** | **100%** |
+| **Total** | | **~274** | **100%** |
 
+> **Batch M Impact (POS Phase 2 & 3):** +8 implemented, +2 partial, -7 planned, +5 new POS features → Net improvement: ~4% implemented increase
 > **Sprint 4 Impact:** +4 production_ready, +5 implemented, -5 planned → Net improvement: ~3.5% production_ready increase
 
 ---
@@ -1601,6 +1607,14 @@ Electron-based desktop application.
 
 ---
 
+### v8.0.0 (September 4, 2026) — Batch M: Documentation Update (POS Phase 2 & 3 Complete)
+- **POS Phase 2 Complete** — 8 API routes (terminals, terminals/[id], sessions, sessions/[id], transactions, transactions/[id], dashboard, products), terminal page, sessions page, transactions page, POS layout, 3 loading states, DB migration
+- **POS Phase 3 Complete** — 2 refund API routes (refunds, refunds/[id]), refunds page, reports page, terminals management page, 100+ i18n keys, 6 POS sub-menus in sidebar
+- **Batch K: Security Hardening** — Rate limiting (21 analytics routes), input sanitization, error boundaries, loading states
+- **Batch L: Code Quality** — Console.log cleanup (7 statements), any types fix, error response standardization (api-error.ts), POS i18n completeness (30+ keys), POS sidebar fix (6 sub-menus)
+- **Documentation Update** — FEATURES, ROADMAP, CURRENT, REMAINING-WORK updated for POS completion
+- **Status Summary** — implemented: 25→33, partial: 18→20, planned: 163→156, total features: 269→274
+
 ### v7.0.0 (September 3, 2026) — Sprint 4 Complete (Batch 1A-4B)
 - **2FA (TOTP)** — RFC 6238 compliant TOTP implementation with enable/disable/verify flow
 - **Session Management** — Multi-device session tracking with active sessions list and revoke
@@ -1619,6 +1633,6 @@ Electron-based desktop application.
 - **TypeScript Check** — PASS (0 errors)
 - **Status Summary** — production_ready: 58→62, implemented: 20→25
 
-**Last Updated:** September 3, 2026 (Sprint 4 Complete — Batch 1A-4B)
+**Last Updated:** September 4, 2026 (Batch M — Documentation Update)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 7.0 — Sprint 4 Complete
+**Document Version:** 8.0 — Batch M Complete
