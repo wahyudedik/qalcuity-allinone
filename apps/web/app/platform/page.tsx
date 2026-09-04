@@ -52,15 +52,7 @@ const defaultStats: PlatformStats = {
     uptime: 100,
 };
 
-const defaultActivities: RecentActivity[] = [
-    {
-        id: "1",
-        type: "tenant_created",
-        message: "Menunggu data aktivitas...",
-        timestamp: "-",
-        tenant: "-",
-    },
-];
+const defaultActivities: RecentActivity[] = [];
 
 // ─── Helper: Format Currency ──────────────────────────────────────────────────
 function formatRupiah(amount: number): string {
@@ -98,6 +90,7 @@ export default function PlatformDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [activitiesError, setActivitiesError] = useState<boolean>(false);
 
     const fetchStats = async () => {
         try {
@@ -126,14 +119,32 @@ export default function PlatformDashboardPage() {
         }
     };
 
+    const fetchActivities = async () => {
+        try {
+            const res = await fetch("/api/platform/monitoring");
+            const data = await res.json();
+            if (data.success && data.data?.recentActivity) {
+                setActivities(data.data.recentActivity);
+                setActivitiesError(false);
+            } else {
+                setActivities([]);
+                setActivitiesError(true);
+            }
+        } catch {
+            setActivities([]);
+            setActivitiesError(true);
+        }
+    };
+
     useEffect(() => {
         fetchStats();
+        fetchActivities();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await fetchStats();
+        await Promise.all([fetchStats(), fetchActivities()]);
         setRefreshing(false);
     };
 
@@ -315,6 +326,30 @@ export default function PlatformDashboardPage() {
                             </div>
                         ))}
                     </div>
+
+                    {/* Empty / Error State for Activities */}
+                    {activities.length === 0 && (
+                        <div className="px-6 py-8 text-center">
+                            {activitiesError ? (
+                                <>
+                                    <AlertTriangle className="mx-auto h-8 w-8 text-yellow-500 mb-2" />
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        {t('platform.dashboardPage.errorLoad')}
+                                    </p>
+                                    <button
+                                        onClick={fetchActivities}
+                                        className="mt-2 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 underline"
+                                    >
+                                        {t('platform.dashboardPage.retry')}
+                                    </button>
+                                </>
+                            ) : (
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {t('platform.dashboardPage.noActivity')}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Actions + System Metrics */}

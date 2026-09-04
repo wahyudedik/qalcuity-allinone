@@ -122,8 +122,8 @@ export default function ApprovalsPage() {
             if (data.success) {
                 setRequests(data.data)
             }
-        } catch {
-            // Graceful fallback
+        } catch (error) {
+            console.error('Failed to fetch approval requests:', error);
         }
     }, [filterEntity, filterStatus])
 
@@ -137,8 +137,8 @@ export default function ApprovalsPage() {
             if (data.success) {
                 setLevels(data.data)
             }
-        } catch {
-            // Graceful fallback
+        } catch (error) {
+            console.error('Failed to fetch approval levels:', error);
         }
     }, [filterEntity])
 

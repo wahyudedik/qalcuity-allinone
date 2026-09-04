@@ -204,8 +204,8 @@ export default function PayrollPage() {
                     salary: Number(e.salary) || 0,
                 })))
             }
-        } catch {
-            // Silent fail
+        } catch (error) {
+            console.error('Failed to fetch employees:', error);
         } finally {
             setEmployeesLoading(false)
         }
@@ -542,11 +542,10 @@ export default function PayrollPage() {
             <div className="flex border-b border-gray-200">
                 <button
                     onClick={() => setActiveTab('list')}
-                    className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === 'list'
+                    className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'list'
                             ? 'border-blue-600 text-blue-600'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                        }`}
                 >
                     <List className="h-4 w-4" />
                     Daftar Payroll
@@ -554,11 +553,10 @@ export default function PayrollPage() {
                 {canMutate && (
                     <button
                         onClick={() => setActiveTab('calculate')}
-                        className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === 'calculate'
+                        className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'calculate'
                                 ? 'border-blue-600 text-blue-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
+                            }`}
                     >
                         <Calculator className="h-4 w-4" />
                         Hitung Payroll

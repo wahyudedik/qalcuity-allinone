@@ -151,8 +151,8 @@ export default function JournalEntriesPage() {
             if (data.success) {
                 setAccounts(data.data || [])
             }
-        } catch {
-            // Silent fail for accounts
+        } catch (error) {
+            console.error('Failed to fetch accounts:', error);
         }
     }
 

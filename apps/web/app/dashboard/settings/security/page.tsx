@@ -118,8 +118,8 @@ export default function SecuritySettingsPage() {
             if (data.success) {
                 setTwoFaStatus(data.data)
             }
-        } catch {
-            // Silent fail for status check
+        } catch (error) {
+            console.error('Failed to fetch 2FA status:', error);
         }
     }, [])
 
@@ -131,8 +131,8 @@ export default function SecuritySettingsPage() {
             if (data.success) {
                 setSessions(data.data)
             }
-        } catch {
-            // Silent fail
+        } catch (error) {
+            console.error('Failed to fetch sessions:', error);
         } finally {
             setSessionsLoading(false)
         }
@@ -147,8 +147,8 @@ export default function SecuritySettingsPage() {
                 setLoginHistory(data.data)
                 setLoginPagination(data.pagination)
             }
-        } catch {
-            // Silent fail
+        } catch (error) {
+            console.error('Failed to fetch login history:', error);
         } finally {
             setLoginHistoryLoading(false)
         }

@@ -1,10 +1,19 @@
-> **Last Updated:** 3 September 2026 (Sprint 4 Complete — Batch 4B: Testing + Documentation + Deployment Prep)
-> **Version:** v7.0.0
-> **Status:** Sprint 4 COMPLETE — All Foundation Engines Integrated, GL/Journal Entry, Tax Engine MVP, Period Closing, Approval Engine, 2FA + Session Management, Platform Admin Enhancement, TypeScript PASS
+> **Last Updated:** 4 September 2026 (Batch I — P1 Quick Wins Round 2)
+> **Version:** v7.1.0
+> **Status:** Batch I COMPLETE — Real File Upload, Platform Dashboard Error State, Silent Catch Blocks Fixed, Legacy _error.tsx Typed, Documentation Updated
 
 ---
 
 ## 🎯 Current Sprint
+
+### Batch I — P1 Quick Wins Round 2 (4 September 2026)
+- ✅ **Real File Upload** — [`apps/web/app/api/upload/route.ts`](apps/web/app/api/upload/route.ts) endpoint created, [`file-upload.tsx`](apps/web/components/ui/file-upload.tsx) updated with real FormData upload + progress indicator (XHR-based)
+- ✅ **Platform Dashboard Error State** — [`apps/web/app/platform/page.tsx`](apps/web/app/platform/page.tsx) — hardcoded fallback replaced with proper error/empty state + retry button
+- ✅ **Silent Catch Blocks Fixed** — 9 locations across 6 files now log errors via `console.error` for debugging
+- ✅ **Legacy `_error.tsx` Typed** — [`apps/web/pages/_error.tsx`](apps/web/pages/_error.tsx) — `any` types replaced with proper TypeScript interfaces
+- ✅ **Documentation Updated** — [`CURRENT.md`](CURRENT.md), [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md) reflect current state
+
+---
 
 **Sprint 4 COMPLETE** — All planned batches selesai.
 

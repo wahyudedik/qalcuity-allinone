@@ -2495,7 +2495,8 @@
             "apiLatency": "Latensi API",
             "errorRate": "Tingkat Error",
             "platformOverview": "Ringkasan Platform",
-            "refresh": "Segarkan"
+            "refresh": "Segarkan",
+            "noActivity": "Tidak ada aktivitas terkini"
         },
         "monitoringPage": {
             "title": "Monitoring Sistem",
