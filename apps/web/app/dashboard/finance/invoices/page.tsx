@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, ChevronRight, FileText, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Invoice = {
     id: string
@@ -237,9 +238,11 @@ export default function InvoicesPage() {
             {/* Kartu invoice untuk tampilan mobile */}
             <div className="md:hidden space-y-3">
                 {filteredInvoices.length === 0 ? (
-                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                        {t('finance.invoices.empty')}
-                    </div>
+                    <EmptyState
+                        icon={FileText}
+                        title={t('finance.invoices.empty') || 'Belum ada invoice'}
+                        description="Buat invoice pertama Anda untuk mulai menerima pembayaran"
+                    />
                 ) : (
                     filteredInvoices.map((invoice) => (
                         <div key={invoice.id} className="rounded-xl border border-gray-200 bg-white p-4">
@@ -299,8 +302,12 @@ export default function InvoicesPage() {
                         <tbody className="divide-y divide-gray-100">
                             {filteredInvoices.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                                        {t('finance.invoices.empty')}
+                                    <td colSpan={7} className="px-6 py-12">
+                                        <EmptyState
+                                            icon={FileText}
+                                            title={t('finance.invoices.empty') || 'Belum ada invoice'}
+                                            description="Buat invoice pertama Anda untuk mulai menerima pembayaran"
+                                        />
                                     </td>
                                 </tr>
                             ) : (

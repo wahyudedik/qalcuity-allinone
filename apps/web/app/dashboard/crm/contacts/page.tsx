@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
-import { Download, Plus, Search, LayoutGrid, List, Trash2, Check, X } from 'lucide-react'
+import { Download, Plus, Search, LayoutGrid, List, Trash2, Check, X, Users } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ImportModal } from '@/components/crm/import-modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Contact = {
     id: string
@@ -338,40 +339,48 @@ export default function ContactsPage() {
 
             {/* Grid View */}
             {viewMode === 'grid' && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filtered.map((contact) => (
-                        <Link
-                            key={contact.id}
-                            href={`/dashboard/crm/contacts/${contact.id}`}
-                            className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
-                                        {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                filtered.length === 0 ? (
+                    <EmptyState
+                        icon={Users}
+                        title="Tidak ada kontak ditemukan"
+                        description="Tidak ada kontak yang sesuai dengan filter yang dipilih."
+                    />
+                ) : (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {filtered.map((contact) => (
+                            <Link
+                                key={contact.id}
+                                href={`/dashboard/crm/contacts/${contact.id}`}
+                                className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+                                            {contact.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900">{contact.name}</p>
+                                            <p className="text-sm text-gray-500">{contact.company}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-medium text-gray-900">{contact.name}</p>
-                                        <p className="text-sm text-gray-500">{contact.company}</p>
+                                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${typeStyles[contact.type] || 'bg-gray-100 text-gray-700'}`}>
+                                        {typeLabels[contact.type] || contact.type}
+                                    </span>
+                                </div>
+                                <div className="mt-4 space-y-2 text-sm text-gray-600">
+                                    <p>{contact.email}</p>
+                                    <p>{contact.phone}</p>
+                                    <p>{contact.position}</p>
+                                </div>
+                                {contact.totalDeals > 0 && (
+                                    <div className="mt-4 border-t border-gray-100 pt-3">
+                                        <p className="text-xs text-gray-500">{contact.totalDeals} {t('crm.contacts.activeDeals')}</p>
                                     </div>
-                                </div>
-                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${typeStyles[contact.type] || 'bg-gray-100 text-gray-700'}`}>
-                                    {typeLabels[contact.type] || contact.type}
-                                </span>
-                            </div>
-                            <div className="mt-4 space-y-2 text-sm text-gray-600">
-                                <p>{contact.email}</p>
-                                <p>{contact.phone}</p>
-                                <p>{contact.position}</p>
-                            </div>
-                            {contact.totalDeals > 0 && (
-                                <div className="mt-4 border-t border-gray-100 pt-3">
-                                    <p className="text-xs text-gray-500">{contact.totalDeals} {t('crm.contacts.activeDeals')}</p>
-                                </div>
-                            )}
-                        </Link>
-                    ))}
-                </div>
+                                )}
+                            </Link>
+                        ))}
+                    </div>
+                )
             )}
 
             {/* List View */}
@@ -379,7 +388,13 @@ export default function ContactsPage() {
                 <>
                     {/* Kartu kontak untuk tampilan mobile */}
                     <div className="md:hidden space-y-3">
-                        {filtered.map((contact) => (
+                        {filtered.length === 0 ? (
+                            <EmptyState
+                                icon={Users}
+                                title="Tidak ada kontak ditemukan"
+                                description="Tidak ada kontak yang sesuai dengan filter yang dipilih."
+                            />
+                        ) : filtered.map((contact) => (
                             <Link
                                 key={contact.id}
                                 href={`/dashboard/crm/contacts/${contact.id}`}
@@ -427,7 +442,17 @@ export default function ContactsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {filtered.map((contact) => (
+                                    {filtered.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-4 py-12">
+                                                <EmptyState
+                                                    icon={Users}
+                                                    title="Tidak ada kontak ditemukan"
+                                                    description="Tidak ada kontak yang sesuai dengan filter yang dipilih."
+                                                />
+                                            </td>
+                                        </tr>
+                                    ) : filtered.map((contact) => (
                                         <tr key={contact.id} className="cursor-pointer hover:bg-gray-50">
                                             <td className="whitespace-nowrap px-4 py-3">
                                                 <Link href={`/dashboard/crm/contacts/${contact.id}`} className="font-medium text-blue-600 hover:underline">

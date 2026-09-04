@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Trash2, Check, X } from 'lucide-react'
+import { Plus, Search, Trash2, Check, X, TrendingUp } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Deal = {
     id: string
@@ -298,9 +299,11 @@ export default function DealsPage() {
             {/* Kartu deal untuk tampilan mobile */}
             <div className="md:hidden space-y-3">
                 {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-8 text-center text-gray-500 dark:text-gray-400">
-                        {t('crm.deals.empty')}
-                    </div>
+                    <EmptyState
+                        icon={TrendingUp}
+                        title={t('crm.deals.empty') || 'Belum ada deal'}
+                        description="Buat deal pertama Anda untuk mulai melacak penjualan"
+                    />
                 ) : (
                     filtered.map((deal) => (
                         <div key={deal.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -368,8 +371,12 @@ export default function DealsPage() {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        {t('crm.deals.empty')}
+                                    <td colSpan={8} className="px-4 py-12">
+                                        <EmptyState
+                                            icon={TrendingUp}
+                                            title={t('crm.deals.empty') || 'Belum ada deal'}
+                                            description="Buat deal pertama Anda untuk mulai melacak penjualan"
+                                        />
                                     </td>
                                 </tr>
                             ) : (

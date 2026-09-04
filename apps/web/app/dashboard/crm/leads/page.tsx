@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Plus, Search, Trash2, Check, X } from 'lucide-react'
+import { Download, Plus, Search, Trash2, Check, X, UserPlus } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ImportModal } from '@/components/crm/import-modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Lead = {
     id: string
@@ -326,9 +327,11 @@ export default function LeadsPage() {
             {/* Kartu lead untuk tampilan mobile */}
             <div className="md:hidden space-y-3">
                 {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                        {t('crm.leads.empty')}
-                    </div>
+                    <EmptyState
+                        icon={UserPlus}
+                        title={t('crm.leads.empty') || 'Belum ada lead'}
+                        description="Tambah lead pertama Anda untuk mulai melacak prospek penjualan"
+                    />
                 ) : (
                     filtered.map((lead) => (
                         <div key={lead.id} className="rounded-xl border border-gray-200 bg-white p-4">
@@ -398,8 +401,12 @@ export default function LeadsPage() {
                         <tbody className="divide-y divide-gray-100">
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                                        {t('crm.leads.empty')}
+                                    <td colSpan={8} className="px-4 py-12">
+                                        <EmptyState
+                                            icon={UserPlus}
+                                            title={t('crm.leads.empty') || 'Belum ada lead'}
+                                            description="Tambah lead pertama Anda untuk mulai melacak prospek penjualan"
+                                        />
                                     </td>
                                 </tr>
                             ) : (
