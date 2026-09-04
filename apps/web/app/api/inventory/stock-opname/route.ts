@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createStockOpnameSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
     try {
@@ -72,8 +73,9 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = createStockOpnameSchema.safeParse(body);
+        const validation = createStockOpnameSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

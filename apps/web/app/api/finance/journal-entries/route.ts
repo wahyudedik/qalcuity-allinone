@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 // Helper: generate sequential entry number JE-YYYYMMDD-XXXX
 async function generateEntryNumber(tenantId: string): Promise<string> {
@@ -126,8 +127,9 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = createJournalEntrySchema.safeParse(body);
+        const validation = createJournalEntrySchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

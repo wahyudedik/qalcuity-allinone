@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 // ─── GET /api/settings/custom-fields?entity=product ──────────────────────────
 
@@ -63,8 +64,9 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = createCustomFieldSchema.safeParse(body);
+        const validation = createCustomFieldSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

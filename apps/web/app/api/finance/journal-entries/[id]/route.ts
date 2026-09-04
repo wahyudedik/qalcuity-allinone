@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(
     request: Request,
@@ -49,8 +50,9 @@ export async function PUT(
         const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = updateJournalEntrySchema.safeParse(body);
+        const validation = updateJournalEntrySchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateQuotationSchema, formatZodError } from '@/lib/validation-schemas';
 import { WorkflowEngine } from '@qalcuity/workflow';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(
     request: Request,
@@ -74,8 +75,9 @@ export async function PUT(
         const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const { items, ...restBody } = body;
+        const { items, ...restBody } = sanitizedBody;
         const validation = updateQuotationSchema.safeParse({ ...restBody, items });
         if (!validation.success) {
             return NextResponse.json(

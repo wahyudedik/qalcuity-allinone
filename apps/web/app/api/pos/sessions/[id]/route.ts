@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { closePosSessionSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 
 export async function GET(
     request: Request,
@@ -107,7 +108,8 @@ export async function PUT(
         const { userId, tenantId } = auth;
         const { id } = params;
         const body = await request.json();
-        const validation = closePosSessionSchema.safeParse(body);
+        const sanitizedBody = sanitizeObject(body);
+        const validation = closePosSessionSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },

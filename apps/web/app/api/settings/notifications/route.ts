@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { updateNotificationPreferencesSchema, formatZodError } from '@/lib/validation-schemas'
+import { sanitizeObject } from '@/lib/sanitize'
 
 interface NotificationPreferences {
     emailInvoice: boolean
@@ -101,8 +102,9 @@ export async function PUT(request: Request) {
         }
         const { userId, tenantId } = auth
         const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
 
-        const validation = updateNotificationPreferencesSchema.safeParse(body)
+        const validation = updateNotificationPreferencesSchema.safeParse(sanitizedBody)
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
