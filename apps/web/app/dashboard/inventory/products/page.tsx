@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Download, Package, AlertTriangle, Trash2, Check, X, Loader2 } from 'lucide-react'
+import { Search, Plus, Download, Package, AlertTriangle, Trash2, Check, X, Loader2, ArrowUp, ArrowDown } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Product = {
     id: string
@@ -93,6 +94,8 @@ export default function ProductsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [filterCategory, setFilterCategory] = useState('all')
     const [filterStatus, setFilterStatus] = useState('all')
+    const [sortField, setSortField] = useState<'name' | 'sku' | 'price'>('name')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
@@ -171,6 +174,34 @@ export default function ProductsPage() {
             p.sku.toLowerCase().includes(searchQuery.toLowerCase())
         return matchCat && matchStatus && matchSearch
     })
+
+    const sorted = [...filtered].sort((a, b) => {
+        let aVal: string | number, bVal: string | number
+        if (sortField === 'name') { aVal = a.name; bVal = b.name }
+        else if (sortField === 'sku') { aVal = a.sku; bVal = b.sku }
+        else { aVal = Number(a.price); bVal = Number(b.price) }
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+            return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+        }
+        const cmp = String(aVal).localeCompare(String(bVal), 'id')
+        return sortDirection === 'asc' ? cmp : -cmp
+    })
+
+    const toggleSort = (field: 'name' | 'sku' | 'price') => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+        } else {
+            setSortField(field)
+            setSortDirection('asc')
+        }
+    }
+
+    const SortIcon = ({ field }: { field: 'name' | 'sku' | 'price' }) => {
+        if (sortField !== field) return null
+        return sortDirection === 'asc'
+            ? <ArrowUp className="ml-1 h-3 w-3 inline" />
+            : <ArrowDown className="ml-1 h-3 w-3 inline" />
+    }
 
     const handleDelete = async (id: string) => {
         setConfirmTitle('Konfirmasi Hapus')
@@ -400,13 +431,16 @@ export default function ProductsPage() {
 
             {/* Kartu produk untuk tampilan mobile */}
             <div className="md:hidden space-y-3">
-                {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                        <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                        {t('inventory.products.noProducts') || 'Tidak ada produk'}
-                    </div>
+                {sorted.length === 0 ? (
+                    <EmptyState
+                        icon={Package}
+                        title={t('inventory.products.noProducts') || 'Tidak ada produk'}
+                        description={searchQuery || filterCategory !== 'all' || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan produk pertama Anda'}
+                        actionLabel={canMutate ? (t('inventory.products.addProduct') || 'Tambah Produk') : undefined}
+                        onAction={canMutate ? openCreateForm : undefined}
+                    />
                 ) : (
-                    filtered.map((product) => (
+                    sorted.map((product) => (
                         <div key={product.id} className="rounded-xl border border-gray-200 bg-white p-4">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -466,10 +500,16 @@ export default function ProductsPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.products.sku') || 'SKU'}</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.products.name') || 'Nama'}</th>
+                                <th className="cursor-pointer px-4 py-3 font-medium text-gray-600 select-none hover:text-gray-900" onClick={() => toggleSort('sku')}>
+                                    {t('inventory.products.sku') || 'SKU'}<SortIcon field="sku" />
+                                </th>
+                                <th className="cursor-pointer px-4 py-3 font-medium text-gray-600 select-none hover:text-gray-900" onClick={() => toggleSort('name')}>
+                                    {t('inventory.products.name') || 'Nama'}<SortIcon field="name" />
+                                </th>
                                 <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.products.category') || 'Kategori'}</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.sellPrice') || 'Harga Jual'}</th>
+                                <th className="cursor-pointer px-4 py-3 text-right font-medium text-gray-600 select-none hover:text-gray-900" onClick={() => toggleSort('price')}>
+                                    {t('inventory.products.sellPrice') || 'Harga Jual'}<SortIcon field="price" />
+                                </th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.buyPrice') || 'Harga Beli'}</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.stock') || 'Stok'}</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.products.minStock') || 'Min Stok'}</th>
@@ -478,15 +518,20 @@ export default function ProductsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filtered.length === 0 ? (
+                            {sorted.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
-                                        <Package className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                                        {t('inventory.products.noProducts') || 'Tidak ada produk'}
+                                    <td colSpan={9} className="px-4 py-12">
+                                        <EmptyState
+                                            icon={Package}
+                                            title={t('inventory.products.noProducts') || 'Tidak ada produk'}
+                                            description={searchQuery || filterCategory !== 'all' || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan produk pertama Anda'}
+                                            actionLabel={canMutate ? (t('inventory.products.addProduct') || 'Tambah Produk') : undefined}
+                                            onAction={canMutate ? openCreateForm : undefined}
+                                        />
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((product) => (
+                                sorted.map((product) => (
                                     <tr key={product.id} className="hover:bg-gray-50">
                                         <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{product.sku}</td>
                                         <td className="px-4 py-3">

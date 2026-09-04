@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
 import { getInitials } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -12,6 +13,7 @@ import {
     Mail,
     Phone,
     User,
+    Users,
     LayoutGrid,
     List,
     AlertTriangle,
@@ -19,6 +21,8 @@ import {
     Check,
     X,
     Loader2,
+    ArrowUp,
+    ArrowDown,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -113,6 +117,8 @@ export default function EmployeesPage() {
     const [selectedDepartment, setSelectedDepartment] = useState('All')
     const [selectedStatus, setSelectedStatus] = useState('All')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+    const [sortField, setSortField] = useState<'name' | 'department' | 'position'>('name')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     // Form modal state
@@ -174,6 +180,29 @@ export default function EmployeesPage() {
         const matchesStatus = selectedStatus === 'All' || emp.status === selectedStatus
         return matchesSearch && matchesDepartment && matchesStatus
     })
+
+    const sortedEmployees = [...filteredEmployees].sort((a, b) => {
+        const aVal = a[sortField] ?? ''
+        const bVal = b[sortField] ?? ''
+        const cmp = String(aVal).localeCompare(String(bVal), 'id')
+        return sortDirection === 'asc' ? cmp : -cmp
+    })
+
+    const toggleSort = (field: 'name' | 'department' | 'position') => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+        } else {
+            setSortField(field)
+            setSortDirection('asc')
+        }
+    }
+
+    const SortIcon = ({ field }: { field: 'name' | 'department' | 'position' }) => {
+        if (sortField !== field) return null
+        return sortDirection === 'asc'
+            ? <ArrowUp className="ml-1 h-3 w-3 inline" />
+            : <ArrowDown className="ml-1 h-3 w-3 inline" />
+    }
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
@@ -426,7 +455,7 @@ export default function EmployeesPage() {
             {/* Grid View */}
             {viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredEmployees.map((emp, index) => (
+                    {sortedEmployees.map((emp, index) => (
                         <div key={emp.id} className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow">
                             <div className="flex items-start gap-4">
                                 <div className={`flex h-12 w-12 items-center justify-center rounded-full text-white font-medium ${avatarColors[index % avatarColors.length]}`}>
@@ -480,7 +509,7 @@ export default function EmployeesPage() {
                 <>
                     {/* Kartu karyawan untuk tampilan mobile */}
                     <div className="md:hidden space-y-3">
-                        {filteredEmployees.map((emp, index) => (
+                        {sortedEmployees.map((emp, index) => (
                             <div key={emp.id} className="rounded-xl border border-gray-200 bg-white p-4">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-3">
@@ -544,16 +573,22 @@ export default function EmployeesPage() {
                             <table className="w-full">
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.position') || 'Posisi'}</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.department') || 'Departemen'}</th>
+                                        <th className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase select-none hover:text-gray-700" onClick={() => toggleSort('name')}>
+                                            {t('hr.employees.title') || 'Karyawan'}<SortIcon field="name" />
+                                        </th>
+                                        <th className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase select-none hover:text-gray-700" onClick={() => toggleSort('position')}>
+                                            {t('hr.employees.position') || 'Posisi'}<SortIcon field="position" />
+                                        </th>
+                                        <th className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase select-none hover:text-gray-700" onClick={() => toggleSort('department')}>
+                                            {t('hr.employees.department') || 'Departemen'}<SortIcon field="department" />
+                                        </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.status') || 'Status'}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.hireDate') || 'Bergabung'}</th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {filteredEmployees.map((emp, index) => (
+                                    {sortedEmployees.map((emp, index) => (
                                         <tr key={emp.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -611,11 +646,13 @@ export default function EmployeesPage() {
             )}
 
             {filteredEmployees.length === 0 && !loading && (
-                <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-                    <User className="mx-auto h-10 w-10 text-gray-400" />
-                    <h3 className="mt-4 text-lg font-medium text-gray-900">{t('hr.employees.emptyState') || 'Tidak ada karyawan ditemukan'}</h3>
-                    <p className="mt-2 text-gray-500">{t('hr.employees.emptyHint') || 'Coba ubah filter atau kata kunci pencarian'}</p>
-                </div>
+                <EmptyState
+                    icon={Users}
+                    title={t('hr.employees.emptyState') || 'Tidak ada karyawan ditemukan'}
+                    description={t('hr.employees.emptyHint') || 'Coba ubah filter atau kata kunci pencarian'}
+                    actionLabel={canMutate ? (t('hr.employees.addEmployee') || 'Tambah Karyawan') : undefined}
+                    onAction={canMutate ? openCreateForm : undefined}
+                />
             )}
 
             {/* Form Modal */}

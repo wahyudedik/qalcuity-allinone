@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, DollarSign, Clock, XCircle, BarChart3, Check, Trash2, X } from 'lucide-react'
+import { Search, Plus, DollarSign, Clock, XCircle, BarChart3, Check, Trash2, X, ArrowUp, ArrowDown, Receipt } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Payment = {
     id: string
@@ -113,6 +114,38 @@ export default function PaymentsPage() {
             p.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())
         return matchStatus && matchSearch
     })
+
+    const [sortField, setSortField] = useState<'date' | 'number' | 'amount'>('date')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+    const sortedPayments = [...filteredPayments].sort((a, b) => {
+        const dir = sortDirection === 'asc' ? 1 : -1
+        if (sortField === 'date') {
+            return dir * new Date(a.date).getTime() - new Date(b.date).getTime()
+        }
+        if (sortField === 'amount') {
+            return dir * (Number(a.amount) - Number(b.amount))
+        }
+        return dir * a.paymentNumber.localeCompare(b.paymentNumber, 'id')
+    })
+
+    const toggleSort = (field: 'date' | 'number' | 'amount') => {
+        if (sortField === field) {
+            setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+        } else {
+            setSortField(field)
+            setSortDirection('asc')
+        }
+    }
+
+    const SortIcon = ({ field }: { field: 'date' | 'number' | 'amount' }) => {
+        if (sortField !== field) return null
+        return sortDirection === 'asc' ? (
+            <ArrowUp className="ml-1 inline h-3 w-3" />
+        ) : (
+            <ArrowDown className="ml-1 inline h-3 w-3" />
+        )
+    }
 
     const totalIncome = payments.filter((p) => p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0)
     const pendingAmount = payments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + Number(p.amount), 0)
@@ -254,12 +287,14 @@ export default function PaymentsPage() {
 
             {/* Kartu pembayaran untuk tampilan mobile */}
             <div className="md:hidden space-y-3">
-                {filteredPayments.length === 0 ? (
-                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                        {t('finance.payments.empty')}
-                    </div>
+                {sortedPayments.length === 0 ? (
+                    <EmptyState
+                        icon={DollarSign}
+                        title={t('finance.payments.empty')}
+                        description="Belum ada data pembayaran yang sesuai dengan filter."
+                    />
                 ) : (
-                    filteredPayments.map((payment) => (
+                    sortedPayments.map((payment) => (
                         <div key={payment.id} className="rounded-xl border border-gray-200 bg-white p-4">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -314,26 +349,30 @@ export default function PaymentsPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.number')}</th>
-                                <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.date')}</th>
+                                <th onClick={() => toggleSort('number')} className="cursor-pointer px-4 py-3 font-medium text-gray-500 hover:text-gray-700">{t('finance.payments.table.number')}<SortIcon field="number" /></th>
+                                <th onClick={() => toggleSort('date')} className="cursor-pointer hidden lg:table-cell px-4 py-3 font-medium text-gray-500 hover:text-gray-700">{t('finance.payments.table.date')}<SortIcon field="date" /></th>
                                 <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.contact')}</th>
                                 <th className="hidden md:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.method')}</th>
                                 <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.reference')}</th>
                                 <th className="hidden lg:table-cell px-4 py-3 font-medium text-gray-500">{t('finance.payments.table.invoice')}</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-500">{t('finance.payments.table.amount')}</th>
+                                <th onClick={() => toggleSort('amount')} className="cursor-pointer px-4 py-3 text-right font-medium text-gray-500 hover:text-gray-700">{t('finance.payments.table.amount')}<SortIcon field="amount" /></th>
                                 <th className="px-4 py-3 text-center font-medium text-gray-500">{t('finance.payments.table.status')}</th>
                                 <th className="hidden md:table-cell px-4 py-3 text-right font-medium text-gray-500"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredPayments.length === 0 ? (
+                            {sortedPayments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
-                                        {t('finance.payments.empty')}
+                                    <td colSpan={9} className="px-4 py-12">
+                                        <EmptyState
+                                            icon={DollarSign}
+                                            title={t('finance.payments.empty')}
+                                            description="Belum ada data pembayaran yang sesuai dengan filter."
+                                        />
                                     </td>
                                 </tr>
                             ) : (
-                                filteredPayments.map((payment) => (
+                                sortedPayments.map((payment) => (
                                     <tr key={payment.id} className="hover:bg-gray-50">
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <Link href={`/dashboard/finance/payments/${payment.id}`} className="font-medium text-blue-600 hover:underline">

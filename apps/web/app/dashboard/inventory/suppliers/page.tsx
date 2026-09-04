@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Star, AlertTriangle, Building2, Trash2, Check, X, Loader2 } from 'lucide-react'
+import { Search, Plus, Star, AlertTriangle, Building2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type Supplier = {
     id: string
@@ -76,6 +77,8 @@ export default function SuppliersPage() {
     const [error, setError] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [filterStatus, setFilterStatus] = useState('all')
+    const [sortField, setSortField] = useState<'name' | 'contactPerson'>('name')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
@@ -136,6 +139,29 @@ export default function SuppliersPage() {
             s.email.toLowerCase().includes(searchQuery.toLowerCase())
         return matchStatus && matchSearch
     })
+
+    const sorted = [...filtered].sort((a, b) => {
+        const aVal = a[sortField] ?? ''
+        const bVal = b[sortField] ?? ''
+        const cmp = String(aVal).localeCompare(String(bVal), 'id')
+        return sortDirection === 'asc' ? cmp : -cmp
+    })
+
+    const toggleSort = (field: 'name' | 'contactPerson') => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+        } else {
+            setSortField(field)
+            setSortDirection('asc')
+        }
+    }
+
+    const SortIcon = ({ field }: { field: 'name' | 'contactPerson' }) => {
+        if (sortField !== field) return null
+        return sortDirection === 'asc'
+            ? <ArrowUp className="ml-1 h-3 w-3 inline" />
+            : <ArrowDown className="ml-1 h-3 w-3 inline" />
+    }
 
     const stats = {
         total: suppliers.length,
@@ -293,11 +319,11 @@ export default function SuppliersPage() {
                 </div>
                 {canMutate && (
                     <button
-                    onClick={openCreateForm}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={openCreateForm}
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                    <Plus className="h-4 w-4" />
-                    {t('inventory.suppliers.addSupplier') || 'Tambah Supplier'}
+                        <Plus className="h-4 w-4" />
+                        {t('inventory.suppliers.addSupplier') || 'Tambah Supplier'}
                     </button>
                 )}
             </div>
@@ -353,13 +379,16 @@ export default function SuppliersPage() {
             {/* Suppliers Table */}
             {/* Kartu Supplier untuk tampilan mobile */}
             <div className="md:hidden space-y-3">
-                {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                        <Building2 className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                        {t('inventory.suppliers.noSuppliers') || 'Tidak ada supplier'}
-                    </div>
+                {sorted.length === 0 ? (
+                    <EmptyState
+                        icon={Building2}
+                        title={t('inventory.suppliers.noSuppliers') || 'Tidak ada supplier'}
+                        description={searchQuery || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan supplier pertama Anda'}
+                        actionLabel={canMutate ? (t('inventory.suppliers.addSupplier') || 'Tambah Supplier') : undefined}
+                        onAction={canMutate ? openCreateForm : undefined}
+                    />
                 ) : (
-                    filtered.map((supplier) => (
+                    sorted.map((supplier) => (
                         <div key={supplier.id} className="rounded-xl border border-gray-200 bg-white p-4">
                             <div className="flex items-start justify-between">
                                 <div>
@@ -418,8 +447,12 @@ export default function SuppliersPage() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.suppliers.supplier') || 'Supplier'}</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.suppliers.contact') || 'Kontak'}</th>
+                                <th className="cursor-pointer px-4 py-3 font-medium text-gray-600 select-none hover:text-gray-900" onClick={() => toggleSort('name')}>
+                                    {t('inventory.suppliers.supplier') || 'Supplier'}<SortIcon field="name" />
+                                </th>
+                                <th className="cursor-pointer px-4 py-3 font-medium text-gray-600 select-none hover:text-gray-900" onClick={() => toggleSort('contactPerson')}>
+                                    {t('inventory.suppliers.contact') || 'Kontak'}<SortIcon field="contactPerson" />
+                                </th>
                                 <th className="px-4 py-3 font-medium text-gray-600">{t('inventory.suppliers.rating') || 'Rating'}</th>
                                 <th className="px-4 py-3 text-right font-medium text-gray-600">{t('inventory.suppliers.totalOrder') || 'Total Order'}</th>
                                 <th className="px-4 py-3 text-center font-medium text-gray-600">{t('inventory.suppliers.status') || 'Status'}</th>
@@ -427,15 +460,20 @@ export default function SuppliersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filtered.length === 0 ? (
+                            {sorted.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
-                                        <Building2 className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                                        {t('inventory.suppliers.noSuppliers') || 'Tidak ada supplier'}
+                                    <td colSpan={6} className="px-4 py-12">
+                                        <EmptyState
+                                            icon={Building2}
+                                            title={t('inventory.suppliers.noSuppliers') || 'Tidak ada supplier'}
+                                            description={searchQuery || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan supplier pertama Anda'}
+                                            actionLabel={canMutate ? (t('inventory.suppliers.addSupplier') || 'Tambah Supplier') : undefined}
+                                            onAction={canMutate ? openCreateForm : undefined}
+                                        />
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((supplier) => (
+                                sorted.map((supplier) => (
                                     <tr key={supplier.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3">
                                             <div>
@@ -473,11 +511,11 @@ export default function SuppliersPage() {
                                                 </button>
                                                 {canMutate && (
                                                     <button
-                                                    onClick={() => handleDelete(supplier.id)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                        onClick={() => handleDelete(supplier.id)}
+                                                        className="text-red-500 hover:text-red-700"
+                                                        title="Hapus"
                                                     >
-                                                    <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>

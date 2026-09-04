@@ -19,8 +19,11 @@ import {
     FileText,
     AlertTriangle,
     Loader2,
+    ArrowUp,
+    ArrowDown,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { EmptyState } from '@/components/ui/empty-state'
 
 // ============================================
 // TYPES
@@ -265,6 +268,8 @@ export default function ChartOfAccountsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [showInactive, setShowInactive] = useState(false)
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+    const [sortField, setSortField] = useState<'code' | 'name' | 'type'>('code')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
     // Modal state
     const [modalOpen, setModalOpen] = useState(false)
@@ -319,8 +324,35 @@ export default function ChartOfAccountsPage() {
     }, [fetchAccounts])
 
     // Build tree
-    const tree = useMemo(() => buildTree(accounts), [accounts])
+    const tree = useMemo(() => {
+        const rootAccounts = [...accounts]
+        rootAccounts.sort((a, b) => {
+            let aVal: string | number, bVal: string | number
+            if (sortField === 'code') { aVal = a.code; bVal = b.code }
+            else if (sortField === 'name') { aVal = a.name; bVal = b.name }
+            else { aVal = a.type; bVal = b.type }
+            const cmp = String(aVal).localeCompare(String(bVal), 'id')
+            return sortDirection === 'asc' ? cmp : -cmp
+        })
+        return buildTree(rootAccounts)
+    }, [accounts, sortField, sortDirection])
     const flatAccounts = useMemo(() => flattenTree(tree), [tree])
+
+    const toggleSort = (field: 'code' | 'name' | 'type') => {
+        if (sortField === field) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+        } else {
+            setSortField(field)
+            setSortDirection('asc')
+        }
+    }
+
+    const SortIcon = ({ field }: { field: 'code' | 'name' | 'type' }) => {
+        if (sortField !== field) return null
+        return sortDirection === 'asc'
+            ? <ArrowUp className="ml-1 h-3 w-3 inline" />
+            : <ArrowDown className="ml-1 h-3 w-3 inline" />
+    }
 
     // Filter logic
     const filteredTree = useMemo(() => {
@@ -694,9 +726,9 @@ export default function ChartOfAccountsPage() {
                 {/* Table header */}
                 <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                     <span className="w-6" />
-                    <span className="w-16">Kode</span>
-                    <span className="flex-1">Nama Akun</span>
-                    <span className="hidden w-24 sm:block">Jenis</span>
+                    <span className="w-16 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300" onClick={() => toggleSort('code')}>Kode<SortIcon field="code" /></span>
+                    <span className="flex-1 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300" onClick={() => toggleSort('name')}>Nama Akun<SortIcon field="name" /></span>
+                    <span className="hidden w-24 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300 sm:block" onClick={() => toggleSort('type')}>Jenis<SortIcon field="type" /></span>
                     <span className="w-36 text-right">Saldo</span>
                     <span className="hidden w-20 sm:block">Status</span>
                     <span className="w-24" />
@@ -722,14 +754,14 @@ export default function ChartOfAccountsPage() {
                             />
                         ))
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                            <FileText className="mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                Tidak ada akun ditemukan
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                                Coba ubah filter atau kata kunci pencarian
-                            </p>
+                        <div className="py-8">
+                            <EmptyState
+                                icon={FileText}
+                                title="Tidak ada akun ditemukan"
+                                description="Coba ubah filter atau kata kunci pencarian"
+                                actionLabel={canMutate ? t('finance.accounts.addAccount') : undefined}
+                                onAction={canMutate ? () => openCreateModal() : undefined}
+                            />
                         </div>
                     )}
                 </div>
