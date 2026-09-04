@@ -1,10 +1,59 @@
-> **Last Updated:** 4 September 2026 (Batch N — Security & Quality Hardening)
-> **Version:** v7.8.0
-> **Status:** Batch N COMPLETE — Input sanitization 100%, rate limiting 47+ handlers, error boundaries expanded, code quality hardened. Health score 85→91/100.
+> **Last Updated:** 4 September 2026 (POS Phase 4 — Loyalty Program + Analytics + Multi-terminal)
+> **Version:** v8.0.0
+> **Status:** POS Phase 1-4 COMPLETE — Loyalty Program (3 models, 9 routes, 4 pages), Analytics Enhancement (4 API routes, charts, CSV export), Multi-terminal Monitor (real-time dashboard). Total POS: 19 API routes, 11 UI pages.
 
 ---
 
 ## 🎯 Current Sprint
+
+### POS Feature — Phase 4: Loyalty Program + Analytics + Multi-terminal (4 September 2026)
+
+> **Focus:** Loyalty program, POS analytics enhancement, multi-terminal real-time monitor
+> **Commits:** `81a00fb` (4A — Loyalty), `609f1c0` (4B+4C — Analytics + Multi-terminal)
+> **Files Changed:** 32 files, 3888 insertions
+
+#### Phase 4A: Loyalty Program (Commit `81a00fb` — 21 files, 2594 insertions)
+- ✅ **Loyalty Models** — 3 new Prisma models: `LoyaltyProgram`, `LoyaltyPointsLedger`, `LoyaltyReward`
+- ✅ **Loyalty Migration** — [`20260904140000_add_loyalty_models`](packages/db/prisma/migrations/20260904140000_add_loyalty_models/migration.sql) applied
+- ✅ **Loyalty API Routes** — 9 new routes:
+  - [`apps/web/app/api/pos/loyalty/programs/route.ts`](apps/web/app/api/pos/loyalty/programs/route.ts) — GET (list) + POST (create)
+  - [`apps/web/app/api/pos/loyalty/programs/[id]/route.ts`](apps/web/app/api/pos/loyalty/programs/[id]/route.ts) — GET (detail) + PUT (update) + DELETE
+  - [`apps/web/app/api/pos/loyalty/members/route.ts`](apps/web/app/api/pos/loyalty/members/route.ts) — GET (list) + POST (register member)
+  - [`apps/web/app/api/pos/loyalty/members/[id]/route.ts`](apps/web/app/api/pos/loyalty/members/[id]/route.ts) — GET (detail) + PUT (update points)
+- ✅ **Loyalty Pages** — 4 new UI pages:
+  - [`apps/web/app/dashboard/pos/loyalty/programs/page.tsx`](apps/web/app/dashboard/pos/loyalty/programs/page.tsx) — Program management (CRUD)
+  - [`apps/web/app/dashboard/pos/loyalty/programs/loading.tsx`](apps/web/app/dashboard/pos/loyalty/programs/loading.tsx) — Loading skeleton
+  - [`apps/web/app/dashboard/pos/loyalty/members/page.tsx`](apps/web/app/dashboard/pos/loyalty/members/page.tsx) — Member management (list, points history)
+  - [`apps/web/app/dashboard/pos/loyalty/members/loading.tsx`](apps/web/app/dashboard/pos/loyalty/members/loading.tsx) — Loading skeleton
+- ✅ **POS Layout Updated** — 8 tabs (Cashier, Sessions, Transactions, Refunds, Reports, Terminals, Programs, Members)
+- ✅ **i18n Keys** — 80+ loyalty keys added to both [`en.json`](apps/web/messages/en.json) and [`id.json`](apps/web/messages/id.json)
+- ✅ **Zod Validation** — `createLoyaltyProgramSchema`, `createLoyaltyMemberSchema`
+- ✅ **Security** — Tenant isolation, RBAC (ADMIN+ for mutations), audit trail, rate limiting
+
+#### Phase 4B: POS Analytics Enhancement (Commit `609f1c0` — 8 files, 780 insertions)
+- ✅ **Analytics API Routes** — 4 enhanced routes:
+  - [`apps/web/app/api/pos/analytics/overview/route.ts`](apps/web/app/api/pos/analytics/overview/route.ts) — POS overview with revenue, transactions, top products
+  - [`apps/web/app/api/pos/analytics/products/route.ts`](apps/web/app/api/pos/analytics/products/route.ts) — Product performance analytics
+  - [`apps/web/app/api/pos/analytics/cashiers/route.ts`](apps/web/app/api/pos/analytics/cashiers/route.ts) — Cashier performance metrics
+  - [`apps/web/app/api/pos/analytics/export/route.ts`](apps/web/app/api/pos/analytics/export/route.ts) — CSV export for POS analytics
+- ✅ **Analytics Charts** — Revenue trend (BarChart), payment method breakdown (PieChart), top products table
+- ✅ **Date Range Filter** — Configurable date range for analytics queries
+
+#### Phase 4C: Multi-terminal Dashboard (Commit `609f1c0` — 3 files, 514 insertions)
+- ✅ **Multi-terminal Monitor** — [`apps/web/app/dashboard/pos/monitor/page.tsx`](apps/web/app/dashboard/pos/monitor/page.tsx) — Real-time dashboard showing all terminals status, active sessions, recent transactions per terminal
+- ✅ **Monitor Loading** — [`apps/web/app/dashboard/pos/monitor/loading.tsx`](apps/web/app/dashboard/pos/monitor/loading.tsx) — PageHeaderSkeleton + terminal status skeletons
+- ✅ **POS Layout Updated** — 9 tabs (added Monitor tab)
+
+#### POS Phase 4 Summary
+| Metric | Phase 2 | Phase 3 | Phase 4 | Total POS |
+|--------|---------|---------|---------|-----------|
+| API Routes | 8 | 2 | 13 | **23** |
+| UI Pages | 3 | 3 | 6 | **12** |
+| Prisma Models | 6 | 0 | 3 | **9** |
+| i18n Keys | — | 100+ | 80+ | **180+** |
+| Loading States | 3 | 3 | 3 | **9** |
+
+---
 
 ### Batch N — Security & Quality Hardening (4 September 2026)
 
@@ -285,7 +334,7 @@
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
-| **POS Module** | 🔄 Partial | 55% (Phase 2-3 complete: API routes + UI pages + i18n) |
+| **POS Module** | ✅ Phase 1-4 Complete | 80% (Core + Refunds + Reports + Loyalty + Analytics + Monitor) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Financial Reports** | ✅ Implemented | 60% (Trial Balance, Balance Sheet, Income Statement) |
 | **HR Enhancement** | ✅ Implemented | 70% (PPh21/BPJS calculator, payroll enhancement) |
@@ -862,32 +911,33 @@ _None currently._
 
 ## 📊 Metrics
 
-### Codebase Stats (Updated: 4 September 2026 — Batch N Complete)
+### Codebase Stats (Updated: 4 September 2026 — POS Phase 4 Complete)
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files (apps/web) | ~170+ |
+| TypeScript files (apps/web) | ~180+ |
 | TypeScript files (packages) | ~50+ |
-| API route files | 80+ |
-| API routes | 110+ |
-| Pages | 55+ |
-| Prisma models | 55+ |
+| API route files | 90+ |
+| API routes | 120+ |
+| Pages | 60+ |
+| Prisma models | 58+ |
 | Database indexes | 65+ |
-| Zod schemas | 22+ |
-| i18n keys | 750+ |
-| Loading states | 40+ |
+| Zod schemas | 24+ |
+| i18n keys | 830+ |
+| Loading states | 45+ |
 | E2E tests | 63 (63 PASS) |
 | Shared packages | 12 (11 active, 1 not created) |
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
 | UI Components | 11 (Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider) |
 | Mobile screens | 14 (12 + Login + Register) |
-| POS API Routes | 10 (terminals, sessions, transactions, dashboard, products, refunds) |
-| POS UI Pages | 7 (terminal, sessions, transactions, refunds, reports, terminals, layout) |
+| POS API Routes | 23 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor) |
+| POS UI Pages | 12 (terminal, sessions, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, layout) |
+| POS Prisma Models | 9 (PosTerminal, PosSession, PosTransaction, PosTransactionItem, PosRefund, PosPayment, LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward) |
 | Permission-integrated routes | ~90+ |
 | Workflow-integrated entities | 5 (Invoice, Payment, PO, Quotation, Leaves) |
-| Prisma Migrations (Total) | 11+ (POS, Tax Engine, Period Closing, Approval Engine, Decimal Fix, 2FA/Sessions/LoginLogs, Reports, etc.) |
-| Git Commits (Sprint 1-4) | 35+ |
-| Files Modified/Created (Sprint 1-4) | 155+ |
+| Prisma Migrations (Total) | 12+ (POS Loyalty, POS Core, Tax Engine, Period Closing, Approval Engine, Decimal Fix, 2FA/Sessions/LoginLogs, Reports, etc.) |
+| Git Commits (Sprint 1-4) | 40+ |
+| Files Modified/Created (Sprint 1-4) | 185+ |
 
 ### Test Results
 

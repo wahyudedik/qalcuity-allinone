@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 4, 2026 (Batch N — Security & Quality Hardening)
+**Last Updated:** September 4, 2026 (POS Phase 4 — Loyalty + Analytics + Multi-terminal)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 8.1 — Batch N Complete
+**Document Version:** 9.0 — POS Phase 4 Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -1133,7 +1133,6 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Refunds** | ✅ `implemented` | 2026-09-04 | Refunds page + 2 API routes (create, list) — Phase 3 |
 | **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
 | **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
-| **POS Customers** | 📋 `planned` | — | Data pelanggan untuk loyalty dan receipt |
 | **POS Products** | ✅ `implemented` | 2026-09-04 | Products API for POS product lookup (Phase 2) |
 | **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
 | **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
@@ -1150,6 +1149,9 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Sessions Page** | ✅ `implemented` | 2026-09-04 | Sessions list page + API (Phase 2) |
 | **POS Terminals Management** | ✅ `implemented` | 2026-09-04 | Terminal CRUD management page (Phase 3) |
 | **POS Reports** | ✅ `implemented` | 2026-09-04 | POS reports page — sales, products, cashier reports (Phase 3) |
+| **POS Loyalty Program** | ✅ `implemented` | 2026-09-04 | Loyalty program CRUD + member management (3 models, 9 routes, 4 pages) — Phase 4A |
+| **POS Analytics** | ✅ `implemented` | 2026-09-04 | POS analytics: overview, products, cashiers, CSV export (4 API routes, charts) — Phase 4B |
+| **Multi-terminal Monitor** | ✅ `implemented` | 2026-09-04 | Real-time multi-terminal dashboard with status, sessions, transactions per terminal — Phase 4C |
 
 ### 15.2 POS Permissions by Role
 
@@ -1423,15 +1425,16 @@ Electron-based desktop application.
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
 | `production_ready` | 🚀 | ~62 | ~35% |
-| `implemented` | ✅ | ~33 | ~19% |
+| `implemented` | ✅ | ~36 | ~20% |
 | `verified` | ✔️ | 1 | ~1% |
 | `partial` | 🔄 | ~20 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~156 | ~44% |
+| `planned` | 📋 | ~153 | ~43% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~274** | **100%** |
+| **Total** | | **~277** | **100%** |
 
+> **POS Phase 4 Impact:** +3 implemented (Loyalty Program, POS Analytics, Multi-terminal Monitor), -3 planned → Net: implemented 33→36, planned 156→153, total 274→277
 > **Batch M Impact (POS Phase 2 & 3):** +8 implemented, +2 partial, -7 planned, +5 new POS features → Net improvement: ~4% implemented increase
 > **Sprint 4 Impact:** +4 production_ready, +5 implemented, -5 planned → Net improvement: ~3.5% production_ready increase
 
@@ -1637,6 +1640,15 @@ Electron-based desktop application.
 - **TypeScript Check** — PASS (0 errors)
 - **Status Summary** — production_ready: 58→62, implemented: 20→25
 
-**Last Updated:** September 4, 2026 (Batch M — Documentation Update)
+### v9.0.0 (September 4, 2026) — POS Phase 4: Loyalty + Analytics + Multi-terminal
+- **POS Loyalty Program** — 3 new Prisma models (LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward), 9 API routes (programs CRUD, members CRUD), 4 UI pages (programs list/create/edit, members list/points), 80+ i18n keys, Zod validation, DB migration
+- **POS Analytics Enhancement** — 4 new API routes (overview, products, cashiers, CSV export), revenue trend charts, payment breakdown pie chart, top products table, date range filter
+- **Multi-terminal Monitor** — Real-time dashboard showing all terminals status, active sessions, recent transactions per terminal, terminal status indicators
+- **POS Layout Updated** — 8 → 9 tabs (added Programs, Members, Monitor)
+- **Commits:** `81a00fb` (Phase 4A — 21 files, 2594 insertions), `609f1c0` (Phase 4B+4C — 11 files, 1294 insertions)
+- **Status Summary** — implemented: 33→36, planned: 156→153, total: 274→277
+- **POS Total** — Phase 1-4 complete: 23 API routes, 12 UI pages, 9 Prisma models, 180+ i18n keys
+
+**Last Updated:** September 4, 2026 (POS Phase 4 — Loyalty + Analytics + Multi-terminal)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 8.0 — Batch M Complete
+**Document Version:** 9.0 — POS Phase 4 Complete
