@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // ─── GET /api/settings/custom-fields?entity=product ──────────────────────────
 
@@ -13,6 +14,12 @@ import { sanitizeObject } from '@/lib/sanitize';
  */
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:custom-fields:${ip}`, 60, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -50,6 +57,12 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:custom-fields:POST:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
