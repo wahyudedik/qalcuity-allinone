@@ -102,10 +102,10 @@ export default function ContactsPage() {
     }
 
     const filtered = contacts.filter((c) => {
-        const matchType = filterType === 'all' || c.type === filterType
+        const matchType = filterType === 'all' || c.type?.toLowerCase() === filterType
         const matchSearch = searchQuery === '' ||
-            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.company.toLowerCase().includes(searchQuery.toLowerCase())
+            (c.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (c.company?.toLowerCase() || '').includes(searchQuery.toLowerCase())
         return matchType && matchSearch
     })
 

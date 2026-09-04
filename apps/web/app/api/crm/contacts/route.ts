@@ -65,7 +65,9 @@ export async function GET(request: Request) {
             name: c.name,
             email: c.email,
             phone: c.phone,
-            type: c.type.toLowerCase(),
+            type: c.type?.toLowerCase() || 'customer',
+            company: c.company,
+            position: null,
             address: c.address,
             city: c.city,
             province: c.province,
@@ -128,6 +130,7 @@ export async function POST(request: Request) {
                 email: (sanitized.email as string) || null,
                 phone: (sanitized.phone as string) || null,
                 type: (validation.data.type || 'CUSTOMER').toUpperCase(),
+                company: (sanitized.company as string) || null,
                 address: (sanitized.address as string) || null,
                 city: (sanitized.city as string) || null,
                 province: (sanitized.province as string) || null,
@@ -141,8 +144,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, data: contact }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
@@ -200,6 +203,7 @@ export async function PUT(request: Request) {
                 ...(typeof sanitized.email === 'string' && { email: sanitized.email }),
                 ...(typeof sanitized.phone === 'string' && { phone: sanitized.phone }),
                 ...(typeof validation.data.type === 'string' && { type: validation.data.type.toUpperCase() }),
+                ...(typeof sanitized.company === 'string' && { company: sanitized.company }),
                 ...(typeof sanitized.address === 'string' && { address: sanitized.address }),
                 ...(typeof sanitized.city === 'string' && { city: sanitized.city }),
                 ...(typeof sanitized.province === 'string' && { province: sanitized.province }),
@@ -214,8 +218,8 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({ success: true, data: contact });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
 
