@@ -152,8 +152,7 @@ export async function checkRateLimitAsync(
 
     if (redis && isRedisAvailable()) {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const multi = redis.multi() as any;
+            const multi = redis.multi();
             multi.incr(key);
             multi.pexpire(key, windowMs);
             multi.pttl(key);

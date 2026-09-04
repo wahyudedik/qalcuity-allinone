@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit'
 import { updateNotificationPreferencesSchema, formatZodError } from '@/lib/validation-schemas'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError } from '@/lib/api-error'
 
 interface NotificationPreferences {
     emailInvoice: boolean
@@ -91,8 +92,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -199,7 +199,6 @@ export async function PUT(request: Request) {
             data: newData,
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }

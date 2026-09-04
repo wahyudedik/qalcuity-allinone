@@ -6,6 +6,7 @@ import { createRoleSchema, formatZodError } from '@/lib/validation-schemas'
 import { SYSTEM_ROLE_PERMISSIONS, PermissionEngine, ALL_PERMISSIONS } from '@qalcuity/permissions'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError } from '@/lib/api-error'
 
 // ─── GET /api/settings/roles ───────────────────────────────────────────────────
 // List semua roles (system + custom) untuk tenant ini.
@@ -81,8 +82,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -183,8 +183,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 

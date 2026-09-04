@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateTaxRateSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError, apiNotFound, apiForbidden } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -20,10 +21,7 @@ export async function GET(
         });
 
         if (!taxRate) {
-            return NextResponse.json(
-                { success: false, error: 'Data pajak tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Tax Rate');
         }
 
         return NextResponse.json({
@@ -39,9 +37,8 @@ export async function GET(
                 createdAt: taxRate.createdAt.toISOString(),
             },
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -57,10 +54,7 @@ export async function PUT(
 
         // Hanya ADMIN+ yang boleh update tax rate
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah data pajak' },
-                { status: 403 }
-            );
+            return apiForbidden();
         }
 
         const body = await request.json();
@@ -76,10 +70,7 @@ export async function PUT(
         // Verify tax rate belongs to tenant
         const existing = await prisma.taxRate.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Data pajak tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Tax Rate');
         }
 
         const validatedData = validation.data;
@@ -126,9 +117,8 @@ export async function PUT(
         });
 
         return NextResponse.json({ success: true, data: taxRate });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -144,18 +134,12 @@ export async function DELETE(
 
         // Hanya ADMIN+ yang boleh delete tax rate
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menghapus data pajak' },
-                { status: 403 }
-            );
+            return apiForbidden();
         }
 
         const existing = await prisma.taxRate.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Data pajak tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Tax Rate');
         }
 
         await prisma.taxRate.delete({ where: { id } });
@@ -166,8 +150,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

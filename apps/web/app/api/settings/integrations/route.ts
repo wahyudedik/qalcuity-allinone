@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit'
 import { createIntegrationSchema, updateIntegrationSchema, formatZodError } from '@/lib/validation-schemas'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError, apiNotFound } from '@/lib/api-error'
 
 /**
  * GET /api/settings/integrations
@@ -70,8 +71,7 @@ export async function GET(request: Request) {
             envStatus: envIntegrations,
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -157,8 +157,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -199,10 +198,7 @@ export async function PUT(request: Request) {
         })
 
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Integrasi tidak ditemukan' },
-                { status: 404 }
-            )
+            return apiNotFound('Integration')
         }
 
         const updated = await prisma.tenantIntegration.update({
@@ -247,8 +243,7 @@ export async function PUT(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -280,10 +275,7 @@ export async function DELETE(request: Request) {
         })
 
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Integrasi tidak ditemukan' },
-                { status: 404 }
-            )
+            return apiNotFound('Integration')
         }
 
         await prisma.tenantIntegration.delete({ where: { id } })
@@ -301,7 +293,6 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ success: true, message: 'Integrasi berhasil dihapus' })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }

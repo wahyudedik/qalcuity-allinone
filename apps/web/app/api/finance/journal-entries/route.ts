@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError } from '@/lib/api-error';
 
 // Helper: generate sequential entry number JE-YYYYMMDD-XXXX
 async function generateEntryNumber(tenantId: string): Promise<string> {
@@ -106,9 +107,8 @@ export async function GET(request: Request) {
                 totalPages: Math.ceil(total / limit),
             },
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -235,8 +235,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: completeEntry }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

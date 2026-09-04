@@ -45,6 +45,7 @@ interface RedisClient {
 interface RedisPipeline {
     incr(key: string): RedisPipeline;
     pexpire(key: string, milliseconds: number): RedisPipeline;
+    pttl(key: string): RedisPipeline;
     exec(): Promise<unknown>;
 }
 

@@ -6,6 +6,7 @@ import { updateRoleSchema, formatZodError } from '@/lib/validation-schemas'
 import { PermissionEngine, SYSTEM_ROLE_PERMISSIONS } from '@qalcuity/permissions'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError, apiNotFound } from '@/lib/api-error'
 
 // ─── GET /api/settings/roles/[id] ──────────────────────────────────────────────
 // Get role details.
@@ -75,10 +76,7 @@ export async function GET(
         })
 
         if (!role) {
-            return NextResponse.json(
-                { success: false, error: 'Role tidak ditemukan' },
-                { status: 404 }
-            )
+            return apiNotFound('Role')
         }
 
         return NextResponse.json({
@@ -95,8 +93,7 @@ export async function GET(
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -146,10 +143,7 @@ export async function PUT(
         })
 
         if (!existingRole) {
-            return NextResponse.json(
-                { success: false, error: 'Role tidak ditemukan' },
-                { status: 404 }
-            )
+            return apiNotFound('Role')
         }
 
         if (existingRole.isSystem) {
@@ -238,8 +232,7 @@ export async function PUT(
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -282,10 +275,7 @@ export async function DELETE(
         })
 
         if (!existingRole) {
-            return NextResponse.json(
-                { success: false, error: 'Role tidak ditemukan' },
-                { status: 404 }
-            )
+            return apiNotFound('Role')
         }
 
         if (existingRole.isSystem) {
@@ -323,7 +313,6 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, message: 'Role berhasil dihapus' })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }

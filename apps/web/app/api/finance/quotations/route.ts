@@ -6,6 +6,7 @@ import { createQuotationSchema, updateQuotationSchema, formatZodError } from '@/
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createApprovalRequest } from '@/lib/approval';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError, apiNotFound } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -82,9 +83,8 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -176,9 +176,8 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: quotation }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -210,10 +209,7 @@ export async function PUT(request: Request) {
 
         const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Quotation tidak ditemukan' },
-                { status: 404 }
-            );
+            return apiNotFound('Quotation');
         }
 
         const data: Record<string, unknown> = {};
@@ -269,9 +265,8 @@ export async function PUT(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Quotation', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: quotation });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -292,10 +287,7 @@ export async function DELETE(request: Request) {
 
         const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Quotation not found' },
-                { status: 404 }
-            );
+            return apiNotFound('Quotation');
         }
 
         await prisma.quotation.delete({ where: { id } });
@@ -304,8 +296,7 @@ export async function DELETE(request: Request) {
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Quotation', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

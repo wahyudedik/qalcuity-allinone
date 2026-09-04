@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { createCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError, apiForbidden } from '@/lib/api-error';
 
 // ─── GET /api/settings/custom-fields?entity=product ──────────────────────────
 
@@ -44,8 +45,7 @@ export async function GET(request: Request) {
             data: fields,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -70,10 +70,7 @@ export async function POST(request: Request) {
         const { userId, tenantId, role: callerRole } = auth;
 
         if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membuat custom field' },
-                { status: 403 }
-            );
+            return apiForbidden();
         }
 
         const body = await request.json();
@@ -137,7 +134,6 @@ export async function POST(request: Request) {
             data: field,
         }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

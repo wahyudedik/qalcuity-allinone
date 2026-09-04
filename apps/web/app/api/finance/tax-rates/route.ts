@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createTaxRateSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError, apiForbidden } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -45,9 +46,8 @@ export async function GET(request: Request) {
         }));
 
         return NextResponse.json({ success: true, data });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -68,10 +68,7 @@ export async function POST(request: Request) {
 
         // Hanya ADMIN+ yang boleh create tax rate
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membuat data pajak' },
-                { status: 403 }
-            );
+            return apiForbidden();
         }
 
         const body = await request.json();
@@ -124,8 +121,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: taxRate }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
