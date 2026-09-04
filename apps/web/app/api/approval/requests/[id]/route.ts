@@ -75,7 +75,7 @@ export async function GET(
                 resolverName: resolver?.name || null,
                 resolverEmail: resolver?.email || null,
                 totalLevels: allLevels.length,
-                levels: allLevels.map((l: any) => ({
+                levels: allLevels.map((l) => ({
                     level: l.level,
                     name: l.name,
                     requiredRole: l.requiredRole,

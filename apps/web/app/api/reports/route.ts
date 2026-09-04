@@ -316,7 +316,7 @@ export async function GET(request: Request) {
         }
         const expenses: ExpenseData[] = Array.from(expenseMap.entries())
             .map(([category, amount]) => ({ category, amount: Math.round(amount) }))
-            .sort((a: any, b: any) => b.amount - a.amount)
+            .sort((a, b) => b.amount - a.amount)
 
         // 3. Sales by customer: group by contact
         const customerMap = new Map<string, { name: string; totalSales: number; transactions: number; lastOrder: string }>()
@@ -339,7 +339,7 @@ export async function GET(request: Request) {
         }
         const salesByCustomer: SalesByCustomerData[] = Array.from(customerMap.values())
             .map(d => ({ customer: d.name, totalSales: Math.round(d.totalSales), transactions: d.transactions, lastOrder: d.lastOrder }))
-            .sort((a: any, b: any) => b.totalSales - a.totalSales)
+            .sort((a, b) => b.totalSales - a.totalSales)
 
         // 4. Sales by product: group by description
         const productMap = new Map<string, { totalSold: number; revenue: number }>()
@@ -355,7 +355,7 @@ export async function GET(request: Request) {
         }
         const salesByProduct: SalesByProductData[] = Array.from(productMap.entries())
             .map(([product, data]) => ({ product, totalSold: Math.round(data.totalSold), revenue: Math.round(data.revenue) }))
-            .sort((a: any, b: any) => b.revenue - a.revenue)
+            .sort((a, b) => b.revenue - a.revenue)
 
         // 5. Stock data mapping
         const stock: StockData[] = products.map(p => ({
@@ -426,7 +426,7 @@ export async function GET(request: Request) {
                 totalSalary: Math.round(data.totalSalary),
                 avgSalary: Math.round(data.totalSalary / data.headcount),
             }))
-            .sort((a: any, b: any) => b.totalSalary - a.totalSalary)
+            .sort((a, b) => b.totalSalary - a.totalSalary)
 
         // 9. Supplier performance
         const supplierData: SupplierData[] = suppliers.map(s => {
@@ -435,7 +435,7 @@ export async function GET(request: Request) {
                 if (!po.deliveryDate) return false
                 return new Date(po.deliveryDate) >= new Date(po.orderDate)
             }).length
-            const totalSpent = s.purchaseOrders.reduce((sum: any, po: any) => sum + Number(po.total), 0)
+            const totalSpent = s.purchaseOrders.reduce((sum, po) => sum + Number(po.total), 0)
             return {
                 name: s.name,
                 rating: Number(s.rating),

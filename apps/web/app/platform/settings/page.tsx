@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "@/lib/i18n";
 import {
     Settings,
     Save,
@@ -24,6 +25,7 @@ interface PlatformSettings {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformSettingsPage() {
+    const { t } = useTranslation();
     const [settings, setSettings] = useState<PlatformSettings | null>(null);
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -37,14 +39,14 @@ export default function PlatformSettingsPage() {
             if (res.ok && data.success) {
                 setSettings(data.data);
             } else {
-                setToast({ message: data.error || "Gagal memuat settings", type: "error" });
+                setToast({ message: data.error || t('platform.settingsPage.errorFetch'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal memuat settings", type: "error" });
+            setToast({ message: t('platform.settingsPage.errorFetch'), type: "error" });
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         fetchSettings();
@@ -62,12 +64,12 @@ export default function PlatformSettingsPage() {
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                setToast({ message: "Settings berhasil disimpan", type: "success" });
+                setToast({ message: t('platform.settingsPage.successSaved'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal menyimpan settings", type: "error" });
+                setToast({ message: data.error || t('platform.settingsPage.errorSave'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menyimpan settings", type: "error" });
+            setToast({ message: t('platform.settingsPage.errorSave'), type: "error" });
         } finally {
             setSaving(false);
         }
@@ -78,8 +80,8 @@ export default function PlatformSettingsPage() {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Platform Settings</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Konfigurasi global untuk seluruh platform Qalcuity</p>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('platform.settingsPage.title')}</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('platform.settingsPage.subtitle')}</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -103,10 +105,10 @@ export default function PlatformSettingsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Platform Settings
+                        {t('platform.settingsPage.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Konfigurasi global untuk seluruh platform Qalcuity
+                        {t('platform.settingsPage.subtitle')}
                     </p>
                 </div>
                 <button
@@ -119,7 +121,7 @@ export default function PlatformSettingsPage() {
                     ) : (
                         <Save className="h-4 w-4" />
                     )}
-                    Save Settings
+                    {t('platform.settingsPage.save')}
                 </button>
             </div>
 
@@ -129,13 +131,13 @@ export default function PlatformSettingsPage() {
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
                             <Globe className="h-5 w-5 text-purple-500" />
-                            General
+                            {t('platform.settingsPage.general')}
                         </h2>
                     </div>
                     <div className="p-6 space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Platform Name
+                                {t('platform.settingsPage.platformName')}
                             </label>
                             <input
                                 type="text"
@@ -148,7 +150,7 @@ export default function PlatformSettingsPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Support Email
+                                {t('platform.settingsPage.supportEmail')}
                             </label>
                             <input
                                 type="email"
@@ -161,7 +163,7 @@ export default function PlatformSettingsPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Default Trial Days
+                                {t('platform.settingsPage.defaultTrialDays')}
                             </label>
                             <input
                                 type="number"
@@ -183,17 +185,17 @@ export default function PlatformSettingsPage() {
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
                             <Shield className="h-5 w-5 text-purple-500" />
-                            Security & Access
+                            {t('platform.settingsPage.securityAccess')}
                         </h2>
                     </div>
                     <div className="p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Maintenance Mode
+                                    {t('platform.settingsPage.maintenanceMode')}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Nonaktifkan akses untuk semua tenant
+                                    {t('platform.settingsPage.maintenanceDesc')}
                                 </p>
                             </div>
                             <button
@@ -215,10 +217,10 @@ export default function PlatformSettingsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Allow Registration
+                                    {t('platform.settingsPage.allowRegistration')}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Izinkan tenant baru mendaftar
+                                    {t('platform.settingsPage.allowRegistrationDesc')}
                                 </p>
                             </div>
                             <button
@@ -240,10 +242,10 @@ export default function PlatformSettingsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Email Notifications
+                                    {t('platform.settingsPage.emailNotifications')}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Kirim email notifikasi untuk event penting
+                                    {t('platform.settingsPage.emailNotificationsDesc')}
                                 </p>
                             </div>
                             <button
@@ -265,10 +267,10 @@ export default function PlatformSettingsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Security Alerts
+                                    {t('platform.settingsPage.securityAlerts')}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Notifikasi untuk aktivitas mencurigakan
+                                    {t('platform.settingsPage.securityAlertsDesc')}
                                 </p>
                             </div>
                             <button
@@ -295,7 +297,7 @@ export default function PlatformSettingsPage() {
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
                             <Database className="h-5 w-5 text-purple-500" />
-                            Plan Limits
+                            {t('platform.settingsPage.planLimits')}
                         </h2>
                     </div>
                     <div className="p-6 space-y-4">
@@ -328,24 +330,24 @@ export default function PlatformSettingsPage() {
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
                             <Settings className="h-5 w-5 text-purple-500" />
-                            About
+                            {t('platform.settingsPage.about')}
                         </h2>
                     </div>
                     <div className="p-6 space-y-3">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">Version</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{t('platform.settingsPage.version')}</span>
                             <span className="text-sm font-medium text-gray-900 dark:text-white">1.0.0</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">Framework</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{t('platform.settingsPage.framework')}</span>
                             <span className="text-sm font-medium text-gray-900 dark:text-white">Next.js 14</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">Database</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{t('platform.settingsPage.database')}</span>
                             <span className="text-sm font-medium text-gray-900 dark:text-white">PostgreSQL 18</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">ORM</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{t('platform.settingsPage.orm')}</span>
                             <span className="text-sm font-medium text-gray-900 dark:text-white">Prisma 5.15</span>
                         </div>
                     </div>

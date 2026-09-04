@@ -73,7 +73,7 @@ export async function GET(request: Request) {
             prisma.payment.count({ where }),
         ]);
 
-        const data = payments.map((p: any) => ({
+        const data = payments.map((p) => ({
             id: p.id,
             paymentNumber: p.paymentNumber,
             invoiceId: p.invoiceId,
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
         const amount = validatedData.amount;
         const status = (validatedData.status || 'PENDING').toUpperCase();
 
-        const payment = await prisma.$transaction(async (tx: any) => {
+        const payment = await prisma.$transaction(async (tx) => {
             // Generate unique payment number using timestamp + random suffix to prevent race condition
             const paymentNumber = `PAY-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
@@ -271,7 +271,7 @@ export async function PUT(request: Request) {
             data.paymentDate = validatedData.date ? new Date(validatedData.date) : null;
         }
 
-        const payment = await prisma.$transaction(async (tx: any) => {
+        const payment = await prisma.$transaction(async (tx) => {
             const updated = await tx.payment.update({
                 where: { id },
                 data,

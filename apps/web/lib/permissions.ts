@@ -31,7 +31,7 @@ export async function getUserPermissions(session: Session): Promise<string[]> {
 
     // If user has a custom role, use its permissions
     if (user?.customRole) {
-        const customPerms = (user.customRole as any).permissions;
+        const customPerms = (user.customRole as { permissions?: string[] }).permissions;
         if (Array.isArray(customPerms) && customPerms.length > 0) {
             return PermissionEngine.resolvePermissions(customPerms);
         }
