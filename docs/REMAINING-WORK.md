@@ -2,7 +2,7 @@
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
 > Diperbarui: 4 September 2026
-> Version: 1.3 — Post-Batch N Update (Security & Quality Hardening)
+> Version: 1.4 — Post-POS Phase 4 Update (Loyalty + Analytics + Multi-terminal)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -38,11 +38,11 @@
 | **Unified Control Engine** | 0 | 0 | 50+ | 50+ | 0% |
 | **Architecture Engines** | 25 | 0 | 5+ | 30+ | 83% |
 | **Industry Packs** | 0 | 0 | 50+ | 50+ | 0% |
-| **POS Module** | 8 | 2 | 7 | 17 | 47% |
+| **POS Module** | 11 | 2 | 4 | 17 | 65% |
 | **Mobile** | 0 | 2 | 2 | 4 | 0% |
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
-| **TOTAL** | **~88** | **~22** | **~138** | **~269** | **~33%** |
+| **TOTAL** | **~91** | **~22** | **~135** | **~269** | **~34%** |
 
 ---
 
@@ -1673,7 +1673,7 @@
 
 > **POS adalah Core Module — terintegrasi langsung ke ERP.**
 > Ref: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22, [`FEATURES.md`](FEATURES.md) Section 15
-> **Update (4 September 2026):** Phase 2 & 3 complete — 8 implemented, 2 partial, 7 remaining
+> **Update (4 September 2026):** Phase 1-4 complete — 11 implemented, 2 partial, 4 remaining
 
 - [x] **[POS-01]** POS Core — Terminal/Cashier page + API (terminals, transactions, dashboard, products)
   - **File:** `apps/web/app/dashboard/pos/`, `apps/web/app/api/pos/`
@@ -1757,6 +1757,26 @@
 - [x] **[POS-17]** POS Sidebar — 6 POS sub-menus in sidebar navigation
   - **File:** `apps/web/components/layout/sidebar.tsx`
   - **Status:** **DONE (Batch L)**
+
+#### POS Phase 4 Items (4 September 2026)
+
+- [x] **[POS-18]** POS Loyalty Program — Program + member management with points tracking
+  - **File:** `apps/web/app/api/pos/loyalty/`, `apps/web/app/dashboard/pos/loyalty/`
+  - **Dependency:** POS-01
+  - **Complexity:** High
+  - **Status:** **DONE (Phase 4A, commit `81a00fb`)** — 3 models (LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward), 9 API routes, 4 UI pages, 80+ i18n keys, DB migration
+
+- [x] **[POS-19]** POS Analytics Enhancement — Overview, product performance, cashier metrics, CSV export
+  - **File:** `apps/web/app/api/pos/analytics/`
+  - **Dependency:** POS-01
+  - **Complexity:** Medium
+  - **Status:** **DONE (Phase 4B, commit `609f1c0`)** — 4 API routes (overview, products, cashiers, export), charts (BarChart, PieChart), date range filter
+
+- [x] **[POS-20]** Multi-terminal Monitor — Real-time dashboard showing all terminals status
+  - **File:** `apps/web/app/dashboard/pos/monitor/`
+  - **Dependency:** POS-01
+  - **Complexity:** Medium
+  - **Status:** **DONE (Phase 4C, commit `609f1c0`)** — Monitor page with terminal status, active sessions, recent transactions per terminal
 
 ### Industry Packs
 
