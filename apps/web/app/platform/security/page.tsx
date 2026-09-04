@@ -40,105 +40,8 @@ interface SecurityStats {
     lastIncident: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockStats: SecurityStats = {
-    totalEvents: 1247,
-    criticalEvents: 2,
-    failedLogins: 15,
-    activeSessions: 89,
-    lastIncident: "31 Ags 2026",
-};
-
-const mockEvents: SecurityEvent[] = [
-    {
-        id: "e1",
-        type: "suspicious_activity",
-        severity: "critical",
-        user: "unknown",
-        tenant: "PT Global Tech",
-        description: "Multiple failed login attempts dari IP berbeda dalam 5 menit",
-        ipAddress: "103.152.xxx.xxx",
-        userAgent: "Chrome/120.0",
-        timestamp: "1 Sep 2026, 08:45",
-    },
-    {
-        id: "e2",
-        type: "login_failed",
-        severity: "high",
-        user: "admin@mitrajaya.co.id",
-        tenant: "CV Mitra Jaya",
-        description: "Login gagal 5x berturut-turut — kemungkinan brute force",
-        ipAddress: "114.124.xxx.xxx",
-        userAgent: "Firefox/119.0",
-        timestamp: "1 Sep 2026, 08:30",
-    },
-    {
-        id: "e3",
-        type: "role_change",
-        severity: "high",
-        user: "superadmin@qalcuity.com",
-        tenant: "Platform",
-        description: "Role user diubah dari MEMBER ke ADMIN",
-        ipAddress: "192.168.1.xxx",
-        userAgent: "Chrome/120.0",
-        timestamp: "1 Sep 2026, 08:00",
-    },
-    {
-        id: "e4",
-        type: "data_export",
-        severity: "medium",
-        user: "admin@majubersama.co.id",
-        tenant: "PT Maju Bersama",
-        description: "Export seluruh data finance (1,247 invoices)",
-        ipAddress: "103.28.xxx.xxx",
-        userAgent: "Chrome/120.0",
-        timestamp: "1 Sep 2026, 07:30",
-    },
-    {
-        id: "e5",
-        type: "login_success",
-        severity: "low",
-        user: "admin@sejahtera.com",
-        tenant: "CV Sejahtera",
-        description: "Login berhasil dari perangkat baru",
-        ipAddress: "36.95.xxx.xxx",
-        userAgent: "Safari/17.0",
-        timestamp: "1 Sep 2026, 07:15",
-    },
-    {
-        id: "e6",
-        type: "password_change",
-        severity: "medium",
-        user: "finance@digitalnusantara.id",
-        tenant: "PT Digital Nusantara",
-        description: "Password berhasil diubah",
-        ipAddress: "112.78.xxx.xxx",
-        userAgent: "Chrome/120.0",
-        timestamp: "31 Ags 2026, 16:30",
-    },
-    {
-        id: "e7",
-        type: "tenant_suspend",
-        severity: "medium",
-        user: "superadmin@qalcuity.com",
-        tenant: "CV Mitra Jaya",
-        description: "Tenant ditangguhkan karena belum bayar 30 hari",
-        ipAddress: "192.168.1.xxx",
-        userAgent: "Chrome/120.0",
-        timestamp: "31 Ags 2026, 14:00",
-    },
-    {
-        id: "e8",
-        type: "api_key_created",
-        severity: "low",
-        user: "admin@globaltech.id",
-        tenant: "PT Global Tech",
-        description: "API key baru dibuat untuk integrasi marketplace",
-        ipAddress: "36.72.xxx.xxx",
-        userAgent: "Chrome/120.0",
-        timestamp: "31 Ags 2026, 10:00",
-    },
-];
+// ─── API Data ────────────────────────────────────────────────────────────────
+// Events are now fetched from /api/platform/security/events
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function EventIcon({ type }: { type: SecurityEvent["type"] }) {
@@ -180,8 +83,14 @@ function SeverityBadge({ severity }: { severity: SecurityEvent["severity"] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformSecurityPage() {
-    const [stats, setStats] = useState<SecurityStats>(mockStats);
-    const [events, setEvents] = useState<SecurityEvent[]>(mockEvents);
+    const [stats, setStats] = useState<SecurityStats>({
+        totalEvents: 0,
+        criticalEvents: 0,
+        failedLogins: 0,
+        activeSessions: 0,
+        lastIncident: "-",
+    });
+    const [events, setEvents] = useState<SecurityEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterSeverity, setFilterSeverity] = useState<string>("all");
@@ -189,9 +98,29 @@ export default function PlatformSecurityPage() {
     const [selectedEvent, setSelectedEvent] = useState<SecurityEvent | null>(null);
 
     useEffect(() => {
-        const timer = setTimeout(() => setLoading(false), 500);
-        return () => clearTimeout(timer);
-    }, []);
+        const fetchEvents = async () => {
+            try {
+                setLoading(true);
+                const params = new URLSearchParams();
+                if (filterSeverity !== "all") params.set("severity", filterSeverity);
+                if (filterType !== "all") params.set("type", filterType);
+                if (searchQuery) params.set("search", searchQuery);
+
+                const res = await fetch(`/api/platform/security/events?${params.toString()}`);
+                const data = await res.json();
+                if (data.success) {
+                    setEvents(data.data.events);
+                    setStats(data.data.stats);
+                }
+            } catch {
+                // Graceful fallback — keep empty state
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, [filterSeverity, filterType, searchQuery]);
 
     const filteredEvents = events.filter((e) => {
         const matchSearch = searchQuery === "" ||
