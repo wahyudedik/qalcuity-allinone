@@ -2,7 +2,7 @@
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
 > Diperbarui: 4 September 2026
-> Version: 1.1 — Post-Batch I Update
+> Version: 1.2 — Post-Batch M Update (POS Phase 2-3 Complete)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -38,11 +38,11 @@
 | **Unified Control Engine** | 0 | 0 | 50+ | 50+ | 0% |
 | **Architecture Engines** | 25 | 0 | 5+ | 30+ | 83% |
 | **Industry Packs** | 0 | 0 | 50+ | 50+ | 0% |
-| **POS Module** | 0 | 0 | 17 | 17 | 0% |
+| **POS Module** | 8 | 2 | 7 | 17 | 47% |
 | **Mobile** | 0 | 2 | 2 | 4 | 0% |
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
-| **TOTAL** | **~80** | **~20** | **~145** | **~269** | **~30%** |
+| **TOTAL** | **~88** | **~22** | **~138** | **~269** | **~33%** |
 
 ---
 
@@ -1655,22 +1655,24 @@
 
 > **POS adalah Core Module — terintegrasi langsung ke ERP.**
 > Ref: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22, [`FEATURES.md`](FEATURES.md) Section 15
+> **Update (4 September 2026):** Phase 2 & 3 complete — 8 implemented, 2 partial, 7 remaining
 
-- [ ] **[POS-01]** POS Core — Transaksi penjualan langsung dengan cart
-  - **File:** New module: `apps/web/app/dashboard/pos/`
+- [x] **[POS-01]** POS Core — Terminal/Cashier page + API (terminals, transactions, dashboard, products)
+  - **File:** `apps/web/app/dashboard/pos/`, `apps/web/app/api/pos/`
   - **Dependency:** Inventory, Finance modules
   - **Complexity:** Very High
-  - **Ref:** Phase 22
+  - **Ref:** Phase 22A — **DONE (Phase 2, 4 September 2026)**
 
 - [ ] **[POS-02]** POS Returns — Pengembalian barang
   - **File:** Returns module
   - **Dependency:** POS-01
   - **Complexity:** Medium
 
-- [ ] **[POS-03]** POS Refunds — Pengembalian dana
-  - **File:** Refund workflow
+- [x] **[POS-03]** POS Refunds — Pengembalian dana + UI page
+  - **File:** `apps/web/app/api/pos/refunds/`, `apps/web/app/dashboard/pos/refunds/`
   - **Dependency:** POS-01
   - **Complexity:** Medium
+  - **Ref:** Phase 22A — **DONE (Phase 3, 4 September 2026)**
 
 - [ ] **[POS-04]** POS Barcode — Barcode scanning
   - **File:** Scanner component
@@ -1682,10 +1684,11 @@
   - **Dependency:** Payment gateway
   - **Complexity:** High
 
-- [ ] **[POS-06]** POS Shift Management — Open/track/close shift
-  - **File:** Shift lifecycle engine
+- [x] **[POS-06]** POS Shift Management — Sessions page + API (basic tracking)
+  - **File:** `apps/web/app/dashboard/pos/sessions/`, `apps/web/app/api/pos/sessions/`
   - **Dependency:** UCE-24
   - **Complexity:** High
+  - **Ref:** Phase 22B — **PARTIAL (Phase 2, basic session tracking, belum full lifecycle)**
 
 - [ ] **[POS-07]** POS Receipt — Receipt generation dan printing
   - **File:** Receipt template + printing
@@ -1706,6 +1709,36 @@
   - **File:** Industry-specific configuration
   - **Dependency:** FE-ICE-01, POS-01
   - **Complexity:** High
+
+#### POS Additional Items (Batch K/L/M — 4 September 2026)
+
+- [x] **[POS-11]** POS Dashboard API — POS overview dashboard with stats
+  - **File:** `apps/web/app/api/pos/dashboard/route.ts`
+  - **Status:** **DONE (Phase 2)**
+
+- [x] **[POS-12]** POS Terminals Management — Terminal CRUD management page
+  - **File:** `apps/web/app/dashboard/pos/terminals/`, `apps/web/app/api/pos/terminals/`
+  - **Status:** **DONE (Phase 3)**
+
+- [x] **[POS-13]** POS Transactions Page — Transaction history page + API
+  - **File:** `apps/web/app/dashboard/pos/transactions/`, `apps/web/app/api/pos/transactions/`
+  - **Status:** **DONE (Phase 2)**
+
+- [x] **[POS-14]** POS Reports Page — POS reports UI
+  - **File:** `apps/web/app/dashboard/pos/reports/`
+  - **Status:** **DONE (Phase 3, basic page)**
+
+- [x] **[POS-15]** POS i18n — 100+ i18n keys for all POS sections
+  - **File:** `apps/web/messages/en.json`, `apps/web/messages/id.json`
+  - **Status:** **DONE (Batch L)**
+
+- [x] **[POS-16]** POS DB Migration — Prisma schema + migration for POS models
+  - **File:** `packages/db/prisma/`
+  - **Status:** **DONE (Phase 2)**
+
+- [x] **[POS-17]** POS Sidebar — 6 POS sub-menus in sidebar navigation
+  - **File:** `apps/web/components/layout/sidebar.tsx`
+  - **Status:** **DONE (Batch L)**
 
 ### Industry Packs
 
