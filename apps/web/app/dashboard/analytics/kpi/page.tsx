@@ -182,7 +182,7 @@ export default function KPIPage() {
             const res = await fetch(`/api/analytics/kpi?${params}`)
             const json: KPIListResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load KPIs')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setKPIs(json.data)
         } catch (err) {
@@ -214,7 +214,7 @@ export default function KPIPage() {
             setForm(DEFAULT_FORM)
             fetchKPIs()
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create')
+            setError(err instanceof Error ? err.message : t('analytics.errors.createFailed'))
         } finally {
             setSaving(false)
         }
@@ -228,7 +228,7 @@ export default function KPIPage() {
             if (!res.ok) throw new Error('Failed to delete')
             setKPIs(prev => prev.filter(k => k.id !== id))
         } catch {
-            setError('Failed to delete KPI')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 
@@ -240,7 +240,7 @@ export default function KPIPage() {
             if (!res.ok) throw new Error('Failed to evaluate')
             fetchKPIs()
         } catch {
-            setError('Failed to evaluate KPI')
+            setError(t('analytics.errors.queryFailed'))
         } finally {
             setEvaluating(null)
         }

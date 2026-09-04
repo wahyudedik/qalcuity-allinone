@@ -208,7 +208,7 @@ export default function AnalyticsAlertsPage() {
                 r.id === id ? { ...r, isActive: !r.isActive } : r
             ))
         } catch {
-            setError('Failed to toggle alert rule')
+            setError(t('analytics.errors.toggleFailed'))
         }
     }
 
@@ -220,7 +220,7 @@ export default function AnalyticsAlertsPage() {
             if (!res.ok) throw new Error('Failed to delete')
             setRules(prev => prev.filter(r => r.id !== id))
         } catch {
-            setError('Failed to delete alert rule')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 
@@ -235,7 +235,7 @@ export default function AnalyticsAlertsPage() {
                 t.id === id ? { ...t, acknowledged: true } : t
             ))
         } catch {
-            setError('Failed to acknowledge trigger')
+            setError(t('analytics.errors.acknowledgeFailed'))
         }
     }
 
@@ -257,7 +257,7 @@ export default function AnalyticsAlertsPage() {
             setForm(DEFAULT_FORM)
             fetchData()
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create')
+            setError(err instanceof Error ? err.message : t('analytics.errors.createFailed'))
         } finally {
             setSaving(false)
         }
@@ -303,8 +303,8 @@ export default function AnalyticsAlertsPage() {
                 <button
                     onClick={() => setActiveTab('rules')}
                     className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === 'rules'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
                         }`}
                 >
                     <Bell className="inline h-3 w-3 mr-1" />
@@ -313,8 +313,8 @@ export default function AnalyticsAlertsPage() {
                 <button
                     onClick={() => setActiveTab('triggers')}
                     className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === 'triggers'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
                         }`}
                 >
                     <AlertCircle className="inline h-3 w-3 mr-1" />
@@ -452,8 +452,8 @@ export default function AnalyticsAlertsPage() {
                                     <div
                                         key={trigger.id}
                                         className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${trigger.acknowledged
-                                                ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50'
-                                                : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/10'
+                                            ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50'
+                                            : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/10'
                                             }`}
                                     >
                                         {trigger.acknowledged ? (

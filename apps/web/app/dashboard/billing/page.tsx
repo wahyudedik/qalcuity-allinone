@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 import {
     CreditCard,
     Clock,
@@ -118,6 +119,7 @@ export default function BillingManagementPage() {
     const [rejectReason, setRejectReason] = useState('')
     const [proofModal, setProofModal] = useState<PaymentWithDetails | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const { t } = useTranslation()
 
     // Subscription & Midtrans states
     const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
@@ -144,7 +146,7 @@ export default function BillingManagementPage() {
         const params = new URLSearchParams(window.location.search)
         if (params.get('payment') === 'success') {
             setPaymentSuccess(true)
-            setToast({ message: 'Pembayaran berhasil! Langganan Anda sedang diproses.', type: 'success' })
+            setToast({ message: t('settings.billingAdmin.paymentSuccess'), type: 'success' })
             // Clean URL
             window.history.replaceState({}, '', '/dashboard/billing')
         }
@@ -156,7 +158,7 @@ export default function BillingManagementPage() {
             const data = await res.json()
             if (data.success) setStats(data.data)
         } catch {
-            console.error('Error fetching stats')
+            setToast({ message: t('settings.billingAdmin.fetchStatsError'), type: 'error' })
         }
     }, [])
 
@@ -176,7 +178,7 @@ export default function BillingManagementPage() {
                 setTotalPages(data.pagination.totalPages)
             }
         } catch {
-            console.error('Error fetching payments')
+            setToast({ message: t('settings.billingAdmin.fetchPaymentsError'), type: 'error' })
         } finally {
             setLoading(false)
         }
@@ -191,7 +193,7 @@ export default function BillingManagementPage() {
                 setTenantBilling(data.data.tenant)
             }
         } catch {
-            console.error('Error fetching subscription')
+            setToast({ message: t('settings.billingAdmin.fetchSubscriptionError'), type: 'error' })
         }
     }, [])
 
@@ -204,7 +206,7 @@ export default function BillingManagementPage() {
     // Handle Midtrans payment
     const handleMidtransPayment = async () => {
         if (!subscription?.id) {
-            setToast({ message: 'Tidak ada langganan aktif untuk dibayar', type: 'error' })
+            setToast({ message: t('settings.billingAdmin.noActiveSubscription'), type: 'error' })
             return
         }
 
@@ -494,10 +496,10 @@ export default function BillingManagementPage() {
                             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                             }`}
                     >
-                        {tab === 'ALL' && 'Semua'}
-                        {tab === 'PENDING' && `Menunggu (${stats?.pendingCount || 0})`}
-                        {tab === 'VERIFIED' && 'Diverifikasi'}
-                        {tab === 'REJECTED' && 'Ditolak'}
+                        {tab === 'ALL' && t('settings.billingAdmin.tabAll')}
+                        {tab === 'PENDING' && `${t('settings.billingAdmin.tabPending')} (${stats?.pendingCount || 0})`}
+                        {tab === 'VERIFIED' && t('settings.billingAdmin.tabVerified')}
+                        {tab === 'REJECTED' && t('settings.billingAdmin.tabRejected')}
                     </button>
                 ))}
             </div>
@@ -507,7 +509,7 @@ export default function BillingManagementPage() {
                 {payments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16">
                         <CreditCard className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400">Belum ada data pembayaran</p>
+                        <p className="text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.emptyPayments')}</p>
                     </div>
                 ) : (
                     <>

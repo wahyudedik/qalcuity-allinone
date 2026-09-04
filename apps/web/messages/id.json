@@ -164,7 +164,38 @@
         "manageLeads": "Kelola Prospek",
         "manageProducts": "Kelola Produk",
         "recordPayment": "Catat Pembayaran",
-        "failedToLoad": "Gagal memuat data dashboard"
+        "failedToLoad": "Gagal memuat data dashboard",
+        "monthlyProfit": "Profit Bulanan",
+        "expenses": "Pengeluaran",
+        "invoiceOverdue": "Invoice Overdue",
+        "activeEmployees": "Karyawan Aktif",
+        "expenseByCategory": "Pengeluaran per Kategori",
+        "thisMonth": "Bulan ini",
+        "topProducts": "Produk Terlaris",
+        "orderTrend": "Tren Order",
+        "invoicesPerMonth": "Invoice per bulan",
+        "pendingApproval": "Menunggu Persetujuan",
+        "viewAllLink": "Lihat Semua →",
+        "submittedBy": "Diajukan oleh",
+        "approveFromDashboard": "Approved dari dashboard",
+        "rejectFromDashboard": "Rejected dari dashboard",
+        "approveFailed": "Gagal menyetujui",
+        "rejectFailed": "Gagal menolak",
+        "revenueInsight": "Insight Pendapatan",
+        "cashFlowAlert": "Peringatan Arus Kas",
+        "stockWarning": "Peringatan Stok",
+        "revenueGrowthStrong": "Pertumbuhan kuat. Pertahankan momentum ini.",
+        "revenueGrowthStable": "Pertumbuhan stabil. Pertimbangkan promosi untuk mencapai target Q3.",
+        "revenueDeclining": "Revenue menurun. Perlu evaluasi strategi penjualan.",
+        "revenueFromLastMonth": "dari bulan lalu",
+        "overdueInvoicesCount": "invoice overdue",
+        "noOverdueInvoices": "Tidak ada invoice overdue",
+        "overdueFollowUp": "perlu follow up segera.",
+        "allInvoicesOnSchedule": "Semua invoice sudah sesuai jadwal.",
+        "lowStockCount": "produk low stock",
+        "allStocksSafe": "Semua stok produk aman",
+        "needRestock": "perlu restock.",
+        "noRestockNeeded": "Tidak ada produk yang perlu restock saat ini."
     },
     "finance": {
         "invoices": {
@@ -263,7 +294,14 @@
             "retry": "Coba Lagi",
             "paymentDate": "Tanggal Pembayaran",
             "paymentMethod": "Metode Pembayaran",
-            "reference": "Referensi"
+            "reference": "Referensi",
+            "emptyDescription": "Tidak ada data pembayaran yang sesuai dengan filter.",
+            "deleteSuccess": "Pembayaran berhasil dihapus",
+            "deleteFailed": "Gagal menghapus pembayaran",
+            "recordSuccess": "Pembayaran berhasil dicatat",
+            "recordFailed": "Gagal mencatat pembayaran",
+            "confirmDelete": "Konfirmasi Hapus",
+            "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus pembayaran ini?"
         },
         "quotations": {
             "title": "Quotation",
@@ -395,7 +433,17 @@
                 "initialBalance": "Saldo Awal",
                 "cancel": "Batal",
                 "save": "Simpan"
-            }
+            },
+            "empty": "Tidak ada akun ditemukan",
+            "emptyDescription": "Belum ada daftar akun. Klik 'Tambah Akun' untuk membuat akun pertama Anda.",
+            "fetchError": "Gagal mengambil data akun",
+            "errorOccurred": "Terjadi kesalahan",
+            "codeAndNameRequired": "Kode dan nama akun wajib diisi",
+            "updateSuccess": "Akun berhasil diperbarui",
+            "updateFailed": "Gagal memperbarui akun",
+            "createSuccess": "Akun berhasil dibuat",
+            "createFailed": "Gagal membuat akun",
+            "saveError": "Terjadi kesalahan saat menyimpan"
         },
         "invoiceDetail": {
             "backToInvoices": "Kembali ke Invoice",
@@ -768,6 +816,16 @@
             "jobTitle": "Jabatan",
             "address": "Alamat",
             "empty": "Tidak ada kontak ditemukan",
+            "emptyDescription": "Tidak ada kontak yang sesuai dengan filter yang dipilih.",
+            "fetchError": "Gagal memuat data kontak",
+            "deleteSuccess": "Kontak berhasil dihapus",
+            "deleteFailed": "Gagal menghapus kontak",
+            "createSuccess": "Kontak berhasil dibuat",
+            "createFailed": "Gagal membuat kontak",
+            "validationError": "Nama dan email wajib diisi",
+            "retry": "Coba Lagi",
+            "newContact": "Tambah Kontak Baru",
+            "confirmation": "Apakah Anda yakin ingin menghapus kontak ini?",
             "gridView": "Tampilan Grid",
             "listView": "Tampilan Daftar",
             "table": {
@@ -1463,6 +1521,49 @@
         "errorSendInvite": "Gagal mengirim undangan",
         "loadingTeam": "Memuat data tim...",
         "retry": "Coba Lagi",
+        "disable2faFailed": "Gagal menonaktifkan 2FA",
+        "disableSessionFailed": "Gagal menonaktifkan sesi",
+        "disableSessionSuccess": "Sesi berhasil dinonaktifkan",
+        "roles": {
+            "loadFailed": "Gagal memuat data roles",
+            "createFailed": "Gagal membuat role",
+            "deleteFailed": "Gagal menghapus role",
+            "connectFailed": "Gagal terhubung ke server",
+            "nameRequired": "Nama role wajib diisi",
+            "createSuccess": "Role berhasil dibuat",
+            "deleteSuccess": "Role berhasil dihapus"
+        },
+        "industry": {
+            "loadFailed": "Gagal memuat konfigurasi industri",
+            "saveFailed": "Gagal menyimpan konfigurasi",
+            "connectFailed": "Gagal terhubung ke server",
+            "selectFirst": "Pilih industri terlebih dahulu",
+            "saveSuccess": "Konfigurasi industri berhasil disimpan"
+        },
+        "customFields": {
+            "loadFailed": "Gagal memuat custom fields",
+            "createFailed": "Gagal membuat custom field",
+            "deleteFailed": "Gagal menghapus custom field",
+            "connectFailed": "Gagal terhubung ke server",
+            "nameRequired": "Nama field dan label wajib diisi",
+            "createSuccess": "Custom field berhasil dibuat",
+            "deleteSuccess": "Custom field berhasil dihapus"
+        },
+        "securityError": {
+            "loadFailed": "Gagal memuat pengaturan keamanan"
+        },
+        "billingAdmin": {
+            "fetchStatsError": "Gagal memuat statistik billing",
+            "fetchPaymentsError": "Gagal memuat data pembayaran",
+            "fetchSubscriptionError": "Gagal memuat data langganan",
+            "paymentSuccess": "Pembayaran berhasil! Langganan Anda sedang diproses.",
+            "noActiveSubscription": "Tidak ada langganan aktif untuk dibayar",
+            "tabAll": "Semua",
+            "tabPending": "Menunggu",
+            "tabVerified": "Diverifikasi",
+            "tabRejected": "Ditolak",
+            "emptyPayments": "Belum ada data pembayaran"
+        },
         "noMembersFound": "Tidak ada anggota ditemukan",
         "you": "Anda",
         "neverActive": "Belum aktif",
@@ -2148,7 +2249,14 @@
             "saveFailed": "Gagal Menyimpan",
             "deleteFailed": "Gagal Menghapus",
             "networkError": "Terjadi kesalahan jaringan",
-            "unknownError": "Terjadi kesalahan yang tidak diketahui"
+            "unknownError": "Terjadi kesalahan yang tidak diketahui",
+            "toggleFailed": "Gagal mengubah status",
+            "acknowledgeFailed": "Gagal mengakui trigger",
+            "createFailed": "Gagal membuat",
+            "runFailed": "Gagal menjalankan",
+            "selectDimensions": "Pilih setidaknya satu dimensi atau ukuran",
+            "nameRequired": "Nama wajib diisi",
+            "createSuccess": "Berhasil dibuat"
         },
         "common": {
             "loading": "Memuat...",

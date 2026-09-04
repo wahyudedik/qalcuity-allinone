@@ -149,7 +149,7 @@ export default function ScheduledPage() {
             const res = await fetch(`/api/analytics/scheduled?${params}`)
             const json: ScheduledResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load scheduled queries')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setScheduled(json.data)
         } catch (err) {
@@ -177,7 +177,7 @@ export default function ScheduledPage() {
             ))
             setActionMenuId(null)
         } catch {
-            setError('Failed to toggle scheduled query')
+            setError(t('analytics.errors.toggleFailed'))
         }
     }
 
@@ -190,7 +190,7 @@ export default function ScheduledPage() {
             setScheduled(prev => prev.filter(s => s.id !== id))
             setActionMenuId(null)
         } catch {
-            setError('Failed to delete scheduled query')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 
@@ -490,7 +490,7 @@ export default function ScheduledPage() {
                             <button
                                 onClick={async () => {
                                     if (!createForm.name) {
-                                        setToast({ message: 'Nama wajib diisi', type: 'error' })
+                                        setToast({ message: t('analytics.errors.nameRequired'), type: 'error' })
                                         return
                                     }
                                     try {
@@ -501,14 +501,14 @@ export default function ScheduledPage() {
                                         })
                                         const data = await res.json()
                                         if (data.success) {
-                                            setToast({ message: 'Scheduled report berhasil dibuat', type: 'success' })
+                                            setToast({ message: t('analytics.errors.createSuccess'), type: 'success' })
                                             setShowCreateModal(false)
                                             fetchScheduled()
                                         } else {
-                                            setToast({ message: data.error || 'Gagal membuat scheduled report', type: 'error' })
+                                            setToast({ message: data.error || t('analytics.errors.createFailed'), type: 'error' })
                                         }
                                     } catch {
-                                        setToast({ message: 'Gagal membuat scheduled report', type: 'error' })
+                                        setToast({ message: t('analytics.errors.createFailed'), type: 'error' })
                                     }
                                 }}
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"

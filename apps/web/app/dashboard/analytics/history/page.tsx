@@ -143,7 +143,7 @@ export default function HistoryPage() {
             const res = await fetch(`/api/analytics/query-history?${params}`)
             const json: HistoryResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load query history')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setHistories(json.data)
             setPagination(json.pagination)
@@ -167,7 +167,7 @@ export default function HistoryPage() {
             setHistories(prev => prev.filter(h => h.id !== id))
             setActionMenuId(null)
         } catch {
-            setError('Failed to delete history entry')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 

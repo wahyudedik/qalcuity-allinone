@@ -126,7 +126,7 @@ export default function AnalyticsReportsPage() {
             const res = await fetch(`/api/analytics/reports?${params}`)
             const json: ReportsListResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load reports')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setReports(json.data)
         } catch (err) {
@@ -153,7 +153,7 @@ export default function AnalyticsReportsPage() {
                 r.id === id ? { ...r, isStarred: !r.isStarred } : r
             ))
         } catch {
-            setError('Failed to update report')
+            setError(t('analytics.errors.saveFailed'))
         }
     }
 
@@ -165,7 +165,7 @@ export default function AnalyticsReportsPage() {
             if (!res.ok) throw new Error('Failed to delete')
             setReports(prev => prev.filter(r => r.id !== id))
         } catch {
-            setError('Failed to delete report')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 
@@ -178,7 +178,7 @@ export default function AnalyticsReportsPage() {
             if (!res.ok) throw new Error('Failed to run report')
             fetchReports()
         } catch {
-            setError('Failed to run report')
+            setError(t('analytics.errors.runFailed'))
         }
     }
 

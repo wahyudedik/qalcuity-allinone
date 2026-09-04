@@ -133,7 +133,7 @@ export default function ChartsPage() {
             const res = await fetch(`/api/analytics/charts?${params}`)
             const json: ChartsResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load charts')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setCharts(json.data)
         } catch (err) {
@@ -172,7 +172,7 @@ export default function ChartsPage() {
             setCreateForm({ name: '', description: '', chartType: 'bar', visibility: 'PRIVATE' })
             fetchCharts()
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create chart')
+            setError(err instanceof Error ? err.message : t('analytics.errors.createFailed'))
         } finally {
             setSaving(false)
         }
@@ -187,7 +187,7 @@ export default function ChartsPage() {
             setCharts(prev => prev.filter(c => c.id !== id))
             setActionMenuId(null)
         } catch {
-            setError('Failed to delete chart')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 

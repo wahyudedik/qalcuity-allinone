@@ -757,8 +757,8 @@ export default function ChartOfAccountsPage() {
                         <div className="py-8">
                             <EmptyState
                                 icon={FileText}
-                                title="Tidak ada akun ditemukan"
-                                description="Coba ubah filter atau kata kunci pencarian"
+                                title={t('finance.accounts.empty')}
+                                description={t('finance.accounts.emptyDescription')}
                                 actionLabel={canMutate ? t('finance.accounts.addAccount') : undefined}
                                 onAction={canMutate ? () => openCreateModal() : undefined}
                             />
