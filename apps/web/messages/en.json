@@ -2495,7 +2495,8 @@
             "apiLatency": "API Latency",
             "errorRate": "Error Rate",
             "platformOverview": "Platform Overview",
-            "refresh": "Refresh"
+            "refresh": "Refresh",
+            "noActivity": "No recent activity"
         },
         "monitoringPage": {
             "title": "System Monitoring",

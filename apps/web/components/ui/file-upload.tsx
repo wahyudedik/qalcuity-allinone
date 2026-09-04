@@ -6,7 +6,7 @@ import { Upload, X, File, Image, FileText, CheckCircle, AlertCircle } from 'luci
 interface FileUploadProps {
     accept?: string;
     maxSize?: number; // in MB
-    onUpload?: (file: File) => void;
+    onUpload?: (file: File, url: string) => void;
     onRemove?: () => void;
     disabled?: boolean;
     className?: string;
@@ -24,6 +24,7 @@ export function FileUpload({
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [progress, setProgress] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleDrag = useCallback((e: React.DragEvent) => {
@@ -79,7 +80,7 @@ export function FileUpload({
         return true;
     };
 
-    const handleFile = (file: File) => {
+    const handleFile = async (file: File) => {
         if (!validateFile(file)) {
             setUploadStatus('error');
             return;
@@ -87,18 +88,61 @@ export function FileUpload({
 
         setSelectedFile(file);
         setUploadStatus('uploading');
+        setProgress(0);
+        setErrorMessage('');
 
-        // Simulate upload delay
-        setTimeout(() => {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const xhr = new XMLHttpRequest();
+
+            const uploadedUrl = await new Promise<string>((resolve, reject) => {
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        setProgress(Math.round((e.loaded / e.total) * 100));
+                    }
+                });
+
+                xhr.addEventListener('load', () => {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (xhr.status >= 200 && xhr.status < 300 && response.success) {
+                            resolve(response.data.url);
+                        } else {
+                            reject(new Error(response.error || 'Gagal mengunggah file'));
+                        }
+                    } catch {
+                        reject(new Error('Gagal membaca respons server'));
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Gagal terhubung ke server'));
+                });
+
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload dibatalkan'));
+                });
+
+                xhr.open('POST', '/api/upload');
+                xhr.send(formData);
+            });
+
             setUploadStatus('success');
-            onUpload?.(file);
-        }, 500);
+            setProgress(100);
+            onUpload?.(file, uploadedUrl);
+        } catch (err) {
+            setUploadStatus('error');
+            setErrorMessage(err instanceof Error ? err.message : 'Gagal mengunggah file');
+        }
     };
 
     const handleRemove = () => {
         setSelectedFile(null);
         setUploadStatus('idle');
         setErrorMessage('');
+        setProgress(0);
         onRemove?.();
         if (inputRef.current) {
             inputRef.current.value = '';
@@ -161,9 +205,17 @@ export function FileUpload({
                         </div>
 
                         {uploadStatus === 'uploading' && (
-                            <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
-                                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                                <span>Mengunggah...</span>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+                                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                    <span>Mengunggah... {progress}%</span>
+                                </div>
+                                <div className="w-full max-w-xs mx-auto h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-blue-600 transition-all duration-300 ease-out"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
                             </div>
                         )}
 

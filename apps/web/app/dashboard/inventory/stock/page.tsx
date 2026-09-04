@@ -72,8 +72,8 @@ export default function StockPage() {
             if (data.success) {
                 setWarehouses(data.data)
             }
-        } catch {
-            // silent fail for warehouses
+        } catch (error) {
+            console.error('Failed to fetch warehouses:', error);
         }
     }
 

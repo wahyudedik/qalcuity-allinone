@@ -1,4 +1,12 @@
-function Error({ statusCode }: { statusCode?: number }) {
+interface ErrorPageProps {
+    statusCode?: number;
+}
+
+interface GetInitialPropsResult {
+    statusCode?: number;
+}
+
+function Error({ statusCode }: ErrorPageProps) {
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
             <div style={{ textAlign: 'center' }}>
@@ -18,7 +26,7 @@ function Error({ statusCode }: { statusCode?: number }) {
     )
 }
 
-Error.getInitialProps = ({ res, err }: { res: any; err: any }) => {
+Error.getInitialProps = ({ res, err }: { res?: { statusCode: number }; err?: { statusCode: number } }): GetInitialPropsResult => {
     const statusCode = res ? res.statusCode : err ? err.statusCode : 404
     return { statusCode }
 }

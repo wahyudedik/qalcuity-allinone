@@ -143,8 +143,8 @@ export default function PeriodsPage() {
             if (data.success) {
                 setPeriodDetail(data.data)
             }
-        } catch {
-            // ignore
+        } catch (error) {
+            console.error('Failed to fetch period detail:', error);
         }
     }
 
