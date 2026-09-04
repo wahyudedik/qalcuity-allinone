@@ -1199,8 +1199,8 @@ async function main() {
     },
   });
 
-  const growthPlan = plans.find((p: any) => p.slug === 'growth');
-  let sub: any = null;
+  const growthPlan = plans.find((p) => p.slug === 'growth');
+  let sub: Awaited<ReturnType<typeof prisma.tenantSubscription.upsert>> | null = null;
   if (growthPlan) {
     sub = await prisma.tenantSubscription.upsert({
       where: { id: 'default-subscription' },

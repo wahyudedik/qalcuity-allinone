@@ -81,3 +81,40 @@ export function handleApiError(error: unknown): NextResponse {
         { status: 500 }
     );
 }
+
+// ---------------------------------------------------------------------------
+// Standardized response helpers
+// ---------------------------------------------------------------------------
+
+/** Standard error response format: `{ success: false, error: string }` */
+export function apiError(error: string, status: number = 500): NextResponse {
+    return NextResponse.json({ success: false, error }, { status });
+}
+
+/** Standard success response format: `{ success: true, data: T }` or `{ success: true }` */
+export function apiSuccess<T>(data?: T, status: number = 200): NextResponse {
+    if (data !== undefined) {
+        return NextResponse.json({ success: true, data }, { status });
+    }
+    return NextResponse.json({ success: true }, { status });
+}
+
+/** Standard 401 Unauthorized response */
+export function apiUnauthorized(message: string = 'Unauthorized'): NextResponse {
+    return NextResponse.json({ success: false, error: message }, { status: 401 });
+}
+
+/** Standard 403 Forbidden response */
+export function apiForbidden(message: string = 'Forbidden'): NextResponse {
+    return NextResponse.json({ success: false, error: message }, { status: 403 });
+}
+
+/** Standard 404 Not Found response */
+export function apiNotFound(message: string = 'Data tidak ditemukan'): NextResponse {
+    return NextResponse.json({ success: false, error: message }, { status: 404 });
+}
+
+/** Standard 429 Too Many Requests response */
+export function apiRateLimited(message: string = 'Terlalu banyak request. Silakan coba lagi.'): NextResponse {
+    return NextResponse.json({ success: false, error: message }, { status: 429 });
+}

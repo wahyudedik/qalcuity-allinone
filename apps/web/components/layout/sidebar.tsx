@@ -107,11 +107,12 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             href: "/dashboard/pos",
             icon: Monitor,
             children: [
-                { label: t("nav.posTerminals") || "Terminals", href: "/dashboard/pos/terminals" },
+                { label: t("nav.posTerminal") || "Terminal (Cashier)", href: "/dashboard/pos/terminal" },
                 { label: t("nav.posSessions") || "Sessions", href: "/dashboard/pos/sessions" },
                 { label: t("nav.posTransactions") || "Transactions", href: "/dashboard/pos/transactions" },
                 { label: t("nav.posRefunds") || "Refunds", href: "/dashboard/pos/refunds" },
                 { label: t("nav.posReports") || "Reports", href: "/dashboard/pos/reports" },
+                { label: t("nav.posTerminals") || "Terminals (Management)", href: "/dashboard/pos/terminals" },
             ],
         },
         // 7. Approvals — all roles

@@ -148,7 +148,8 @@
         "periods": "Periods",
         "approvals": "Approvals",
         "pos": "Point of Sale",
-        "posTerminals": "Terminals",
+        "posTerminal": "Terminal (Cashier)",
+        "posTerminals": "Terminals (Management)",
         "posSessions": "Sessions",
         "posTransactions": "Transactions",
         "posRefunds": "Refunds",
@@ -3030,10 +3031,17 @@
     },
     "pos": {
         "title": "Point of Sale",
-        "terminal": "Terminal",
+        "terminal": {
+            "title": "Select Products",
+            "cart": "Cart"
+        },
         "terminals": "Terminals",
-        "sessions": "Sessions",
-        "transactions": "Transactions",
+        "sessions": {
+            "title": "Cashier Sessions"
+        },
+        "transactions": {
+            "title": "POS Transactions"
+        },
         "refunds": "Refunds",
         "reports": "Reports",
         "openSession": "Open Session",
@@ -3100,6 +3108,7 @@
         },
         "refunds": {
             "title": "POS Refunds",
+            "subtitle": "Manage refund requests from POS transactions",
             "description": "Manage refund requests from POS transactions",
             "createRequest": "Create Refund Request",
             "refundDetails": "Refund Details",
@@ -3125,10 +3134,22 @@
             "selectTransaction": "Select Transaction",
             "maxRefundAmount": "Maximum refund amount",
             "submitRequest": "Submit Request",
-            "cancel": "Cancel"
+            "cancel": "Cancel",
+            "allStatus": "All Statuses",
+            "pending": "Pending",
+            "empty": "No refund requests yet",
+            "emptyDescription": "Refund requests will appear here.",
+            "refundNo": "Refund No",
+            "transactionNo": "Transaction No",
+            "amount": "Amount",
+            "reason": "Reason",
+            "status": "Status",
+            "date": "Date",
+            "actions": "Actions"
         },
         "reports": {
             "title": "POS Reports",
+            "subtitle": "Analysis and POS sales reports",
             "description": "View POS sales reports and analytics",
             "dailySales": "Daily Sales",
             "weeklySales": "Weekly Sales",
@@ -3158,10 +3179,17 @@
             "rank": "Rank",
             "week": "Week",
             "day": "Day",
-            "month": "Month"
+            "month": "Month",
+            "todaySales": "Today's Sales",
+            "todayTransactions": "Today's Transactions",
+            "avgPerTransaction": "Average per Transaction",
+            "weeklySummary": "Weekly Summary",
+            "monthlySummary": "Monthly Summary",
+            "paymentSummary": "Payment Method Summary"
         },
         "terminals": {
             "title": "POS Terminals",
+            "subtitle": "Manage your POS terminals and their configuration",
             "description": "Manage your POS terminals and their configuration",
             "addTerminal": "Add Terminal",
             "editTerminal": "Edit Terminal",
@@ -3190,7 +3218,24 @@
                 "location": "Location",
                 "locationPlaceholder": "e.g. Ground Floor",
                 "status": "Status"
-            }
+            },
+            "allStatus": "All Statuses",
+            "active": "Active",
+            "inactive": "Inactive",
+            "maintenance": "Maintenance",
+            "empty": "No terminals yet",
+            "emptyDescription": "Add a terminal to start POS transactions.",
+            "code": "Code",
+            "name": "Name",
+            "location": "Location",
+            "status": "Status",
+            "actions": "Actions"
+        }
+    },
+    "errors": {
+        "pos": {
+            "title": "POS Error",
+            "description": "An error occurred in the POS system. Please try again."
         }
     }
 }

@@ -148,7 +148,8 @@
         "periods": "Periode",
         "approvals": "Persetujuan",
         "pos": "Point of Sale",
-        "posTerminals": "Terminal",
+        "posTerminal": "Terminal (Kasir)",
+        "posTerminals": "Terminal (Manajemen)",
         "posSessions": "Sesi",
         "posTransactions": "Transaksi",
         "posRefunds": "Refund",
@@ -3030,10 +3031,17 @@
     },
     "pos": {
         "title": "Point of Sale",
-        "terminal": "Terminal",
+        "terminal": {
+            "title": "Pilih Produk",
+            "cart": "Keranjang"
+        },
         "terminals": "Terminal",
-        "sessions": "Sesi",
-        "transactions": "Transaksi",
+        "sessions": {
+            "title": "Sesi Kasir"
+        },
+        "transactions": {
+            "title": "Transaksi POS"
+        },
         "refunds": "Refund",
         "reports": "Laporan",
         "openSession": "Buka Sesi",
@@ -3100,6 +3108,7 @@
         },
         "refunds": {
             "title": "Refund POS",
+            "subtitle": "Kelola permintaan refund dari transaksi POS",
             "description": "Kelola permintaan refund dari transaksi POS",
             "createRequest": "Buat Permintaan Refund",
             "refundDetails": "Detail Refund",
@@ -3125,10 +3134,22 @@
             "selectTransaction": "Pilih Transaksi",
             "maxRefundAmount": "Jumlah maksimum refund",
             "submitRequest": "Kirim Permintaan",
-            "cancel": "Batal"
+            "cancel": "Batal",
+            "allStatus": "Semua Status",
+            "pending": "Menunggu",
+            "empty": "Belum ada permintaan refund",
+            "emptyDescription": "Permintaan refund akan muncul di sini.",
+            "refundNo": "No Refund",
+            "transactionNo": "No Transaksi",
+            "amount": "Jumlah",
+            "reason": "Alasan",
+            "status": "Status",
+            "date": "Tanggal",
+            "actions": "Aksi"
         },
         "reports": {
             "title": "Laporan POS",
+            "subtitle": "Analisis dan laporan penjualan point of sale",
             "description": "Lihat laporan penjualan dan analitik POS",
             "dailySales": "Penjualan Harian",
             "weeklySales": "Penjualan Mingguan",
@@ -3158,10 +3179,17 @@
             "rank": "Peringkat",
             "week": "Minggu",
             "day": "Hari",
-            "month": "Bulan"
+            "month": "Bulan",
+            "todaySales": "Penjualan Hari Ini",
+            "todayTransactions": "Transaksi Hari Ini",
+            "avgPerTransaction": "Rata-rata/Transaksi",
+            "weeklySummary": "Ringkasan Minggu Ini",
+            "monthlySummary": "Ringkasan Bulan Ini",
+            "paymentSummary": "Ringkasan Metode Pembayaran"
         },
         "terminals": {
             "title": "Terminal POS",
+            "subtitle": "Kelola terminal point of sale",
             "description": "Kelola terminal POS dan konfigurasinya",
             "addTerminal": "Tambah Terminal",
             "editTerminal": "Edit Terminal",
@@ -3190,7 +3218,24 @@
                 "location": "Lokasi",
                 "locationPlaceholder": "contoh: Lantai Dasar",
                 "status": "Status"
-            }
+            },
+            "allStatus": "Semua Status",
+            "active": "Aktif",
+            "inactive": "Nonaktif",
+            "maintenance": "Perawatan",
+            "empty": "Belum ada terminal",
+            "emptyDescription": "Tambahkan terminal untuk memulai transaksi POS.",
+            "code": "Kode",
+            "name": "Nama",
+            "location": "Lokasi",
+            "status": "Status",
+            "actions": "Aksi"
+        }
+    },
+    "errors": {
+        "pos": {
+            "title": "Kesalahan POS",
+            "description": "Terjadi kesalahan pada sistem Point of Sale. Silakan coba lagi."
         }
     }
 }
