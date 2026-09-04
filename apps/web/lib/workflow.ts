@@ -380,14 +380,7 @@ export async function validateWorkflowTransition(
             t.to.toUpperCase() === upperTo
     );
 
-    if (transition?.permissions && transition.permissions.length > 0) {
-        // Log permission check (permission validation dilakukan di lapisan API route)
-        console.log(
-            `[Workflow] Transition ${upperFrom} → ${upperTo} requires permissions:`,
-            transition.permissions,
-            `Caller role: ${callerRole}`
-        );
-    }
+    // Permission validation dilakukan di lapisan API route
 
     return { valid: true };
 }

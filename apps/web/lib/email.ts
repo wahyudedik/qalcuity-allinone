@@ -370,7 +370,6 @@ export async function notifySuperadminPayment(paymentId: string): Promise<SendEm
             html,
         });
 
-        console.log(`[Email] notifySuperadminPayment: ${paymentId}`, result);
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -429,7 +428,6 @@ export async function sendInvoiceCreatedEmail(
             html,
         });
 
-        console.log(`[Email] sendInvoiceCreatedEmail: ${invoice.invoiceNumber}`, result);
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -482,7 +480,6 @@ export async function sendPaymentReceivedEmail(
             html,
         });
 
-        console.log(`[Email] sendPaymentReceivedEmail: ${payment.paymentNumber}`, result);
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -522,7 +519,6 @@ export async function sendWelcomeEmail(
             html,
         });
 
-        console.log(`[Email] sendWelcomeEmail: ${user.email}`, result);
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -575,7 +571,6 @@ export async function sendPaymentReminderEmail(
             html,
         });
 
-        console.log(`[Email] sendPaymentReminderEmail: ${invoice.invoiceNumber}`, result);
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
