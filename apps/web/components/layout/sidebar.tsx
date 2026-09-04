@@ -113,6 +113,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.posRefunds") || "Refunds", href: "/dashboard/pos/refunds" },
                 { label: t("nav.posReports") || "Reports", href: "/dashboard/pos/reports" },
                 { label: t("nav.posTerminals") || "Terminals (Management)", href: "/dashboard/pos/terminals" },
+                { label: t("nav.posLoyalty") || "Loyalty", href: "/dashboard/pos/loyalty" },
             ],
         },
         // 7. Approvals — all roles

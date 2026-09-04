@@ -121,6 +121,11 @@ model Tenant {
   posTransactionItems PosTransactionItem[]
   posPayments        PosPayment[]
   posRefunds         PosRefund[]
+
+  // POS Loyalty
+  loyaltyMembers       LoyaltyMember[]
+  loyaltyTransactions  LoyaltyTransaction[]
+  loyaltyRewards       LoyaltyReward[]
 }
 
 model User {
@@ -1964,4 +1969,63 @@ model PosRefund {
   @@index([tenantId])
   @@index([tenantId, transactionId])
   @@index([tenantId, status])
+}
+
+// ============================================
+// POS LOYALTY PROGRAM
+// ============================================
+
+model LoyaltyMember {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contactId     String?
+  name          String
+  email         String?
+  phone         String?
+  memberCode    String
+  tier          String   @default("BRONZE") // BRONZE, SILVER, GOLD, PLATINUM
+  points        Int      @default(0)
+  totalSpent    Decimal  @default(0) @db.Decimal(15, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  transactions  LoyaltyTransaction[]
+
+  @@unique([tenantId, memberCode])
+  @@unique([tenantId, email], name: "loyalty_member_email_unique")
+  @@index([tenantId])
+  @@index([tenantId, phone])
+}
+
+model LoyaltyTransaction {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        LoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  transactionId String?
+  type          String
+  points        Int
+  description   String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, memberId])
+  @@index([tenantId, type])
+}
+
+model LoyaltyReward {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  pointsCost    Int
+  rewardType    String
+  rewardValue   Decimal  @db.Decimal(15, 2)
+  isActive      Boolean  @default(true)
+  stock         Int      @default(-1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, isActive])
 }

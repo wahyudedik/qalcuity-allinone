@@ -153,7 +153,8 @@
         "posSessions": "Sessions",
         "posTransactions": "Transactions",
         "posRefunds": "Refunds",
-        "posReports": "POS Reports"
+        "posReports": "POS Reports",
+        "posLoyalty": "Loyalty"
     },
     "dashboard": {
         "welcome": "Welcome back! Here's a summary of your business today.",
@@ -3103,7 +3104,8 @@
                 "transactions": "Transactions",
                 "refunds": "Refunds",
                 "reports": "Reports",
-                "terminals": "Terminals"
+                "terminals": "Terminals",
+                "loyalty": "Loyalty"
             }
         },
         "refunds": {
@@ -3230,6 +3232,40 @@
             "location": "Location",
             "status": "Status",
             "actions": "Actions"
+        },
+        "loyalty": {
+            "title": "Loyalty Program",
+            "members": "Loyalty Members",
+            "membersDesc": "Manage your loyalty program members",
+            "rewards": "Loyalty Rewards",
+            "rewardsDesc": "Manage rewards that members can redeem with points",
+            "addMember": "Add Member",
+            "addReward": "Add Reward",
+            "editReward": "Edit Reward",
+            "searchMembers": "Search by name, phone, or code...",
+            "allTiers": "All Tiers",
+            "tierDistribution": "Tier Distribution",
+            "topMembers": "Top Members",
+            "totalMembers": "Total Members",
+            "totalPoints": "Total Points",
+            "totalSpent": "Total Spent",
+            "activeRewards": "Active Rewards",
+            "points": "Points",
+            "tier": "Tier",
+            "code": "Code",
+            "pointsCost": "Points Cost",
+            "value": "Value",
+            "stock": "Stock",
+            "type": "Type",
+            "adjustPoints": "Adjust Points",
+            "pointsHistory": "Points History",
+            "memberSince": "Member Since",
+            "noMembers": "No members yet",
+            "noMembersDesc": "Start by adding your first loyalty member.",
+            "noRewards": "No rewards yet",
+            "noRewardsDesc": "Create rewards that members can redeem with their points.",
+            "noTransactions": "No transactions yet",
+            "confirmDeleteReward": "Are you sure you want to deactivate this reward? Members will no longer be able to redeem it."
         }
     },
     "errors": {

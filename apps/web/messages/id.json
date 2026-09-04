@@ -153,7 +153,8 @@
         "posSessions": "Sesi",
         "posTransactions": "Transaksi",
         "posRefunds": "Refund",
-        "posReports": "Laporan POS"
+        "posReports": "Laporan POS",
+        "posLoyalty": "Loyalty"
     },
     "dashboard": {
         "welcome": "Selamat datang kembali! Berikut ringkasan bisnis Anda hari ini.",
@@ -3103,7 +3104,8 @@
                 "transactions": "Transaksi",
                 "refunds": "Refund",
                 "reports": "Laporan",
-                "terminals": "Terminal"
+                "terminals": "Terminal",
+                "loyalty": "Loyalty"
             }
         },
         "refunds": {
@@ -3230,6 +3232,40 @@
             "location": "Lokasi",
             "status": "Status",
             "actions": "Aksi"
+        },
+        "loyalty": {
+            "title": "Program Loyalty",
+            "members": "Member Loyalty",
+            "membersDesc": "Kelola member program loyalitas Anda",
+            "rewards": "Reward Loyalty",
+            "rewardsDesc": "Kelola reward yang dapat ditukar member dengan poin",
+            "addMember": "Tambah Member",
+            "addReward": "Tambah Reward",
+            "editReward": "Edit Reward",
+            "searchMembers": "Cari berdasarkan nama, telepon, atau kode...",
+            "allTiers": "Semua Tier",
+            "tierDistribution": "Distribusi Tier",
+            "topMembers": "Member Teratas",
+            "totalMembers": "Total Member",
+            "totalPoints": "Total Poin",
+            "totalSpent": "Total Belanja",
+            "activeRewards": "Reward Aktif",
+            "points": "Poin",
+            "tier": "Tier",
+            "code": "Kode",
+            "pointsCost": "Biaya Poin",
+            "value": "Nilai",
+            "stock": "Stok",
+            "type": "Tipe",
+            "adjustPoints": "Sesuaikan Poin",
+            "pointsHistory": "Riwayat Poin",
+            "memberSince": "Member Sejak",
+            "noMembers": "Belum ada member",
+            "noMembersDesc": "Mulai dengan menambahkan member loyalitas pertama Anda.",
+            "noRewards": "Belum ada reward",
+            "noRewardsDesc": "Buat reward yang dapat ditukar member dengan poin mereka.",
+            "noTransactions": "Belum ada transaksi",
+            "confirmDeleteReward": "Apakah Anda yakin ingin menonaktifkan reward ini? Member tidak akan bisa menukarkannya lagi."
         }
     },
     "errors": {
