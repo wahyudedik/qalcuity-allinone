@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createCoAAccountSchema, updateCoAAccountSchema } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 // GET: Ambil semua akun CoA (dengan tenant isolation)
 export async function GET(request: Request) {
@@ -60,12 +61,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[CoA GET]', error instanceof Error ? error.message : 'Unknown error');
-        const message = error instanceof Error ? error.message : 'Gagal mengambil data akun';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -134,19 +130,7 @@ export async function POST(request: Request) {
             data: newAccount,
         }, { status: 201 });
     } catch (error) {
-        console.error('[CoA POST]', error instanceof Error ? error.message : 'Unknown error');
-        // Tangani error Zod validation
-        if (error && typeof error === 'object' && 'issues' in error) {
-            return NextResponse.json(
-                { success: false, message: 'Validasi gagal', details: error },
-                { status: 400 }
-            );
-        }
-        const message = error instanceof Error ? error.message : 'Gagal membuat akun';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -249,18 +233,7 @@ export async function PUT(request: Request) {
             data: updated,
         });
     } catch (error) {
-        console.error('[CoA PUT]', error instanceof Error ? error.message : 'Unknown error');
-        if (error && typeof error === 'object' && 'issues' in error) {
-            return NextResponse.json(
-                { success: false, message: 'Validasi gagal', details: error },
-                { status: 400 }
-            );
-        }
-        const message = error instanceof Error ? error.message : 'Gagal memperbarui akun';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -332,11 +305,6 @@ export async function DELETE(request: Request) {
             data: { id },
         });
     } catch (error) {
-        console.error('[CoA DELETE]', error instanceof Error ? error.message : 'Unknown error');
-        const message = error instanceof Error ? error.message : 'Gagal menghapus akun';
-        return NextResponse.json(
-            { success: false, message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

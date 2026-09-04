@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createWarehouseSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -68,11 +69,7 @@ export async function GET(request: Request) {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -118,13 +115,6 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, data: warehouse }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message.includes('Unique constraint')) {
-            return NextResponse.json(
-                { success: false, error: 'Kode gudang sudah ada' },
-                { status: 409 }
-            );
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }

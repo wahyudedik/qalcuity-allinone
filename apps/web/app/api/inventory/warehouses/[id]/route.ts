@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateWarehouseSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
@@ -26,8 +27,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
         return NextResponse.json({ success: true, data: warehouse });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -82,14 +82,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
         return NextResponse.json({ success: true, data: warehouse });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message.includes('Unique constraint')) {
-            return NextResponse.json(
-                { success: false, error: 'Kode gudang sudah ada' },
-                { status: 409 }
-            );
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 
@@ -128,7 +121,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
         return NextResponse.json({ success: true, message: 'Gudang berhasil dihapus' });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
