@@ -876,6 +876,19 @@ export const revokeSessionSchema = z.object({
 });
 
 // ============================================
+// HR Attendance Schemas
+// ============================================
+
+export const updateAttendanceSchema = z.object({
+    date: z.string().optional(),
+    clockIn: z.string().optional(),
+    clockOut: z.string().optional(),
+    status: z.enum(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY']).optional(),
+    workHours: z.number().min(0, 'Jam kerja tidak boleh negatif').optional(),
+    notes: z.string().optional().nullable(),
+});
+
+// ============================================
 // Helper Function: Format Zod errors
 // ============================================
 

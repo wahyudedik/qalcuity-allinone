@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { updateProductSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -59,12 +60,8 @@ export async function GET(
         };
 
         return NextResponse.json({ success: true, data });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -125,15 +122,8 @@ export async function PUT(
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Product', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: product });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message.includes('Unique constraint')) {
-            return NextResponse.json(
-                { success: false, error: 'SKU sudah digunakan oleh produk lain' },
-                { status: 409 }
-            );
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -184,8 +174,7 @@ export async function DELETE(
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Product', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
