@@ -136,10 +136,9 @@ export default function LoginPage() {
                         />
                         <span className="text-sm text-gray-600">{t('auth.rememberMe')}</span>
                     </label>
-                    {/* TODO: Halaman forgot-password belum diimplementasi */}
-                    <span className="text-sm text-gray-400 cursor-not-allowed" title={t('common.comingSoon')}>
+                    <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                         {t('auth.forgotPassword')}
-                    </span>
+                    </Link>
                 </div>
 
                 <button

@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Settings,
     Save,
     RefreshCw,
     Globe,
-    Mail,
     Shield,
-    Bell,
     Database,
-    Palette,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,35 +22,80 @@ interface PlatformSettings {
     securityAlerts: boolean;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const defaultSettings: PlatformSettings = {
-    platformName: "Qalcuity",
-    supportEmail: "support@qalcuity.com",
-    defaultTrialDays: 14,
-    maxTenantsPerPlan: {
-        Starter: 50,
-        Professional: 100,
-        Enterprise: 500,
-    },
-    maintenanceMode: false,
-    allowRegistration: true,
-    emailNotifications: true,
-    securityAlerts: true,
-};
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformSettingsPage() {
-    const [settings, setSettings] = useState<PlatformSettings>(defaultSettings);
+    const [settings, setSettings] = useState<PlatformSettings | null>(null);
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+    const fetchSettings = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetch("/api/platform/settings");
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setSettings(data.data);
+            } else {
+                setToast({ message: data.error || "Gagal memuat settings", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal memuat settings", type: "error" });
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
+
     const handleSave = async () => {
+        if (!settings) return;
         setSaving(true);
-        // TODO: API call to save settings
-        await new Promise((r) => setTimeout(r, 1000));
-        setSaving(false);
-        setToast({ message: "Settings berhasil disimpan", type: "success" });
+        setToast(null);
+        try {
+            const res = await fetch("/api/platform/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(settings),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setToast({ message: "Settings berhasil disimpan", type: "success" });
+            } else {
+                setToast({ message: data.error || "Gagal menyimpan settings", type: "error" });
+            }
+        } catch {
+            setToast({ message: "Gagal menyimpan settings", type: "error" });
+        } finally {
+            setSaving(false);
+        }
     };
+
+    if (loading || !settings) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Platform Settings</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Konfigurasi global untuk seluruh platform Qalcuity</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 p-6">
+                            <div className="animate-pulse space-y-4">
+                                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+                                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+                                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

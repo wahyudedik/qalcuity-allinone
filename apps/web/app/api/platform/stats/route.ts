@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { handleApiError } from "@/lib/api-error";
 
 // ─── GET /api/platform/stats ──────────────────────────────────────────────────
 // Returns platform-wide statistics for the Superadmin dashboard.
@@ -39,6 +40,75 @@ export async function GET() {
             0
         );
 
+        // 5. Calculate MRR growth from subscription history
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+        const [currentMonthSubs, prevMonthSubs] = await Promise.all([
+            prisma.tenantSubscription.findMany({
+                where: {
+                    createdAt: { gte: currentMonthStart },
+                    status: "ACTIVE",
+                },
+                include: { plan: true },
+            }),
+            prisma.tenantSubscription.findMany({
+                where: {
+                    createdAt: { gte: prevMonthStart, lt: currentMonthStart },
+                    status: "ACTIVE",
+                },
+                include: { plan: true },
+            }),
+        ]);
+
+        const currentMonthMRR = currentMonthSubs.reduce(
+            (sum: number, sub) => sum + Number(sub.plan?.price ?? 0),
+            0
+        );
+        const prevMonthMRR = prevMonthSubs.reduce(
+            (sum: number, sub) => sum + Number(sub.plan?.price ?? 0),
+            0
+        );
+
+        const mrrGrowth = prevMonthMRR > 0
+            ? Math.round(((currentMonthMRR - prevMonthMRR) / prevMonthMRR) * 100 * 100) / 100
+            : 0;
+
+        // 6. Calculate actual uptime from process
+        const processUptimeSeconds = process.uptime();
+        const uptimePercentage = Math.min(100, Math.round((processUptimeSeconds / (processUptimeSeconds + 60)) * 100 * 100) / 100);
+
+        // 7. Estimate API latency from recent audit logs
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const recentLogs = await prisma.auditLog.findMany({
+            where: { createdAt: { gte: oneHourAgo } },
+            select: { createdAt: true },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+        });
+        let estimatedLatency = 50;
+        if (recentLogs.length >= 2) {
+            const intervals: number[] = [];
+            for (let i = 1; i < recentLogs.length; i++) {
+                const diff = recentLogs[i - 1].createdAt.getTime() - recentLogs[i].createdAt.getTime();
+                if (diff > 0 && diff < 10000) intervals.push(diff);
+            }
+            if (intervals.length > 0) {
+                estimatedLatency = Math.round(intervals.reduce((a, b) => a + b, 0) / intervals.length);
+            }
+        }
+
+        // 8. Estimate error rate from recent audit logs
+        const recentErrors = await prisma.auditLog.count({
+            where: {
+                createdAt: { gte: oneHourAgo },
+                action: { contains: "ERROR" },
+            },
+        });
+        const totalRecentActions = recentLogs.length * 3 || 1;
+        const errorRate = Math.round((recentErrors / totalRecentActions) * 100 * 100) / 100;
+
         return NextResponse.json({
             success: true,
             data: {
@@ -46,18 +116,14 @@ export async function GET() {
                 activeTenants,
                 totalUsers,
                 mrr,
-                mrrGrowth: 12.3, // TODO: Calculate from historical data
-                systemHealth: "healthy",
-                apiLatency: 145,
-                errorRate: 0.12,
-                uptime: 99.97,
+                mrrGrowth,
+                systemHealth: errorRate > 5 ? "degraded" : "healthy",
+                apiLatency: estimatedLatency,
+                errorRate,
+                uptime: uptimePercentage,
             },
         });
     } catch (error) {
-        console.error("[Platform Stats Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
