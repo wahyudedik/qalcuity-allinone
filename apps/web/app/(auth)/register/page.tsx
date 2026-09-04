@@ -1,11 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
 import { Eye, EyeOff } from 'lucide-react'
+
+interface Providers {
+    credentials: boolean;
+    google: boolean;
+}
 
 export default function RegisterPage() {
     const router = useRouter()
@@ -21,6 +26,19 @@ export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
     const [agreed, setAgreed] = useState(false)
+    const [providers, setProviders] = useState<Providers>({ credentials: true, google: false })
+
+    // Fetch available auth providers from server
+    // Replaces static NEXT_PUBLIC_GOOGLE_CLIENT_ID check with dynamic
+    // server-side validation of Google OAuth reachability.
+    useEffect(() => {
+        fetch('/api/auth/providers')
+            .then(res => res.json())
+            .then((data: Providers) => setProviders(data))
+            .catch(() => {
+                setProviders({ credentials: true, google: false })
+            })
+    }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({
@@ -282,7 +300,7 @@ export default function RegisterPage() {
                 </div>
             </div>
 
-            {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+            {providers.google && (
                 <button
                     type="button"
                     onClick={() => signIn('google', { callbackUrl: '/dashboard?onboard=true' })}

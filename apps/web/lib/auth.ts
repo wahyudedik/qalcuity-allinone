@@ -17,14 +17,53 @@ if (!secret) {
     );
 }
 
+// ─── Google OAuth Graceful Degradation ──────────────────────────────────────────
+// Validates Google OAuth credentials format. Returns true only if:
+// 1. Both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set
+// 2. Values are non-empty and not placeholder strings
+// This prevents registering a broken Google provider on VPS/production
+// where env vars may be set but Google OAuth is unreachable or misconfigured.
+function isGoogleOAuthConfigured(): boolean {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        return false;
+    }
+
+    // Reject empty, too-short, or placeholder values
+    if (clientId.length < 10 || clientSecret.length < 10) {
+        return false;
+    }
+
+    const placeholderPatterns = ['your-', 'xxx', 'placeholder', 'REPLACE_ME', 'CHANGE_THIS'];
+    const isPlaceholder = placeholderPatterns.some(
+        p => clientId.toLowerCase().includes(p.toLowerCase()) ||
+            clientSecret.toLowerCase().includes(p.toLowerCase())
+    );
+
+    if (isPlaceholder) {
+        console.warn(
+            '[Auth] Google OAuth credentials appear to be placeholder values. ' +
+            'Google login is disabled.'
+        );
+        return false;
+    }
+
+    return true;
+}
+
 export const authOptions: NextAuthOptions = {
     providers: [
-        // Google OAuth Provider — hanya aktif jika env vars ter-set
-        ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+        // Google OAuth Provider — hanya aktif jika credentials valid
+        // Graceful degradation: jika env vars tidak ada atau tidak valid,
+        // Google provider tidak didaftarkan dan login hanya via email/password.
+        // Lihat juga: /api/auth/providers untuk client-side availability check.
+        ...(isGoogleOAuthConfigured()
             ? [
                 GoogleProvider({
-                    clientId: process.env.GOOGLE_CLIENT_ID,
-                    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                    clientId: process.env.GOOGLE_CLIENT_ID!,
+                    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
                 }),
             ]
             : []),
