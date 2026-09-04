@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
 import {
     Building2,
     CreditCard,
@@ -91,6 +92,7 @@ function ActivityIcon({ type }: { type: RecentActivity["type"] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformDashboardPage() {
+    const { t } = useTranslation();
     const [stats, setStats] = useState<PlatformStats>(defaultStats);
     const [activities, setActivities] = useState<RecentActivity[]>(defaultActivities);
     const [loading, setLoading] = useState(true);
@@ -115,10 +117,10 @@ export default function PlatformDashboardPage() {
                 });
                 setError(null);
             } else {
-                setError(data.error || "Gagal mengambil data stats");
+                setError(data.error || t('platform.dashboardPage.errorFetchStats'));
             }
         } catch {
-            setError("Gagal menghubungi server");
+            setError(t('platform.dashboardPage.errorContact'));
         } finally {
             setLoading(false);
         }
@@ -148,13 +150,13 @@ export default function PlatformDashboardPage() {
             {/* Error Banner */}
             {error && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-                    <p className="font-medium">Gagal memuat data:</p>
+                    <p className="font-medium">{t('platform.dashboardPage.errorLoad')}</p>
                     <p>{error}</p>
                     <button
                         onClick={handleRefresh}
                         className="mt-2 text-sm font-medium underline hover:no-underline"
                     >
-                        Coba lagi
+                        {t('platform.dashboardPage.retry')}
                     </button>
                 </div>
             )}
@@ -163,10 +165,10 @@ export default function PlatformDashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Platform Overview
+                        {t('platform.dashboardPage.platformOverview')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Monitoring dan manajemen seluruh tenant Qalcuity
+                        {t('platform.dashboardPage.subtitle')}
                     </p>
                 </div>
                 <button
@@ -175,7 +177,7 @@ export default function PlatformDashboardPage() {
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                     <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                    Refresh
+                    {t('platform.dashboardPage.refresh')}
                 </button>
             </div>
 
@@ -186,13 +188,13 @@ export default function PlatformDashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                Total Tenants
+                                {t('platform.dashboardPage.totalTenants')}
                             </p>
                             <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
                                 {stats.totalTenants}
                             </p>
                             <p className="mt-1 text-xs text-green-600 dark:text-green-400">
-                                {stats.activeTenants} aktif
+                                {stats.activeTenants} {t('platform.dashboardPage.active')}
                             </p>
                         </div>
                         <div className="rounded-lg bg-purple-100 p-3 dark:bg-purple-900/30">
@@ -206,7 +208,7 @@ export default function PlatformDashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                Monthly Recurring Revenue
+                                {t('platform.dashboardPage.mrr')}
                             </p>
                             <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
                                 {formatRupiah(stats.mrr)}
@@ -218,7 +220,7 @@ export default function PlatformDashboardPage() {
                                     <TrendingDown className="h-3 w-3 text-red-500" />
                                 )}
                                 <p className={`text-xs ${stats.mrrGrowth >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                                    {stats.mrrGrowth >= 0 ? "+" : ""}{stats.mrrGrowth}% dari bulan lalu
+                                    {stats.mrrGrowth >= 0 ? "+" : ""}{stats.mrrGrowth}% {t('platform.dashboardPage.fromLastMonth')}
                                 </p>
                             </div>
                         </div>
@@ -233,13 +235,13 @@ export default function PlatformDashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                Total Users
+                                {t('platform.dashboardPage.totalUsers')}
                             </p>
                             <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
                                 {stats.totalUsers}
                             </p>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                rata-rata {Math.round(stats.totalUsers / stats.totalTenants)} per tenant
+                                {t('platform.dashboardPage.avgPerTenant')} {Math.round(stats.totalUsers / stats.totalTenants)}
                             </p>
                         </div>
                         <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/30">
@@ -253,7 +255,7 @@ export default function PlatformDashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                System Health
+                                {t('platform.dashboardPage.systemHealth')}
                             </p>
                             <div className="mt-1 flex items-center gap-2">
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -262,7 +264,7 @@ export default function PlatformDashboardPage() {
                                 </p>
                             </div>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Uptime: {stats.uptime}%
+                                {t('platform.dashboardPage.uptime')} {stats.uptime}%
                             </p>
                         </div>
                         <div className="rounded-lg bg-green-100 p-3 dark:bg-green-900/30">
@@ -278,13 +280,13 @@ export default function PlatformDashboardPage() {
                 <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Recent Activity
+                            {t('platform.dashboardPage.recentActivity')}
                         </h2>
                         <Link
                             href="/platform/monitoring"
                             className="text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400"
                         >
-                            View All
+                            {t('platform.dashboardPage.viewAll')}
                         </Link>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -321,7 +323,7 @@ export default function PlatformDashboardPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Quick Actions
+                                {t('platform.dashboardPage.quickActions')}
                             </h2>
                         </div>
                         <div className="p-4 space-y-2">
@@ -331,7 +333,7 @@ export default function PlatformDashboardPage() {
                             >
                                 <span className="flex items-center gap-3">
                                     <Building2 className="h-4 w-4 text-purple-500" />
-                                    Kelola Tenants
+                                    {t('platform.tenantsPage.title')}
                                 </span>
                                 <ArrowRight className="h-4 w-4 text-gray-400" />
                             </Link>
@@ -341,7 +343,7 @@ export default function PlatformDashboardPage() {
                             >
                                 <span className="flex items-center gap-3">
                                     <CreditCard className="h-4 w-4 text-green-500" />
-                                    Billing & Payments
+                                    {t('platform.dashboardPage.billingPayments')}
                                 </span>
                                 <ArrowRight className="h-4 w-4 text-gray-400" />
                             </Link>
@@ -351,7 +353,7 @@ export default function PlatformDashboardPage() {
                             >
                                 <span className="flex items-center gap-3">
                                     <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                    Support Tickets
+                                    {t('platform.dashboardPage.supportTickets')}
                                 </span>
                                 <ArrowRight className="h-4 w-4 text-gray-400" />
                             </Link>
@@ -361,7 +363,7 @@ export default function PlatformDashboardPage() {
                             >
                                 <span className="flex items-center gap-3">
                                     <Activity className="h-4 w-4 text-blue-500" />
-                                    Security Events
+                                    {t('platform.dashboardPage.securityEvents')}
                                 </span>
                                 <ArrowRight className="h-4 w-4 text-gray-400" />
                             </Link>
@@ -372,7 +374,7 @@ export default function PlatformDashboardPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                System Metrics
+                                {t('platform.dashboardPage.systemMetrics')}
                             </h2>
                         </div>
                         <div className="p-4 space-y-4">
@@ -380,7 +382,7 @@ export default function PlatformDashboardPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        API Latency
+                                        {t('platform.dashboardPage.apiLatency')}
                                     </span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                                         {stats.apiLatency}ms
@@ -398,7 +400,7 @@ export default function PlatformDashboardPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        Error Rate
+                                        {t('platform.dashboardPage.errorRate')}
                                     </span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                                         {stats.errorRate}%
@@ -416,7 +418,7 @@ export default function PlatformDashboardPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        Uptime
+                                        {t('platform.dashboardPage.uptime')}
                                     </span>
                                     <span className="text-sm font-medium text-green-600 dark:text-green-400">
                                         {stats.uptime}%

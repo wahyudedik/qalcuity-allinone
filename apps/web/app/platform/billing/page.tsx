@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "@/lib/i18n";
 import {
     CreditCard,
     TrendingUp,
@@ -168,6 +169,7 @@ type BillingTab = "overview" | "plans" | "payments" | "overdue";
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformBillingPage() {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<BillingTab>("overview");
     const [loading, setLoading] = useState(true);
 
@@ -283,7 +285,7 @@ export default function PlatformBillingPage() {
 
     const handleSave = async () => {
         if (!formName || !formSlug) {
-            setMessage({ type: "error", text: "Nama dan slug wajib diisi" });
+            setMessage({ type: "error", text: t('platform.billingPage.validationNameSlugRequired') });
             return;
         }
 
@@ -317,21 +319,21 @@ export default function PlatformBillingPage() {
 
             const data = await res.json();
             if (data.success) {
-                setMessage({ type: "success", text: data.message || "Paket berhasil disimpan" });
+                setMessage({ type: "success", text: data.message || t('platform.billingPage.successSaved') });
                 setShowCreateForm(false);
                 fetchPlans();
             } else {
-                setMessage({ type: "error", text: data.error || "Gagal menyimpan paket" });
+                setMessage({ type: "error", text: data.error || t('platform.billingPage.errorSave') });
             }
         } catch {
-            setMessage({ type: "error", text: "Gagal menyimpan paket" });
+            setMessage({ type: "error", text: t('platform.billingPage.errorSave') });
         } finally {
             setSaving(false);
         }
     };
 
     const handleDelete = async (plan: Plan) => {
-        if (!confirm(`Hapus paket "${plan.name}"?`)) return;
+        if (!confirm(`${t('platform.billingPage.confirmDelete')} "${plan.name}"?`)) return;
 
         try {
             const res = await fetch(`/api/admin/plans/${plan.id}`, { method: "DELETE" });
@@ -343,7 +345,7 @@ export default function PlatformBillingPage() {
                 setMessage({ type: "error", text: data.error });
             }
         } catch {
-            setMessage({ type: "error", text: "Gagal menghapus paket" });
+            setMessage({ type: "error", text: t('platform.billingPage.errorDelete') });
         }
     };
 
@@ -372,7 +374,7 @@ export default function PlatformBillingPage() {
             createdAt: p.createdAt,
         }));
         exportToCSV(exportData, `billing-payments-${new Date().toISOString().split("T")[0]}`);
-        setMessage({ type: "success", text: "Data pembayaran berhasil diekspor" });
+        setMessage({ type: "success", text: t('platform.billingPage.exportSuccess') });
     };
 
     if (loading) {
@@ -384,10 +386,10 @@ export default function PlatformBillingPage() {
     }
 
     const tabs: { id: BillingTab; label: string; icon: React.ElementType }[] = [
-        { id: "overview", label: "Overview", icon: BarChart3 },
-        { id: "plans", label: "Plans", icon: Package },
-        { id: "payments", label: "Payments", icon: CreditCard },
-        { id: "overdue", label: "Overdue", icon: AlertTriangle },
+        { id: "overview", label: t('platform.billingPage.tabOverview'), icon: BarChart3 },
+        { id: "plans", label: t('platform.billingPage.tabPlans'), icon: Package },
+        { id: "payments", label: t('platform.billingPage.tabPayments'), icon: CreditCard },
+        { id: "overdue", label: t('platform.billingPage.tabOverdue'), icon: AlertTriangle },
     ];
 
     return (
@@ -396,10 +398,10 @@ export default function PlatformBillingPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Billing & Plans
+                        {t('platform.billingPage.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Kelola paket langganan, pembayaran, dan revenue
+                        {t('platform.billingPage.subtitle')}
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -408,7 +410,7 @@ export default function PlatformBillingPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <RefreshCw className="h-4 w-4" />
-                        Refresh
+                        {t('platform.billingPage.refresh')}
                     </button>
                 </div>
             </div>
@@ -440,8 +442,8 @@ export default function PlatformBillingPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${activeTab === tab.id
-                                    ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
-                                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                 }`}
                         >
                             <Icon className="h-4 w-4" />
@@ -472,7 +474,7 @@ export default function PlatformBillingPage() {
                                     </p>
                                     <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                                         <TrendingUp className="h-3 w-3" />
-                                        Monthly Recurring Revenue
+                                        {t('platform.billingPage.monthlyRecurringRevenue')}
                                     </p>
                                 </div>
                                 <div className="rounded-lg bg-green-100 p-3 dark:bg-green-900/30">
@@ -491,7 +493,7 @@ export default function PlatformBillingPage() {
                                     </p>
                                     <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                         <TrendingUp className="h-3 w-3" />
-                                        Annual Recurring Revenue
+                                        {t('platform.billingPage.annualRecurringRevenue')}
                                     </p>
                                 </div>
                                 <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/30">
@@ -503,14 +505,14 @@ export default function PlatformBillingPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Churn Rate
+                                        {t('platform.billingPage.churnRate')}
                                     </p>
                                     <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
                                         {billing.churnRate}%
                                     </p>
                                     <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                         <TrendingDown className="h-3 w-3" />
-                                        Last 30 days
+                                        {t('platform.billingPage.last30Days')}
                                     </p>
                                 </div>
                                 <div className="rounded-lg bg-yellow-100 p-3 dark:bg-yellow-900/30">
@@ -522,13 +524,13 @@ export default function PlatformBillingPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Active Subscriptions
+                                        {t('platform.billingPage.activeSubscriptions')}
                                     </p>
                                     <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
                                         {billing.totalActiveSubscriptions}
                                     </p>
                                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        dari {billing.totalTenants} tenants
+                                        {t('platform.billingPage.fromTenants')} {billing.totalTenants}
                                     </p>
                                 </div>
                                 <div className="rounded-lg bg-purple-100 p-3 dark:bg-purple-900/30">
@@ -545,17 +547,17 @@ export default function PlatformBillingPage() {
                                 <AlertTriangle className="h-5 w-5 text-red-500" />
                                 <div>
                                     <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-                                        {billing.overdueCount} invoice overdue
+                                        {billing.overdueCount} {t('platform.billingPage.overdueCount')}
                                     </p>
                                     <p className="text-xs text-red-600 dark:text-red-400">
-                                        Total: {formatRupiah(billing.totalOverdueAmount)} perlu perhatian segera
+                                        {t('platform.billingPage.overdueTotalAttention')} {formatRupiah(billing.totalOverdueAmount)}
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => setActiveTab("overdue")}
                                     className="ml-auto rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
                                 >
-                                    Lihat Detail
+                                    {t('platform.billingPage.viewDetail')}
                                 </button>
                             </div>
                         </div>
@@ -571,7 +573,7 @@ export default function PlatformBillingPage() {
                             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                         >
                             <Plus className="h-4 w-4" />
-                            Buat Plan
+                            {t('platform.billingPage.createPlan')}
                         </button>
                     </div>
 
@@ -595,7 +597,7 @@ export default function PlatformBillingPage() {
                                                 : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
                                                 }`}
                                         >
-                                            {plan.isActive ? "Active" : "Inactive"}
+                                            {plan.isActive ? t('platform.billingPage.active') : t('platform.billingPage.inactive')}
                                         </span>
                                     </div>
                                     {plan.description && (
@@ -608,17 +610,17 @@ export default function PlatformBillingPage() {
                                 <div className="mb-4">
                                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {plan.priceMonthly === 0
-                                            ? "Gratis"
+                                            ? t('platform.billingPage.free')
                                             : formatRupiah(plan.priceMonthly)}
                                         {plan.priceMonthly > 0 && (
                                             <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                                                /bulan
+                                                {t('platform.billingPage.perMonth')}
                                             </span>
                                         )}
                                     </div>
                                     {plan.priceYearly && (
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            Tahunan: {formatRupiah(plan.priceYearly)} (hemat{" "}
+                                            {t('platform.billingPage.yearly')}: {formatRupiah(plan.priceYearly)} ({t('platform.billingPage.savePercent')}{" "}
                                             {Math.round(
                                                 ((plan.priceMonthly * 12 - plan.priceYearly) /
                                                     (plan.priceMonthly * 12)) *
@@ -634,7 +636,7 @@ export default function PlatformBillingPage() {
                                         <Users className="h-4 w-4" />
                                         <span>
                                             {plan.maxUsers === -1
-                                                ? "Unlimited"
+                                                ? t('platform.billingPage.unlimited')
                                                 : `${plan.maxUsers} users`}
                                         </span>
                                     </div>
@@ -643,18 +645,18 @@ export default function PlatformBillingPage() {
                                         <span>
                                             {plan.maxStorage
                                                 ? `${plan.maxStorage} MB storage`
-                                                : "Unlimited storage"}
+                                                : t('platform.billingPage.unlimitedStorage')}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                                         <CreditCard className="h-4 w-4" />
-                                        <span>{plan.tenantCount} tenant aktif</span>
+                                        <span>{plan.tenantCount} {t('platform.billingPage.activeTenant')}</span>
                                     </div>
                                 </div>
 
                                 <div className="mb-4">
                                     <p className="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
-                                        Features
+                                        {t('platform.billingPage.featuresLabel')}
                                     </p>
                                     <div className="flex flex-wrap gap-1">
                                         {plan.features
@@ -671,7 +673,7 @@ export default function PlatformBillingPage() {
                                             ))}
                                         {plan.features.filter((f) => f.enabled).length > 6 && (
                                             <span className="text-xs text-gray-500">
-                                                +{plan.features.filter((f) => f.enabled).length - 6} lainnya
+                                                {t('platform.billingPage.andMore')} {plan.features.filter((f) => f.enabled).length - 6}
                                             </span>
                                         )}
                                     </div>
@@ -707,7 +709,7 @@ export default function PlatformBillingPage() {
                                 onChange={(e) => { setPaymentFilter(e.target.value); setPaymentPage(1); }}
                                 className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                             >
-                                <option value="">Semua Status</option>
+                                <option value="">{t('platform.billingPage.allStatus')}</option>
                                 <option value="PAID">Paid</option>
                                 <option value="UNPAID">Unpaid</option>
                                 <option value="PARTIAL">Partial</option>
@@ -752,7 +754,7 @@ export default function PlatformBillingPage() {
                                 {payments.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                            Tidak ada data pembayaran
+                                            {t('platform.billingPage.noPaymentData')}
                                         </td>
                                     </tr>
                                 ) : (
@@ -806,7 +808,7 @@ export default function PlatformBillingPage() {
                             <div className="rounded-xl border border-gray-200 bg-white py-8 text-center dark:border-gray-700 dark:bg-gray-900">
                                 <CreditCard className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
                                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                    Tidak ada data pembayaran
+                                    {t('platform.billingPage.noPaymentData')}
                                 </p>
                             </div>
                         ) : (
@@ -845,7 +847,7 @@ export default function PlatformBillingPage() {
                     {paymentsPagination.totalPages > 1 && (
                         <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Halaman {paymentPage} dari {paymentsPagination.totalPages} · {paymentsPagination.total} total
+                                {t('platform.billingPage.paginationOf')} {paymentPage} {t('platform.billingPage.paginationOf')} {paymentsPagination.totalPages} · {paymentsPagination.total}
                             </p>
                             <div className="flex gap-2">
                                 <button
@@ -854,14 +856,14 @@ export default function PlatformBillingPage() {
                                     className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
-                                    Prev
+                                    {t('platform.billingPage.prev')}
                                 </button>
                                 <button
                                     onClick={() => setPaymentPage((p) => Math.min(paymentsPagination.totalPages, p + 1))}
                                     disabled={paymentPage === paymentsPagination.totalPages}
                                     className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
-                                    Next
+                                    {t('platform.billingPage.next')}
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
                             </div>
@@ -876,10 +878,10 @@ export default function PlatformBillingPage() {
                         <div className="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
                             <CheckCircle2 className="mx-auto h-12 w-12 text-green-400" />
                             <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                Tidak ada invoice overdue
+                                {t('platform.billingPage.noOverdue')}
                             </p>
                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                Semua pembayaran tepat waktu
+                                {t('platform.billingPage.allOnTime')}
                             </p>
                         </div>
                     ) : (
@@ -894,7 +896,7 @@ export default function PlatformBillingPage() {
                                             )}
                                         </p>
                                         <p className="text-xs text-red-600 dark:text-red-400">
-                                            Perlu perhatian segera untuk menghindari churn
+                                            {t('platform.billingPage.needsAttention')}
                                         </p>
                                     </div>
                                 </div>
@@ -959,7 +961,7 @@ export default function PlatformBillingPage() {
                     <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
                         <div className="mb-6 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                {editingPlan ? "Edit Plan" : "Buat Plan Baru"}
+                                {editingPlan ? t('platform.billingPage.editPlan') : t('platform.billingPage.createNewPlan')}
                             </h2>
                             <button
                                 onClick={() => setShowCreateForm(false)}
@@ -973,7 +975,7 @@ export default function PlatformBillingPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Nama *
+                                        {t('platform.billingPage.form.name')}
                                     </label>
                                     <input
                                         type="text"
@@ -984,7 +986,7 @@ export default function PlatformBillingPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Slug *
+                                        {t('platform.billingPage.form.slug')}
                                     </label>
                                     <input
                                         type="text"
@@ -997,7 +999,7 @@ export default function PlatformBillingPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Deskripsi
+                                    {t('platform.billingPage.form.description')}
                                 </label>
                                 <textarea
                                     value={formDescription}
@@ -1010,7 +1012,7 @@ export default function PlatformBillingPage() {
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Harga/Bulan (Rp)
+                                        {t('platform.billingPage.form.priceMonthly')}
                                     </label>
                                     <input
                                         type="number"
@@ -1021,7 +1023,7 @@ export default function PlatformBillingPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Harga/Tahun (Rp)
+                                        {t('platform.billingPage.form.priceYearly')}
                                     </label>
                                     <input
                                         type="number"
@@ -1036,7 +1038,7 @@ export default function PlatformBillingPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Max Users (-1 = unlimited)
+                                        {t('platform.billingPage.form.maxUsers')}
                                     </label>
                                     <input
                                         type="number"
@@ -1049,7 +1051,7 @@ export default function PlatformBillingPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Features
+                                    {t('platform.billingPage.form.features')}
                                 </label>
                                 <div className="space-y-3 max-h-[300px] overflow-y-auto rounded-lg border border-gray-200 p-3 dark:border-gray-600">
                                     {FEATURE_GROUPS.map((group) => (
@@ -1105,7 +1107,7 @@ export default function PlatformBillingPage() {
                                     onClick={() => setShowCreateForm(false)}
                                     className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                                 >
-                                    Batal
+                                    {t('platform.billingPage.form.cancel')}
                                 </button>
                                 <button
                                     onClick={handleSave}
@@ -1117,7 +1119,7 @@ export default function PlatformBillingPage() {
                                     ) : (
                                         <Save className="h-4 w-4" />
                                     )}
-                                    {editingPlan ? "Update" : "Buat"}
+                                    {editingPlan ? t('platform.billingPage.form.update') : t('platform.billingPage.form.create')}
                                 </button>
                             </div>
                         </div>

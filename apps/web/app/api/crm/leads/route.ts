@@ -54,7 +54,7 @@ export async function GET(request: Request) {
             prisma.lead.count({ where }),
         ]);
 
-        const data = leads.map((lead: any) => ({
+        const data = leads.map((lead) => ({
             id: lead.id,
             name: lead.name,
             email: lead.email,

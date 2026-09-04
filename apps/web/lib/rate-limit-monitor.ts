@@ -91,7 +91,8 @@ export async function logRateLimitViolation(violation: RateLimitViolation): Prom
             const redis = await getRedisClient();
             if (redis) {
                 const today = new Date().toISOString().split('T')[0];
-                await redis.pipeline()
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (redis.pipeline() as any)
                     .incr(`rl:stats:violations:${today}`)
                     .incr(`rl:stats:violations:ip:${violation.ip}:${today}`)
                     .incr(`rl:stats:violations:endpoint:${violation.pathname}:${today}`)

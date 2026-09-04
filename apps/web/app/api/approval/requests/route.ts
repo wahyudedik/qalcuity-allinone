@@ -71,7 +71,7 @@ export async function GET(request: Request) {
 
         // Enrich with level names and requester info
         const enrichedRequests = await Promise.all(
-            requests.map(async (req: any) => {
+            requests.map(async (req) => {
                 const level = await prisma.approvalLevel.findFirst({
                     where: {
                         tenantId,

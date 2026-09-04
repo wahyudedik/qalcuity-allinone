@@ -113,7 +113,7 @@ export async function GET(request: Request) {
         const totalRevenue = Number(totalInvoices._sum.total || 0);
 
         // Build recent activities from audit logs
-        const recentActivities = recentAuditLogs.map((log: any) => {
+        const recentActivities = recentAuditLogs.map((log) => {
             const entityIcons: Record<string, string> = {
                 Invoice: 'dollar-sign',
                 Deal: 'trending-up',
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
         // Build alerts
         const alerts: Array<{ id: string; type: string; title: string; message: string; moduleId: string }> = [];
 
-        overdueInvoices.forEach((inv: any) => {
+        overdueInvoices.forEach((inv) => {
             alerts.push({
                 id: `overdue-${inv.id}`,
                 type: 'danger',
@@ -151,7 +151,7 @@ export async function GET(request: Request) {
             });
         });
 
-        lowStockProducts.forEach((prod: any) => {
+        lowStockProducts.forEach((prod) => {
             alerts.push({
                 id: `lowstock-${prod.id}`,
                 type: 'warning',

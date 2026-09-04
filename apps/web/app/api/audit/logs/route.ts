@@ -61,8 +61,7 @@ export async function GET(request: Request) {
             prisma.auditLog.count({ where }),
         ]);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = logs.map((log: any) => ({
+        const data = logs.map((log) => ({
             id: log.id,
             userId: log.userId,
             userName: log.user?.name || 'System',

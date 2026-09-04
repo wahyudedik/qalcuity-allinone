@@ -53,7 +53,7 @@ export async function GET(request: Request) {
             prisma.employee.count({ where }),
         ]);
 
-        const data = employees.map((emp: any) => ({
+        const data = employees.map((emp) => ({
             id: emp.id,
             employeeId: emp.employeeId,
             name: emp.name,

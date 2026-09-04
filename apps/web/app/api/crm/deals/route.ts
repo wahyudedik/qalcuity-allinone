@@ -55,7 +55,7 @@ export async function GET(request: Request) {
             prisma.deal.count({ where }),
         ]);
 
-        const data = deals.map((deal: any) => ({
+        const data = deals.map((deal) => ({
             id: deal.id,
             title: deal.title,
             name: deal.title,

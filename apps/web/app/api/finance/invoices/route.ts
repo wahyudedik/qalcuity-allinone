@@ -58,7 +58,7 @@ export async function GET(request: Request) {
         ]);
 
         // Map to frontend-compatible format
-        const data = invoices.map((inv: any) => ({
+        const data = invoices.map((inv) => ({
             id: inv.id,
             invoiceNumber: inv.invoiceNumber,
             customerName: inv.contact?.name || '-',
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
             dueDate: inv.dueDate.toISOString().split('T')[0],
             createdAt: inv.createdAt.toISOString(),
             notes: inv.notes,
-            items: inv.items.map((item: any) => ({
+            items: inv.items.map((item) => ({
                 id: item.id,
                 description: item.description,
                 quantity: item.quantity,
@@ -79,8 +79,8 @@ export async function GET(request: Request) {
                 total: item.total,
             })),
             paidAmount: inv.payments
-                .filter((p: any) => p.status === 'COMPLETED')
-                .reduce((sum: any, p: any) => sum + Number(p.amount), 0),
+                .filter((p) => p.status === 'COMPLETED')
+                .reduce((sum, p) => sum + Number(p.amount), 0),
         }));
 
         return NextResponse.json({
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         const total = subtotal + taxAmount;
 
         // Use transaction for atomicity: contact creation + invoice + items
-        const invoice = await prisma.$transaction(async (tx: any) => {
+        const invoice = await prisma.$transaction(async (tx) => {
             // Generate unique invoice number using timestamp + random suffix to prevent race condition
             const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
                     tenantId,
                     contactId,
                     items: {
-                        create: validatedData.items.map((item: any) => ({
+                        create: validatedData.items.map((item) => ({
                             description: item.description,
                             quantity: item.quantity,
                             unitPrice: item.unitPrice,
@@ -286,10 +286,10 @@ export async function PUT(request: Request) {
             data.total = subtotal + taxAmount;
 
             // Delete old items and create new ones in transaction
-            await prisma.$transaction(async (tx: any) => {
+            await prisma.$transaction(async (tx) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
-                    data: (validatedData.items ?? []).map((item: any) => ({
+                    data: (validatedData.items ?? []).map((item) => ({
                         invoiceId: id,
                         description: item.description,
                         quantity: item.quantity,

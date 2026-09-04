@@ -62,7 +62,7 @@ export async function GET(request: Request) {
             prisma.payrollRecord.count({ where }),
         ]);
 
-        const data = records.map((r: any) => ({
+        const data = records.map((r) => ({
             id: r.id,
             employeeName: r.employee.name,
             employeeId: r.employee.employeeId,

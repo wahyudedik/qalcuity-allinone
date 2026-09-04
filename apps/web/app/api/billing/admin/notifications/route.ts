@@ -45,11 +45,11 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            data: notifications.map((n: any) => ({
+            data: notifications.map((n) => ({
                 id: n.id,
                 type: 'PAYMENT_RECEIVED',
                 title: `Pembayaran Baru dari ${n.tenant.name}`,
-                message: `${n.accountName || 'Unknown'} mengirim Rp ${n.amount.toLocaleString('id-ID')} via ${n.bankName || 'Transfer Bank'}`,
+                message: `${n.accountName || 'Unknown'} mengirim Rp ${Number(n.amount).toLocaleString('id-ID')} via ${n.bankName || 'Transfer Bank'}`,
                 tenant: n.tenant,
                 plan: n.subscription.plan,
                 amount: n.amount,

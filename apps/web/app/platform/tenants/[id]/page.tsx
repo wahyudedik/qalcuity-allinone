@@ -26,6 +26,7 @@ import {
     TrendingUp,
     TrendingDown,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface TenantUser {
@@ -150,6 +151,7 @@ function RoleBadge({ role }: { role: string }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformTenantDetailPage() {
+    const { t } = useTranslation();
     const params = useParams();
     const tenantId = params?.id as string;
     const [tenant, setTenant] = useState<TenantDetail | null>(null);
@@ -174,10 +176,10 @@ export default function PlatformTenantDetailPage() {
             if (data.success && data.data) {
                 setTenant(data.data);
             } else {
-                setError(data.error || "Gagal mengambil data tenant");
+                setError(data.error || t('platform.tenantDetailPage.errorFetch'));
             }
         } catch {
-            setError("Gagal menghubungi server");
+            setError(t('platform.tenantDetailPage.errorContact'));
         } finally {
             setLoading(false);
         }
@@ -217,12 +219,12 @@ export default function PlatformTenantDetailPage() {
             const data = await res.json();
             if (data.success) {
                 setTenant({ ...tenant, status: "suspended", planPrice: 0 });
-                setToast({ message: "Tenant berhasil ditangguhkan", type: "success" });
+                setToast({ message: t('platform.tenantDetailPage.successTenantSuspended'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal menangguhkan tenant", type: "error" });
+                setToast({ message: data.error || t('platform.tenantDetailPage.errorSuspend'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.tenantDetailPage.errorContact'), type: "error" });
         } finally {
             setActionLoading(false);
         }
@@ -240,12 +242,12 @@ export default function PlatformTenantDetailPage() {
             const data = await res.json();
             if (data.success) {
                 fetchTenant();
-                setToast({ message: "Tenant berhasil diaktifkan kembali", type: "success" });
+                setToast({ message: t('platform.tenantDetailPage.successTenantReactivated'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal mengaktifkan tenant", type: "error" });
+                setToast({ message: data.error || t('platform.tenantDetailPage.errorReactivate'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal menghubungi server", type: "error" });
+            setToast({ message: t('platform.tenantDetailPage.errorContact'), type: "error" });
         } finally {
             setActionLoading(false);
         }
@@ -253,7 +255,7 @@ export default function PlatformTenantDetailPage() {
 
     const handleSendNotification = async () => {
         if (!notificationSubject || !notificationMessage) {
-            setToast({ message: "Subjek dan pesan wajib diisi", type: "error" });
+            setToast({ message: t('platform.tenantDetailPage.validationSubjectMessageRequired'), type: "error" });
             return;
         }
         setActionLoading(true);
@@ -269,15 +271,15 @@ export default function PlatformTenantDetailPage() {
             });
             const data = await res.json();
             if (data.success) {
-                setToast({ message: "Notifikasi berhasil dikirim", type: "success" });
+                setToast({ message: t('platform.tenantDetailPage.successNotificationSent'), type: "success" });
                 setShowNotificationModal(false);
                 setNotificationMessage("");
                 setNotificationSubject("");
             } else {
-                setToast({ message: data.error || "Gagal mengirim notifikasi", type: "error" });
+                setToast({ message: data.error || t('platform.tenantDetailPage.errorNotificationFailed'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal mengirim notifikasi", type: "error" });
+            setToast({ message: t('platform.tenantDetailPage.errorNotificationFailed'), type: "error" });
         } finally {
             setActionLoading(false);
         }
@@ -296,12 +298,12 @@ export default function PlatformTenantDetailPage() {
             if (data.success) {
                 fetchTenant();
                 setShowPlanModal(false);
-                setToast({ message: "Plan berhasil diubah", type: "success" });
+                setToast({ message: t('platform.tenantDetailPage.successPlanChanged'), type: "success" });
             } else {
-                setToast({ message: data.error || "Gagal mengubah plan", type: "error" });
+                setToast({ message: data.error || t('platform.tenantDetailPage.errorPlanChangeFailed'), type: "error" });
             }
         } catch {
-            setToast({ message: "Gagal mengubah plan", type: "error" });
+            setToast({ message: t('platform.tenantDetailPage.errorPlanChangeFailed'), type: "error" });
         } finally {
             setActionLoading(false);
         }
@@ -320,10 +322,10 @@ export default function PlatformTenantDetailPage() {
             <div className="text-center py-12">
                 <Building2 className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
                 <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {error || "Tenant tidak ditemukan"}
+                    {error || t('platform.tenantDetailPage.notFound')}
                 </p>
                 <Link href="/platform/tenants" className="mt-4 inline-block text-sm text-purple-600 hover:text-purple-700">
-                    Kembali ke daftar tenant
+                    {t('platform.tenantDetailPage.notFoundHint')}
                 </Link>
             </div>
         );
@@ -337,7 +339,7 @@ export default function PlatformTenantDetailPage() {
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
                 <ArrowLeft className="h-4 w-4" />
-                Kembali ke Tenant List
+                {t('platform.tenantDetailPage.backToList')}
             </Link>
 
             {/* Header */}
@@ -364,7 +366,7 @@ export default function PlatformTenantDetailPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <Send className="h-4 w-4" />
-                        Send Notification
+                        {t('platform.tenantDetailPage.sendNotification')}
                     </button>
                     <button
                         onClick={() => {
@@ -374,7 +376,7 @@ export default function PlatformTenantDetailPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <ArrowRightLeft className="h-4 w-4" />
-                        Change Plan
+                        {t('platform.tenantDetailPage.changePlan')}
                     </button>
                     {tenant.status === "active" || tenant.status === "trial" ? (
                         <button
@@ -387,7 +389,7 @@ export default function PlatformTenantDetailPage() {
                             ) : (
                                 <Ban className="h-4 w-4" />
                             )}
-                            Suspend Tenant
+                            {t('platform.tenantDetailPage.suspendTenant')}
                         </button>
                     ) : (
                         <button
@@ -400,7 +402,7 @@ export default function PlatformTenantDetailPage() {
                             ) : (
                                 <CheckCircle2 className="h-4 w-4" />
                             )}
-                            Reactivate Tenant
+                            {t('platform.tenantDetailPage.reactivateTenant')}
                         </button>
                     )}
                 </div>
@@ -414,7 +416,7 @@ export default function PlatformTenantDetailPage() {
                             <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Users</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.users')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
                                 {tenant.stats.totalUsers}
                             </p>
@@ -427,7 +429,7 @@ export default function PlatformTenantDetailPage() {
                             <CreditCard className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">MRR</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.mrr')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
                                 {tenant.planPrice > 0 ? formatRupiah(tenant.planPrice) : "-"}
                             </p>
@@ -440,7 +442,7 @@ export default function PlatformTenantDetailPage() {
                             <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Invoices</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.invoices')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
                                 {tenant.stats.totalInvoices.toLocaleString()}
                             </p>
@@ -453,7 +455,7 @@ export default function PlatformTenantDetailPage() {
                             <Package className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Products</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.products')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
                                 {tenant.stats.totalProducts}
                             </p>
@@ -468,17 +470,17 @@ export default function PlatformTenantDetailPage() {
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Tenant Information
+                            {t('platform.tenantDetailPage.tenantInfo')}
                         </h2>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
                         {[
-                            { icon: Mail, label: "Email", value: tenant.email },
-                            { icon: Globe, label: "Website", value: tenant.website || "-" },
-                            { icon: MapPin, label: "Alamat", value: tenant.address || "-" },
-                            { icon: CreditCard, label: "Plan", value: tenant.plan },
-                            { icon: Calendar, label: "Terdaftar", value: new Date(tenant.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) },
-                            { icon: Clock, label: "Terakhir Update", value: new Date(tenant.updatedAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) },
+                            { icon: Mail, label: t('platform.tenantDetailPage.email'), value: tenant.email },
+                            { icon: Globe, label: t('platform.tenantDetailPage.website'), value: tenant.website || "-" },
+                            { icon: MapPin, label: t('platform.tenantDetailPage.address'), value: tenant.address || "-" },
+                            { icon: CreditCard, label: t('platform.tenantDetailPage.plan'), value: tenant.plan },
+                            { icon: Calendar, label: t('platform.tenantDetailPage.registered'), value: new Date(tenant.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) },
+                            { icon: Clock, label: t('platform.tenantDetailPage.lastUpdate'), value: new Date(tenant.updatedAt).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) },
                         ].map((item) => (
                             <div key={item.label} className="flex items-center gap-4 px-6 py-3">
                                 <item.icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -501,13 +503,13 @@ export default function PlatformTenantDetailPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Users ({tenant.users.length})
+                                {t('platform.tenantDetailPage.users')} ({tenant.users.length})
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-800">
                             {tenant.users.length === 0 ? (
                                 <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                    Belum ada user
+                                    {t('platform.tenantDetailPage.noUsers')}
                                 </div>
                             ) : (
                                 tenant.users.map((user) => (
@@ -531,13 +533,13 @@ export default function PlatformTenantDetailPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Subscriptions & Billing
+                                {t('platform.tenantDetailPage.subscriptionsBilling')}
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-800">
                             {tenant.subscriptions.length === 0 ? (
                                 <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                    Belum ada subscription
+                                    {t('platform.tenantDetailPage.noSubscription')}
                                 </div>
                             ) : (
                                 tenant.subscriptions.map((sub) => (
@@ -548,7 +550,7 @@ export default function PlatformTenantDetailPage() {
                                                     {sub.plan}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {new Date(sub.startDate).toLocaleDateString("id-ID")} - {sub.endDate ? new Date(sub.endDate).toLocaleDateString("id-ID") : "Berlangsung"}
+                                                    {new Date(sub.startDate).toLocaleDateString("id-ID")} - {sub.endDate ? new Date(sub.endDate).toLocaleDateString("id-ID") : t('platform.tenantDetailPage.active')}
                                                 </p>
                                             </div>
                                             <div className="text-right">
@@ -563,7 +565,7 @@ export default function PlatformTenantDetailPage() {
                                                     {sub.status}
                                                 </span>
                                                 <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                                    {sub.price > 0 ? formatRupiah(sub.price) : "Free"}
+                                                    {sub.price > 0 ? formatRupiah(sub.price) : t('platform.tenantDetailPage.free')}
                                                 </p>
                                             </div>
                                         </div>
@@ -577,13 +579,13 @@ export default function PlatformTenantDetailPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Recent Activity
+                                {t('platform.tenantDetailPage.recentActivity')}
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-800">
                             {tenant.recentActivity.length === 0 ? (
                                 <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                    Belum ada aktivitas
+                                    {t('platform.tenantDetailPage.noActivity')}
                                 </div>
                             ) : (
                                 tenant.recentActivity.map((log) => (
@@ -594,7 +596,7 @@ export default function PlatformTenantDetailPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-gray-900 dark:text-gray-100">
                                                 <span className="font-medium">{log.action}</span>
-                                                {" "}on {log.entity}
+                                                {" "}{t('platform.tenantDetailPage.onEntity')} {log.entity}
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">
                                                 {log.ipAddress && `IP: ${log.ipAddress} · `}
@@ -613,7 +615,7 @@ export default function PlatformTenantDetailPage() {
             <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                 <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Quick Actions
+                        {t('platform.tenantDetailPage.quickActions')}
                     </h2>
                 </div>
                 <div className="flex flex-wrap gap-3 p-4">
@@ -622,29 +624,29 @@ export default function PlatformTenantDetailPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
                         <Send className="h-4 w-4 text-blue-500" />
-                        Send Notification
+                        {t('platform.tenantDetailPage.sendNotification')}
                     </button>
                     <button
                         onClick={() => setShowPlanModal(true)}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
                         <ArrowRightLeft className="h-4 w-4 text-purple-500" />
-                        Change Plan
+                        {t('platform.tenantDetailPage.changePlan')}
                     </button>
                     <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                         <Shield className="h-4 w-4 text-orange-500" />
-                        Reset Password Admin
+                        {t('platform.tenantDetailPage.resetPasswordAdmin')}
                     </button>
                     <Link
                         href="/platform/monitoring"
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
                         <Activity className="h-4 w-4 text-green-500" />
-                        View Audit Log
+                        {t('platform.tenantDetailPage.viewAuditLog')}
                     </Link>
                     <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                         <FileText className="h-4 w-4 text-purple-500" />
-                        Export Data
+                        {t('platform.tenantDetailPage.exportData')}
                     </button>
                 </div>
             </div>
@@ -655,7 +657,7 @@ export default function PlatformTenantDetailPage() {
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
                         <div className="mb-6 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Kirim Notifikasi
+                                {t('platform.tenantDetailPage.notificationTitle')}
                             </h2>
                             <button
                                 onClick={() => setShowNotificationModal(false)}
@@ -667,7 +669,7 @@ export default function PlatformTenantDetailPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Kepada
+                                    {t('platform.tenantDetailPage.to')}
                                 </label>
                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                     {tenant.email}
@@ -675,25 +677,25 @@ export default function PlatformTenantDetailPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Subjek *
+                                    {t('platform.tenantDetailPage.subject')}
                                 </label>
                                 <input
                                     type="text"
                                     value={notificationSubject}
                                     onChange={(e) => setNotificationSubject(e.target.value)}
-                                    placeholder="Subjek notifikasi..."
+                                    placeholder={t('platform.tenantDetailPage.subjectPlaceholder')}
                                     className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Pesan *
+                                    {t('platform.tenantDetailPage.message')}
                                 </label>
                                 <textarea
                                     value={notificationMessage}
                                     onChange={(e) => setNotificationMessage(e.target.value)}
                                     rows={4}
-                                    placeholder="Tulis pesan notifikasi..."
+                                    placeholder={t('platform.tenantDetailPage.messagePlaceholder')}
                                     className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
@@ -702,7 +704,7 @@ export default function PlatformTenantDetailPage() {
                                     onClick={() => setShowNotificationModal(false)}
                                     className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                                 >
-                                    Batal
+                                    {t('platform.tenantDetailPage.cancel')}
                                 </button>
                                 <button
                                     onClick={handleSendNotification}
@@ -714,7 +716,7 @@ export default function PlatformTenantDetailPage() {
                                     ) : (
                                         <Send className="h-4 w-4" />
                                     )}
-                                    Kirim
+                                    {t('platform.tenantDetailPage.send')}
                                 </button>
                             </div>
                         </div>
@@ -728,7 +730,7 @@ export default function PlatformTenantDetailPage() {
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
                         <div className="mb-6 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Ubah Plan
+                                {t('platform.tenantDetailPage.changePlanTitle')}
                             </h2>
                             <button
                                 onClick={() => setShowPlanModal(false)}
@@ -740,7 +742,7 @@ export default function PlatformTenantDetailPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Plan Saat Ini
+                                    {t('platform.tenantDetailPage.currentPlan')}
                                 </label>
                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                     {tenant.plan}
@@ -748,7 +750,7 @@ export default function PlatformTenantDetailPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Plan Baru
+                                    {t('platform.tenantDetailPage.newPlan')}
                                 </label>
                                 <select
                                     value={selectedPlan}
@@ -757,7 +759,7 @@ export default function PlatformTenantDetailPage() {
                                 >
                                     {plans.map((plan) => (
                                         <option key={plan.slug} value={plan.slug}>
-                                            {plan.name} - {plan.price > 0 ? formatRupiah(plan.price) : "Free"}
+                                            {plan.name} - {plan.price > 0 ? formatRupiah(plan.price) : t('platform.tenantDetailPage.free')}
                                         </option>
                                     ))}
                                 </select>
@@ -767,7 +769,7 @@ export default function PlatformTenantDetailPage() {
                                     onClick={() => setShowPlanModal(false)}
                                     className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                                 >
-                                    Batal
+                                    {t('platform.tenantDetailPage.cancel')}
                                 </button>
                                 <button
                                     onClick={handleChangePlan}
@@ -779,7 +781,7 @@ export default function PlatformTenantDetailPage() {
                                     ) : (
                                         <ArrowRightLeft className="h-4 w-4" />
                                     )}
-                                    Ubah Plan
+                                    {t('platform.tenantDetailPage.changePlan')}
                                 </button>
                             </div>
                         </div>
