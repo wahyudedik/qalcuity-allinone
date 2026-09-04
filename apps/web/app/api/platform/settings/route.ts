@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-error";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
@@ -68,8 +69,15 @@ function writeSettings(settings: PlatformSettings): void {
 
 // ─── GET /api/platform/settings ────────────────────────────────────────────
 // Returns platform-wide settings. Only accessible by SUPERADMIN.
-export async function GET() {
-    // 1. Auth check
+export async function GET(request: Request) {
+    // 1. Rate limiting
+    const ip = getClientIp(request);
+    const rateLimitResult = checkRateLimit(`api:platform:settings:GET:${ip}`, 30, 60000);
+    if (!rateLimitResult.success) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    // 2. Auth check
     const session = await getServerSession(authOptions);
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -95,7 +103,14 @@ export async function GET() {
 // ─── PUT /api/platform/settings ────────────────────────────────────────────
 // Update platform-wide settings. Only accessible by SUPERADMIN.
 export async function PUT(req: Request) {
-    // 1. Auth check
+    // 1. Rate limiting
+    const ip = getClientIp(req);
+    const rateLimitResult = checkRateLimit(`api:platform:settings:PUT:${ip}`, 10, 60000);
+    if (!rateLimitResult.success) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    // 2. Auth check
     const session = await getServerSession(authOptions);
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

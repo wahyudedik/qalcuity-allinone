@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // ─── GET /api/platform/billing ───────────────────────────────────────────────
 // Returns billing overview: MRR, ARR, churn rate, payment history, overdue alerts.
 // Only accessible by SUPERADMIN role.
 export async function GET(request: Request) {
-    // 1. Auth check
+    // 1. Rate limiting
+    const ip = getClientIp(request);
+    const rateLimitResult = checkRateLimit(`api:platform:billing:GET:${ip}`, 30, 60000);
+    if (!rateLimitResult.success) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    // 2. Auth check
     const session = await getServerSession(authOptions);
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

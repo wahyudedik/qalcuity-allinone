@@ -1,10 +1,64 @@
-> **Last Updated:** 4 September 2026 (POS Feature Phase 3 — Refunds, Reports, Terminals Management)
-> **Version:** v7.4.0
-> **Status:** POS Feature Phase 3 COMPLETE — 10 API routes, 7 UI pages, 6 loading states, 6-tab POS layout, full refund/reports/terminals management
+> **Last Updated:** 4 September 2026 (Batch K — Security Hardening + Quick Wins)
+> **Version:** v7.5.0
+> **Status:** Batch K COMPLETE — 34 audit issues addressed, P0 Critical + P1 Important fixes applied across AI chat, 25+ analytics routes, 4 mutation routes, 7 error boundaries, 5 loading states, 4 missing rate limit routes
 
 ---
 
 ## 🎯 Current Sprint
+
+### Batch K — Security Hardening + Quick Wins (4 September 2026)
+
+> **Audit Score:** 72/100 → Target 85+ after Batch K
+> **34 issues found** — P0 Critical (5) + P1 Important (11) + P2 Nice-to-have (18)
+
+#### T1: AI Chat API Security (P0 Critical)
+- ✅ **Rate Limiting** — [`apps/web/app/api/ai/chat/route.ts`](apps/web/app/api/ai/chat/route.ts) — 30 requests/minute per tenant+IP
+- ✅ **Audit Logging** — Chat interactions logged via `logAudit()` for compliance
+- ✅ **Tenant Isolation** — Session-based tenantId extraction
+- ✅ **Input Sanitization** — `sanitizeInput()` applied to all message content
+- ✅ **Zod Validation** — `chatRequestSchema` validates message structure, role enum, content limits
+
+#### T2: Analytics Routes Rate Limiting (P0 Critical) — 21 routes
+- ✅ **Rate limiting added** to all 21 analytics API routes:
+  - [`alerts/route.ts`](apps/web/app/api/analytics/alerts/route.ts), [`alerts/[id]/route.ts`](apps/web/app/api/analytics/alerts/[id]/route.ts), [`alerts/triggers/route.ts`](apps/web/app/api/analytics/alerts/triggers/route.ts), [`alerts/triggers/[id]/acknowledge/route.ts`](apps/web/app/api/analytics/alerts/triggers/[id]/acknowledge/route.ts)
+  - [`charts/route.ts`](apps/web/app/api/analytics/charts/route.ts), [`charts/[id]/route.ts`](apps/web/app/api/analytics/charts/[id]/route.ts)
+  - [`dashboard/route.ts`](apps/web/app/api/analytics/dashboard/route.ts)
+  - [`dashboards/route.ts`](apps/web/app/api/analytics/dashboards/route.ts), [`dashboards/[id]/route.ts`](apps/web/app/api/analytics/dashboards/[id]/route.ts), [`dashboards/[id]/widgets/route.ts`](apps/web/app/api/analytics/dashboards/[id]/widgets/route.ts)
+  - [`dictionary/route.ts`](apps/web/app/api/analytics/dictionary/route.ts), [`explorer/route.ts`](apps/web/app/api/analytics/explorer/route.ts)
+  - [`kpi/route.ts`](apps/web/app/api/analytics/kpi/route.ts), [`kpi/[id]/route.ts`](apps/web/app/api/analytics/kpi/[id]/route.ts), [`kpi/[id]/evaluate/route.ts`](apps/web/app/api/analytics/kpi/[id]/evaluate/route.ts)
+  - [`metrics/route.ts`](apps/web/app/api/analytics/metrics/route.ts), [`query-history/route.ts`](apps/web/app/api/analytics/query-history/route.ts)
+  - [`reports/route.ts`](apps/web/app/api/analytics/reports/route.ts), [`reports/[id]/route.ts`](apps/web/app/api/analytics/reports/[id]/route.ts), [`reports/[id]/execute/route.ts`](apps/web/app/api/analytics/reports/[id]/execute/route.ts)
+  - [`scheduled/route.ts`](apps/web/app/api/analytics/scheduled/route.ts)
+- ✅ GET routes: 60 req/min, POST/PUT/DELETE: 30 req/min per IP
+
+#### T3: Input Sanitization (P0 Critical) — 4 mutation routes
+- ✅ [`apps/web/app/api/finance/invoices/route.ts`](apps/web/app/api/finance/invoices/route.ts) — `sanitizeObject()` before Zod validation
+- ✅ [`apps/web/app/api/finance/payments/route.ts`](apps/web/app/api/finance/payments/route.ts) — `sanitizeObject()` before Zod validation
+- ✅ [`apps/web/app/api/crm/deals/route.ts`](apps/web/app/api/crm/deals/route.ts) — `sanitizeObject()` before Zod validation
+- ✅ [`apps/web/app/api/inventory/products/route.ts`](apps/web/app/api/inventory/products/route.ts) — `sanitizeObject()` before Zod validation
+
+#### T4: Error Boundaries (P1 Important) — 7 pages
+- ✅ [`apps/web/app/dashboard/ai/error.tsx`](apps/web/app/dashboard/ai/error.tsx) — AIError
+- ✅ [`apps/web/app/dashboard/pos/error.tsx`](apps/web/app/dashboard/pos/error.tsx) — POSError
+- ✅ [`apps/web/app/platform/error.tsx`](apps/web/app/platform/error.tsx) — PlatformError
+- ✅ [`apps/web/app/platform/monitoring/error.tsx`](apps/web/app/platform/monitoring/error.tsx) — MonitoringError
+- ✅ [`apps/web/app/platform/security/error.tsx`](apps/web/app/platform/security/error.tsx) — SecurityError
+- ✅ [`apps/web/app/platform/support/error.tsx`](apps/web/app/platform/support/error.tsx) — SupportError
+- ✅ [`apps/web/app/platform/tenants/error.tsx`](apps/web/app/platform/tenants/error.tsx) — TenantsError
+- All use `ModuleError` from `@/components/ui/error-boundary` + `useTranslation`
+
+#### T5: Loading States (P1 Important) — 5 pages
+- ✅ [`apps/web/app/platform/monitoring/loading.tsx`](apps/web/app/platform/monitoring/loading.tsx) — PageHeaderSkeleton + StatsCardsSkeleton + CardGridSkeleton
+- ✅ [`apps/web/app/platform/security/loading.tsx`](apps/web/app/platform/security/loading.tsx) — PageHeaderSkeleton + StatsCardsSkeleton
+- ✅ [`apps/web/app/platform/support/loading.tsx`](apps/web/app/platform/support/loading.tsx) — PageHeaderSkeleton + CardGridSkeleton
+- ✅ [`apps/web/app/platform/tenants/loading.tsx`](apps/web/app/platform/tenants/loading.tsx) — PageHeaderSkeleton + StatsCardsSkeleton + TableSkeleton
+- ✅ [`apps/web/app/platform/settings/loading.tsx`](apps/web/app/platform/settings/loading.tsx) — PageHeaderSkeleton + CardGridSkeleton
+
+#### T6: Rate Limiting for Missing Routes (P1 Important) — 4 routes
+- ✅ [`apps/web/app/api/demo/load/route.ts`](apps/web/app/api/demo/load/route.ts) — 5 req/5min (expensive operation)
+- ✅ [`apps/web/app/api/upload/route.ts`](apps/web/app/api/upload/route.ts) — 20 req/min
+- ✅ [`apps/web/app/api/platform/settings/route.ts`](apps/web/app/api/platform/settings/route.ts) — GET: 30/min, PUT: 10/min
+- ✅ [`apps/web/app/api/platform/billing/route.ts`](apps/web/app/api/platform/billing/route.ts) — 30/min
 
 ### POS Feature — Phase 3: Refunds, Reports, Terminals Management (4 September 2026)
 - ✅ **API Routes** — 2 new API route files for POS refunds:

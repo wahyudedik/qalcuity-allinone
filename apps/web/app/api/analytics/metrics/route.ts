@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { METRIC_DEFINITIONS } from '@qalcuity/analytics'
 
 // ============================================
@@ -13,6 +14,12 @@ import { METRIC_DEFINITIONS } from '@qalcuity/analytics'
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:analytics:metrics:GET:${ip}`, 60, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })

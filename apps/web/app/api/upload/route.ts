@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { handleApiError } from '@/lib/api-error';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -27,6 +28,17 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { success: false, error: 'Unauthorized' },
                 { status: 401 }
+            );
+        }
+
+        // 2. Rate limiting
+        const ip = getClientIp(request);
+        const tenantId = session.user.tenantId;
+        const rateLimitResult = checkRateLimit(`api:upload:${tenantId}:${ip}`, 20, 60000); // 20 per minute
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Terlalu banyak upload. Coba lagi nanti.' },
+                { status: 429 }
             );
         }
 

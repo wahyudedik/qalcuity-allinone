@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { sanitizeObject } from '@/lib/sanitize';
 import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
@@ -94,7 +95,10 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
 
-        const validation = createProductSchema.safeParse(body);
+        // Sanitize text inputs before validation
+        const sanitizedBody = sanitizeObject(body);
+
+        const validation = createProductSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
