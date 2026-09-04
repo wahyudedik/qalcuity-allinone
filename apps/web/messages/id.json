@@ -154,7 +154,8 @@
         "posTransactions": "Transaksi",
         "posRefunds": "Refund",
         "posReports": "Laporan POS",
-        "posLoyalty": "Loyalty"
+        "posLoyalty": "Loyalty",
+        "posMonitor": "Monitor"
     },
     "dashboard": {
         "welcome": "Selamat datang kembali! Berikut ringkasan bisnis Anda hari ini.",
@@ -3105,6 +3106,7 @@
                 "refunds": "Refund",
                 "reports": "Laporan",
                 "terminals": "Terminal",
+                "monitor": "Monitor",
                 "loyalty": "Loyalty"
             }
         },
@@ -3187,7 +3189,26 @@
             "avgPerTransaction": "Rata-rata/Transaksi",
             "weeklySummary": "Ringkasan Minggu Ini",
             "monthlySummary": "Ringkasan Bulan Ini",
-            "paymentSummary": "Ringkasan Metode Pembayaran"
+            "paymentSummary": "Ringkasan Metode Pembayaran",
+            "salesTrend": "Tren Penjualan",
+            "salesByCategory": "Penjualan per Kategori",
+            "hourlyTrend": "Tren Per Jam",
+            "cashierPerformance": "Performa Kasir",
+            "sessions": "Sesi",
+            "yesterday": "Kemarin",
+            "change": "Perubahan",
+            "noCashierData": "Belum ada data kasir",
+            "exportCSV": "Ekspor CSV",
+            "daily": "Harian",
+            "weekly": "Mingguan",
+            "monthly": "Bulanan",
+            "custom": "Kustom",
+            "vsYesterday": "vs kemarin",
+            "noChange": "Tidak ada perubahan",
+            "totalSales": "Total Penjualan",
+            "totalTax": "Total Pajak",
+            "avgTransaction": "Rata-rata Transaksi",
+            "topProducts": "Produk Terlaris"
         },
         "terminals": {
             "title": "Terminal POS",
@@ -3266,6 +3287,23 @@
             "noRewardsDesc": "Buat reward yang dapat ditukar member dengan poin mereka.",
             "noTransactions": "Belum ada transaksi",
             "confirmDeleteReward": "Apakah Anda yakin ingin menonaktifkan reward ini? Member tidak akan bisa menukarkannya lagi."
+        },
+        "monitor": {
+            "title": "Monitor Terminal",
+            "subtitle": "Pantau semua terminal POS secara real-time",
+            "statusActive": "Aktif",
+            "statusIdle": "Idle",
+            "statusOffline": "Offline",
+            "totalTerminals": "Total Terminal",
+            "active": "Aktif",
+            "idle": "Idle",
+            "offline": "Offline",
+            "transactions": "Transaksi Hari Ini",
+            "sales": "Penjualan Hari Ini",
+            "openedAt": "Dibuka",
+            "liveSession": "Sesi aktif",
+            "lastUpdated": "Terakhir diperbarui",
+            "noTerminals": "Belum ada terminal yang dikonfigurasi"
         }
     },
     "errors": {
