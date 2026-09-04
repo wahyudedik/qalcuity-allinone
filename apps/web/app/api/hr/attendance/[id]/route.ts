@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { updateAttendanceSchema } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -66,6 +68,8 @@ export async function PUT(
         const { id } = params;
         const body = await request.json();
 
+        const validated = updateAttendanceSchema.parse(body);
+
         const existing = await prisma.attendanceRecord.findFirst({
             where: { id, tenantId },
         });
@@ -77,18 +81,18 @@ export async function PUT(
         }
 
         const data: Record<string, unknown> = {};
-        if (body.date) data.date = new Date(String(body.date));
-        if (body.clockIn) {
+        if (validated.date) data.date = new Date(String(validated.date));
+        if (validated.clockIn) {
             const dateStr = existing.date.toISOString().split('T')[0];
-            data.clockIn = new Date(`${dateStr}T${body.clockIn}`);
+            data.clockIn = new Date(`${dateStr}T${validated.clockIn}`);
         }
-        if (body.clockOut) {
+        if (validated.clockOut) {
             const dateStr = existing.date.toISOString().split('T')[0];
-            data.clockOut = new Date(`${dateStr}T${body.clockOut}`);
+            data.clockOut = new Date(`${dateStr}T${validated.clockOut}`);
         }
-        if (typeof body.status === 'string') data.status = body.status.toUpperCase();
-        if (typeof body.workHours === 'number') data.workHours = body.workHours;
-        if (typeof body.notes === 'string') data.notes = body.notes;
+        if (validated.status) data.status = validated.status;
+        if (validated.workHours !== undefined) data.workHours = validated.workHours;
+        if (validated.notes !== undefined) data.notes = validated.notes;
 
         const updated = await prisma.attendanceRecord.update({
             where: { id },
@@ -110,12 +114,8 @@ export async function PUT(
         });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -152,11 +152,7 @@ export async function DELETE(
         });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

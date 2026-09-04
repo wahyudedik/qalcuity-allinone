@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
 import { sendInvoiceCreatedEmail } from '@/lib/email';
 import { createApprovalRequest } from '@/lib/approval';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -90,9 +91,8 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -215,9 +215,8 @@ export async function POST(request: Request) {
         }
 
         return NextResponse.json({ success: true, data: invoice }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -310,9 +309,8 @@ export async function PUT(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: invoice });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -344,8 +342,7 @@ export async function DELETE(request: Request) {
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

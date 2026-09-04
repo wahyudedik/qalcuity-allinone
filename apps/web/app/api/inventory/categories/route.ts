@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { createCategorySchema, formatZodError } from '@/lib/validation-schemas'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 // GET /api/inventory/categories — List categories with product count and total value
 export async function GET(request: Request) {
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
             orderBy: { name: 'asc' },
         })
 
-        const data = categories.map((category: any) => ({
+        const data = categories.map((category) => ({
             id: category.id,
             name: category.name,
             description: category.description || '',
@@ -48,11 +49,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 })
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -132,8 +129,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -187,7 +183,6 @@ export async function DELETE(request: Request) {
             message: 'Kategori berhasil dihapus',
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -70,9 +72,8 @@ export async function GET(
         };
 
         return NextResponse.json({ success: true, data });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -166,7 +167,7 @@ export async function PUT(
             updateData.taxAmount = taxAmount;
             updateData.total = subtotal + taxAmount;
 
-            await prisma.$transaction(async (tx: any) => {
+            await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
                     data: (validatedData.items ?? []).map((item) => ({
@@ -189,9 +190,8 @@ export async function PUT(
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: updateData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: invoice });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -219,8 +219,7 @@ export async function DELETE(
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
