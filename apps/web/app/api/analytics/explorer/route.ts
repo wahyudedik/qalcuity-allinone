@@ -8,6 +8,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getDatasetById } from '@qalcuity/analytics'
 import type { DatasetDefinition, DimensionDefinition, MeasureDefinition } from '@qalcuity/analytics'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ============================================
 // TYPES
@@ -112,6 +113,12 @@ type PrismaClient = Record<string, { findMany: (args: Record<string, unknown>) =
 
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:analytics:explorer:route:POST:${ip}`, 60, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })

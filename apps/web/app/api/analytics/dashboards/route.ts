@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ============================================
 // TYPES
@@ -33,6 +34,12 @@ interface CreateDashboardBody {
 
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:analytics:dashboards:route:GET:${ip}`, 60, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -110,6 +117,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:analytics:dashboards:route:POST:${ip}`, 60, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })

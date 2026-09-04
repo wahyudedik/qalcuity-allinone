@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermissionForRoute } from "@/lib/session";
 import { loadDemoData, tenantHasData } from "@/lib/seed-data/demo";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * POST /api/demo/load
@@ -18,6 +19,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
         const { tenantId } = auth;
+
+        // Rate limiting: demo load is expensive, limit strictly
+        const ip = getClientIp(req);
+        const rateLimitResult = checkRateLimit(`api:demo:load:${tenantId}:${ip}`, 5, 300000); // 5 per 5 minutes
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: "Terlalu banyak request. Coba lagi nanti." },
+                { status: 429 }
+            );
+        }
 
         // Check if tenant already has data (unless force=true)
         let body: { force?: boolean } = {};
