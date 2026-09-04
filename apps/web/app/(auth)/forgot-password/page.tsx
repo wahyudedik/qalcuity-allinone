@@ -7,15 +7,29 @@ export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('')
     const [submitted, setSubmitted] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState('')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        // Simulate sending reset email
-        setTimeout(() => {
-            setSubmitted(true)
+        setError('')
+        try {
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            })
+            const data = await res.json()
+            if (res.ok && data.success) {
+                setSubmitted(true)
+            } else {
+                setError(data.error || 'Terjadi kesalahan. Silakan coba lagi.')
+            }
+        } catch {
+            setError('Terjadi kesalahan. Silakan coba lagi.')
+        } finally {
             setIsLoading(false)
-        }, 1500)
+        }
     }
 
     return (
@@ -36,6 +50,12 @@ export default function ForgotPasswordPage() {
                     Masukkan email Anda dan kami akan mengirimkan tautan untuk mereset password.
                 </p>
             </div>
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                </div>
+            )}
 
             {submitted ? (
                 <div className="space-y-4">
