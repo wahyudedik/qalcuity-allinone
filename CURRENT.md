@@ -1,10 +1,29 @@
-> **Last Updated:** 4 September 2026 (Batch J — i18n Hardcoded Strings + Error Handling)
-> **Version:** v7.2.0
-> **Status:** Batch J COMPLETE — 50+ hardcoded Indonesian strings replaced with i18n t() calls, 10+ silent catch blocks fixed with toast notifications, 20 files modified
+> **Last Updated:** 4 September 2026 (POS Feature Phase 2 — API Routes + UI Pages)
+> **Version:** v7.3.0
+> **Status:** POS Feature Phase 2 COMPLETE — 8 API routes, 4 UI pages, 3 loading states, POS Terminal (kasir) interface functional
 
 ---
 
 ## 🎯 Current Sprint
+
+### POS Feature — Phase 2: API Routes + UI Pages (4 September 2026)
+- ✅ **API Routes** — 8 API route files created for POS:
+  - [`apps/web/app/api/pos/terminals/route.ts`](apps/web/app/api/pos/terminals/route.ts) — GET (list) + POST (create, ADMIN+ only)
+  - [`apps/web/app/api/pos/terminals/[id]/route.ts`](apps/web/app/api/pos/terminals/[id]/route.ts) — GET (detail) + PUT (update) + DELETE (ADMIN+ only)
+  - [`apps/web/app/api/pos/sessions/route.ts`](apps/web/app/api/pos/sessions/route.ts) — GET (list) + POST (open session)
+  - [`apps/web/app/api/pos/sessions/[id]/route.ts`](apps/web/app/api/pos/sessions/[id]/route.ts) — GET (detail) + PUT (close session with variance calculation)
+  - [`apps/web/app/api/pos/transactions/route.ts`](apps/web/app/api/pos/transactions/route.ts) — GET (list with pagination) + POST (create transaction with items + payment)
+  - [`apps/web/app/api/pos/transactions/[id]/route.ts`](apps/web/app/api/pos/transactions/[id]/route.ts) — GET (detail with items, payments, refunds) + PUT (void transaction, ADMIN+ only)
+  - [`apps/web/app/api/pos/dashboard/route.ts`](apps/web/app/api/pos/dashboard/route.ts) — GET (today's summary: sales, transactions, active sessions, payment methods)
+  - [`apps/web/app/api/pos/products/route.ts`](apps/web/app/api/pos/products/route.ts) — GET (products for POS with search)
+- ✅ **POS Terminal Page** — [`apps/web/app/dashboard/pos/terminal/page.tsx`](apps/web/app/dashboard/pos/terminal/page.tsx) — Full cashier interface with product grid, cart, payment modal, receipt
+- ✅ **POS Sessions Page** — [`apps/web/app/dashboard/pos/sessions/page.tsx`](apps/web/app/dashboard/pos/sessions/page.tsx) — Session management with open/close, responsive cards + desktop table
+- ✅ **POS Transactions Page** — [`apps/web/app/dashboard/pos/transactions/page.tsx`](apps/web/app/dashboard/pos/transactions/page.tsx) — Transaction history with detail modal, void, pagination
+- ✅ **POS Layout** — [`apps/web/app/dashboard/pos/layout.tsx`](apps/web/app/dashboard/pos/layout.tsx) — Tab navigation (Terminal, Sessions, Transactions)
+- ✅ **Loading States** — 3 loading.tsx files for Terminal, Sessions, Transactions pages
+- ✅ **Database Migration** — [`20260904090000_add_pos_models`](packages/db/prisma/migrations/20260904090000_add_pos_models/migration.sql) — 6 POS models applied
+- ✅ **TypeScript Check** — 0 errors
+- ✅ **Security** — Tenant isolation, RBAC (ADMIN+ for mutations), Zod validation, audit trail, rate limiting
 
 ### Batch J — i18n Hardcoded Strings + Error Handling (4 September 2026)
 - ✅ **Isu 1 & 2: Dashboard** — [`apps/web/app/dashboard/page.tsx`](apps/web/app/dashboard/page.tsx) — 15+ hardcoded Indonesian strings replaced with `t()` calls, approve/reject catch blocks now show error toasts
