@@ -147,8 +147,7 @@ const DATASET_DEFS: Record<string, DatasetDef> = {
     },
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type PrismaClient = Record<string, any>
+type PrismaClient = Record<string, { findMany: (args: Record<string, unknown>) => Promise<Record<string, unknown>[]> }>
 
 // ============================================
 // API HANDLER

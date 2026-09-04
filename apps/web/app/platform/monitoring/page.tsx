@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "@/lib/i18n";
 import {
     Activity,
     Server,
@@ -170,6 +171,7 @@ function UsageBar({ label, value, icon: Icon }: { label: string; value: number; 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformMonitoringPage() {
+    const { t } = useTranslation();
     const [data, setData] = useState<MonitoringData | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -251,7 +253,7 @@ export default function PlatformMonitoringPage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
                 >
                     <RefreshCw className="h-4 w-4" />
-                    Coba Lagi
+                    {t('platform.monitoringPage.retry')}
                 </button>
             </div>
         );
@@ -275,10 +277,10 @@ export default function PlatformMonitoringPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        System Monitoring
+                        {t('platform.monitoringPage.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Real-time system health dan performance metrics
+                        {t('platform.monitoringPage.subtitle')}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -289,7 +291,7 @@ export default function PlatformMonitoringPage() {
                             onChange={(e) => setAutoRefresh(e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                         />
-                        Auto-refresh
+                        {t('platform.monitoringPage.autoRefresh')}
                     </label>
                     <button
                         onClick={handleRefresh}
@@ -297,7 +299,7 @@ export default function PlatformMonitoringPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                        Refresh
+                        {t('platform.monitoringPage.refresh')}
                     </button>
                 </div>
             </div>
@@ -305,17 +307,17 @@ export default function PlatformMonitoringPage() {
             {/* Error banner (if data exists but refresh failed) */}
             {error && data && (
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
-                    {error} — menampilkan data terakhir.
+                    {error} — {t('platform.monitoringPage.showingLast')}.
                 </div>
             )}
 
             {/* Overall Status Banner */}
             {health && (
                 <div className={`rounded-xl border p-4 ${health.status === "healthy"
-                        ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
-                        : health.status === "degraded"
-                            ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20"
-                            : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
+                    ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
+                    : health.status === "degraded"
+                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20"
+                        : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
                     }`}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -328,23 +330,23 @@ export default function PlatformMonitoringPage() {
                             )}
                             <div>
                                 <p className={`text-sm font-semibold ${health.status === "healthy"
-                                        ? "text-green-800 dark:text-green-300"
-                                        : health.status === "degraded"
-                                            ? "text-yellow-800 dark:text-yellow-300"
-                                            : "text-red-800 dark:text-red-300"
+                                    ? "text-green-800 dark:text-green-300"
+                                    : health.status === "degraded"
+                                        ? "text-yellow-800 dark:text-yellow-300"
+                                        : "text-red-800 dark:text-red-300"
                                     }`}>
                                     {health.status === "healthy"
-                                        ? "All Systems Operational"
+                                        ? t('platform.monitoringPage.allOperational')
                                         : health.status === "degraded"
-                                            ? "System Performance Degraded"
-                                            : "System Down"
+                                            ? t('platform.monitoringPage.degraded')
+                                            : t('platform.monitoringPage.down')
                                     }
                                 </p>
                                 <p className={`text-xs ${health.status === "healthy"
-                                        ? "text-green-600 dark:text-green-400"
-                                        : health.status === "degraded"
-                                            ? "text-yellow-600 dark:text-yellow-400"
-                                            : "text-red-600 dark:text-red-400"
+                                    ? "text-green-600 dark:text-green-400"
+                                    : health.status === "degraded"
+                                        ? "text-yellow-600 dark:text-yellow-400"
+                                        : "text-red-600 dark:text-red-400"
                                     }`}>
                                     Uptime: {health.uptime}% · Last checked: {formatTime(health.lastChecked)}
                                 </p>
@@ -364,7 +366,7 @@ export default function PlatformMonitoringPage() {
                                 <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">API Latency</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.apiLatency')}</p>
                                 <p className="text-lg font-bold text-gray-900 dark:text-white">{health.apiLatency}ms</p>
                             </div>
                         </div>
@@ -375,7 +377,7 @@ export default function PlatformMonitoringPage() {
                                 <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Requests/min</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.requestsPerMinute')}</p>
                                 <p className="text-lg font-bold text-gray-900 dark:text-white">{health.requestsPerMinute.toLocaleString()}</p>
                             </div>
                         </div>
@@ -386,7 +388,7 @@ export default function PlatformMonitoringPage() {
                                 <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Active Sessions</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.activeSessions')}</p>
                                 <p className="text-lg font-bold text-gray-900 dark:text-white">{health.activeSessions}</p>
                             </div>
                         </div>
@@ -394,16 +396,16 @@ export default function PlatformMonitoringPage() {
                     <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                         <div className="flex items-center gap-3">
                             <div className={`rounded-lg p-2 ${health.errorRate > 5
-                                    ? "bg-red-100 dark:bg-red-900/30"
-                                    : "bg-yellow-100 dark:bg-yellow-900/30"
+                                ? "bg-red-100 dark:bg-red-900/30"
+                                : "bg-yellow-100 dark:bg-yellow-900/30"
                                 }`}>
                                 <AlertTriangle className={`h-5 w-5 ${health.errorRate > 5
-                                        ? "text-red-600 dark:text-red-400"
-                                        : "text-yellow-600 dark:text-yellow-400"
+                                    ? "text-red-600 dark:text-red-400"
+                                    : "text-yellow-600 dark:text-yellow-400"
                                     }`} />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Error Rate</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.errorRate')}</p>
                                 <p className="text-lg font-bold text-gray-900 dark:text-white">{health.errorRate}%</p>
                             </div>
                         </div>
@@ -417,7 +419,7 @@ export default function PlatformMonitoringPage() {
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Services Status
+                            {t('platform.monitoringPage.services')}
                         </h2>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -448,14 +450,14 @@ export default function PlatformMonitoringPage() {
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Resource Usage
+                            {t('platform.monitoringPage.resources')}
                         </h2>
                     </div>
                     <div className="p-6 space-y-5">
-                        <UsageBar label="CPU (estimated)" value={estimatedCpu} icon={Cpu} />
-                        <UsageBar label="Memory (estimated)" value={estimatedMemory} icon={HardDrive} />
-                        <UsageBar label="Disk (estimated)" value={estimatedDisk} icon={Server} />
-                        <UsageBar label="DB Connection Pool" value={estimatedDbConn} icon={Database} />
+                        <UsageBar label={t('platform.monitoringPage.cpuEstimated')} value={estimatedCpu} icon={Cpu} />
+                        <UsageBar label={t('platform.monitoringPage.memoryEstimated')} value={estimatedMemory} icon={HardDrive} />
+                        <UsageBar label={t('platform.monitoringPage.diskEstimated')} value={estimatedDisk} icon={Server} />
+                        <UsageBar label={t('platform.monitoringPage.dbConnectionPool')} value={estimatedDbConn} icon={Database} />
                     </div>
                 </div>
             </div>
@@ -467,7 +469,7 @@ export default function PlatformMonitoringPage() {
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Database Metrics
+                                {t('platform.monitoringPage.dbMetrics')}
                             </h2>
                         </div>
                         <div className="p-6">
@@ -475,34 +477,34 @@ export default function PlatformMonitoringPage() {
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
                                     <div className="flex items-center gap-2">
                                         <Globe className="h-4 w-4 text-blue-500" />
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">Total Tenants</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.totalTenants')}</span>
                                     </div>
                                     <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalTenants}</p>
-                                    <p className="text-xs text-green-600 dark:text-green-400">{db.activeTenants} active</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">{db.activeTenants} {t('platform.monitoringPage.activeLabel')}</p>
                                 </div>
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
                                     <div className="flex items-center gap-2">
                                         <Users className="h-4 w-4 text-purple-500" />
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">Total Users</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.totalUsers')}</span>
                                     </div>
                                     <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalUsers}</p>
-                                    <p className="text-xs text-green-600 dark:text-green-400">{db.activeUsersToday} active today</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">{db.activeUsersToday} {t('platform.monitoringPage.activeToday')}</p>
                                 </div>
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
                                     <div className="flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-green-500" />
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">Invoices</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.invoices')}</span>
                                     </div>
                                     <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalInvoices.toLocaleString()}</p>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400">+{db.invoicesLastHour} last hour</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">+{db.invoicesLastHour} {t('platform.monitoringPage.lastHour')}</p>
                                 </div>
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50">
                                     <div className="flex items-center gap-2">
                                         <Shield className="h-4 w-4 text-orange-500" />
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">Audit Logs</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.auditLogs')}</span>
                                     </div>
                                     <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{db.totalAuditLogs.toLocaleString()}</p>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400">+{db.auditLogsLastHour} last hour</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">+{db.auditLogsLastHour} {t('platform.monitoringPage.lastHour')}</p>
                                 </div>
                             </div>
                         </div>
@@ -513,12 +515,12 @@ export default function PlatformMonitoringPage() {
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Subscription Distribution
+                            {t('platform.monitoringPage.subscriptionDist')}
                         </h2>
                     </div>
                     <div className="p-6">
                         {subDist.length === 0 ? (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">No subscription data available.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.noSubscriptionData')}</p>
                         ) : (
                             <div className="space-y-3">
                                 {subDist.map((item) => {
@@ -561,14 +563,14 @@ export default function PlatformMonitoringPage() {
             <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                 <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Recent Alerts & Errors
+                        {t('platform.monitoringPage.recentAlerts')}
                     </h2>
                 </div>
                 {alerts.length === 0 ? (
                     <div className="px-6 py-8 text-center">
                         <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
                         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            No alerts in the last 24 hours. All clear!
+                            {t('platform.monitoringPage.noAlerts')}
                         </p>
                     </div>
                 ) : (
@@ -579,19 +581,19 @@ export default function PlatformMonitoringPage() {
                                 <thead>
                                     <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            Action
+                                            {t('platform.monitoringPage.action')}
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            Entity
+                                            {t('platform.monitoringPage.entity')}
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            Entity ID
+                                            {t('platform.monitoringPage.entityId')}
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            IP Address
+                                            {t('platform.monitoringPage.ipAddress')}
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            Time
+                                            {t('platform.monitoringPage.time')}
                                         </th>
                                     </tr>
                                 </thead>

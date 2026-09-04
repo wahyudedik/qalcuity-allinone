@@ -5,6 +5,7 @@
 // ============================================
 
 import { prisma } from './db';
+import { Prisma } from '@prisma/client';
 import { logAudit } from './audit';
 
 // ============================================
@@ -105,10 +106,9 @@ export async function saveAutoApprovalRules(
             }, {} as Record<string, unknown>),
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await prisma.tenant.update({
             where: { id: tenantId },
-            data: { settings: newSettings as any },
+            data: { settings: newSettings as Prisma.InputJsonValue },
         });
 
         void logAudit({

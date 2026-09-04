@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "@/lib/i18n";
 import {
     Shield,
     AlertTriangle,
@@ -83,6 +84,7 @@ function SeverityBadge({ severity }: { severity: SecurityEvent["severity"] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PlatformSecurityPage() {
+    const { t } = useTranslation();
     const [stats, setStats] = useState<SecurityStats>({
         totalEvents: 0,
         criticalEvents: 0,
@@ -146,10 +148,10 @@ export default function PlatformSecurityPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Security Events
+                        {t('platform.securityPage.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Monitoring aktivitas keamanan seluruh platform
+                        {t('platform.securityPage.subtitle')}
                     </p>
                 </div>
             </div>
@@ -162,7 +164,7 @@ export default function PlatformSecurityPage() {
                             <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Total Events</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.securityPage.totalEvents')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.totalEvents}</p>
                         </div>
                     </div>
@@ -173,7 +175,7 @@ export default function PlatformSecurityPage() {
                             <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Critical</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.securityPage.critical')}</p>
                             <p className="text-lg font-bold text-red-600 dark:text-red-400">{stats.criticalEvents}</p>
                         </div>
                     </div>
@@ -184,7 +186,7 @@ export default function PlatformSecurityPage() {
                             <XCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Failed Logins</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.securityPage.failedLogins')}</p>
                             <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{stats.failedLogins}</p>
                         </div>
                     </div>
@@ -195,7 +197,7 @@ export default function PlatformSecurityPage() {
                             <Eye className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Active Sessions</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.monitoringPage.activeSessions')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.activeSessions}</p>
                         </div>
                     </div>
@@ -206,7 +208,7 @@ export default function PlatformSecurityPage() {
                             <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Last Incident</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.securityPage.lastIncident')}</p>
                             <p className="text-sm font-bold text-gray-900 dark:text-white">{stats.lastIncident}</p>
                         </div>
                     </div>
@@ -219,7 +221,7 @@ export default function PlatformSecurityPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari event..."
+                        placeholder={t('platform.securityPage.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
@@ -230,26 +232,26 @@ export default function PlatformSecurityPage() {
                     onChange={(e) => setFilterSeverity(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
-                    <option value="all">Semua Severity</option>
-                    <option value="critical">Critical</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="all">{t('platform.securityPage.allSeverity')}</option>
+                    <option value="critical">{t('platform.securityPage.severityCritical')}</option>
+                    <option value="high">{t('platform.securityPage.severityHigh')}</option>
+                    <option value="medium">{t('platform.securityPage.severityMedium')}</option>
+                    <option value="low">{t('platform.securityPage.severityLow')}</option>
                 </select>
                 <select
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
-                    <option value="all">Semua Type</option>
-                    <option value="login_success">Login Success</option>
-                    <option value="login_failed">Login Failed</option>
-                    <option value="password_change">Password Change</option>
-                    <option value="role_change">Role Change</option>
-                    <option value="suspicious_activity">Suspicious Activity</option>
-                    <option value="data_export">Data Export</option>
-                    <option value="api_key_created">API Key Created</option>
-                    <option value="tenant_suspend">Tenant Suspend</option>
+                    <option value="all">{t('platform.securityPage.allType')}</option>
+                    <option value="login_success">{t('platform.securityPage.typeLoginSuccess')}</option>
+                    <option value="login_failed">{t('platform.securityPage.typeLoginFailed')}</option>
+                    <option value="password_change">{t('platform.securityPage.typePasswordChange')}</option>
+                    <option value="role_change">{t('platform.securityPage.typeRoleChange')}</option>
+                    <option value="suspicious_activity">{t('platform.securityPage.typeSuspiciousActivity')}</option>
+                    <option value="data_export">{t('platform.securityPage.typeDataExport')}</option>
+                    <option value="api_key_created">{t('platform.securityPage.typeApiKeyCreated')}</option>
+                    <option value="tenant_suspend">{t('platform.securityPage.typeTenantSuspend')}</option>
                 </select>
             </div>
 
@@ -259,22 +261,22 @@ export default function PlatformSecurityPage() {
                     <thead>
                         <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Event
+                                {t('platform.securityPage.event')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                User
+                                {t('platform.securityPage.user')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Tenant
+                                {t('platform.securityPage.tenant')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Severity
+                                {t('platform.securityPage.severity')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                IP Address
+                                {t('platform.securityPage.ipAddress')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Time
+                                {t('platform.securityPage.time')}
                             </th>
                         </tr>
                     </thead>
@@ -356,7 +358,7 @@ export default function PlatformSecurityPage() {
                 <div className="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
                     <Shield className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
                     <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Tidak ada event ditemukan
+                        {t('platform.securityPage.noEvents')}
                     </p>
                 </div>
             )}
@@ -368,7 +370,7 @@ export default function PlatformSecurityPage() {
                         <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Security Event Detail
+                                    {t('platform.securityPage.detailTitle')}
                                 </h2>
                                 <div className="mt-1 flex items-center gap-2">
                                     <SeverityBadge severity={selectedEvent.severity} />
@@ -386,24 +388,24 @@ export default function PlatformSecurityPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</p>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('platform.securityPage.description')}</p>
                                 <p className="text-sm text-gray-900 dark:text-gray-100">{selectedEvent.description}</p>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">User</p>
+                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('platform.securityPage.user')}</p>
                                     <p className="text-sm text-gray-900 dark:text-gray-100">{selectedEvent.user}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Tenant</p>
+                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('platform.securityPage.tenant')}</p>
                                     <p className="text-sm text-gray-900 dark:text-gray-100">{selectedEvent.tenant}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">IP Address</p>
+                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('platform.securityPage.ipAddress')}</p>
                                     <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{selectedEvent.ipAddress}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">User Agent</p>
+                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('platform.securityPage.userAgent')}</p>
                                     <p className="text-sm text-gray-900 dark:text-gray-100">{selectedEvent.userAgent}</p>
                                 </div>
                             </div>
@@ -413,7 +415,7 @@ export default function PlatformSecurityPage() {
                                 onClick={() => setSelectedEvent(null)}
                                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
-                                Close
+                                {t('platform.securityPage.close')}
                             </button>
                         </div>
                     </div>

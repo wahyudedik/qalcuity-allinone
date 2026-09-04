@@ -104,8 +104,7 @@ function aggregateValues(values: number[], method: string): number {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type PrismaClient = Record<string, any>
+type PrismaClient = Record<string, { findMany: (args: Record<string, unknown>) => Promise<Record<string, unknown>[]> }>
 
 // ============================================
 // API HANDLER

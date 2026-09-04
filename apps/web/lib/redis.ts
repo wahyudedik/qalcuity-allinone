@@ -18,10 +18,42 @@
  */
 
 // Use dynamic import to avoid @types/ioredis v4 conflict with ioredis v6
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let RedisClass: any = null;
 
-async function loadRedis(): Promise<any> {
+/**
+ * Minimal Redis client interface — covers methods used across the codebase.
+ * Uses `Function` for event listeners and pipeline to stay compatible with ioredis v6.
+ */
+interface RedisClient {
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    on(event: string, listener: Function): RedisClient;
+    connect(): Promise<void>;
+    quit(): Promise<unknown>;
+    disconnect(): void;
+    get(key: string): Promise<string | null>;
+    set(key: string, value: string, ...args: unknown[]): Promise<unknown>;
+    setex(key: string, seconds: number, value: string): Promise<unknown>;
+    del(key: string): Promise<unknown>;
+    incr(key: string): Promise<number>;
+    pexpire(key: string, milliseconds: number): Promise<unknown>;
+    expire(key: string, seconds: number): Promise<unknown>;
+    multi(options?: unknown): RedisPipeline;
+    pipeline(): RedisPipeline;
+    status: string;
+}
+
+/** Minimal pipeline/multi interface for Redis batch operations. */
+interface RedisPipeline {
+    incr(key: string): RedisPipeline;
+    pexpire(key: string, milliseconds: number): RedisPipeline;
+    exec(): Promise<unknown>;
+}
+
+/** Constructor type for creating new Redis instances. */
+type RedisConstructor = new (url: string, options?: Record<string, unknown>) => RedisClient;
+
+let RedisClass: RedisConstructor | null = null;
+
+async function loadRedis(): Promise<RedisConstructor | null> {
     if (RedisClass) return RedisClass;
     try {
         const mod = await import('ioredis');
@@ -65,7 +97,7 @@ const REDIS_CONFIG = {
 // Lazy Singleton
 // ============================================================
 
-let redisClient: any = null;
+let redisClient: RedisClient | null = null;
 let redisAvailable = false;
 let initializationAttempted = false;
 
@@ -73,7 +105,7 @@ let initializationAttempted = false;
  * Get or create Redis client (lazy singleton pattern).
  * Returns null if Redis is not configured or connection fails.
  */
-export async function getRedisClient(): Promise<any> {
+export async function getRedisClient(): Promise<RedisClient | null> {
     // Already initialized and determined unavailable
     if (initializationAttempted && !redisClient) {
         return null;
@@ -159,7 +191,7 @@ export async function getRedisClient(): Promise<any> {
  * Get Redis client synchronously (returns cached instance or null).
  * For use in sync contexts like middleware. Will not trigger new connections.
  */
-export function getRedisClientSync(): any {
+export function getRedisClientSync(): RedisClient | null {
     if (redisAvailable && redisClient) {
         return redisClient;
     }
