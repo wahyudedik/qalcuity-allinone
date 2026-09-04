@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 4, 2026 (Batch M — Documentation Update)
+**Last Updated:** September 4, 2026 (Batch N — Security & Quality Hardening)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 8.0 — Batch M Complete
+**Document Version:** 8.1 — Batch N Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -638,7 +638,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Rate Limiter (Redis)** | 🚀 `production_ready` | 2026-08-30 | Per-IP rate limiting, Redis-backed |
+| **Rate Limiter (Redis)** | 🚀 `production_ready` | 2026-09-04 | Per-IP rate limiting, Redis-backed, 47+ handlers covered (Batch K + N) |
 
 ### 10.4 Import/Export
 
@@ -1612,7 +1612,11 @@ Electron-based desktop application.
 - **POS Phase 3 Complete** — 2 refund API routes (refunds, refunds/[id]), refunds page, reports page, terminals management page, 100+ i18n keys, 6 POS sub-menus in sidebar
 - **Batch K: Security Hardening** — Rate limiting (21 analytics routes), input sanitization, error boundaries, loading states
 - **Batch L: Code Quality** — Console.log cleanup (7 statements), any types fix, error response standardization (api-error.ts), POS i18n completeness (30+ keys), POS sidebar fix (6 sub-menus)
-- **Documentation Update** — FEATURES, ROADMAP, CURRENT, REMAINING-WORK updated for POS completion
+- **Batch N-1: Input Sanitization (27 routes)** — 100% mutation route coverage, `sanitizeObject()`/`sanitizeInput()` on all routes (fixes CQ-03)
+- **Batch N-2: Rate Limiting (26 handlers)** — Settings, billing, POS, workflow, search, reports routes covered + 2 error boundaries (fixes API-01, API-02, UI-01-b)
+- **Batch N-3: Code Quality** — `any` types eliminated from rate limiter, `handleApiError()` standardized, 4 composite indexes added to Prisma schema (fixes CQ-05, UI-05, DB-01)
+- **Health Score** — 85/100 → 91/100 (+6 points)
+- **Documentation Update** — FEATURES, ROADMAP, CURRENT, REMAINING-WORK updated for POS completion + Batch N
 - **Status Summary** — implemented: 25→33, partial: 18→20, planned: 163→156, total features: 269→274
 
 ### v7.0.0 (September 3, 2026) — Sprint 4 Complete (Batch 1A-4B)

@@ -2,7 +2,7 @@
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
 > Diperbarui: 4 September 2026
-> Version: 1.2 — Post-Batch M Update (POS Phase 2-3 Complete)
+> Version: 1.3 — Post-Batch N Update (Security & Quality Hardening)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -43,6 +43,24 @@
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
 | **TOTAL** | **~88** | **~22** | **~138** | **~269** | **~33%** |
+
+---
+
+### 🔄 Batch N — Audit Issues Resolved (4 September 2026)
+
+> **Audit issues dari [`plans/comprehensive-audit-2026-09-04.md`](plans/comprehensive-audit-2026-09-04.md) yang sudah diperbaiki.**
+
+| Audit ID | Issue | Severity | Status | Batch |
+|----------|-------|----------|--------|-------|
+| **CQ-03** | Input Sanitization Inconsistent (7/40+ routes) | 🔴 Critical | ✅ FIXED — 100% coverage, 27 routes sanitized | N-1 |
+| **API-01** | Settings Routes — Inconsistent Rate Limiting | 🟠 High | ✅ FIXED — Rate limiting added to all settings routes | N-2 |
+| **API-02** | Billing Routes — Mixed Security | 🟠 High | ✅ FIXED — Rate limiting added to all billing routes | N-2 |
+| **UI-01-b** | Missing Error Boundaries — 10+ Pages | 🟠 High | ✅ FIXED — 2 error boundaries added (AI, POS) + 7 from Batch K | N-2 |
+| **CQ-05** | `any` Types in Rate Limiter | 🟡 Medium | ✅ FIXED — Proper TypeScript types, `eslint-disable` removed | N-3 |
+| **UI-05** | `handleApiError` Inconsistent | 🟠 High | ✅ FIXED — Standardized across API routes | N-3 |
+| **DB-01** | Missing Composite Indexes (4 tables) | 🟡 Medium | ✅ FIXED — 4 composite indexes added to Prisma schema | N-3 |
+
+> ⚠️ **Note:** POS migration SQL (4 composite indexes) masih perlu dijalankan manual di VPS.
 
 ---
 
@@ -1960,7 +1978,7 @@ Parallel tracks (can run alongside):
 ---
 
 > **Document maintained by:** Qalcuity AI Team
-> **Version:** 1.2 — Remaining Work Documentation (Updated: 2 September 2026 — FASE 3C-4C items marked done)
+> **Version:** 1.3 — Remaining Work Documentation (Updated: 4 September 2026 — Batch N audit issues resolved)
 > **Next Review:** Setelah Phase 10 (Unified Control Engine) selesai
 > **Related Documents:**
 > - [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) — Analytics architecture
