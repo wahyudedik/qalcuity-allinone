@@ -1,11 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from '@/lib/i18n'
 import { FlaskConical, Eye, EyeOff } from 'lucide-react'
+
+interface Providers {
+    credentials: boolean;
+    google: boolean;
+}
 
 export default function LoginPage() {
     const router = useRouter()
@@ -17,7 +22,21 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
     const [rememberMe, setRememberMe] = useState(false)
+    const [providers, setProviders] = useState<Providers>({ credentials: true, google: false })
     const isDemoLogin = searchParams?.get('email') === 'demo@qalcuity.com'
+
+    // Fetch available auth providers from server
+    // This replaces the static NEXT_PUBLIC_GOOGLE_CLIENT_ID check with a
+    // dynamic check that validates Google OAuth reachability on the server.
+    useEffect(() => {
+        fetch('/api/auth/providers')
+            .then(res => res.json())
+            .then((data: Providers) => setProviders(data))
+            .catch(() => {
+                // If fetch fails, default to credentials-only (safe fallback)
+                setProviders({ credentials: true, google: false })
+            })
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -169,7 +188,7 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+            {providers.google && (
                 <button
                     type="button"
                     onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
