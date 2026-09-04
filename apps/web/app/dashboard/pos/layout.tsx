@@ -7,6 +7,7 @@ import {
     BookOpen,
     Receipt,
     BarChart3,
+    RotateCcw,
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
@@ -21,6 +22,9 @@ const posTabs: TabItem[] = [
     { href: '/dashboard/pos/terminal', labelKey: 'pos.layout.tabs.terminal', icon: Monitor },
     { href: '/dashboard/pos/sessions', labelKey: 'pos.layout.tabs.sessions', icon: BookOpen },
     { href: '/dashboard/pos/transactions', labelKey: 'pos.layout.tabs.transactions', icon: Receipt },
+    { href: '/dashboard/pos/refunds', labelKey: 'pos.layout.tabs.refunds', icon: RotateCcw },
+    { href: '/dashboard/pos/reports', labelKey: 'pos.layout.tabs.reports', icon: BarChart3 },
+    { href: '/dashboard/pos/terminals', labelKey: 'pos.layout.tabs.terminals', icon: Monitor },
 ]
 
 export default function POSLayout({ children }: { children: React.ReactNode }) {
