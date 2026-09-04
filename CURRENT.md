@@ -1,10 +1,22 @@
-> **Last Updated:** 4 September 2026 (Batch I — P1 Quick Wins Round 2)
-> **Version:** v7.1.0
-> **Status:** Batch I COMPLETE — Real File Upload, Platform Dashboard Error State, Silent Catch Blocks Fixed, Legacy _error.tsx Typed, Documentation Updated
+> **Last Updated:** 4 September 2026 (Batch J — i18n Hardcoded Strings + Error Handling)
+> **Version:** v7.2.0
+> **Status:** Batch J COMPLETE — 50+ hardcoded Indonesian strings replaced with i18n t() calls, 10+ silent catch blocks fixed with toast notifications, 20 files modified
 
 ---
 
 ## 🎯 Current Sprint
+
+### Batch J — i18n Hardcoded Strings + Error Handling (4 September 2026)
+- ✅ **Isu 1 & 2: Dashboard** — [`apps/web/app/dashboard/page.tsx`](apps/web/app/dashboard/page.tsx) — 15+ hardcoded Indonesian strings replaced with `t()` calls, approve/reject catch blocks now show error toasts
+- ✅ **Isu 4 & 9: Billing** — [`apps/web/app/dashboard/billing/page.tsx`](apps/web/app/dashboard/billing/page.tsx) — 3 silent `console.error` catch blocks replaced with toast notifications, hardcoded payment empty state replaced
+- ✅ **Isu 5: Finance Accounts** — [`apps/web/app/dashboard/finance/accounts/page.tsx`](apps/web/app/dashboard/finance/accounts/page.tsx) — EmptyState hardcoded strings replaced
+- ✅ **Isu 6: Finance Payments** — [`apps/web/app/dashboard/finance/payments/page.tsx`](apps/web/app/dashboard/finance/payments/page.tsx) — EmptyState description in 2 locations replaced
+- ✅ **Isu 7: CRM Contacts** — [`apps/web/app/dashboard/crm/contacts/page.tsx`](apps/web/app/dashboard/crm/contacts/page.tsx) — 3 EmptyState locations + error messages replaced
+- ✅ **Isu 8: Analytics Pages** — 9 pages (scheduled, reports, kpi, dashboards, alerts, charts, history, explorer, dictionary) — hardcoded English error messages replaced
+- ✅ **Isu 10: Settings Pages** — 4 pages (security, roles, industry, custom-fields) — hardcoded error/success messages replaced
+- ✅ **i18n Keys Added** — 40+ new keys added to both [`en.json`](apps/web/messages/en.json) and [`id.json`](apps/web/messages/id.json)
+- ✅ **TypeScript Check** — 0 errors
+- ✅ **Commit** — `c4afd0d` pushed to remote
 
 ### Batch I — P1 Quick Wins Round 2 (4 September 2026)
 - ✅ **Real File Upload** — [`apps/web/app/api/upload/route.ts`](apps/web/app/api/upload/route.ts) endpoint created, [`file-upload.tsx`](apps/web/components/ui/file-upload.tsx) updated with real FormData upload + progress indicator (XHR-based)
