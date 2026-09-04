@@ -5,38 +5,40 @@ import { formatCurrency, formatNumber } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import {
     BarChart3, Loader2, AlertCircle, Check, Download,
-    TrendingUp, Receipt, DollarSign, ShoppingCart,
+    TrendingUp, TrendingDown, Receipt, DollarSign, ShoppingCart,
+    Users, Minus,
 } from 'lucide-react'
-import { BarChart, PieChart } from '@/components/ui/charts'
+import { BarChart, PieChart, LineChart } from '@/components/ui/charts'
 
-type DashboardData = {
-    todaySales: number
-    todayTax: number
-    todayTransactionCount: number
-    totalTransactions: number
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+type SummaryData = {
+    today: { sales: number; tax: number; transactionCount: number; avgTransactionValue: number }
+    yesterday: { sales: number; tax: number; transactionCount: number; avgTransactionValue: number }
+    change: { salesPercent: number; countPercent: number; avgPercent: number }
     activeSessions: number
-    recentTransactions: {
-        id: string
-        transactionNo: string
-        totalAmount: number
-        paymentMethod: string
-        status: string
-        createdAt: string
-    }[]
-    paymentMethods: {
-        method: string
-        count: number
-        total: number
-    }[]
+    totalTerminals: number
 }
 
-type ReportData = {
-    daily: { date: string; total: number; count: number }[]
-    weekly: { date: string; total: number; count: number }[]
-    monthly: { date: string; total: number; count: number }[]
+type AnalyticsData = {
+    salesByPeriod: { date: string; total: number; count: number }[]
     topProducts: { name: string; quantity: number; revenue: number }[]
-    paymentBreakdown: { method: string; count: number; total: number; percentage: number }[]
+    salesByCategory: { category: string; quantity: number; revenue: number }[]
+    hourlyTrend: { hour: number; count: number; total: number }[]
+    paymentMethodBreakdown: { method: string; count: number; total: number; percentage: number }[]
+    meta: { period: string; startDate: string; endDate: string; totalTransactions: number }
 }
+
+type CashierData = {
+    cashierId: string
+    cashierName: string
+    transactionCount: number
+    totalSales: number
+    avgTransactionValue: number
+    sessionCount: number
+}
+
+type PeriodOption = 'daily' | 'weekly' | 'monthly' | 'custom'
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
     CASH: 'Tunai',
@@ -48,19 +50,23 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 
 const PAYMENT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899']
 
+// ─── Component ──────────────────────────────────────────────────────────────
+
 export default function POSReportsPage() {
     const { t } = useTranslation()
 
-    const [dashboard, setDashboard] = useState<DashboardData | null>(null)
-    const [report, setReport] = useState<ReportData | null>(null)
+    const [summary, setSummary] = useState<SummaryData | null>(null)
+    const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+    const [cashiers, setCashiers] = useState<CashierData[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
-    // Date range filter
+    // Period selector
+    const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>('weekly')
     const [dateFrom, setDateFrom] = useState(() => {
         const d = new Date()
-        d.setDate(d.getDate() - 30)
+        d.setDate(d.getDate() - 7)
         return d.toISOString().split('T')[0]
     })
     const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0])
@@ -72,150 +78,159 @@ export default function POSReportsPage() {
         }
     }, [toast])
 
-    const fetchDashboard = useCallback(async () => {
+    // Handle period preset selection
+    const handlePeriodChange = useCallback((period: PeriodOption) => {
+        setSelectedPeriod(period)
+        const now = new Date()
+        const to = now.toISOString().split('T')[0]
+        let from: string
+
+        switch (period) {
+            case 'daily': {
+                const d = new Date(now)
+                from = d.toISOString().split('T')[0]
+                break
+            }
+            case 'weekly': {
+                const d = new Date(now)
+                d.setDate(d.getDate() - 7)
+                from = d.toISOString().split('T')[0]
+                break
+            }
+            case 'monthly': {
+                const d = new Date(now)
+                d.setMonth(d.getMonth() - 1)
+                from = d.toISOString().split('T')[0]
+                break
+            }
+            default:
+                from = dateFrom
+        }
+        setDateFrom(from)
+        setDateTo(to)
+    }, [dateFrom])
+
+    const fetchSummary = useCallback(async () => {
         try {
-            const response = await fetch('/api/pos/dashboard')
+            const response = await fetch('/api/pos/analytics/summary')
             const data = await response.json()
             if (data.success) {
-                setDashboard(data.data)
+                setSummary(data.data)
             }
         } catch {
-            // Silent fail for dashboard
+            // Silent fail for summary
         }
     }, [])
 
-    const fetchReport = useCallback(async () => {
+    const fetchAnalytics = useCallback(async () => {
         try {
             setLoading(true)
             setError(null)
+
             const params = new URLSearchParams()
-            params.set('dateFrom', dateFrom)
-            params.set('dateTo', dateTo)
-
-            // Fetch transactions for the date range
-            const response = await fetch(`/api/pos/transactions?${params.toString()}&limit=1000`)
-            const data = await response.json()
-            if (data.success) {
-                const transactions = data.data as { totalAmount: number; paymentMethod: string; status: string; createdAt: string; items: { productName: string; quantity: number; unitPrice: number; subtotal: number }[] }[]
-
-                // Build daily data
-                const dailyMap = new Map<string, { total: number; count: number }>()
-                const weeklyMap = new Map<string, { total: number; count: number }>()
-                const monthlyMap = new Map<string, { total: number; count: number }>()
-                const productMap = new Map<string, { quantity: number; revenue: number }>()
-                const paymentMap = new Map<string, { count: number; total: number }>()
-
-                for (const tx of transactions) {
-                    if (tx.status !== 'COMPLETED') continue
-
-                    const date = new Date(tx.createdAt)
-                    const dayKey = date.toISOString().split('T')[0]
-                    const weekKey = getWeekKey(date)
-                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-                    // Daily
-                    const dayEntry = dailyMap.get(dayKey) || { total: 0, count: 0 }
-                    dayEntry.total += tx.totalAmount
-                    dayEntry.count += 1
-                    dailyMap.set(dayKey, dayEntry)
-
-                    // Weekly
-                    const weekEntry = weeklyMap.get(weekKey) || { total: 0, count: 0 }
-                    weekEntry.total += tx.totalAmount
-                    weekEntry.count += 1
-                    weeklyMap.set(weekKey, weekEntry)
-
-                    // Monthly
-                    const monthEntry = monthlyMap.get(monthKey) || { total: 0, count: 0 }
-                    monthEntry.total += tx.totalAmount
-                    monthEntry.count += 1
-                    monthlyMap.set(monthKey, monthEntry)
-
-                    // Products
-                    for (const item of tx.items) {
-                        const prod = productMap.get(item.productName) || { quantity: 0, revenue: 0 }
-                        prod.quantity += item.quantity
-                        prod.revenue += item.subtotal
-                        productMap.set(item.productName, prod)
-                    }
-
-                    // Payment methods
-                    const payEntry = paymentMap.get(tx.paymentMethod) || { count: 0, total: 0 }
-                    payEntry.count += 1
-                    payEntry.total += tx.totalAmount
-                    paymentMap.set(tx.paymentMethod, payEntry)
-                }
-
-                const daily = Array.from(dailyMap.entries())
-                    .map(([date, v]) => ({ date, ...v }))
-                    .sort((a, b) => a.date.localeCompare(b.date))
-
-                const weekly = Array.from(weeklyMap.entries())
-                    .map(([date, v]) => ({ date, ...v }))
-                    .sort((a, b) => a.date.localeCompare(b.date))
-
-                const monthly = Array.from(monthlyMap.entries())
-                    .map(([date, v]) => ({ date, ...v }))
-                    .sort((a, b) => a.date.localeCompare(b.date))
-
-                const topProducts = Array.from(productMap.entries())
-                    .map(([name, v]) => ({ name, ...v }))
-                    .sort((a, b) => b.revenue - a.revenue)
-                    .slice(0, 10)
-
-                const totalPaymentCount = Array.from(paymentMap.values()).reduce((s, v) => s + v.count, 0)
-                const paymentBreakdown = Array.from(paymentMap.entries())
-                    .map(([method, v]) => ({
-                        method,
-                        ...v,
-                        percentage: totalPaymentCount > 0 ? Math.round((v.count / totalPaymentCount) * 100) : 0,
-                    }))
-                    .sort((a, b) => b.total - a.total)
-
-                setReport({ daily, weekly, monthly, topProducts, paymentBreakdown })
+            if (selectedPeriod === 'custom') {
+                params.set('period', 'custom')
+                params.set('startDate', dateFrom)
+                params.set('endDate', dateTo)
             } else {
-                setError(data.error || 'Gagal memuat data laporan')
+                params.set('period', selectedPeriod)
+                params.set('startDate', dateFrom)
+                params.set('endDate', dateTo)
+            }
+
+            const [analyticsRes, cashiersRes] = await Promise.all([
+                fetch(`/api/pos/analytics?${params.toString()}`),
+                fetch(`/api/pos/analytics/cashiers?period=${selectedPeriod}`),
+            ])
+
+            const analyticsData = await analyticsRes.json()
+            const cashiersData = await cashiersRes.json()
+
+            if (analyticsData.success) {
+                setAnalytics(analyticsData.data)
+            } else {
+                setError(analyticsData.error || 'Gagal memuat data analitik')
+            }
+
+            if (cashiersData.success) {
+                setCashiers(cashiersData.data.cashiers)
             }
         } catch {
-            setError('Gagal memuat data laporan. Periksa koneksi jaringan Anda.')
+            setError('Gagal memuat data analitik. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
-    }, [dateFrom, dateTo])
+    }, [selectedPeriod, dateFrom, dateTo])
 
     useEffect(() => {
-        fetchDashboard()
-        fetchReport()
-    }, [fetchDashboard, fetchReport])
+        fetchSummary()
+        fetchAnalytics()
+    }, [fetchSummary, fetchAnalytics])
 
-    const handleExport = () => {
-        setToast({ message: 'Fitur export akan segera hadir', type: 'success' })
-    }
+    // CSV Export
+    const handleExport = useCallback(() => {
+        if (!analytics) return
 
-    // Calculate summary stats
-    const todayTotal = dashboard?.todaySales || 0
-    const todayCount = dashboard?.todayTransactionCount || 0
-    const todayAvg = todayCount > 0 ? todayTotal / todayCount : 0
+        const rows: string[] = []
+        rows.push('Tanggal,Total,Jumlah Transaksi')
+        for (const row of analytics.salesByPeriod) {
+            rows.push(`${row.date},${row.total},${row.count}`)
+        }
+        rows.push('')
+        rows.push('Produk,Qty Terjual,Pendapatan')
+        for (const p of analytics.topProducts) {
+            rows.push(`"${p.name}",${p.quantity},${p.revenue}`)
+        }
+        rows.push('')
+        rows.push('Kategori,Qty Terjual,Pendapatan')
+        for (const c of analytics.salesByCategory) {
+            rows.push(`"${c.category}",${c.quantity},${c.revenue}`)
+        }
+        rows.push('')
+        rows.push('Metode Pembayaran,Jumlah,Total,Persentase')
+        for (const p of analytics.paymentMethodBreakdown) {
+            rows.push(`${PAYMENT_METHOD_LABELS[p.method] || p.method},${p.count},${p.total},${p.percentage}%`)
+        }
+        rows.push('')
+        rows.push('Kasir,Transaksi,Total Penjualan,Rata-rata,Sesi')
+        for (const c of cashiers) {
+            rows.push(`"${c.cashierName}",${c.transactionCount},${c.totalSales},${Math.round(c.avgTransactionValue)},${c.sessionCount}`)
+        }
 
-    // Weekly summary from report data
-    const weeklyTotal = report?.weekly.reduce((s, w) => s + w.total, 0) || 0
-    const weeklyCount = report?.weekly.reduce((s, w) => s + w.count, 0) || 0
+        const csvContent = rows.join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `pos-report-${dateFrom}-${dateTo}.csv`
+        link.click()
+        URL.revokeObjectURL(url)
+        setToast({ message: 'Berhasil diekspor ke CSV', type: 'success' })
+    }, [analytics, cashiers, dateFrom, dateTo])
 
-    // Monthly summary from report data
-    const monthlyTotal = report?.monthly.reduce((s, m) => s + m.total, 0) || 0
-    const monthlyCount = report?.monthly.reduce((s, m) => s + m.count, 0) || 0
-
-    // Daily chart data (last 7 days)
-    const chartDaily = report?.daily.slice(-7) || []
-    const chartDailyLabels = chartDaily.map((d) => {
+    // Chart data
+    const salesChartLabels = analytics?.salesByPeriod.map((d) => {
         const date = new Date(d.date)
         return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-    })
-    const chartDailyData = chartDaily.map((d) => d.total)
+    }) || []
+    const salesChartData = analytics?.salesByPeriod.map((d) => d.total) || []
 
-    // Payment pie chart
-    const pieLabels = report?.paymentBreakdown.map((p) => PAYMENT_METHOD_LABELS[p.method] || p.method) || []
-    const pieData = report?.paymentBreakdown.map((p) => p.total) || []
+    const hourlyLabels = analytics?.hourlyTrend.map((h) => `${h.hour}:00`) || []
+    const hourlyData = analytics?.hourlyTrend.map((h) => h.total) || []
+
+    const pieLabels = analytics?.paymentMethodBreakdown.map((p) => PAYMENT_METHOD_LABELS[p.method] || p.method) || []
+    const pieData = analytics?.paymentMethodBreakdown.map((p) => p.total) || []
+
+    const catLabels = analytics?.salesByCategory.map((c) => c.category) || []
+    const catData = analytics?.salesByCategory.map((c) => c.revenue) || []
+
+    // Summary calculations
+    const todaySales = summary?.today.sales || 0
+    const todayCount = summary?.today.transactionCount || 0
+    const todayAvg = summary?.today.avgTransactionValue || 0
+    const salesChange = summary?.change.salesPercent || 0
+    const countChange = summary?.change.countPercent || 0
+    const avgChange = summary?.change.avgPercent || 0
 
     return (
         <div className="space-y-6">
@@ -238,39 +253,58 @@ export default function POSReportsPage() {
                 </div>
                 <button
                     onClick={handleExport}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                    disabled={!analytics}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
                     <Download className="h-4 w-4" />
-                    Export
+                    {t('common.export') || 'Export CSV'}
                 </button>
             </div>
 
-            {/* Date Range Filter */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-500">Dari:</label>
-                    <input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                    />
+            {/* Period Selector */}
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <div className="flex gap-1 rounded-lg border border-gray-200 dark:border-gray-700 p-1">
+                    {([
+                        { key: 'daily' as PeriodOption, label: t('pos.reports.today') || 'Hari Ini' },
+                        { key: 'weekly' as PeriodOption, label: t('pos.reports.thisWeek') || 'Minggu Ini' },
+                        { key: 'monthly' as PeriodOption, label: t('pos.reports.thisMonth') || 'Bulan Ini' },
+                        { key: 'custom' as PeriodOption, label: t('pos.reports.dateRange') || 'Custom' },
+                    ]).map((opt) => (
+                        <button
+                            key={opt.key}
+                            onClick={() => handlePeriodChange(opt.key)}
+                            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${selectedPeriod === opt.key
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                                }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
                 </div>
-                <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-500">Sampai:</label>
-                    <input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                    />
-                </div>
+                {selectedPeriod === 'custom' && (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        />
+                        <span className="text-gray-400">-</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        />
+                    </div>
+                )}
                 <button
-                    onClick={fetchReport}
+                    onClick={fetchAnalytics}
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     <BarChart3 className="h-4 w-4" />
-                    Filter
+                    {t('common.filter') || 'Filter'}
                 </button>
             </div>
 
@@ -282,118 +316,94 @@ export default function POSReportsPage() {
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
                     <p className="text-sm text-gray-500">{error}</p>
-                    <button onClick={fetchReport} className="mt-3 text-sm text-blue-600 hover:underline">Coba Lagi</button>
+                    <button onClick={fetchAnalytics} className="mt-3 text-sm text-blue-600 hover:underline">{t('common.tryAgain') || 'Coba Lagi'}</button>
                 </div>
             ) : (
                 <>
-                    {/* Summary Cards */}
+                    {/* Summary Cards with Today vs Yesterday */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                                    <DollarSign className="h-5 w-5 text-blue-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">{t('pos.reports.todaySales') || 'Penjualan Hari Ini'}</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(todayTotal)}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                                    <Receipt className="h-5 w-5 text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">{t('pos.reports.todayTransactions') || 'Transaksi Hari Ini'}</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{todayCount} transaksi</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                                    <TrendingUp className="h-5 w-5 text-purple-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">{t('pos.reports.avgPerTransaction') || 'Rata-rata/Transaksi'}</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(todayAvg)}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                                    <ShoppingCart className="h-5 w-5 text-orange-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">{t('pos.reports.activeSessions') || 'Sesi Aktif'}</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{dashboard?.activeSessions || 0}</p>
-                                </div>
-                            </div>
-                        </div>
+                        <SummaryCard
+                            icon={<DollarSign className="h-5 w-5 text-blue-600" />}
+                            iconBg="bg-blue-100 dark:bg-blue-900/30"
+                            label={t('pos.reports.todaySales') || 'Penjualan Hari Ini'}
+                            value={formatCurrency(todaySales)}
+                            change={salesChange}
+                        />
+                        <SummaryCard
+                            icon={<Receipt className="h-5 w-5 text-green-600" />}
+                            iconBg="bg-green-100 dark:bg-green-900/30"
+                            label={t('pos.reports.todayTransactions') || 'Transaksi Hari Ini'}
+                            value={`${todayCount} transaksi`}
+                            change={countChange}
+                        />
+                        <SummaryCard
+                            icon={<TrendingUp className="h-5 w-5 text-purple-600" />}
+                            iconBg="bg-purple-100 dark:bg-purple-900/30"
+                            label={t('pos.reports.avgPerTransaction') || 'Rata-rata/Transaksi'}
+                            value={formatCurrency(todayAvg)}
+                            change={avgChange}
+                        />
+                        <SummaryCard
+                            icon={<Users className="h-5 w-5 text-orange-600" />}
+                            iconBg="bg-orange-100 dark:bg-orange-900/30"
+                            label={t('pos.reports.activeSessions') || 'Sesi Aktif'}
+                            value={`${summary?.activeSessions || 0} / ${summary?.totalTerminals || 0}`}
+                            change={null}
+                        />
                     </div>
 
-                    {/* Period Summaries */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('pos.reports.weeklySummary') || 'Ringkasan Minggu Ini'}</h3>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Total Penjualan</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(weeklyTotal)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Jumlah Transaksi</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{weeklyCount}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Rata-rata/Transaksi</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(weeklyCount > 0 ? weeklyTotal / weeklyCount : 0)}</span>
-                                </div>
+                    {/* Sales Trend Line Chart */}
+                    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                            {t('pos.reports.salesTrend') || 'Tren Penjualan'}
+                        </h3>
+                        {salesChartData.length >= 2 ? (
+                            <LineChart
+                                data={salesChartData}
+                                labels={salesChartLabels}
+                                height={220}
+                                color="#3B82F6"
+                            />
+                        ) : salesChartData.length === 1 ? (
+                            <BarChart
+                                data={salesChartData}
+                                labels={salesChartLabels}
+                                height={220}
+                                valuePrefix="Rp "
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+                                {t('pos.reports.noData') || 'Belum ada data'}
                             </div>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('pos.reports.monthlySummary') || 'Ringkasan Bulan Ini'}</h3>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Total Penjualan</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(monthlyTotal)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Jumlah Transaksi</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{monthlyCount}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Rata-rata/Transaksi</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(monthlyCount > 0 ? monthlyTotal / monthlyCount : 0)}</span>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Charts Row */}
+                    {/* Charts Row: Category + Payment Method */}
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        {/* Daily Sales Chart */}
+                        {/* Sales by Category */}
                         <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{t('pos.reports.dailySales') || 'Penjualan Harian (7 Hari Terakhir)'}</h3>
-                            {chartDailyData.length > 0 ? (
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                {t('pos.reports.salesByCategory') || 'Penjualan per Kategori'}
+                            </h3>
+                            {catData.length > 0 ? (
                                 <BarChart
-                                    data={chartDailyData}
-                                    labels={chartDailyLabels}
+                                    data={catData}
+                                    labels={catLabels}
                                     height={200}
                                     valuePrefix="Rp "
                                 />
                             ) : (
                                 <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-                                    Belum ada data
+                                    {t('pos.reports.noData') || 'Belum ada data'}
                                 </div>
                             )}
                         </div>
 
                         {/* Payment Method Breakdown */}
                         <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{t('pos.reports.paymentBreakdown') || 'Metode Pembayaran'}</h3>
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                {t('pos.reports.paymentBreakdown') || 'Metode Pembayaran'}
+                            </h3>
                             {pieData.length > 0 ? (
                                 <PieChart
                                     data={pieData}
@@ -403,28 +413,45 @@ export default function POSReportsPage() {
                                 />
                             ) : (
                                 <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-                                    Belum ada data
+                                    {t('pos.reports.noData') || 'Belum ada data'}
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Top Products */}
+                    {/* Hourly Trend */}
+                    {analytics?.hourlyTrend && analytics.hourlyTrend.some((h) => h.count > 0) && (
+                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                {t('pos.reports.hourlyTrend') || 'Tren Per Jam'}
+                            </h3>
+                            <BarChart
+                                data={hourlyData}
+                                labels={hourlyLabels}
+                                height={180}
+                                valuePrefix="Rp "
+                            />
+                        </div>
+                    )}
+
+                    {/* Top Products Table */}
                     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{t('pos.reports.topProducts') || 'Produk Terlaris'}</h3>
-                        {report?.topProducts && report.topProducts.length > 0 ? (
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                            {t('pos.reports.topProducts') || 'Produk Terlaris'}
+                        </h3>
+                        {analytics?.topProducts && analytics.topProducts.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                     <thead className="bg-gray-50 dark:bg-gray-800">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produk</th>
-                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
-                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pendapatan</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.reports.product') || 'Produk'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.quantitySold') || 'Qty'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.revenue') || 'Pendapatan'}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {report.topProducts.map((p, i) => (
+                                        {analytics.topProducts.map((p, i) => (
                                             <tr key={p.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                                 <td className="px-4 py-3 text-sm text-gray-500">{i + 1}</td>
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{p.name}</td>
@@ -436,26 +463,28 @@ export default function POSReportsPage() {
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400 text-center py-8">Belum ada data produk</p>
+                            <p className="text-sm text-gray-400 text-center py-8">{t('pos.reports.noData') || 'Belum ada data produk'}</p>
                         )}
                     </div>
 
                     {/* Payment Method Table */}
-                    {report?.paymentBreakdown && report.paymentBreakdown.length > 0 && (
+                    {analytics?.paymentMethodBreakdown && analytics.paymentMethodBreakdown.length > 0 && (
                         <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{t('pos.reports.paymentSummary') || 'Ringkasan Metode Pembayaran'}</h3>
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                {t('pos.reports.paymentSummary') || 'Ringkasan Metode Pembayaran'}
+                            </h3>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                     <thead className="bg-gray-50 dark:bg-gray-800">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metode</th>
-                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jumlah</th>
-                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Persentase</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.reports.paymentMethodLabel') || 'Metode'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.count') || 'Jumlah'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.totalRevenue') || 'Total'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">%</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {report.paymentBreakdown.map((p) => (
+                                        {analytics.paymentMethodBreakdown.map((p) => (
                                             <tr key={p.method} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                                                     {PAYMENT_METHOD_LABELS[p.method] || p.method}
@@ -470,15 +499,80 @@ export default function POSReportsPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* Cashier Performance Table */}
+                    {cashiers.length > 0 && (
+                        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                {t('pos.reports.cashierPerformance') || 'Performa Kasir'}
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead className="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.reports.cashier') || 'Kasir'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.count') || 'Transaksi'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.totalRevenue') || 'Total Penjualan'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.avgPerTransaction') || 'Rata-rata'}</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.reports.sessions') || 'Sesi'}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {cashiers.map((c, i) => (
+                                            <tr key={c.cashierId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <td className="px-4 py-3 text-sm text-gray-500">{i + 1}</td>
+                                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{c.cashierName}</td>
+                                                <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">{c.transactionCount}</td>
+                                                <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(c.totalSales)}</td>
+                                                <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">{formatCurrency(c.avgTransactionValue)}</td>
+                                                <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">{c.sessionCount}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>
     )
 }
 
-function getWeekKey(date: Date): string {
-    const startOfYear = new Date(date.getFullYear(), 0, 1)
-    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
-    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7)
-    return `${date.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`
+// ─── Summary Card Component ─────────────────────────────────────────────────
+
+function SummaryCard({
+    icon,
+    iconBg,
+    label,
+    value,
+    change,
+}: {
+    icon: React.ReactNode
+    iconBg: string
+    label: string
+    value: string
+    change: number | null
+}) {
+    return (
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconBg}`}>
+                    {icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-500 truncate">{label}</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+                </div>
+                {change !== null && (
+                    <div className={`flex items-center gap-0.5 text-xs font-medium ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-400'
+                        }`}>
+                        {change > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : change < 0 ? <TrendingDown className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
+                        {Math.abs(change).toFixed(1)}%
+                    </div>
+                )}
+            </div>
+        </div>
+    )
 }

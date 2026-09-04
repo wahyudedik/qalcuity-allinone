@@ -154,7 +154,8 @@
         "posTransactions": "Transactions",
         "posRefunds": "Refunds",
         "posReports": "POS Reports",
-        "posLoyalty": "Loyalty"
+        "posLoyalty": "Loyalty",
+        "posMonitor": "Monitor"
     },
     "dashboard": {
         "welcome": "Welcome back! Here's a summary of your business today.",
@@ -3105,6 +3106,7 @@
                 "refunds": "Refunds",
                 "reports": "Reports",
                 "terminals": "Terminals",
+                "monitor": "Monitor",
                 "loyalty": "Loyalty"
             }
         },
@@ -3187,7 +3189,26 @@
             "avgPerTransaction": "Average per Transaction",
             "weeklySummary": "Weekly Summary",
             "monthlySummary": "Monthly Summary",
-            "paymentSummary": "Payment Method Summary"
+            "paymentSummary": "Payment Method Summary",
+            "salesTrend": "Sales Trend",
+            "salesByCategory": "Sales by Category",
+            "hourlyTrend": "Hourly Trend",
+            "cashierPerformance": "Cashier Performance",
+            "sessions": "Sessions",
+            "yesterday": "Yesterday",
+            "change": "Change",
+            "noCashierData": "No cashier data available",
+            "exportCSV": "Export CSV",
+            "daily": "Daily",
+            "weekly": "Weekly",
+            "monthly": "Monthly",
+            "custom": "Custom",
+            "vsYesterday": "vs yesterday",
+            "noChange": "No change",
+            "totalSales": "Total Sales",
+            "totalTax": "Total Tax",
+            "avgTransaction": "Avg Transaction",
+            "topProducts": "Top Products"
         },
         "terminals": {
             "title": "POS Terminals",
@@ -3266,6 +3287,23 @@
             "noRewardsDesc": "Create rewards that members can redeem with their points.",
             "noTransactions": "No transactions yet",
             "confirmDeleteReward": "Are you sure you want to deactivate this reward? Members will no longer be able to redeem it."
+        },
+        "monitor": {
+            "title": "Monitor Terminal",
+            "subtitle": "Pantau semua terminal POS secara real-time",
+            "statusActive": "Active",
+            "statusIdle": "Idle",
+            "statusOffline": "Offline",
+            "totalTerminals": "Total Terminals",
+            "active": "Active",
+            "idle": "Idle",
+            "offline": "Offline",
+            "transactions": "Transactions Today",
+            "sales": "Sales Today",
+            "openedAt": "Opened",
+            "liveSession": "Live session",
+            "lastUpdated": "Last updated",
+            "noTerminals": "No terminals configured yet"
         }
     },
     "errors": {
