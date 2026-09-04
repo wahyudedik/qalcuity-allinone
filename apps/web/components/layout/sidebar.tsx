@@ -21,6 +21,7 @@ import {
     X,
     BarChart3,
     CheckCircle,
+    Monitor,
     type LucideIcon,
 } from "lucide-react";
 
@@ -100,19 +101,32 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.suppliers") || "Suppliers", href: "/dashboard/inventory/suppliers" },
             ],
         },
-        // 6. Approvals — all roles
+        // 6. POS (Point of Sale) — ADMIN, MEMBER, VIEWER (read-only)
+        {
+            label: t("nav.pos") || "Point of Sale",
+            href: "/dashboard/pos",
+            icon: Monitor,
+            children: [
+                { label: t("nav.posTerminals") || "Terminals", href: "/dashboard/pos/terminals" },
+                { label: t("nav.posSessions") || "Sessions", href: "/dashboard/pos/sessions" },
+                { label: t("nav.posTransactions") || "Transactions", href: "/dashboard/pos/transactions" },
+                { label: t("nav.posRefunds") || "Refunds", href: "/dashboard/pos/refunds" },
+                { label: t("nav.posReports") || "Reports", href: "/dashboard/pos/reports" },
+            ],
+        },
+        // 7. Approvals — all roles
         {
             label: t("nav.approvals") || "Approvals",
             href: "/dashboard/approvals",
             icon: CheckCircle,
         },
-        // 7. Reports — ADMIN, MEMBER, VIEWER
+        // 8. Reports — ADMIN, MEMBER, VIEWER
         {
             label: t("nav.reports") || "Reports",
             href: "/dashboard/reports",
             icon: FileText,
         },
-        // 7. Analytics — ADMIN, MEMBER, VIEWER
+        // 9. Analytics — ADMIN, MEMBER, VIEWER
         {
             label: t("nav.analytics") || "Analytics",
             href: "/dashboard/analytics",
@@ -130,7 +144,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.dictionary") || "Dictionary", href: "/dashboard/analytics/dictionary" },
             ],
         },
-        // 8. Settings — ADMIN, SUPERADMIN only
+        // 10. Settings — ADMIN, SUPERADMIN only
         {
             label: t("nav.settings") || "Settings",
             href: "/dashboard/settings",
@@ -148,14 +162,14 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.workflow") || "Workflow", href: "/dashboard/settings/workflow" },
             ],
         },
-        // 8. Billing — ADMIN, SUPERADMIN only
+        // 11. Billing — ADMIN, SUPERADMIN only
         {
             label: t("nav.billing") || "Billing",
             href: "/dashboard/settings/billing",
             icon: CreditCard,
             adminOnly: true,
         },
-        // 9. Audit Trail — ADMIN, SUPERADMIN only
+        // 12. Audit Trail — ADMIN, SUPERADMIN only
         {
             label: t("nav.auditTrail") || "Audit Trail",
             href: "/dashboard/audit",

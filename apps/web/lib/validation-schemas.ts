@@ -891,6 +891,60 @@ export const updateAttendanceSchema = z.object({
 });
 
 // ============================================
+// POS (Point of Sale) Schemas
+// ============================================
+
+export const createPosTerminalSchema = z.object({
+    name: z.string().min(1, 'Nama terminal wajib diisi').max(255, 'Nama terminal maksimal 255 karakter'),
+    code: z.string().min(1, 'Kode terminal wajib diisi').max(50, 'Kode terminal maksimal 50 karakter'),
+    location: z.string().max(255, 'Lokasi maksimal 255 karakter').optional().nullable(),
+});
+
+export const updatePosTerminalSchema = z.object({
+    name: z.string().min(1, 'Nama terminal wajib diisi').max(255, 'Nama terminal maksimal 255 karakter').optional(),
+    location: z.string().max(255, 'Lokasi maksimal 255 karakter').optional().nullable(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE'], { message: 'Status terminal tidak valid' }).optional(),
+});
+
+export const openPosSessionSchema = z.object({
+    terminalId: z.string().min(1, 'ID terminal wajib diisi'),
+    openingCash: z.number().min(0, 'Uang awal tidak boleh negatif'),
+});
+
+export const closePosSessionSchema = z.object({
+    closingCash: z.number().min(0, 'Uang tutup tidak boleh negatif'),
+});
+
+export const posTransactionItemSchema = z.object({
+    productId: z.string().min(1, 'ID produk wajib diisi'),
+    productName: z.string().min(1, 'Nama produk wajib diisi'),
+    productSku: z.string().optional().nullable(),
+    quantity: z.number().min(0.01, 'Jumlah harus lebih dari 0'),
+    unitPrice: z.number().min(0, 'Harga satuan tidak boleh negatif'),
+    discountAmount: z.number().min(0, 'Diskon tidak boleh negatif').optional(),
+    discountPercent: z.number().min(0, 'Persentase diskon tidak boleh negatif').max(100, 'Persentase diskon maksimal 100').optional().nullable(),
+    taxRate: z.number().min(0, 'Tarif pajak tidak boleh negatif').optional(),
+});
+
+export const createPosTransactionSchema = z.object({
+    sessionId: z.string().min(1, 'ID sesi wajib diisi'),
+    customerName: z.string().max(255, 'Nama pelanggan maksimal 255 karakter').optional().nullable(),
+    customerPhone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    items: z.array(posTransactionItemSchema).min(1, 'Minimal 1 item dalam transaksi'),
+    paymentMethod: z.enum(['CASH', 'CARD', 'QRIS', 'E_WALLET', 'BANK_TRANSFER'], { message: 'Metode pembayaran tidak valid' }).optional(),
+    discountAmount: z.number().min(0, 'Diskon tidak boleh negatif').optional(),
+    discountPercent: z.number().min(0, 'Persentase diskon tidak boleh negatif').max(100, 'Persentase diskon maksimal 100').optional().nullable(),
+    paidAmount: z.number().min(0, 'Jumlah bayar tidak boleh negatif'),
+    notes: z.string().optional().nullable(),
+});
+
+export const createPosRefundSchema = z.object({
+    transactionId: z.string().min(1, 'ID transaksi wajib diisi'),
+    amount: z.number().min(0.01, 'Jumlah refund harus lebih dari 0'),
+    reason: z.string().min(1, 'Alasan refund wajib diisi').max(500, 'Alasan refund maksimal 500 karakter'),
+});
+
+// ============================================
 // Helper Function: Format Zod errors
 // ============================================
 
