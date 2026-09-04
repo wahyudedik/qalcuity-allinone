@@ -962,3 +962,36 @@ export function formatZodError(error: z.ZodError) {
         details: fieldErrors,
     };
 }
+
+// ============================================
+// POS Loyalty Schemas
+// ============================================
+
+export const createLoyaltyMemberSchema = z.object({
+    name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    email: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    phone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    contactId: z.string().optional().nullable(),
+});
+
+export const updateLoyaltyMemberSchema = z.object({
+    name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter').optional(),
+    email: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    phone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    tier: z.enum(['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']).optional(),
+});
+
+export const createLoyaltyRewardSchema = z.object({
+    name: z.string().min(1, 'Nama reward wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    description: z.string().optional().nullable(),
+    pointsCost: z.number().int().min(1, 'Minimal 1 point'),
+    rewardType: z.enum(['DISCOUNT_PERCENT', 'DISCOUNT_FIXED', 'FREE_ITEM', 'VOUCHER']),
+    rewardValue: z.number().min(0, 'Nilai reward tidak boleh negatif'),
+    stock: z.number().int().optional().default(-1),
+});
+
+export const redeemLoyaltyPointsSchema = z.object({
+    memberId: z.string().min(1, 'Member wajib dipilih'),
+    rewardId: z.string().min(1, 'Reward wajib dipilih'),
+    points: z.number().int().min(1, 'Minimal 1 point').optional(),
+});
