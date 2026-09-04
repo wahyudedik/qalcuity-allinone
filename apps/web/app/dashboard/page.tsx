@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { useToast } from '@/components/ui/toast'
 import { BarChart, PieChart, LineChart } from '@/components/ui/charts'
 
 interface DashboardStats {
@@ -119,6 +120,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { t } = useTranslation()
+    const { addToast } = useToast()
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -240,25 +242,25 @@ export default function DashboardPage() {
     // Extended KPI row
     const extendedKpis = kpi ? [
         {
-            title: 'Profit Bulanan',
+            title: t('dashboard.monthlyProfit'),
             value: formatCurrency(kpi.profit.current),
             change: kpi.profit.change,
             icon: DollarSign,
         },
         {
-            title: 'Pengeluaran',
+            title: t('dashboard.expenses'),
             value: formatCurrency(kpi.expenses.current),
             change: kpi.expenses.change,
             icon: Receipt,
         },
         {
-            title: 'Invoice Overdue',
+            title: t('dashboard.invoiceOverdue'),
             value: kpi.outstandingInvoices.count.toString(),
             subtitle: formatCurrency(kpi.outstandingInvoices.total),
             icon: FileText,
         },
         {
-            title: 'Karyawan Aktif',
+            title: t('dashboard.activeEmployees'),
             value: kpi.activeEmployees.toString(),
             icon: Users,
         },
@@ -274,37 +276,37 @@ export default function DashboardPage() {
     // AI Insights from real KPI data
     const revenueChangePercent = kpi?.revenue?.change ?? 0
     const revenueInsightText = revenueChangePercent >= 0
-        ? `↑ ${revenueChangePercent}% dari bulan lalu`
-        : `↓ ${Math.abs(revenueChangePercent)}% dari bulan lalu`
+        ? `↑ ${revenueChangePercent}% ${t('dashboard.revenueFromLastMonth')}`
+        : `↓ ${Math.abs(revenueChangePercent)}% ${t('dashboard.revenueFromLastMonth')}`
     const revenueInsightDesc = revenueChangePercent >= 10
-        ? 'Pertumbuhan kuat. Pertahankan momentum ini.'
+        ? t('dashboard.revenueGrowthStrong')
         : revenueChangePercent >= 0
-            ? 'Pertumbuhan stabil. Pertimbangkan promosi untuk mencapai target Q3.'
-            : 'Revenue menurun. Perlu evaluasi strategi penjualan.'
+            ? t('dashboard.revenueGrowthStable')
+            : t('dashboard.revenueDeclining')
 
     const overdueCount = kpi?.outstandingInvoices?.count ?? 0
     const overdueTotal = kpi?.outstandingInvoices?.total ?? 0
     const cashFlowInsightText = overdueCount > 0
-        ? `${overdueCount} invoice overdue`
-        : 'Tidak ada invoice overdue'
+        ? `${overdueCount} ${t('dashboard.overdueInvoicesCount')}`
+        : t('dashboard.noOverdueInvoices')
     const cashFlowInsightDesc = overdueCount > 0
-        ? `Total ${formatCurrency(overdueTotal)} perlu follow up segera.`
-        : 'Semua invoice sudah sesuai jadwal.'
+        ? `Total ${formatCurrency(overdueTotal)} ${t('dashboard.overdueFollowUp')}`
+        : t('dashboard.allInvoicesOnSchedule')
 
     const lowStockCount = kpi?.lowStockProducts?.count ?? 0
     const lowStockNames = kpi?.lowStockProducts?.items?.map((p) => p.name) ?? []
     const stockInsightText = lowStockCount > 0
-        ? `${lowStockCount} produk low stock`
-        : 'Semua stok produk aman'
+        ? `${lowStockCount} ${t('dashboard.lowStockCount')}`
+        : t('dashboard.allStocksSafe')
     const stockInsightDesc = lowStockCount > 0
-        ? `${lowStockNames.slice(0, 3).join(', ')}${lowStockCount > 3 ? ` dan ${lowStockCount - 3} lainnya` : ''} perlu restock.`
-        : 'Tidak ada produk yang perlu restock saat ini.'
+        ? `${lowStockNames.slice(0, 3).join(', ')}${lowStockCount > 3 ? ` dan ${lowStockCount - 3} lainnya` : ''} ${t('dashboard.needRestock')}`
+        : t('dashboard.noRestockNeeded')
 
     return (
         <div className="space-y-6">
             {/* Page Title */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('common.dashboard')}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t('dashboard.welcome')}
                 </p>
@@ -394,7 +396,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between">
                         <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                             <ClipboardCheck className="h-5 w-5 text-yellow-600" />
-                            Menunggu Persetujuan
+                            {t('dashboard.pendingApproval')}
                             <span className="ml-2 inline-flex items-center justify-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-sm font-bold text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200">
                                 {approvals.count}
                             </span>
@@ -403,7 +405,7 @@ export default function DashboardPage() {
                             href="/dashboard/settings/workflow"
                             className="text-sm font-medium text-yellow-700 hover:text-yellow-900 dark:text-yellow-300 dark:hover:text-yellow-100"
                         >
-                            Lihat Semua →
+                            {t('dashboard.viewAllLink')}
                         </Link>
                     </div>
                     <div className="mt-4 space-y-3">
@@ -421,7 +423,7 @@ export default function DashboardPage() {
                                             {ENTITY_LABELS[req.entityType] || req.entityType} — {req.entityDisplay}
                                         </p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            Diajukan oleh {req.requesterName}
+                                            {t('dashboard.submittedBy')} {req.requesterName}
                                             {req.entityAmount !== null && (
                                                 <> • {formatCurrency(req.entityAmount)}</>
                                             )}
@@ -435,7 +437,7 @@ export default function DashboardPage() {
                                                 const res = await fetch(`/api/approval/requests/${req.id}/approve`, {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ comments: 'Approved dari dashboard' }),
+                                                    body: JSON.stringify({ comments: t('dashboard.approveFromDashboard') }),
                                                 })
                                                 if (res.ok) {
                                                     setApprovals((prev) => ({
@@ -443,7 +445,9 @@ export default function DashboardPage() {
                                                         requests: prev.requests.filter((r) => r.id !== req.id),
                                                     }))
                                                 }
-                                            } catch { /* ignore */ }
+                                            } catch {
+                                                addToast(t('dashboard.approveFailed'), 'error')
+                                            }
                                         }}
                                         className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700 transition-colors"
                                         title="Approve"
@@ -456,7 +460,7 @@ export default function DashboardPage() {
                                                 const res = await fetch(`/api/approval/requests/${req.id}/reject`, {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ comments: 'Rejected dari dashboard' }),
+                                                    body: JSON.stringify({ comments: t('dashboard.rejectFromDashboard') }),
                                                 })
                                                 if (res.ok) {
                                                     setApprovals((prev) => ({
@@ -464,7 +468,9 @@ export default function DashboardPage() {
                                                         requests: prev.requests.filter((r) => r.id !== req.id),
                                                     }))
                                                 }
-                                            } catch { /* ignore */ }
+                                            } catch {
+                                                addToast(t('dashboard.rejectFailed'), 'error')
+                                            }
                                         }}
                                         className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700 transition-colors"
                                         title="Reject"
@@ -502,8 +508,8 @@ export default function DashboardPage() {
 
                 {/* Expense by Category Chart */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pengeluaran per Kategori</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Bulan ini</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.expenseByCategory')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.thisMonth')}</p>
                     <div className="mt-4">
                         {charts?.expenseByCategory && charts.expenseByCategory.data.length > 0 ? (
                             <PieChart
@@ -525,8 +531,8 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Top Products Chart */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Produk Terlaris</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">6 bulan terakhir</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.topProducts')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.lastSixMonths')}</p>
                     <div className="mt-4">
                         {charts?.topProducts && charts.topProducts.data.length > 0 ? (
                             <BarChart
@@ -545,8 +551,8 @@ export default function DashboardPage() {
 
                 {/* Order Trend Chart */}
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tren Order</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Invoice per bulan</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.orderTrend')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.invoicesPerMonth')}</p>
                     <div className="mt-4">
                         {charts?.orderTrend && charts.orderTrend.data.length > 0 ? (
                             <LineChart
@@ -607,7 +613,7 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-lg bg-white/10 p-4">
-                        <p className="text-sm opacity-80">Revenue Insight</p>
+                        <p className="text-sm opacity-80">{t('dashboard.revenueInsight')}</p>
                         <div className="flex items-center gap-1 font-semibold">
                             {revenueChangePercent >= 0 ? (
                                 <TrendingUp className="h-4 w-4" />
@@ -622,7 +628,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="rounded-lg bg-white/10 p-4">
-                        <p className="text-sm opacity-80">Cash Flow Alert</p>
+                        <p className="text-sm opacity-80">{t('dashboard.cashFlowAlert')}</p>
                         <div className="flex items-center gap-1 font-semibold">
                             {overdueCount > 0 && <AlertCircle className="h-4 w-4" />}
                             {cashFlowInsightText}
@@ -633,7 +639,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="rounded-lg bg-white/10 p-4">
-                        <p className="text-sm opacity-80">Stock Warning</p>
+                        <p className="text-sm opacity-80">{t('dashboard.stockWarning')}</p>
                         <div className="flex items-center gap-1 font-semibold">
                             {lowStockCount > 0 && <Package className="h-4 w-4" />}
                             {stockInsightText}

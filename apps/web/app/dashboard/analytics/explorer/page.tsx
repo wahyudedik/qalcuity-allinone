@@ -230,7 +230,7 @@ export default function DataExplorerPage() {
     /* ---------- Analyze ---------- */
     const runAnalysis = useCallback(async () => {
         if (selectedDimensions.length === 0 && selectedMeasures.length === 0) {
-            setError('Select at least one dimension or measure')
+            setError(t('analytics.errors.selectDimensions'))
             return
         }
         try {
@@ -291,7 +291,7 @@ export default function DataExplorerPage() {
             setSaveName('')
             setSaveTags('')
         } catch {
-            setError('Failed to save report')
+            setError(t('analytics.errors.saveFailed'))
         } finally {
             setSaving(false)
         }

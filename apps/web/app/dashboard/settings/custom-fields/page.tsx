@@ -85,10 +85,10 @@ export default function CustomFieldsSettingsPage() {
             if (data.success) {
                 setFields(data.data)
             } else {
-                setError(data.error || 'Gagal memuat custom fields')
+                setError(data.error || t('settings.customFields.loadFailed'))
             }
         } catch {
-            setError('Gagal terhubung ke server')
+            setError(t('settings.customFields.connectFailed'))
         } finally {
             setLoading(false)
         }
@@ -100,7 +100,7 @@ export default function CustomFieldsSettingsPage() {
 
     const handleCreate = async () => {
         if (!newField.fieldName.trim() || !newField.fieldLabel.trim()) {
-            setToast({ message: 'Nama field dan label wajib diisi', type: 'error' })
+            setToast({ message: t('settings.customFields.nameRequired'), type: 'error' })
             return
         }
 
@@ -129,15 +129,15 @@ export default function CustomFieldsSettingsPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Custom field berhasil dibuat', type: 'success' })
+                setToast({ message: t('settings.customFields.createSuccess'), type: 'success' })
                 setShowCreateModal(false)
                 setNewField({ entity: 'product', fieldName: '', fieldLabel: '', fieldType: 'text', required: false, options: '', defaultValue: '' })
                 fetchFields()
             } else {
-                setToast({ message: data.error || 'Gagal membuat custom field', type: 'error' })
+                setToast({ message: data.error || t('settings.customFields.createFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            setToast({ message: t('settings.customFields.connectFailed'), type: 'error' })
         } finally {
             setCreating(false)
         }
@@ -151,13 +151,13 @@ export default function CustomFieldsSettingsPage() {
             const res = await fetch(`/api/settings/custom-fields/${fieldId}`, { method: 'DELETE' })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: `Custom field "${fieldLabel}" berhasil dihapus`, type: 'success' })
+                setToast({ message: t('settings.customFields.deleteSuccess'), type: 'success' })
                 fetchFields()
             } else {
-                setToast({ message: data.error || 'Gagal menghapus custom field', type: 'error' })
+                setToast({ message: data.error || t('settings.customFields.deleteFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            setToast({ message: t('settings.customFields.connectFailed'), type: 'error' })
         } finally {
             setDeleting(null)
         }
@@ -376,8 +376,8 @@ export default function CustomFieldsSettingsPage() {
                                                 key={opt.value}
                                                 onClick={() => setNewField(prev => ({ ...prev, fieldType: opt.value }))}
                                                 className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${newField.fieldType === opt.value
-                                                        ? 'border-blue-500 bg-blue-50'
-                                                        : 'border-gray-200 hover:border-gray-300'
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-gray-300'
                                                     }`}
                                             >
                                                 <Icon className={`h-5 w-5 ${newField.fieldType === opt.value ? 'text-blue-600' : 'text-gray-400'}`} />

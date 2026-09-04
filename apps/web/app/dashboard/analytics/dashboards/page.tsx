@@ -119,7 +119,7 @@ export default function DashboardsPage() {
             const res = await fetch('/api/analytics/dashboards')
             const json: DashboardsResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load dashboards')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setDashboards(json.data)
         } catch (err) {
@@ -142,7 +142,7 @@ export default function DashboardsPage() {
             setDashboards(prev => prev.filter(d => d.id !== id))
             setActionMenuId(null)
         } catch {
-            setError('Failed to delete dashboard')
+            setError(t('analytics.errors.deleteFailed'))
         }
     }
 
@@ -172,7 +172,7 @@ export default function DashboardsPage() {
             setCreateForm({ name: '', description: '', visibility: 'PRIVATE', theme: 'AUTO' })
             fetchDashboards()
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create dashboard')
+            setError(err instanceof Error ? err.message : t('analytics.errors.createFailed'))
         } finally {
             setSaving(false)
         }

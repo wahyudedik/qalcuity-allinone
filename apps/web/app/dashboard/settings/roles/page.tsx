@@ -128,10 +128,10 @@ export default function RolesSettingsPage() {
             if (data.success) {
                 setRoles(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data roles')
+                setError(data.error || t('settings.roles.loadFailed'))
             }
         } catch {
-            setError('Gagal terhubung ke server')
+            setError(t('settings.roles.connectFailed'))
         } finally {
             setLoading(false)
         }
@@ -143,7 +143,7 @@ export default function RolesSettingsPage() {
 
     const handleCreateRole = async () => {
         if (!newRole.name.trim()) {
-            setToast({ message: 'Nama role wajib diisi', type: 'error' })
+            setToast({ message: t('settings.roles.nameRequired'), type: 'error' })
             return
         }
 
@@ -156,15 +156,15 @@ export default function RolesSettingsPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Role berhasil dibuat', type: 'success' })
+                setToast({ message: t('settings.roles.createSuccess'), type: 'success' })
                 setShowCreateModal(false)
                 setNewRole({ name: '', description: '', permissions: [] })
                 fetchRoles()
             } else {
-                setToast({ message: data.error || 'Gagal membuat role', type: 'error' })
+                setToast({ message: data.error || t('settings.roles.createFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            setToast({ message: t('settings.roles.connectFailed'), type: 'error' })
         } finally {
             setCreating(false)
         }
@@ -178,13 +178,13 @@ export default function RolesSettingsPage() {
             const res = await fetch(`/api/settings/roles/${roleId}`, { method: 'DELETE' })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: `Role "${roleName}" berhasil dihapus`, type: 'success' })
+                setToast({ message: t('settings.roles.deleteSuccess'), type: 'success' })
                 fetchRoles()
             } else {
-                setToast({ message: data.error || 'Gagal menghapus role', type: 'error' })
+                setToast({ message: data.error || t('settings.roles.deleteFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            setToast({ message: t('settings.roles.connectFailed'), type: 'error' })
         } finally {
             setDeleting(null)
         }

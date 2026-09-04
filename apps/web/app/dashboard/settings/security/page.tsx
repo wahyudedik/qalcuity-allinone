@@ -297,7 +297,7 @@ export default function SecuritySettingsPage() {
                 setToast({ message: t('settings.twoFaDisabled') || '2FA telah dinonaktifkan', type: 'success' })
             } else {
                 setTwoFaError(data.error)
-                setToast({ message: data.error || 'Gagal menonaktifkan 2FA', type: 'error' })
+                setToast({ message: data.error || t('settings.disable2faFailed'), type: 'error' })
             }
         } catch {
             setToast({ message: t('settings.errorConnectServer'), type: 'error' })
@@ -323,10 +323,10 @@ export default function SecuritySettingsPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Sesi berhasil dinonaktifkan', type: 'success' })
+                setToast({ message: t('settings.disableSessionSuccess') || 'Session disabled', type: 'success' })
                 fetchSessions()
             } else {
-                setToast({ message: data.error || 'Gagal menonaktifkan sesi', type: 'error' })
+                setToast({ message: data.error || t('settings.disableSessionFailed'), type: 'error' })
             }
         } catch {
             setToast({ message: t('settings.errorConnectServer'), type: 'error' })
@@ -342,10 +342,10 @@ export default function SecuritySettingsPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: data.message || 'Semua sesi lain berhasil dinonaktifkan', type: 'success' })
+                setToast({ message: data.message || t('settings.disableSessionSuccess') || 'All sessions disabled', type: 'success' })
                 fetchSessions()
             } else {
-                setToast({ message: data.error || 'Gagal menonaktifkan sesi', type: 'error' })
+                setToast({ message: data.error || t('settings.disableSessionFailed'), type: 'error' })
             }
         } catch {
             setToast({ message: t('settings.errorConnectServer'), type: 'error' })
@@ -541,8 +541,8 @@ export default function SecuritySettingsPage() {
                         onClick={handleTwoFaToggle}
                         disabled={twoFaLoading}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${twoFaStatus.enabled
-                                ? 'border border-red-300 text-red-700 hover:bg-red-50'
-                                : 'bg-green-600 text-white hover:bg-green-700'
+                            ? 'border border-red-300 text-red-700 hover:bg-red-50'
+                            : 'bg-green-600 text-white hover:bg-green-700'
                             }`}
                     >
                         {twoFaLoading && <Loader2 className="w-4 h-4 animate-spin inline mr-1" />}
@@ -629,8 +629,8 @@ export default function SecuritySettingsPage() {
                             <div
                                 key={session.id}
                                 className={`flex items-center justify-between p-4 rounded-lg border ${session.isCurrent
-                                        ? 'border-green-200 bg-green-50'
-                                        : 'border-gray-200 hover:bg-gray-50'
+                                    ? 'border-green-200 bg-green-50'
+                                    : 'border-gray-200 hover:bg-gray-50'
                                     }`}
                             >
                                 <div className="flex items-center gap-4">

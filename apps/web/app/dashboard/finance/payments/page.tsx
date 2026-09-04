@@ -291,7 +291,7 @@ export default function PaymentsPage() {
                     <EmptyState
                         icon={DollarSign}
                         title={t('finance.payments.empty')}
-                        description="Belum ada data pembayaran yang sesuai dengan filter."
+                        description={t('finance.payments.emptyDescription')}
                     />
                 ) : (
                     sortedPayments.map((payment) => (
@@ -367,7 +367,7 @@ export default function PaymentsPage() {
                                         <EmptyState
                                             icon={DollarSign}
                                             title={t('finance.payments.empty')}
-                                            description="Belum ada data pembayaran yang sesuai dengan filter."
+                                            description={t('finance.payments.emptyDescription')}
                                         />
                                     </td>
                                 </tr>

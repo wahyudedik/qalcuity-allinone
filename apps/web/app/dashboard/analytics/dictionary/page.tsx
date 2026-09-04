@@ -123,7 +123,7 @@ export default function DictionaryPage() {
             const res = await fetch(`/api/analytics/dictionary?${params}`)
             const json: DictionaryResponse = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error('Failed to load dictionary')
+                throw new Error(t('analytics.errors.loadFailed'))
             }
             setEntries(json.data)
         } catch (err) {

@@ -92,10 +92,10 @@ export default function ContactsPage() {
             if (data.success) {
                 setContacts(data.data)
             } else {
-                setError('Gagal memuat data kontak')
+                setError(t('crm.contacts.fetchError'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('crm.contacts.fetchError'))
         } finally {
             setLoading(false)
         }
@@ -118,12 +118,12 @@ export default function ContactsPage() {
                 const result = await response.json()
                 if (result.success) {
                     fetchContacts()
-                    setToast({ message: 'Kontak berhasil dihapus', type: 'success' })
+                    setToast({ message: t('crm.contacts.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: t('crm.contacts.deleteFailed'), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus kontak', type: 'error' })
+                setToast({ message: t('crm.contacts.deleteFailed'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -177,12 +177,12 @@ export default function ContactsPage() {
                 setShowCreateModal(false)
                 setForm(initialFormState)
                 fetchContacts()
-                setToast({ message: 'Kontak berhasil dibuat', type: 'success' })
+                setToast({ message: t('crm.contacts.createSuccess'), type: 'success' })
             } else {
-                setToast({ message: `Gagal membuat kontak: ${result.error || 'Terjadi kesalahan'}`, type: 'error' })
+                setToast({ message: t('crm.contacts.createFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal membuat kontak', type: 'error' })
+            setToast({ message: t('crm.contacts.createFailed'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -342,8 +342,8 @@ export default function ContactsPage() {
                 filtered.length === 0 ? (
                     <EmptyState
                         icon={Users}
-                        title="Tidak ada kontak ditemukan"
-                        description="Tidak ada kontak yang sesuai dengan filter yang dipilih."
+                        title={t('crm.contacts.empty')}
+                        description={t('crm.contacts.emptyDescription')}
                     />
                 ) : (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -391,8 +391,8 @@ export default function ContactsPage() {
                         {filtered.length === 0 ? (
                             <EmptyState
                                 icon={Users}
-                                title="Tidak ada kontak ditemukan"
-                                description="Tidak ada kontak yang sesuai dengan filter yang dipilih."
+                                title={t('crm.contacts.empty')}
+                                description={t('crm.contacts.emptyDescription')}
                             />
                         ) : filtered.map((contact) => (
                             <Link
@@ -447,8 +447,8 @@ export default function ContactsPage() {
                                             <td colSpan={6} className="px-4 py-12">
                                                 <EmptyState
                                                     icon={Users}
-                                                    title="Tidak ada kontak ditemukan"
-                                                    description="Tidak ada kontak yang sesuai dengan filter yang dipilih."
+                                                    title={t('crm.contacts.empty')}
+                                                    description={t('crm.contacts.emptyDescription')}
                                                 />
                                             </td>
                                         </tr>

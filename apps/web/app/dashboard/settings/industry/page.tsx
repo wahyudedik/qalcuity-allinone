@@ -89,10 +89,10 @@ export default function IndustrySettingsPage() {
                 setSelectedIndustry(data.data.industry)
                 setModules(data.data.modules)
             } else {
-                setError(data.error || 'Gagal memuat konfigurasi industri')
+                setError(data.error || t('settings.industry.loadFailed'))
             }
         } catch {
-            setError('Gagal terhubung ke server')
+            setError(t('settings.industry.connectFailed'))
         } finally {
             setLoading(false)
         }
@@ -104,7 +104,7 @@ export default function IndustrySettingsPage() {
 
     const handleSave = async () => {
         if (!selectedIndustry) {
-            setToast({ message: 'Pilih industri terlebih dahulu', type: 'error' })
+            setToast({ message: t('settings.industry.selectFirst'), type: 'error' })
             return
         }
 
@@ -117,13 +117,13 @@ export default function IndustrySettingsPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Konfigurasi industri berhasil disimpan', type: 'success' })
+                setToast({ message: t('settings.industry.saveSuccess'), type: 'success' })
                 fetchConfig()
             } else {
-                setToast({ message: data.error || 'Gagal menyimpan konfigurasi', type: 'error' })
+                setToast({ message: data.error || t('settings.industry.saveFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            setToast({ message: t('settings.industry.connectFailed'), type: 'error' })
         } finally {
             setSaving(false)
         }
