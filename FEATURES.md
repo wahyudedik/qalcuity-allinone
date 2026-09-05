@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 5, 2026 (POS Kitchen Display System — Phase 1+2 Complete)
+**Last Updated:** September 5, 2026 (Operations Module MVP Phase A — Complete)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 11.0 — Kitchen Display System Complete
+**Document Version:** 12.0 — Operations Module MVP Phase A Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -375,25 +375,29 @@ HR yang efisien dengan automation untuk fokus pada people.
 
 ## 6. Operations & Project
 
-Manage projects dan field operations dengan efisien.
+Manage projects dan field operations dengan efisien. **MVP Phase A Complete** (5 September 2026).
 
 ### 6.1 Project Management
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
+| **Project CRUD** | ✅ `implemented` | 2026-09-05 | Full CRUD: list (grid cards), detail (4 tabs: Overview, Tasks, Members, Budget), search/filter — [`apps/web/app/dashboard/projects/`](apps/web/app/dashboard/projects/) |
+| **Project Members** | ✅ `implemented` | 2026-09-05 | Add/remove members with role (LEAD/MEMBER/VIEWER) — API + UI integrated |
+| **Project Budget Tracking** | ✅ `implemented` | 2026-09-05 | Budget field on Project model, displayed in project detail Budget tab |
+| **Kanban Board** | ✅ `implemented` | 2026-09-05 | 4 columns (TODO/IN_PROGRESS/IN_REVIEW/DONE), button-based status change — [`apps/web/app/dashboard/projects/[id]/board.tsx`](apps/web/app/dashboard/projects/[id]/board.tsx) |
 | **Project Types** | 📋 `planned` | — | Belum ada kode |
 | **Gantt Chart** | 📋 `planned` | — | Belum ada kode |
-| **Kanban Board** | 📋 `planned` | — | Belum ada kode |
 | **Resource Allocation** | 📋 `planned` | — | Belum ada kode |
-| **Budget Tracking** | 📋 `planned` | — | Belum ada kode |
 
 ### 6.2 Task & Time Tracking
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Task Assignment** | 📋 `planned` | — | Belum ada kode |
-| **Time Logging** | 📋 `planned` | — | Belum ada kode |
-| **Timesheet** | 📋 `planned` | — | Belum ada kode |
+| **Task Management** | ✅ `implemented` | 2026-09-05 | Full CRUD, status (TODO/IN_PROGRESS/IN_REVIEW/DONE), priority (LOW/MEDIUM/HIGH/CRITICAL), assignee, due date, estimated hours — [`apps/web/app/api/tasks/`](apps/web/app/api/tasks/) |
+| **Task Comments** | ✅ `implemented` | 2026-09-05 | Add/view comments on tasks — API + UI integrated |
+| **My Tasks (Cross-project)** | ✅ `implemented` | 2026-09-05 | Cross-project task view with filters and grouping — [`apps/web/app/dashboard/tasks/page.tsx`](apps/web/app/dashboard/tasks/page.tsx) |
+| **Time Logging** | ✅ `implemented` | 2026-09-05 | Log time per task with hours, description, date — API + UI integrated |
+| **Timesheet** | ✅ `implemented` | 2026-09-05 | Weekly/monthly view with project breakdown — [`apps/web/app/dashboard/timesheet/page.tsx`](apps/web/app/dashboard/timesheet/page.tsx) |
 | **Productivity Report** | 📋 `planned` | — | Belum ada kode |
 
 ### 6.3 Field Service Module
