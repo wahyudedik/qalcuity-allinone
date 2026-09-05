@@ -26,6 +26,12 @@
             "@/*": [
                 "./*"
             ],
+            "@qalcuity/api": [
+                "../../packages/api/src"
+            ],
+            "@qalcuity/types": [
+                "../../packages/types/src"
+            ],
             "@qalcuity/ui": [
                 "../../packages/ui/src"
             ],
