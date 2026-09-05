@@ -51,6 +51,11 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── Audit ────────────────────────────────────────────────────────────────
     '/api/audit': { permission: 'audit.read', fallbackRole: 'ADMIN' },
+
+    // ─── POS Kitchen Display ─────────────────────────────────────────────────
+    '/api/pos/kitchen/orders': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
+    '/api/pos/kitchen/stations': { permission: 'pos.kitchen_station', fallbackRole: 'ADMIN' },
+    '/api/pos/kitchen/stats': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
 };
 
 /**

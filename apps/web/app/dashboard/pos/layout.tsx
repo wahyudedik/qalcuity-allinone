@@ -11,6 +11,7 @@ import {
     RotateCcw,
     Award,
     Activity,
+    ChefHat,
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
@@ -31,6 +32,7 @@ const posTabs: TabItem[] = [
     { href: '/dashboard/pos/terminals', labelKey: 'pos.layout.tabs.terminals', icon: Monitor },
     { href: '/dashboard/pos/terminals-monitor', labelKey: 'pos.layout.tabs.monitor', icon: Activity },
     { href: '/dashboard/pos/loyalty', labelKey: 'pos.layout.tabs.loyalty', icon: Award },
+    { href: '/dashboard/pos/kitchen', labelKey: 'pos.layout.tabs.kitchen', icon: ChefHat },
 ]
 
 export default function POSLayout({ children }: { children: React.ReactNode }) {

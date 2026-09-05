@@ -995,3 +995,46 @@ export const redeemLoyaltyPointsSchema = z.object({
     rewardId: z.string().min(1, 'Reward wajib dipilih'),
     points: z.number().int().min(1, 'Minimal 1 point').optional(),
 });
+
+// ============================================
+// POS Kitchen Display Schemas
+// ============================================
+
+export const createKitchenStationSchema = z.object({
+    name: z.string().min(1, 'Nama stasiun wajib diisi').max(100, 'Nama stasiun maksimal 100 karakter'),
+    description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable(),
+    sortOrder: z.number().int().min(0).optional().default(0),
+});
+
+export const updateKitchenStationSchema = z.object({
+    name: z.string().min(1, 'Nama stasiun wajib diisi').max(100, 'Nama stasiun maksimal 100 karakter').optional(),
+    description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable(),
+    sortOrder: z.number().int().min(0).optional(),
+    isActive: z.boolean().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+const kitchenOrderItemSchema = z.object({
+    productName: z.string().min(1, 'Nama produk wajib diisi').max(255, 'Nama produk maksimal 255 karakter'),
+    quantity: z.number().int('Jumlah harus bilangan bulat').min(1, 'Jumlah minimal 1'),
+    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
+    transactionItemId: z.string().optional().nullable(),
+});
+
+export const createKitchenOrderSchema = z.object({
+    transactionId: z.string().optional().nullable(),
+    stationId: z.string().optional().nullable(),
+    priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT'], { message: 'Priority tidak valid' }).optional(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+    estimatedMinutes: z.number().int().min(1, 'Estimasi waktu minimal 1 menit').max(480, 'Estimasi waktu maksimal 480 menit').optional().nullable(),
+    items: z.array(kitchenOrderItemSchema).min(1, 'Minimal 1 item pesanan'),
+});
+
+export const updateKitchenOrderStatusSchema = z.object({
+    status: z.enum(['PREPARING', 'READY', 'SERVED', 'CANCELLED'], {
+        message: 'Status harus PREPARING, READY, SERVED, atau CANCELLED',
+    }),
+    stationId: z.string().optional().nullable(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});
