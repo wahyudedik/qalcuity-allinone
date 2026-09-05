@@ -1,11 +1,15 @@
 #!/bin/bash
-# ============================================================
-# Qalcuity - Update Script
-# Untuk update dari repository + rebuild + restart service
-# ============================================================
+# ============================================================================
+# Qalcuity All-in-One — VPS Update Script
+# ============================================================================
+# Deployment: aaPanel Node.js Project Manager
+# Process Manager: aaPanel (NOT PM2)
+# App Port: 3000
+# App URL: https://qalcuity.com
+# ============================================================================
 # Jalankan manual: sudo ./update.sh
 # Atau otomatis via cron (sudah di-setup oleh deploy.sh)
-# ============================================================
+# ============================================================================
 
 set -e
 
@@ -188,33 +192,23 @@ print_success "Cache .next dibersihkan"
 pnpm build
 print_success "Build berhasil"
 
-# --- 8. Restart service via PM2 (aaPanel compatible) ---
-print_step "8/8 - Restart service"
+# --- 8. Restart Application (aaPanel) ---
+print_step "8/8 - Restarting Application..."
 
-# Kill process lama di port 3000 (ROOT user bisa kill semua process)
-fuser -k $APP_PORT/tcp 2>/dev/null || true
-sleep 2
-
-# Pastikan start.sh executable
-chmod +x "$APP_DIR/apps/web/start.sh"
-
-# Restart via PM2 — PM2 menjalankan sebagai user www (aaPanel compatible)
-cd "$APP_DIR/apps/web"
-if command -v pm2 &> /dev/null; then
-    # Coba restart process yang sudah ada
-    if pm2 describe qalcuity-web &> /dev/null; then
-        pm2 restart qalcuity-web --update-env
-        print_success "Service di-restart via PM2 (existing process)"
-    else
-        # First time — start via ecosystem config
-        pm2 start ecosystem.config.js --update-env
-        pm2 save
-        print_success "Service di-start via PM2 (new process)"
-    fi
-else
-    print_warning "PM2 tidak ditemukan, fallback ke nohup"
-    nohup bash start.sh > /tmp/qalcuity.log 2>&1 &
+# Kill existing process on port
+if command -v fuser &> /dev/null; then
+    fuser -k $APP_PORT/tcp 2>/dev/null || true
+    log "Killed existing process on port $APP_PORT"
+    sleep 3
 fi
+
+# aaPanel auto-restart: touch the project config to trigger restart
+# OR: aaPanel monitors the directory, so just ensure build is fresh
+print_success "Build complete. aaPanel will auto-restart the application."
+
+# Alternative: If aaPanel doesn't auto-restart, try these:
+# - Go to aaPanel → Website → Node.js Project → click Restart
+# - OR: pm2 restart qalcuity-web (if PM2 is also installed as backup)
 sleep 5
 
 # Health check dengan retry
