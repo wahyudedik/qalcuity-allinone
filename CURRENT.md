@@ -1,10 +1,51 @@
-> **Last Updated:** 5 September 2026 (POS Table Management — Complete)
-> **Version:** v8.4.0
-> **Status:** POS Phase 1-6 COMPLETE + Kitchen Display System + Table Management + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+> **Last Updated:** 5 September 2026 (Operations Module MVP Phase A — Complete)
+> **Version:** v8.5.0
+> **Status:** POS Phase 1-6 COMPLETE + Kitchen Display System + Table Management + Operations Module MVP Phase A + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
 
 ---
 
 ## 🎯 Current Sprint
+
+### Operations Module — MVP Phase A: Project + Task + Time Logging (5 September 2026)
+
+> **Focus:** Core operations module — project management, task tracking, time logging, kanban board, timesheet
+> **Commit:** `a0ee9ce` (25 files, 4654 insertions)
+> **TypeScript Check:** PASS (0 errors)
+
+#### Database: 5 Prisma Models
+- ✅ **Project** — name, code, description, status (PLANNING/IN_PROGRESS/ON_HOLD/COMPLETED/CANCELLED), budget, startDate, endDate
+- ✅ **ProjectMember** — userId, role (LEAD/MEMBER/VIEWER), assignedAt
+- ✅ **Task** — title, description, status (TODO/IN_PROGRESS/IN_REVIEW/DONE), priority (LOW/MEDIUM/HIGH/CRITICAL), assigneeId, projectId, dueDate, estimatedHours
+- ✅ **TaskComment** — content, authorId, taskId
+- ✅ **TimeLog** — hours, description, date, taskId, userId
+- ✅ **Migration** — [`20260905220000_add_operations_module`](packages/db/prisma/migrations/20260905220000_add_operations_module/migration.sql) applied
+
+#### API: 10 Routes (RBAC + Tenant Isolation + Zod Validation)
+- ✅ [`apps/web/app/api/projects/route.ts`](apps/web/app/api/projects/route.ts) — GET (list) + POST (create)
+- ✅ [`apps/web/app/api/projects/[id]/route.ts`](apps/web/app/api/projects/[id]/route.ts) — GET (detail) + PUT (update) + DELETE
+- ✅ [`apps/web/app/api/projects/[id]/members/route.ts`](apps/web/app/api/projects/[id]/members/route.ts) — GET (list) + POST (add member)
+- ✅ [`apps/web/app/api/projects/[id]/members/[memberId]/route.ts`](apps/web/app/api/projects/[id]/members/[memberId]/route.ts) — DELETE (remove member)
+- ✅ [`apps/web/app/api/tasks/route.ts`](apps/web/app/api/tasks/route.ts) — GET (list with filters) + POST (create)
+- ✅ [`apps/web/app/api/tasks/[id]/route.ts`](apps/web/app/api/tasks/[id]/route.ts) — GET (detail) + PUT (update) + DELETE
+- ✅ [`apps/web/app/api/tasks/[id]/comments/route.ts`](apps/web/app/api/tasks/[id]/comments/route.ts) — GET (list) + POST (add comment)
+- ✅ [`apps/web/app/api/tasks/[id]/time/route.ts`](apps/web/app/api/tasks/[id]/time/route.ts) — GET (list) + POST (log time)
+- ✅ [`apps/web/app/api/timesheet/route.ts`](apps/web/app/api/timesheet/route.ts) — GET (timesheet data with project breakdown)
+
+#### UI: 5 Pages + 4 Loading + 1 Error
+- ✅ [`apps/web/app/dashboard/projects/page.tsx`](apps/web/app/dashboard/projects/page.tsx) — Project list with grid cards, filters, search
+- ✅ [`apps/web/app/dashboard/projects/[id]/page.tsx`](apps/web/app/dashboard/projects/[id]/page.tsx) — Project detail with 4 tabs: Overview, Tasks, Members, Budget
+- ✅ [`apps/web/app/dashboard/projects/[id]/board.tsx`](apps/web/app/dashboard/projects/[id]/board.tsx) — Kanban board with 4 columns (button-based status change)
+- ✅ [`apps/web/app/dashboard/tasks/page.tsx`](apps/web/app/dashboard/tasks/page.tsx) — My Tasks cross-project view with filters and grouping
+- ✅ [`apps/web/app/dashboard/timesheet/page.tsx`](apps/web/app/dashboard/timesheet/page.tsx) — Timesheet with weekly/monthly view, project breakdown
+- ✅ 4 Loading states + 1 Error boundary
+
+#### Other
+- ✅ **Custom Hook** — [`apps/web/hooks/use-projects.ts`](apps/web/hooks/use-projects.ts) — Auto-refresh, CRUD operations
+- ✅ **Zod Schemas** — 8 schemas added to [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts)
+- ✅ **Route Permissions** — 3 route groups added to [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts)
+- ✅ **Sidebar Navigation** — Operations section updated in [`apps/web/components/layout/sidebar.tsx`](apps/web/components/layout/sidebar.tsx)
+
+---
 
 ### POS Feature — Phase 4: Loyalty Program + Analytics + Multi-terminal (4 September 2026)
 
@@ -374,6 +415,7 @@
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
+| **Operations Module** | ✅ MVP Phase A Complete | 25% (Project CRUD + Task Management + Kanban + Time Logging + Timesheet) |
 | **POS Module** | ✅ Phase 1-6 Complete | 90% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display + Table Management) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Financial Reports** | ✅ Implemented | 60% (Trial Balance, Balance Sheet, Income Statement) |
@@ -989,7 +1031,7 @@ _None currently._
 
 ## 📊 Metrics
 
-### Codebase Stats (Updated: 5 September 2026 — Table Management Complete)
+### Codebase Stats (Updated: 5 September 2026 — Operations Module MVP)
 
 | Metric | Count |
 |--------|-------|
@@ -1008,8 +1050,11 @@ _None currently._
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
 | UI Components | 11 (Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider) |
 | Mobile screens | 14 (12 + Login + Register) |
+| Operations API Routes | 10 (projects CRUD, projects/[id] members, tasks CRUD, tasks/[id] comments, tasks/[id] time, timesheet) |
 | POS API Routes | 38 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor, kitchen/orders, kitchen/orders/[id], kitchen/stations, kitchen/stations/[id], kitchen/stats, tables, tables/[id], tables/[id]/status, tables/reservations, tables/reservations/[id], tables/stats) |
 | POS UI Pages | 23 (terminal, sessions, tables, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, kitchen, layout, loading/tables, offline-indicator, sync-status-badge, kitchen-order-card, kitchen-stats-bar, kitchen-station-filter, kitchen-order-timer, reservation-form, table-card) |
+| Operations UI Pages | 5 (projects list, project detail, kanban board, my tasks, timesheet) |
+| Operations Prisma Models | 5 (Project, ProjectMember, Task, TaskComment, TimeLog) |
 | POS Kitchen Display Files | 8 (kitchen/page.tsx, kitchen/loading.tsx, kitchen/error.tsx, kitchen-order-card.tsx, kitchen-stats-bar.tsx, kitchen-station-filter.tsx, kitchen-order-timer.tsx, use-kitchen-orders.ts) |
 | POS Offline Files | 10 (types.ts, db.ts, sync.ts, api-client.ts, service-worker.ts, sw.js, use-pos-offline.ts, use-pos-products.ts, offline-indicator.tsx, sync-status-badge.tsx) |
 | POS Table Management Files | 8 (tables/page.tsx, tables/loading.tsx, table-card.tsx, reservation-form.tsx, use-pos-tables.ts, tables API route, tables/[id] API, tables/[id]/status API, tables/reservations API, tables/reservations/[id] API, tables/stats API) |
@@ -1044,6 +1089,23 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 5 September 2026 — Operations Module MVP Phase A
+
+**Operations Module — Database, API, UI, Navigation:**
+- **Database** — 5 new Prisma models: `Project`, `ProjectMember`, `Task`, `TaskComment`, `TimeLog`
+- **Migration** — [`20260905220000_add_operations_module`](packages/db/prisma/migrations/20260905220000_add_operations_module/migration.sql)
+- **10 API Routes** — with RBAC, tenant isolation, Zod validation:
+  - Projects CRUD (3 routes): list/create, detail/update/delete, members add/remove
+  - Tasks CRUD (3 routes): list/create, detail/update/delete, comments, time logging
+  - Timesheet (1 route): weekly/monthly view with project breakdown
+- **5 UI Pages** — Project list (grid cards), Project detail (4 tabs), Kanban board, My Tasks, Timesheet
+- **4 Loading States** + **1 Error Boundary** for all operations pages
+- **Custom Hook** — `use-projects.ts` with auto-refresh
+- **Zod Schemas** — 8 validation schemas added
+- **Sidebar** — Operations section navigation updated
+- **Commit:** `a0ee9ce` (25 files, 4654 insertions)
+- **TypeScript Check** — PASS (0 errors)
 
 ### 5 September 2026 — POS Table Management
 
