@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 5, 2026 (POS Phase 5 — Offline Mode)
+**Last Updated:** September 5, 2026 (POS Kitchen Display System — Phase 1+2 Complete)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 10.0 — POS Phase 5 Complete
+**Document Version:** 11.0 — Kitchen Display System Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -1157,6 +1157,15 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Loyalty Program** | ✅ `implemented` | 2026-09-04 | Loyalty program CRUD + member management (3 models, 9 routes, 4 pages) — Phase 4A |
 | **POS Analytics** | ✅ `implemented` | 2026-09-04 | POS analytics: overview, products, cashiers, CSV export (4 API routes, charts) — Phase 4B |
 | **Multi-terminal Monitor** | ✅ `implemented` | 2026-09-04 | Real-time multi-terminal dashboard with status, sessions, transactions per terminal — Phase 4C |
+| **Kitchen Display System** | ✅ `implemented` | 2026-09-05 | KDS page with auto-refresh polling (10s), color-coded order cards, timer, overdue detection — Phase 6 |
+| **Kitchen — KDS Display** | ✅ `implemented` | 2026-09-05 | Kitchen display page with real-time order list, auto-refresh 10s, station filtering ([`apps/web/app/dashboard/pos/kitchen/page.tsx`](apps/web/app/dashboard/pos/kitchen/page.tsx)) |
+| **Kitchen — Order Card** | ✅ `implemented` | 2026-09-05 | Color-coded order card: NEW (blue), PREPARING (yellow), READY (green), overdue (red) ([`apps/web/components/pos/kitchen-order-card.tsx`](apps/web/components/pos/kitchen-order-card.tsx)) |
+| **Kitchen — Station Filter** | ✅ `implemented` | 2026-09-05 | Filter orders by kitchen station ([`apps/web/components/pos/kitchen-station-filter.tsx`](apps/web/components/pos/kitchen-station-filter.tsx)) |
+| **Kitchen — Timer** | ✅ `implemented` | 2026-09-05 | Order preparation timer with overdue detection ([`apps/web/components/pos/kitchen-order-timer.tsx`](apps/web/components/pos/kitchen-order-timer.tsx)) |
+| **Kitchen — Stats Bar** | ✅ `implemented` | 2026-09-05 | Kitchen statistics: total orders, preparing, ready, overdue ([`apps/web/components/pos/kitchen-stats-bar.tsx`](apps/web/components/pos/kitchen-stats-bar.tsx)) |
+| **Kitchen — API Routes** | ✅ `implemented` | 2026-09-05 | 9 API routes: orders CRUD, stations CRUD, stats — state machine (NEW→PREPARING→READY→COMPLETED) |
+| **Kitchen — Custom Hook** | ✅ `implemented` | 2026-09-05 | [`use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts) — filter, actions, real-time updates |
+| **Kitchen — Database Models** | ✅ `implemented` | 2026-09-05 | 3 Prisma models: PosKitchenOrder, PosKitchenOrderItem, PosKitchenStation + Product extensions |
 
 ### 15.2 POS Permissions by Role
 
@@ -1430,15 +1439,16 @@ Electron-based desktop application.
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
 | `production_ready` | 🚀 | ~62 | ~35% |
-| `implemented` | ✅ | ~36 | ~20% |
+| `implemented` | ✅ | ~45 | ~25% |
 | `verified` | ✔️ | 1 | ~1% |
 | `partial` | 🔄 | ~20 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~153 | ~43% |
+| `planned` | 📋 | ~144 | ~41% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~277** | **100%** |
+| **Total** | | **~286** | **100%** |
 
+> **POS Phase 6 Impact (Kitchen Display):** +9 implemented (KDS Display, Order Card, Station Filter, Timer, Stats Bar, API Routes, Custom Hook, Database Models, Kitchen Display System), -9 planned → Net: implemented 36→45, planned 153→144, total 277→286
 > **POS Phase 4 Impact:** +3 implemented (Loyalty Program, POS Analytics, Multi-terminal Monitor), -3 planned → Net: implemented 33→36, planned 156→153, total 274→277
 > **Batch M Impact (POS Phase 2 & 3):** +8 implemented, +2 partial, -7 planned, +5 new POS features → Net improvement: ~4% implemented increase
 > **Sprint 4 Impact:** +4 production_ready, +5 implemented, -5 planned → Net improvement: ~3.5% production_ready increase
@@ -1654,6 +1664,18 @@ Electron-based desktop application.
 - **Status Summary** — implemented: 33→36, planned: 156→153, total: 274→277
 - **POS Total** — Phase 1-4 complete: 23 API routes, 12 UI pages, 9 Prisma models, 180+ i18n keys
 
+### v11.0.0 (September 5, 2026) — POS Kitchen Display System (KDS)
+- **Kitchen Display System** — Full KDS implementation: database models, API routes, UI components, custom hook, architecture doc
+- **Database** — 3 new Prisma models: `PosKitchenOrder`, `PosKitchenOrderItem`, `PosKitchenStation` + Product extensions (`preparationMinutes`, `isPreparedItem`) + PosTransactionItem extensions (`itemNotes`, `kitchenStatus`)
+- **API Routes** — 9 routes with state machine (NEW→PREPARING→READY→COMPLETED), RBAC, tenant isolation, Zod validation
+- **KDS Page** — [`apps/web/app/dashboard/pos/kitchen/page.tsx`](apps/web/app/dashboard/pos/kitchen/page.tsx) — Auto-refresh polling (10s), color-coded cards, timer, overdue detection
+- **4 UI Components** — [`kitchen-order-card.tsx`](apps/web/components/pos/kitchen-order-card.tsx), [`kitchen-stats-bar.tsx`](apps/web/components/pos/kitchen-stats-bar.tsx), [`kitchen-station-filter.tsx`](apps/web/components/pos/kitchen-station-filter.tsx), [`kitchen-order-timer.tsx`](apps/web/components/pos/kitchen-order-timer.tsx)
+- **Custom Hook** — [`use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts) — Filter, actions, real-time updates
+- **Architecture Doc** — [`plans/pos-kitchen-display-architecture.md`](plans/pos-kitchen-display-architecture.md)
+- **Commit:** `0046832` (19 files, 3760 insertions)
+- **TypeScript Check** — PASS (0 errors)
+- **POS Total** — Phase 1-6 complete: 32 API routes, 21 UI pages, 12 Prisma models, 180+ i18n keys, 10 offline files, 8 kitchen files
+
 ### v10.0.0 (September 5, 2026) — POS Phase 5: Offline Mode
 - **POS Offline Mode** — Full offline capability for POS terminal: IndexedDB local storage, background sync queue, service worker caching, UI indicators
 - **5A: IndexedDB Core** — TypeScript interfaces + Dexie.js-based IndexedDB wrapper ([`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts), [`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts))
@@ -1665,6 +1687,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 5, 2026 (POS Phase 5 — Offline Mode)
+**Last Updated:** September 5, 2026 (POS Kitchen Display System — Phase 1+2 Complete)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 10.0 — POS Phase 5 Complete
+**Document Version:** 11.0 — Kitchen Display System Complete

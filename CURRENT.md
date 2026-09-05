@@ -1,6 +1,6 @@
-> **Last Updated:** 5 September 2026 (POS Phase 5 — Offline Mode Complete)
-> **Version:** v8.2.0
-> **Status:** POS Phase 1-5 COMPLETE + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+> **Last Updated:** 5 September 2026 (POS Kitchen Display System — Phase 1+2 Complete)
+> **Version:** v8.3.0
+> **Status:** POS Phase 1-6 COMPLETE + Kitchen Display System + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
 
 ---
 
@@ -374,7 +374,7 @@
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
-| **POS Module** | ✅ Phase 1-5 Complete | 85% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode) |
+| **POS Module** | ✅ Phase 1-6 Complete | 88% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Financial Reports** | ✅ Implemented | 60% (Trial Balance, Balance Sheet, Income Statement) |
 | **HR Enhancement** | ✅ Implemented | 70% (PPh21/BPJS calculator, payroll enhancement) |
@@ -989,7 +989,7 @@ _None currently._
 
 ## 📊 Metrics
 
-### Codebase Stats (Updated: 5 September 2026 — POS Phase 5 Complete)
+### Codebase Stats (Updated: 5 September 2026 — Kitchen Display System Complete)
 
 | Metric | Count |
 |--------|-------|
@@ -1008,10 +1008,11 @@ _None currently._
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
 | UI Components | 11 (Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider) |
 | Mobile screens | 14 (12 + Login + Register) |
-| POS API Routes | 23 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor) |
-| POS UI Pages | 13 (terminal, sessions, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, layout, offline-indicator, sync-status-badge) |
+| POS API Routes | 32 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor, kitchen/orders, kitchen/orders/[id], kitchen/stations, kitchen/stations/[id], kitchen/stats) |
+| POS UI Pages | 21 (terminal, sessions, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, kitchen, layout, offline-indicator, sync-status-badge, kitchen-order-card, kitchen-stats-bar, kitchen-station-filter, kitchen-order-timer) |
+| POS Kitchen Display Files | 8 (kitchen/page.tsx, kitchen/loading.tsx, kitchen/error.tsx, kitchen-order-card.tsx, kitchen-stats-bar.tsx, kitchen-station-filter.tsx, kitchen-order-timer.tsx, use-kitchen-orders.ts) |
 | POS Offline Files | 10 (types.ts, db.ts, sync.ts, api-client.ts, service-worker.ts, sw.js, use-pos-offline.ts, use-pos-products.ts, offline-indicator.tsx, sync-status-badge.tsx) |
-| POS Prisma Models | 9 (PosTerminal, PosSession, PosTransaction, PosTransactionItem, PosRefund, PosPayment, LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward) |
+| POS Prisma Models | 12 (PosTerminal, PosSession, PosTransaction, PosTransactionItem, PosRefund, PosPayment, LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward, PosKitchenOrder, PosKitchenOrderItem, PosKitchenStation) |
 | Permission-integrated routes | ~90+ |
 | Workflow-integrated entities | 5 (Invoice, Payment, PO, Quotation, Leaves) |
 | Prisma Migrations (Total) | 12+ (POS Loyalty, POS Core, Tax Engine, Period Closing, Approval Engine, Decimal Fix, 2FA/Sessions/LoginLogs, Reports, etc.) |
@@ -1042,6 +1043,18 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 5 September 2026 — Kitchen Display System (KDS)
+
+**Kitchen Display System — Phase 1+2 (Database, API, UI):**
+- **Phase 1: Database + Migration** — 3 new Prisma models: `PosKitchenOrder`, `PosKitchenOrderItem`, `PosKitchenStation` + Product extensions (`preparationMinutes`, `isPreparedItem`) + PosTransactionItem extensions (`itemNotes`, `kitchenStatus`)
+- **Phase 2: API Routes** — 9 API routes with state machine (NEW→PREPARING→READY→COMPLETED), RBAC, tenant isolation, Zod validation
+- **Phase 2: UI** — Kitchen display page with auto-refresh polling (10s), color-coded cards, timer, overdue detection
+- **4 UI Components** — [`kitchen-order-card.tsx`](apps/web/components/pos/kitchen-order-card.tsx), [`kitchen-stats-bar.tsx`](apps/web/components/pos/kitchen-stats-bar.tsx), [`kitchen-station-filter.tsx`](apps/web/components/pos/kitchen-station-filter.tsx), [`kitchen-order-timer.tsx`](apps/web/components/pos/kitchen-order-timer.tsx)
+- **Custom Hook** — [`use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts) with filter and actions
+- **Architecture Doc** — [`plans/pos-kitchen-display-architecture.md`](plans/pos-kitchen-display-architecture.md)
+- **Commit:** `0046832` (19 files, 3760 insertions)
+- **TypeScript Check** — PASS (0 errors)
 
 ### 5 September 2026 — POS Phase 5: Offline Mode
 
