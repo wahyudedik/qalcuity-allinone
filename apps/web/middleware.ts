@@ -108,16 +108,6 @@ export default withAuth(
             authorized: ({ token, req }) => {
                 const pathname = req.nextUrl.pathname;
 
-                // Debug logging (temporary — remove after login is fixed)
-                if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
-                    console.log('[Middleware] Auth check:', {
-                        pathname,
-                        hasToken: !!token,
-                        tokenRole: token?.role,
-                        tokenTenantId: token?.tenantId,
-                    });
-                }
-
                 // Allow public API paths without auth
                 if (PUBLIC_API_PATHS.some((path) => pathname.startsWith(path))) {
                     return true;
