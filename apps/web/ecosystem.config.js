@@ -17,10 +17,12 @@ module.exports = {
         exec_mode: 'fork', // Gunakan 'fork' untuk 1 instance, 'cluster' untuk multi-instance
         autorestart: true,
         watch: false,
+        wait_ready: true, // PM2 menunggu process baru benar-benar ready sebelum mark sukses
         kill_timeout: 10000, // Tunggu 10s untuk process lama release port sebelum start baru
         listen_timeout: 15000, // Tunggu 15s untuk app start sebelum PM2 mark sebagai ready
+        exp_backoff_restart_delay: 1000, // Exponential backoff untuk restart delays, mencegah restart loop
         max_memory_restart: '1G',
-        max_restarts: 10,
+        max_restarts: 15, // Naikkan dari 10 ke 15 untuk toleransi restart lebih banyak
         log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
         error_file: './logs/error.log',
         out_file: './logs/out.log',
