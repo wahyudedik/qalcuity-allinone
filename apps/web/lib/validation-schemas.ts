@@ -703,6 +703,11 @@ export const updateIndustryConfigSchema = z.object({
     }).optional(),
 });
 
+export const applyIndustryPackSchema = z.object({
+    packId: z.string().min(1, 'Pack ID wajib diisi').max(100, 'Pack ID maksimal 100 karakter'),
+    customConfig: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const createCustomFieldSchema = z.object({
     entity: z.string().min(1, 'Entity wajib diisi').max(100, 'Entity maksimal 100 karakter'),
     fieldName: z.string().min(1, 'Field name wajib diisi').max(100, 'Field name maksimal 100 karakter').regex(/^[a-z_]+$/, 'Field name hanya boleh huruf kecil dan underscore'),

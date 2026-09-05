@@ -14,8 +14,10 @@ import type {
     ApprovalRule,
     CustomFieldValidationResult,
     TenantConfigOverride,
+    IndustryPack,
 } from './types';
 import { DEFAULT_INDUSTRY_CONFIGS } from './defaults';
+import { INDUSTRY_PACKS } from './packs';
 
 export class IndustryConfigEngine {
     // ─── Private State ────────────────────────────────────────────────────────
@@ -31,12 +33,20 @@ export class IndustryConfigEngine {
      */
     private tenantConfigs: Map<string, TenantConfigOverride>;
 
+    /**
+     * Cache untuk industry packs.
+     * Key: pack ID
+     */
+    private packs: Map<string, IndustryPack>;
+
     // ─── Constructor ──────────────────────────────────────────────────────────
 
     constructor() {
         this.configs = new Map();
         this.tenantConfigs = new Map();
+        this.packs = new Map();
         this.loadDefaults();
+        this.loadPacks();
     }
 
     // ─── Private Methods ──────────────────────────────────────────────────────
@@ -47,6 +57,15 @@ export class IndustryConfigEngine {
     private loadDefaults(): void {
         for (const [key, config] of Object.entries(DEFAULT_INDUSTRY_CONFIGS)) {
             this.configs.set(key as IndustryType, config);
+        }
+    }
+
+    /**
+     * Load industry packs ke cache.
+     */
+    private loadPacks(): void {
+        for (const [key, pack] of Object.entries(INDUSTRY_PACKS)) {
+            this.packs.set(key, pack);
         }
     }
 
@@ -327,5 +346,38 @@ export class IndustryConfigEngine {
      */
     mergeTenantConfig(base: IndustryConfig, overrides: Partial<IndustryConfig>): IndustryConfig {
         return this.deepMerge(base, overrides) as unknown as IndustryConfig;
+    }
+
+    // ─── Industry Pack Methods ────────────────────────────────────────────────
+
+    /**
+     * Dapatkan industry pack berdasarkan pack ID.
+     *
+     * @param packId - ID pack (e.g., 'restaurant')
+     * @returns IndustryPack atau undefined jika tidak ditemukan
+     */
+    getIndustryPack(packId: string): IndustryPack | undefined {
+        return this.packs.get(packId);
+    }
+
+    /**
+     * Dapatkan daftar semua industry packs yang tersedia.
+     *
+     * @returns Array IndustryPack
+     */
+    getAvailablePacks(): IndustryPack[] {
+        return Array.from(this.packs.values());
+    }
+
+    /**
+     * Merge industry pack dengan user customizations.
+     * Pack values menjadi defaults, user customizations meng-override.
+     *
+     * @param pack - Industry pack
+     * @param customConfig - Custom config dari user (Partial IndustryPack)
+     * @returns Merged IndustryPack
+     */
+    mergeWithDefaults(pack: IndustryPack, customConfig: Partial<IndustryPack>): IndustryPack {
+        return this.deepMerge(pack, customConfig) as unknown as IndustryPack;
     }
 }

@@ -138,6 +138,89 @@ export interface ApprovalLevel {
     required: boolean;
 }
 
+// ─── Industry Pack ──────────────────────────────────────────────────────────
+
+/**
+ * Definisi module dalam industry pack.
+ * Setiap module bisa diaktifkan/nonaktifkan per pack.
+ */
+export interface PackModule {
+    enabled: boolean;
+    label: string;
+}
+
+/**
+ * Widget dashboard dalam industry pack.
+ * Lebih fleksibel dari DashboardWidget — mendukung ukuran 'medium' dan 'large'.
+ */
+export interface PackDashboardWidget {
+    id: string;
+    title: string;
+    module: string;
+    size: 'small' | 'medium' | 'large';
+}
+
+/**
+ * Transisi workflow dalam industry pack.
+ */
+export interface WorkflowTransition {
+    from: string;
+    to: string;
+    roles: string[];
+}
+
+/**
+ * Definisi workflow dalam industry pack.
+ */
+export interface PackWorkflow {
+    states: string[];
+    initialState: string;
+    transitions: WorkflowTransition[];
+}
+
+/**
+ * Konfigurasi POS dalam industry pack.
+ */
+export interface PackPosSettings {
+    defaultOrderType: string;
+    enableTableManagement: boolean;
+    enableKitchenDisplay: boolean;
+    enableReservations: boolean;
+    enableLoyalty: boolean;
+    receiptTemplate: string;
+}
+
+/**
+ * Industry Pack — konfigurasi lengkap untuk industri tertentu.
+ * Berisi module toggles, custom fields, dashboard widgets,
+ * workflow definitions, dan POS settings.
+ */
+export interface IndustryPack {
+    id: string;
+    name: string;
+    description: string;
+
+    // Module toggles
+    modules: Record<string, PackModule>;
+
+    // Custom fields per entity
+    customFields: {
+        [entity: string]: CustomField[];
+    };
+
+    // Dashboard widgets
+    dashboardWidgets: PackDashboardWidget[];
+
+    // Workflow definitions
+    workflows: Record<string, PackWorkflow>;
+
+    // POS settings (optional — hanya untuk industri F&B/Retail)
+    posSettings?: PackPosSettings;
+
+    // Base industry type yang digunakan
+    baseIndustry?: IndustryType;
+}
+
 // ─── Tenant Config Override ──────────────────────────────────────────────────
 
 /**
