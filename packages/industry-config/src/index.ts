@@ -37,14 +37,23 @@ export type {
     ApprovalLevel,
     TenantConfigOverride,
     CustomFieldValidationResult,
+    IndustryPack,
+    PackModule,
+    PackDashboardWidget,
+    WorkflowTransition,
+    PackWorkflow,
+    PackPosSettings,
 } from './types';
 export { DEFAULT_INDUSTRY_CONFIGS, SUPPORTED_INDUSTRIES } from './defaults';
+export { restaurantIndustryPack } from './packs/restaurant';
+export { INDUSTRY_PACKS, AVAILABLE_PACK_IDS } from './packs';
 
 // ─── Convenience Functions ───────────────────────────────────────────────────
 
 import { IndustryConfigEngine } from './engine';
 import { DEFAULT_INDUSTRY_CONFIGS } from './defaults';
-import type { IndustryType, IndustryConfig, CustomField } from './types';
+import { INDUSTRY_PACKS } from './packs';
+import type { IndustryType, IndustryConfig, CustomField, IndustryPack } from './types';
 
 /**
  * Singleton engine instance untuk convenience functions.
@@ -84,4 +93,34 @@ export function getCustomFields(industry: IndustryType, entity: string, tenantId
  */
 export function isModuleEnabled(industry: IndustryType, module: string, tenantId?: string): boolean {
     return engine.isModuleEnabled(industry, module, tenantId);
+}
+
+/**
+ * Dapatkan industry pack berdasarkan pack ID.
+ *
+ * @param packId - ID pack (e.g., 'restaurant')
+ * @returns IndustryPack atau undefined
+ */
+export function getIndustryPack(packId: string): IndustryPack | undefined {
+    return engine.getIndustryPack(packId);
+}
+
+/**
+ * Dapatkan semua industry packs yang tersedia.
+ *
+ * @returns Array IndustryPack
+ */
+export function getAvailablePacks(): IndustryPack[] {
+    return engine.getAvailablePacks();
+}
+
+/**
+ * Merge industry pack dengan user customizations.
+ *
+ * @param pack - Industry pack
+ * @param customConfig - Custom config dari user
+ * @returns Merged IndustryPack
+ */
+export function mergePackWithDefaults(pack: IndustryPack, customConfig: Partial<IndustryPack>): IndustryPack {
+    return engine.mergeWithDefaults(pack, customConfig);
 }
