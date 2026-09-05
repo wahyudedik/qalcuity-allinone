@@ -126,6 +126,10 @@ model Tenant {
   loyaltyMembers       LoyaltyMember[]
   loyaltyTransactions  LoyaltyTransaction[]
   loyaltyRewards       LoyaltyReward[]
+
+  // POS Kitchen Display
+  kitchenStations      PosKitchenStation[]
+  kitchenOrders        PosKitchenOrder[]
 }
 
 model User {
@@ -566,6 +570,9 @@ model Product {
 
   stockMovements    StockMovement[]
   stockOpnameItems  StockOpnameItem[]
+
+  preparationMinutes Int?    // Estimasi waktu persiapan (menit)
+  isPreparedItem     Boolean @default(false) // Apakah produk ini perlu diproses di dapur?
 
   @@unique([sku, tenantId])
   @@index([tenantId])
@@ -1925,6 +1932,8 @@ model PosTransactionItem {
   taxRate         Decimal   @default(0)
   taxAmount       Decimal   @default(0)
   subtotal        Decimal   @default(0)
+  itemNotes     String?   // Catatan khusus dari kasir ke dapur
+  kitchenStatus String?   // Status kitchen: NONE, PENDING, PREPARING, READY, SERVED
   createdAt       DateTime  @default(now())
 
   @@index([tenantId])
@@ -2028,4 +2037,68 @@ model LoyaltyReward {
   updatedAt     DateTime @updatedAt
 
   @@index([tenantId, isActive])
+}
+
+// ============================================
+// POS KITCHEN DISPLAY SYSTEM
+// ============================================
+
+model PosKitchenStation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id])
+  orders PosKitchenOrder[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isActive])
+}
+
+model PosKitchenOrder {
+  id            String   @id @default(cuid())
+  tenantId      String
+  transactionId String?
+  stationId     String?
+  orderNumber   Int
+  status        String   @default("PENDING") // PENDING, PREPARING, READY, SERVED, CANCELLED
+  priority      String   @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  notes         String?
+  estimatedMinutes Int?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  servedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id])
+  station PosKitchenStation? @relation(fields: [stationId], references: [id])
+  items   PosKitchenOrderItem[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, stationId])
+  @@index([tenantId, createdAt])
+}
+
+model PosKitchenOrderItem {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  kitchenOrderId     String
+  transactionItemId  String?
+  productName        String
+  quantity           Int      @default(1)
+  notes              String?
+  status             String   @default("PENDING") // PENDING, PREPARING, READY, SERVED
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  kitchenOrder PosKitchenOrder @relation(fields: [kitchenOrderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, kitchenOrderId])
+  @@index([tenantId, status])
 }
