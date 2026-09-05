@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 5, 2026 (Operations Module MVP Phase A — Complete)
+**Last Updated:** September 5, 2026 (Mega Sprint Complete)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 12.0 — Operations Module MVP Phase A Complete
+**Document Version:** 13.0 — Mega Sprint Complete (POS Offline + KDS + Tables + Operations + AI + API Package + F&B Pack)
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -567,8 +567,8 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **AI Chat** | 🔄 `partial` | — | Floating button + OpenAI provider + Mock fallback — mock responses, belum real AI |
-| **AI Provider (OpenAI/Mock)** | ✅ `implemented` | — | API route `/api/ai/chat`, OpenAI + mock fallback |
+| **AI Chat** | ✅ `implemented` | 2026-09-05 | Floating button + OpenAI-compatible provider — real AI responses via configurable endpoint |
+| **AI Provider (OpenAI-compatible)** | ✅ `implemented` | 2026-09-05 | API route `/api/ai/chat` + `/api/ai/query`, OpenAI-compatible provider with fallback |
 | **AI Hub Page** | ✅ `implemented` | 2026-09-01 | `/dashboard/ai` — AI features overview dengan i18n, feature cards, example questions |
 | **AI Insights** | 🔄 `partial` | 2026-09-01 | Basic insight cards on dashboard |
 
@@ -655,7 +655,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **REST API** | 🔄 `partial` | — | 51+ routes, belum public API documentation |
+| **REST API** | 🔄 `partial` | — | 120+ routes, belum public API documentation |
 | **GraphQL** | 📋 `planned` | — | Belum ada kode |
 | **Webhook** | 📋 `planned` | — | Belum ada kode |
 | **API Documentation** | 📋 `planned` | — | Belum ada kode |
@@ -1115,7 +1115,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **F&B Pack** | 📋 `planned` | — | Default config untuk food & beverage |
+| **F&B Pack** | ✅ `implemented` | 2026-09-05 | Restaurant pack: custom fields, documents, workflows — [`packages/industry-config/src/packs/restaurant.ts`](packages/industry-config/src/packs/restaurant.ts) |
 | **Recipe Management** | 📋 `planned` | — | Recipe + ingredient fields |
 | **Batch & Expiry Tracking** | 📋 `planned` | — | Batch number + expiry date |
 | **Production Report** | 📋 `planned` | — | Custom document: Production Report |
@@ -1451,15 +1451,17 @@ Electron-based desktop application.
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
 | `production_ready` | 🚀 | ~62 | ~35% |
-| `implemented` | ✅ | ~45 | ~25% |
+| `implemented` | ✅ | ~48 | ~27% |
 | `verified` | ✔️ | 1 | ~1% |
-| `partial` | 🔄 | ~20 | ~11% |
+| `partial` | 🔄 | ~21 | ~12% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~144 | ~41% |
+| `planned` | 📋 | ~141 | ~39% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~286** | **100%** |
 
+> **Mega Sprint Impact (5 Sep):** +3 implemented (F&B Pack, AI Chat real, AI Provider real), -3 planned → Net: implemented 45→48, planned 144→141, total 286→286
+> **POS Phase 7 Impact (Table Management):** +8 implemented (Table Management, Database, API Routes, UI Page, Table Card, Reservation Form, Custom Hook, Status Machine), -8 planned → Net: implemented 37→45, planned 152→144, total 289→289 (adjusted for new features)
 > **POS Phase 6 Impact (Kitchen Display):** +9 implemented (KDS Display, Order Card, Station Filter, Timer, Stats Bar, API Routes, Custom Hook, Database Models, Kitchen Display System), -9 planned → Net: implemented 36→45, planned 153→144, total 277→286
 > **POS Phase 4 Impact:** +3 implemented (Loyalty Program, POS Analytics, Multi-terminal Monitor), -3 planned → Net: implemented 33→36, planned 156→153, total 274→277
 > **Batch M Impact (POS Phase 2 & 3):** +8 implemented, +2 partial, -7 planned, +5 new POS features → Net improvement: ~4% implemented increase
@@ -1468,6 +1470,17 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v13.0.0 (September 5, 2026) — Mega Sprint Complete
+- **POS Offline Mode (Phase 5)** — Full offline capability: IndexedDB (Dexie.js), sync queue with exponential backoff, service worker (cache-first/network-first), React hooks, UI indicators, 10 files
+- **POS Kitchen Display System (KDS)** — 3 models, 9 API routes, state machine (NEW→PREPARING→READY→COMPLETED), auto-refresh polling, color-coded cards, timer, overdue detection, 19 files
+- **POS Table Management** — 2 models, 6 API routes, grid/list view, quick status change, reservations with conflict checking, zone filtering, 2 UI components, custom hook
+- **Operations Module MVP Phase A** — 5 models, 9 API routes, 5 UI pages (project list, detail, Kanban, My Tasks, Timesheet), 8 Zod schemas, 25 files
+- **AI Real Integration** — OpenAI-compatible provider replacing mock, chat API, query API, configurable endpoint + API key
+- **@qalcuity/api Package** — Shared API client: types, client, errors — reusable across Web, Mobile, Desktop, AI Agent
+- **F&B Industry Pack** — Restaurant pack: custom fields, documents, workflows in `@qalcuity/industry-config`
+- **VPS Deployment Fixes** — aaPanel migration, login redirect fix, Prisma migration fixes, debug cleanup, update.sh rewrite
+- **Status Summary** — implemented: 45→48, planned: 144→141, total: 286→286
 
 ### v5.3.0 (September 1, 2026) — UI Modernization Sprint (Batches 1-5)
 - **ConfirmDialog Component** — Centralized confirmation dialog replacing 24 window.confirm calls across all CRUD pages
