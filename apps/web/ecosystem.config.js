@@ -8,6 +8,9 @@ module.exports = {
             NODE_ENV: 'production',
             PORT: 3000,
             PRISMA_QUERY_ENGINE_TYPE: 'library',
+            NEXTAUTH_URL: 'https://qalcuity.com',
+            NEXTAUTH_SECRET: '3522d3dba1ab5934eb53c5b52a3e9b6afb2af46427f6408bd1a233670a4c3e36',
+            NEXT_PUBLIC_APP_URL: 'https://qalcuity.com',
         },
         instances: 1, // Gunakan 1 untuk VPS 2GB RAM, max untuk VPS 4GB+
         exec_mode: 'fork', // Gunakan 'fork' untuk 1 instance, 'cluster' untuk multi-instance
