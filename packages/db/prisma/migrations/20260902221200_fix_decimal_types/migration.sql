@@ -3,26 +3,26 @@
 -- This ensures consistent precision for all monetary/currency fields across the platform
 
 -- ============================================
--- PART 1: Int → Decimal(19,4) conversions
+-- PART 1: Int -> Decimal(19,4) conversions
 -- ============================================
 
--- SubscriptionPlan.price: Int → Decimal(19,4)
+-- SubscriptionPlan.price: Int -> Decimal(19,4)
 ALTER TABLE "SubscriptionPlan" ALTER COLUMN "price" SET DATA TYPE DECIMAL(19,4) USING "price"::DECIMAL(19,4);
 ALTER TABLE "SubscriptionPlan" ALTER COLUMN "price" SET DEFAULT 0;
 
--- BillingPayment.amount: Int → Decimal(19,4)
+-- BillingPayment.amount: Int -> Decimal(19,4)
 ALTER TABLE "BillingPayment" ALTER COLUMN "amount" SET DATA TYPE DECIMAL(19,4) USING "amount"::DECIMAL(19,4);
 ALTER TABLE "BillingPayment" ALTER COLUMN "amount" SET DEFAULT 0;
 
--- Plan.priceMonthly: Int → Decimal(19,4)
+-- Plan.priceMonthly: Int -> Decimal(19,4)
 ALTER TABLE "Plan" ALTER COLUMN "priceMonthly" SET DATA TYPE DECIMAL(19,4) USING "priceMonthly"::DECIMAL(19,4);
 ALTER TABLE "Plan" ALTER COLUMN "priceMonthly" SET DEFAULT 0;
 
--- Plan.priceYearly: Int? → Decimal? (19,4)
+-- Plan.priceYearly: Int? -> Decimal? (19,4)
 ALTER TABLE "Plan" ALTER COLUMN "priceYearly" SET DATA TYPE DECIMAL(19,4) USING "priceYearly"::DECIMAL(19,4);
 
 -- ============================================
--- PART 2: Upgrade Decimal(15,2) → Decimal(19,4)
+-- PART 2: Upgrade Decimal(15,2) -> Decimal(19,4)
 -- ============================================
 
 -- Invoice model
