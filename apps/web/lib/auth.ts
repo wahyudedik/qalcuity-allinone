@@ -53,6 +53,14 @@ function isGoogleOAuthConfigured(): boolean {
     return true;
 }
 
+// Debug: Log auth configuration (temporary — remove after login is fixed)
+console.log('[Auth] Config:', {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'NOT SET',
+    NEXTAUTH_SECRET_SET: !!process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_SECRET_LENGTH: process.env.NEXTAUTH_SECRET?.length || 0,
+    NODE_ENV: process.env.NODE_ENV,
+});
+
 export const authOptions: NextAuthOptions = {
     providers: [
         // Google OAuth Provider — hanya aktif jika credentials valid
@@ -109,6 +117,15 @@ export const authOptions: NextAuthOptions = {
                         data: { lastLoginAt: new Date() },
                     }).catch((err) => {
                         console.error("[Auth] Failed to update lastLoginAt:", err);
+                    });
+
+                    // Debug: Log successful auth (temporary — remove after login is fixed)
+                    console.log('[Auth] authorize success:', {
+                        userId: user.id,
+                        email: user.email,
+                        role: user.role,
+                        tenantId: user.tenantId,
+                        hasTenant: !!user.tenant,
                     });
 
                     return {
