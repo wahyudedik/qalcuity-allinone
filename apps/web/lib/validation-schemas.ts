@@ -1201,3 +1201,24 @@ export const updateProjectMemberSchema = z.object({
         message: 'Role harus MANAGER, MEMBER, atau VIEWER',
     }),
 });
+
+// ============================================
+// AI Schemas
+// ============================================
+
+export const aiChatSchema = z.object({
+    messages: z
+        .array(
+            z.object({
+                role: z.enum(['user', 'assistant', 'system']),
+                content: z.string().min(1, 'Pesan tidak boleh kosong').max(10000, 'Pesan maksimal 10000 karakter'),
+            })
+        )
+        .min(1, 'Minimal 1 pesan')
+        .max(50, 'Maksimal 50 pesan'),
+});
+
+export const aiQuerySchema = z.object({
+    query: z.string().min(1, 'Query tidak boleh kosong').max(500, 'Query maksimal 500 karakter'),
+    module: z.string().max(50, 'Module maksimal 50 karakter').optional(),
+});
