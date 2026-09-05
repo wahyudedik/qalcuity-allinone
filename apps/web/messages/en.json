@@ -3107,7 +3107,8 @@
                 "reports": "Reports",
                 "terminals": "Terminals",
                 "monitor": "Monitor",
-                "loyalty": "Loyalty"
+                "loyalty": "Loyalty",
+                "tables": "Tables"
             }
         },
         "refunds": {
@@ -3304,6 +3305,10 @@
             "liveSession": "Live session",
             "lastUpdated": "Last updated",
             "noTerminals": "No terminals configured yet"
+        },
+        "tables": {
+            "title": "Table Management",
+            "subtitle": "Manage tables, status, and POS reservations"
         }
     },
     "errors": {

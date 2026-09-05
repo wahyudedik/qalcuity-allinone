@@ -3107,7 +3107,8 @@
                 "reports": "Laporan",
                 "terminals": "Terminal",
                 "monitor": "Monitor",
-                "loyalty": "Loyalty"
+                "loyalty": "Loyalty",
+                "tables": "Meja"
             }
         },
         "refunds": {
@@ -3304,6 +3305,10 @@
             "liveSession": "Sesi aktif",
             "lastUpdated": "Terakhir diperbarui",
             "noTerminals": "Belum ada terminal yang dikonfigurasi"
+        },
+        "tables": {
+            "title": "Manajemen Meja",
+            "subtitle": "Kelola meja, status, dan reservasi POS"
         }
     },
     "errors": {

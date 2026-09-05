@@ -130,6 +130,10 @@ model Tenant {
   // POS Kitchen Display
   kitchenStations      PosKitchenStation[]
   kitchenOrders        PosKitchenOrder[]
+
+  // POS Table Management
+  posTables            PosTable[]
+  posTableReservations PosTableReservation[]
 }
 
 model User {
@@ -2100,5 +2104,57 @@ model PosKitchenOrderItem {
   kitchenOrder PosKitchenOrder @relation(fields: [kitchenOrderId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, kitchenOrderId])
+  @@index([tenantId, status])
+}
+
+// ============================================
+// POS TABLE MANAGEMENT
+// ============================================
+
+model PosTable {
+  id               String    @id @default(cuid())
+  tenantId         String
+  number           Int
+  name             String?   // e.g., "VIP 1", "Outdoor 3"
+  capacity         Int       @default(4)
+  status           String    @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED, CLEANING, DISABLED
+  zone             String?   // e.g., "Indoor", "Outdoor", "VIP"
+  floor            String?   // e.g., "Ground Floor", "1st Floor"
+  posX             Float?    // Layout position X (for visual map)
+  posY             Float?    // Layout position Y (for visual map)
+  width            Float?    @default(1) // Grid width
+  height           Float?    @default(1) // Grid height
+  isActive         Boolean   @default(true)
+  currentSessionId String?   // POS Session yang sedang aktif di meja ini
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id])
+  reservations PosTableReservation[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, zone])
+}
+
+model PosTableReservation {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tableId          String?
+  customerName     String
+  customerPhone    String?
+  partySize        Int
+  reservationTime  DateTime
+  duration         Int       @default(60) // minutes
+  status           String    @default("CONFIRMED") // CONFIRMED, SEATED, CANCELLED, NO_SHOW
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id])
+  table  PosTable? @relation(fields: [tableId], references: [id])
+
+  @@index([tenantId, reservationTime])
   @@index([tenantId, status])
 }
