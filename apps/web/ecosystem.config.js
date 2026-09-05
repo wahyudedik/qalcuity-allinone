@@ -2,7 +2,8 @@ module.exports = {
     apps: [{
         name: 'qalcuity-web',
         cwd: './',
-        script: 'node_modules/.bin/next',
+        // Use direct Node.js entry point (NOT node_modules/.bin/next which is a shell wrapper on Linux)
+        script: 'node_modules/next/dist/bin/next',
         args: 'start -p 3000',
         env: {
             NODE_ENV: 'production',
