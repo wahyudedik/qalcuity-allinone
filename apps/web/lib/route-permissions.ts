@@ -56,6 +56,11 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/pos/kitchen/orders': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
     '/api/pos/kitchen/stations': { permission: 'pos.kitchen_station', fallbackRole: 'ADMIN' },
     '/api/pos/kitchen/stats': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
+
+    // ─── POS Table Management ──────────────────────────────────────────────
+    '/api/pos/tables': { permission: 'pos.table', fallbackRole: 'ADMIN' },
+    '/api/pos/tables/reservations': { permission: 'pos.table', fallbackRole: 'ADMIN' },
+    '/api/pos/tables/stats': { permission: 'pos.table', fallbackRole: 'ADMIN' },
 };
 
 /**

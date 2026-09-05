@@ -1038,3 +1038,70 @@ export const updateKitchenOrderStatusSchema = z.object({
     stationId: z.string().optional().nullable(),
     notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
 });
+
+// ============================================
+// POS Table Management Schemas
+// ============================================
+
+export const createTableSchema = z.object({
+    number: z.number().int('Nomor meja harus bilangan bulat').min(1, 'Nomor meja minimal 1'),
+    name: z.string().max(100, 'Nama meja maksimal 100 karakter').optional().nullable(),
+    capacity: z.number().int('Kapasitas harus bilangan bulat').min(1, 'Kapasitas minimal 1').max(100, 'Kapasitas maksimal 100').optional().default(4),
+    zone: z.string().max(50, 'Zone maksimal 50 karakter').optional().nullable(),
+    floor: z.string().max(50, 'Lantai maksimal 50 karakter').optional().nullable(),
+    posX: z.number().optional().nullable(),
+    posY: z.number().optional().nullable(),
+    width: z.number().min(0.5, 'Lebar minimal 0.5').max(10, 'Lebar maksimal 10').optional().default(1),
+    height: z.number().min(0.5, 'Tinggi minimal 0.5').max(10, 'Tinggi maksimal 10').optional().default(1),
+    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
+});
+
+export const updateTableSchema = z.object({
+    number: z.number().int('Nomor meja harus bilangan bulat').min(1, 'Nomor meja minimal 1').optional(),
+    name: z.string().max(100, 'Nama meja maksimal 100 karakter').optional().nullable(),
+    capacity: z.number().int('Kapasitas harus bilangan bulat').min(1, 'Kapasitas minimal 1').max(100, 'Kapasitas maksimal 100').optional(),
+    status: z.enum(['AVAILABLE', 'OCCUPIED', 'RESERVED', 'CLEANING', 'DISABLED'], {
+        message: 'Status harus AVAILABLE, OCCUPIED, RESERVED, CLEANING, atau DISABLED',
+    }).optional(),
+    zone: z.string().max(50, 'Zone maksimal 50 karakter').optional().nullable(),
+    floor: z.string().max(50, 'Lantai maksimal 50 karakter').optional().nullable(),
+    posX: z.number().optional().nullable(),
+    posY: z.number().optional().nullable(),
+    width: z.number().min(0.5, 'Lebar minimal 0.5').max(10, 'Lebar maksimal 10').optional(),
+    height: z.number().min(0.5, 'Tinggi minimal 0.5').max(10, 'Tinggi maksimal 10').optional(),
+    isActive: z.boolean().optional(),
+    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const updateTableStatusSchema = z.object({
+    status: z.enum(['AVAILABLE', 'OCCUPIED', 'RESERVED', 'CLEANING', 'DISABLED'], {
+        message: 'Status harus AVAILABLE, OCCUPIED, RESERVED, CLEANING, atau DISABLED',
+    }),
+});
+
+export const createReservationSchema = z.object({
+    tableId: z.string().optional().nullable(),
+    customerName: z.string().min(1, 'Nama pelanggan wajib diisi').max(255, 'Nama pelanggan maksimal 255 karakter'),
+    customerPhone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    partySize: z.number().int('Jumlah tamu harus bilangan bulat').min(1, 'Jumlah tamu minimal 1').max(100, 'Jumlah tamu maksimal 100'),
+    reservationTime: z.string().min(1, 'Waktu reservasi wajib diisi'),
+    duration: z.number().int('Durasi harus bilangan bulat').min(15, 'Durasi minimal 15 menit').max(480, 'Durasi maksimal 480 menit').optional().default(60),
+    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
+});
+
+export const updateReservationSchema = z.object({
+    tableId: z.string().optional().nullable(),
+    status: z.enum(['CONFIRMED', 'SEATED', 'CANCELLED', 'NO_SHOW'], {
+        message: 'Status harus CONFIRMED, SEATED, CANCELLED, atau NO_SHOW',
+    }).optional(),
+    customerName: z.string().min(1, 'Nama pelanggan wajib diisi').max(255, 'Nama pelanggan maksimal 255 karakter').optional(),
+    customerPhone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
+    partySize: z.number().int('Jumlah tamu harus bilangan bulat').min(1, 'Jumlah tamu minimal 1').max(100, 'Jumlah tamu maksimal 100').optional(),
+    reservationTime: z.string().optional(),
+    duration: z.number().int('Durasi harus bilangan bulat').min(15, 'Durasi minimal 15 menit').max(480, 'Durasi maksimal 480 menit').optional(),
+    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
