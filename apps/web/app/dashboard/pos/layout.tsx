@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -13,6 +14,7 @@ import {
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
+import { registerServiceWorker } from '@/lib/pos-offline/service-worker'
 
 interface TabItem {
     href: string
@@ -34,6 +36,11 @@ const posTabs: TabItem[] = [
 export default function POSLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const { t } = useTranslation()
+
+    // Register Service Worker once for all POS pages (client-side only)
+    useEffect(() => {
+        void registerServiceWorker()
+    }, [])
 
     return (
         <div className="space-y-6">
