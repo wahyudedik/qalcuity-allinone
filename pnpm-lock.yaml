@@ -79,6 +79,9 @@ importers:
       '@prisma/client':
         specifier: ^5.15.0
         version: 5.22.0(prisma@5.22.0)
+      '@qalcuity/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@qalcuity/industry-config':
         specifier: workspace:*
         version: link:../../packages/industry-config

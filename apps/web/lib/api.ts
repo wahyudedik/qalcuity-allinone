@@ -1,10 +1,81 @@
 /**
  * API Client utility untuk Qalcuity Web App
  * Menyediakan fungsi fetch yang konsisten untuk semua halaman
+ *
+ * Re-exports shared API client dari @qalcuity/api untuk digunakan
+ * oleh web, mobile, dan desktop apps.
  */
+
+// ============================================
+// Re-exports from @qalcuity/api (shared package)
+// ============================================
+
+// Shared types
+export type {
+    HttpMethod,
+    RequestOptions,
+    PaginationParams,
+    PaginationMeta,
+    TenantHeaders,
+    ApiClientConfig,
+    ApiClient,
+    UploadOptions,
+    UploadProgress,
+    UploadResponse,
+    BatchRequest,
+    BatchResponse,
+    WebSocketMessage,
+    WebSocketConfig,
+} from '@qalcuity/api';
+
+// Re-export ApiResponse from shared package under a prefixed name
+// to avoid conflict with the local ApiResponse<T> below
+export type {
+    ApiResponse as SharedApiResponse,
+    ApiResponseWithMeta,
+    ApiErrorResponse,
+    FetchOptions as SharedFetchOptions,
+} from '@qalcuity/api';
+
+// Shared error classes
+export {
+    ApiError,
+    BadRequestError,
+    UnauthorizedError,
+    ForbiddenError,
+    NotFoundError,
+    ConflictError,
+    UnprocessableEntityError,
+    RateLimitError,
+    InternalServerError,
+    ServiceUnavailableError,
+    NetworkError,
+    parseApiError,
+} from '@qalcuity/api';
+
+// Shared API client factory and module-specific clients
+export {
+    createApiClient,
+    apiClient,
+    financeApi,
+    crmApi,
+    inventoryApi,
+    hrApi,
+    settingsApi,
+} from '@qalcuity/api';
+
+// ============================================
+// Local API Client (backward compatible)
+// ============================================
 
 const API_BASE = '/api';
 
+/**
+ * Local ApiResponse type — includes pagination fields directly.
+ * Kept for backward compatibility with existing web app code.
+ *
+ * @deprecated Use SharedApiResponse or ApiResponseWithMeta from @qalcuity/api for new code
+ */
 export interface ApiResponse<T> {
     success: boolean;
     data: T;
@@ -15,6 +86,9 @@ export interface ApiResponse<T> {
     error?: string;
 }
 
+/**
+ * @deprecated Use RequestOptions or SharedFetchOptions from @qalcuity/api for new code
+ */
 export interface FetchOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     body?: unknown;
@@ -24,6 +98,8 @@ export interface FetchOptions {
 
 /**
  * Generic fetch function untuk API calls
+ *
+ * @deprecated Use createApiClient from @qalcuity/api for new code
  */
 export async function fetchApi<T>(
     endpoint: string,
@@ -63,6 +139,8 @@ export async function fetchApi<T>(
 /**
  * Hook-style fetch dengan state management
  * Digunakan di halaman-halaman untuk fetch data
+ *
+ * @deprecated Use createApiClient from @qalcuity/api for new code
  */
 export function createApiFetcher<T>(endpoint: string) {
     return {
@@ -84,7 +162,7 @@ export function createApiFetcher<T>(endpoint: string) {
 }
 
 // ============================================
-// API Clients per Module
+// API Clients per Module (backward compatible)
 // ============================================
 
 // Finance
