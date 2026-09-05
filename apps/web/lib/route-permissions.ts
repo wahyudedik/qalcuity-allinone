@@ -61,6 +61,11 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/pos/tables': { permission: 'pos.table', fallbackRole: 'ADMIN' },
     '/api/pos/tables/reservations': { permission: 'pos.table', fallbackRole: 'ADMIN' },
     '/api/pos/tables/stats': { permission: 'pos.table', fallbackRole: 'ADMIN' },
+
+    // ─── Operations Module ─────────────────────────────────────────────────
+    '/api/projects': { permission: 'operations.project', fallbackRole: 'ADMIN' },
+    '/api/tasks': { permission: 'operations.task', fallbackRole: 'ADMIN' },
+    '/api/timesheet': { permission: 'operations.timesheet', fallbackRole: 'MEMBER' },
 };
 
 /**

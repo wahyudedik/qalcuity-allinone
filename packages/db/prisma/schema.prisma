@@ -134,6 +134,9 @@ model Tenant {
   // POS Table Management
   posTables            PosTable[]
   posTableReservations PosTableReservation[]
+
+  // Operations Module
+  projects             Project[]
 }
 
 model User {
@@ -2157,4 +2160,103 @@ model PosTableReservation {
 
   @@index([tenantId, reservationTime])
   @@index([tenantId, status])
+}
+
+// ============================================
+// OPERATIONS MODULE
+// ============================================
+
+model Project {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  status      String   @default("PLANNING") // PLANNING, ACTIVE, ON_HOLD, COMPLETED, CANCELLED
+  priority    String   @default("MEDIUM")   // LOW, MEDIUM, HIGH, URGENT
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Decimal? @db.Decimal(15, 2)
+  spent       Decimal? @default(0) @db.Decimal(15, 2)
+  progress    Int      @default(0) // 0-100 percent
+  managerId   String?  // Employee ID (dari HR module)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id])
+  members ProjectMember[]
+  tasks   Task[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, managerId])
+}
+
+model ProjectMember {
+  id          String   @id @default(cuid())
+  tenantId    String
+  projectId   String
+  employeeId  String   // dari HR module
+  role        String   @default("MEMBER") // MANAGER, MEMBER, VIEWER
+  joinedAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, employeeId])
+  @@index([tenantId, projectId])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  tenantId    String
+  projectId   String
+  title       String
+  description String?
+  status      String   @default("TODO")       // TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED
+  priority    String   @default("MEDIUM")      // LOW, MEDIUM, HIGH, URGENT
+  assigneeId  String?                          // Employee ID
+  dueDate     DateTime?
+  estimatedHours Decimal? @db.Decimal(5, 2)
+  actualHours   Decimal? @default(0) @db.Decimal(5, 2)
+  tags        String?  // comma-separated tags
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments  TaskComment[]
+  timeLogs  TimeLog[]
+
+  @@index([tenantId, projectId])
+  @@index([tenantId, status])
+  @@index([tenantId, assigneeId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  taskId    String
+  authorId  String   // Employee ID
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, taskId])
+}
+
+model TimeLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  taskId      String
+  employeeId  String
+  date        DateTime @db.Date
+  hours       Decimal  @db.Decimal(5, 2)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, taskId])
+  @@index([tenantId, employeeId, date])
 }
