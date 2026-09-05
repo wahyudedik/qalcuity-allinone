@@ -1,6 +1,6 @@
-> **Last Updated:** 4 September 2026 (POS Phase 4 — Loyalty Program + Analytics + Multi-terminal)
-> **Version:** v8.0.0
-> **Status:** POS Phase 1-4 COMPLETE — Loyalty Program (3 models, 9 routes, 4 pages), Analytics Enhancement (4 API routes, charts, CSV export), Multi-terminal Monitor (real-time dashboard). Total POS: 19 API routes, 11 UI pages.
+> **Last Updated:** 5 September 2026 (VPS Deployment — aaPanel Migration)
+> **Version:** v8.1.0
+> **Status:** POS Phase 1-4 COMPLETE + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
 
 ---
 
@@ -267,7 +267,7 @@
 
 ### Sprint 3 — Batch 1A-1B: Decimal Fix + Deployment (2-3 September 2026)
 - ✅ All monetary fields upgraded to `Decimal(19,4)`
-- ✅ Deployment fixes for VPS (PM2, aaPanel, Prisma engine)
+- ✅ Deployment fixes for VPS (aaPanel Node.js Project Manager, Prisma library engine)
 - ✅ Trial Balance, Balance Sheet, Income Statement reports
 
 ### Sprint 2 — Batch 2A-2C: Enhancement Sprint (2-3 September 2026)
@@ -770,12 +770,50 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 26 | ~~`any` types in rate limiter (CQ-05)~~ | 🟡 Low | Code Quality | ✅ Fixed — proper TypeScript types (Batch N) |
 | 27 | ~~`handleApiError` inconsistent (UI-05)~~ | 🟠 Medium | API | ✅ Fixed — standardized error handling (Batch N) |
 | 28 | ~~Missing composite indexes (DB-01)~~ | 🟡 Low | Database | ✅ Fixed — 4 indexes in Prisma schema (Batch N, VPS migration pending) |
+| 29 | **NEXTAUTH_URL must be production URL in `.env`** | 🔴 High | Deployment | ⚠️ `NEXTAUTH_URL` harus `"https://qalcuity.com"` di `.env` VPS (bukan localhost) — jika salah, callback OAuth gagal |
+| 30 | **NEXTAUTH_SECRET must be production value** | 🔴 High | Deployment | ⚠️ `NEXTAUTH_SECRET` harus production-strength value — different dari local dev |
+| 31 | **`.env` file values override PM2/aaPanel env vars** | 🟠 Medium | Deployment | ⚠️ dotenv tidak override — values di `.env` file selalu menang. Pastikan `.env` di VPS berisi production values |
+| 32 | **aaPanel auto-restart after build** | 🟡 Low | Deployment | ⚠️ aaPanel Node.js Project Manager auto-restart app setelah build — tidak perlu restart manual |
 
 ---
 
 ## 🚫 Blockers
 
 _None currently._
+
+---
+
+## 🖥️ VPS Deployment Info
+
+> **Deployment method: aaPanel Node.js Project Manager** (bukan PM2).
+
+### VPS Specifications
+
+| Komponen | Detail |
+|----------|--------|
+| **App URL** | `https://qalcuity.com` |
+| **Deployment Path** | `/www/wwwroot/qalcuity` |
+| **Process Manager** | aaPanel Node.js Project Manager |
+| **App Port** | 3000 |
+| **Node Version** | v24.15.0 |
+| **Database** | PostgreSQL (aaPanel built-in) |
+| **Database Path** | `/www/server/pgsql/bin` |
+| **Prisma Engine** | Library mode (`PRISMA_QUERY_ENGINE_TYPE=library`) |
+
+### Deployment Commands
+
+| Command | Description |
+|---------|-------------|
+| `sudo bash update.sh` | Update deployment (git pull + build + migrate + restart) |
+| `sudo ./deploy-vps.sh [branch]` | Full deployment with rollback support |
+| `sudo ./deploy-vps.sh rollback` | Rollback to previous backup |
+
+### Deployment Notes
+
+- **Prisma Engine:** VPS tidak bisa download Prisma engine binary — gunakan `PRISMA_QUERY_ENGINE_TYPE=library` sebagai workaround
+- **Git Branch:** Default branch `main` — script otomatis pull dari remote
+- **Auto-backup:** Deploy script otomatis backup sebelum deploy (max 5 backups)
+- **Logs:** Update logs ditulis ke `/var/log/qalcuity-update.log`
 
 ---
 
@@ -829,7 +867,7 @@ _None currently._
 | **Styling** | Tailwind CSS | 3.4 | ✅ Active |
 | **Icons** | Lucide React | latest | ✅ Active |
 | **ORM** | Prisma | 5.15 | ✅ Active |
-| **Database** | PostgreSQL (DBngin) | 18.4 | ✅ Active |
+| **Database** | PostgreSQL (aaPanel) | 14+ | ✅ Active (Production VPS) |
 | **Auth** | NextAuth (JWT) | 4.24 | ✅ Active |
 | **Validation** | Zod | latest | ✅ Active (14+ schemas) |
 | **Monorepo** | pnpm workspaces | latest | ✅ Active |
@@ -1518,4 +1556,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 7.7.0 — Batch M Complete (Documentation Update)
+**Document Version:** 8.1.0 — VPS Deployment (aaPanel Migration)
