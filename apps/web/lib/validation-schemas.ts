@@ -1105,3 +1105,99 @@ export const updateReservationSchema = z.object({
 }).refine((data) => Object.keys(data).length > 0, {
     message: 'Minimal satu field harus di-update',
 });
+
+// ============================================
+// Operations Module Schemas
+// ============================================
+
+export const createProjectSchema = z.object({
+    name: z.string().min(1, 'Nama proyek wajib diisi').max(255, 'Nama proyek maksimal 255 karakter'),
+    description: z.string().max(2000, 'Deskripsi maksimal 2000 karakter').optional().nullable(),
+    status: z.enum(['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'], {
+        message: 'Status harus PLANNING, ACTIVE, ON_HOLD, COMPLETED, atau CANCELLED',
+    }).optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+        message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+    }).optional(),
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+    budget: z.number().min(0, 'Budget tidak boleh negatif').optional().nullable(),
+    managerId: z.string().max(50).optional().nullable(),
+});
+
+export const updateProjectSchema = z.object({
+    name: z.string().min(1, 'Nama proyek wajib diisi').max(255, 'Nama proyek maksimal 255 karakter').optional(),
+    description: z.string().max(2000, 'Deskripsi maksimal 2000 karakter').optional().nullable(),
+    status: z.enum(['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'], {
+        message: 'Status harus PLANNING, ACTIVE, ON_HOLD, COMPLETED, atau CANCELLED',
+    }).optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+        message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+    }).optional(),
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+    budget: z.number().min(0, 'Budget tidak boleh negatif').optional().nullable(),
+    progress: z.number().int('Progress harus bilangan bulat').min(0, 'Progress minimal 0').max(100, 'Progress maksimal 100').optional(),
+    managerId: z.string().max(50).optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const createTaskSchema = z.object({
+    projectId: z.string().min(1, 'ID proyek wajib diisi'),
+    title: z.string().min(1, 'Judul task wajib diisi').max(255, 'Judul task maksimal 255 karakter'),
+    description: z.string().max(5000, 'Deskripsi maksimal 5000 karakter').optional().nullable(),
+    status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'], {
+        message: 'Status harus TODO, IN_PROGRESS, IN_REVIEW, DONE, atau CANCELLED',
+    }).optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+        message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+    }).optional(),
+    assigneeId: z.string().max(50).optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    estimatedHours: z.number().min(0, 'Estimasi jam tidak boleh negatif').optional().nullable(),
+    tags: z.string().max(500, 'Tags maksimal 500 karakter').optional().nullable(),
+});
+
+export const updateTaskSchema = z.object({
+    title: z.string().min(1, 'Judul task wajib diisi').max(255, 'Judul task maksimal 255 karakter').optional(),
+    description: z.string().max(5000, 'Deskripsi maksimal 5000 karakter').optional().nullable(),
+    status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'], {
+        message: 'Status harus TODO, IN_PROGRESS, IN_REVIEW, DONE, atau CANCELLED',
+    }).optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+        message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+    }).optional(),
+    assigneeId: z.string().max(50).optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    estimatedHours: z.number().min(0, 'Estimasi jam tidak boleh negatif').optional().nullable(),
+    actualHours: z.number().min(0, 'Jam aktual tidak boleh negatif').optional().nullable(),
+    tags: z.string().max(500, 'Tags maksimal 500 karakter').optional().nullable(),
+    sortOrder: z.number().int('Sort order harus bilangan bulat').min(0).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const createTimeLogSchema = z.object({
+    taskId: z.string().min(1, 'ID task wajib diisi'),
+    date: z.string().min(1, 'Tanggal wajib diisi'),
+    hours: z.number().min(0.25, 'Jam minimal 0.25 (15 menit)').max(24, 'Jam maksimal 24'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+});
+
+export const createTaskCommentSchema = z.object({
+    content: z.string().min(1, 'Komentar wajib diisi').max(5000, 'Komentar maksimal 5000 karakter'),
+});
+
+export const addProjectMemberSchema = z.object({
+    employeeId: z.string().min(1, 'ID karyawan wajib diisi').max(50, 'ID karyawan maksimal 50 karakter'),
+    role: z.enum(['MANAGER', 'MEMBER', 'VIEWER'], {
+        message: 'Role harus MANAGER, MEMBER, atau VIEWER',
+    }).optional(),
+});
+
+export const updateProjectMemberSchema = z.object({
+    role: z.enum(['MANAGER', 'MEMBER', 'VIEWER'], {
+        message: 'Role harus MANAGER, MEMBER, atau VIEWER',
+    }),
+});

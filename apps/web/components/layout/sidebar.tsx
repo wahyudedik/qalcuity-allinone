@@ -22,6 +22,7 @@ import {
     BarChart3,
     CheckCircle,
     Monitor,
+    FolderKanban,
     type LucideIcon,
 } from "lucide-react";
 
@@ -117,7 +118,18 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.posMonitor") || "Monitor", href: "/dashboard/pos/terminals-monitor" },
             ],
         },
-        // 7. Approvals — all roles
+        // 7. Operations — ADMIN, MEMBER, VIEWER (read-only)
+        {
+            label: t("nav.operations") || "Operations",
+            href: "/dashboard/projects",
+            icon: FolderKanban,
+            children: [
+                { label: t("nav.projects") || "Projects", href: "/dashboard/projects" },
+                { label: t("nav.myTasks") || "My Tasks", href: "/dashboard/tasks" },
+                { label: t("nav.timesheet") || "Timesheet", href: "/dashboard/timesheet" },
+            ],
+        },
+        // 8. Approvals — all roles
         {
             label: t("nav.approvals") || "Approvals",
             href: "/dashboard/approvals",
