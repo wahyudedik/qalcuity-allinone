@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslation } from '@/lib/i18n'
 import { FlaskConical, Eye, EyeOff } from 'lucide-react'
 
@@ -13,7 +13,6 @@ interface Providers {
 }
 
 export default function LoginPage() {
-    const router = useRouter()
     const searchParams = useSearchParams()
     const { t } = useTranslation()
     const [email, setEmail] = useState(searchParams?.get('email') || '')
@@ -52,12 +51,11 @@ export default function LoginPage() {
 
             if (result?.error) {
                 setError(result.error)
+            } else if (result?.ok) {
+                // Use window.location for hard navigation to ensure session cookie is sent
+                window.location.href = '/dashboard'
             } else {
-                // rememberMe: NextAuth JWT sudah punya expiry default.
-                // Jika rememberMe = false, redirect ke dashboard (session expiry default).
-                // Jika rememberMe = true, tetap redirect ke dashboard (session lebih lama).
-                router.push('/dashboard')
-                router.refresh()
+                setError('Login failed. Please try again.')
             }
         } catch (err) {
             setError(t('common.error'))
