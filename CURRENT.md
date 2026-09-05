@@ -1,6 +1,6 @@
-> **Last Updated:** 5 September 2026 (VPS Deployment — aaPanel Migration)
-> **Version:** v8.1.0
-> **Status:** POS Phase 1-4 COMPLETE + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+> **Last Updated:** 5 September 2026 (POS Phase 5 — Offline Mode Complete)
+> **Version:** v8.2.0
+> **Status:** POS Phase 1-5 COMPLETE + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
 
 ---
 
@@ -52,6 +52,46 @@
 | Prisma Models | 6 | 0 | 3 | **9** |
 | i18n Keys | — | 100+ | 80+ | **180+** |
 | Loading States | 3 | 3 | 3 | **9** |
+
+---
+
+### POS Feature — Phase 5: Offline Mode (5 September 2026)
+
+> **Focus:** Offline mode untuk POS terminal — IndexedDB storage, sync queue, service worker, UI indicators
+> **TypeScript Check:** PASS (0 errors)
+> **Files Created/Modified:** 10 files
+
+#### Phase 5A: IndexedDB Core
+- **Types** — [`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts) — TypeScript interfaces: `OfflineTransaction`, `OfflineProduct`, `OfflineSession`, `SyncQueueItem`, `SyncStatus`, `NetworkState`
+- **IndexedDB Manager** — [`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts) — Dexie.js-based IndexedDB wrapper: open/close DB, CRUD operations, product cache, transaction storage, sync queue management
+
+#### Phase 5B: Sync Queue & API Client
+- **Sync Engine** — [`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts) — Background sync queue: enqueue transactions, retry logic with exponential backoff, conflict detection, batch sync, sync status tracking
+- **API Client** — [`apps/web/lib/pos-offline/api-client.ts`](apps/web/lib/pos-offline/api-client.ts) — Offline-aware API client: network detection, request queuing when offline, automatic retry on reconnection, response caching
+
+#### Phase 5C+5D: React Hooks & UI Components
+- **usePosOffline Hook** — [`apps/web/hooks/use-pos-offline.ts`](apps/web/hooks/use-pos-offline.ts) — React hook: online/offline detection, sync status, pending transactions count, manual sync trigger
+- **usePosProducts Hook** — [`apps/web/hooks/use-pos-products.ts`](apps/web/hooks/use-pos-products.ts) — React hook: offline-aware product list with IndexedDB cache, network-aware fetching
+- **Offline Indicator** — [`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx) — Visual indicator: online/offline status badge with network state display
+- **Sync Status Badge** — [`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx) — Sync status component: pending count, sync progress, last sync time, manual sync button
+
+#### Phase 5E: Service Worker
+- **Service Worker** — [`apps/web/public/sw.js`](apps/web/public/sw.js) — Cache-first strategy for static assets, network-first for API calls, offline fallback page
+- **SW Manager** — [`apps/web/lib/pos-offline/service-worker.ts`](apps/web/lib/pos-offline/service-worker.ts) — Registration, update handling, cache management utilities
+
+#### Phase 5F: Integration
+- **POS Terminal Integration** — [`apps/web/app/dashboard/pos/terminal/page.tsx`](apps/web/app/dashboard/pos/terminal/page.tsx) — Offline indicator + sync status integrated into cashier UI
+- **POS Layout Integration** — [`apps/web/app/dashboard/pos/layout.tsx`](apps/web/app/dashboard/pos/layout.tsx) — Offline-aware layout with network state provider
+
+#### POS Phase 5 Summary
+| Metric | Phase 2 | Phase 3 | Phase 4 | Phase 5 | Total POS |
+|--------|---------|---------|---------|---------|-----------|
+| API Routes | 8 | 2 | 13 | 0 | **23** |
+| UI Pages | 3 | 3 | 6 | 2 | **13** |
+| Prisma Models | 6 | 0 | 3 | 0 | **9** |
+| i18n Keys | — | 100+ | 80+ | — | **180+** |
+| Loading States | 3 | 3 | 3 | 0 | **9** |
+| Offline Files | — | — | — | 10 | **10** |
 
 ---
 
@@ -334,7 +374,7 @@
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
-| **POS Module** | ✅ Phase 1-4 Complete | 80% (Core + Refunds + Reports + Loyalty + Analytics + Monitor) |
+| **POS Module** | ✅ Phase 1-5 Complete | 85% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Financial Reports** | ✅ Implemented | 60% (Trial Balance, Balance Sheet, Income Statement) |
 | **HR Enhancement** | ✅ Implemented | 70% (PPh21/BPJS calculator, payroll enhancement) |
@@ -733,7 +773,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 
 - [ ] **Full AI Agent Suite** — Replace mock responses with real database queries per module
 - [ ] **Advanced ML Models** — Predictions, anomaly detection, forecasting
-- [ ] **Offline Capability** — Service worker, local cache for mobile/desktop
+- [x] **POS Offline Mode** — IndexedDB, sync queue, service worker, offline indicator, sync status badge — Phase 5A-5F complete
 - [ ] **Unified Control Engine** — Policy Engine, configurable approval, SLA, Delegation, SoD (Phase 10)
 - [x] **Sprint 4 Documentation Update** — CURRENT.md, FEATURES.md, deploy-vps.sh, sprint-final-summary.md
 
@@ -949,7 +989,7 @@ _None currently._
 
 ## 📊 Metrics
 
-### Codebase Stats (Updated: 4 September 2026 — POS Phase 4 Complete)
+### Codebase Stats (Updated: 5 September 2026 — POS Phase 5 Complete)
 
 | Metric | Count |
 |--------|-------|
@@ -969,7 +1009,8 @@ _None currently._
 | UI Components | 11 (Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider) |
 | Mobile screens | 14 (12 + Login + Register) |
 | POS API Routes | 23 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor) |
-| POS UI Pages | 12 (terminal, sessions, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, layout) |
+| POS UI Pages | 13 (terminal, sessions, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, layout, offline-indicator, sync-status-badge) |
+| POS Offline Files | 10 (types.ts, db.ts, sync.ts, api-client.ts, service-worker.ts, sw.js, use-pos-offline.ts, use-pos-products.ts, offline-indicator.tsx, sync-status-badge.tsx) |
 | POS Prisma Models | 9 (PosTerminal, PosSession, PosTransaction, PosTransactionItem, PosRefund, PosPayment, LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward) |
 | Permission-integrated routes | ~90+ |
 | Workflow-integrated entities | 5 (Invoice, Payment, PO, Quotation, Leaves) |
@@ -1001,6 +1042,17 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 5 September 2026 — POS Phase 5: Offline Mode
+
+**POS Phase 5A-5F — Offline Mode Implementation:**
+- **5A: IndexedDB Core** — [`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts) + [`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts) — TypeScript interfaces + Dexie.js-based IndexedDB wrapper
+- **5B: Sync Queue & API Client** — [`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts) + [`apps/web/lib/pos-offline/api-client.ts`](apps/web/lib/pos-offline/api-client.ts) — Background sync queue + offline-aware API client
+- **5C+5D: React Hooks & UI Components** — [`apps/web/hooks/use-pos-offline.ts`](apps/web/hooks/use-pos-offline.ts) + [`apps/web/hooks/use-pos-products.ts`](apps/web/hooks/use-pos-products.ts) + [`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx) + [`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx) — Offline detection hooks + UI indicators
+- **5E: Service Worker** — [`apps/web/public/sw.js`](apps/web/public/sw.js) + [`apps/web/lib/pos-offline/service-worker.ts`](apps/web/lib/pos-offline/service-worker.ts) — Cache-first SW + registration manager
+- **5F: Integration** — [`apps/web/app/dashboard/pos/terminal/page.tsx`](apps/web/app/dashboard/pos/terminal/page.tsx) + [`apps/web/app/dashboard/pos/layout.tsx`](apps/web/app/dashboard/pos/layout.tsx) — Offline indicators integrated into POS UI
+- **TypeScript Check** — PASS (0 errors)
+- **Files Created/Modified:** 10 files
 
 ### 1 September 2026 — Improvement Sprint (Batch 7A-7E)
 
@@ -1458,7 +1510,7 @@ _None currently._
 - [ ] **Integration** — Payment gateway, e-invoicing, WhatsApp, marketplace, bank feeds, project management, time tracking, support portal
 - [ ] **AI Agents** — Hub setup, 5 domain agents, NLQ, document extraction, template generator, anomaly detection
 - [x] **Mobile Auth** — JWT auth flow (login, register, refresh, me), AuthContext, Login/Register screens
-- [ ] **POS** — Core module, offline mode, receipt printer, barcode scanner, industry config, multi-outlet, cash drawer
+- [x] **POS** — Core module ✅, offline mode ✅ (Phase 5), receipt printer, barcode scanner, industry config, multi-outlet, cash drawer
 - [ ] **Industry Packs** — Framework engine, 9 default industry packs, dashboard config per industri
 - [ ] **Platform Control Center** — Tenant management, billing, error center, health dashboard, support, impersonation, feature flags, usage metering, security center
 
@@ -1556,4 +1608,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 8.1.0 — VPS Deployment (aaPanel Migration)
+**Document Version:** 8.2.0 — POS Phase 5 Complete (Offline Mode)

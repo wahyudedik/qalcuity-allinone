@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 4, 2026 (POS Phase 4 — Loyalty + Analytics + Multi-terminal)
+**Last Updated:** September 5, 2026 (POS Phase 5 — Offline Mode)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 9.0 — POS Phase 4 Complete
+**Document Version:** 10.0 — POS Phase 5 Complete
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -1141,7 +1141,12 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Cashier Management** | 🔄 `partial` | 2026-09-04 | Terminals Management page (CRUD terminals, belum scheduling) |
 | **POS Receipt Printing** | 📋 `planned` | — | Receipt generation dan printing (thermal/regular) |
 | **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
-| **POS Offline Mode** | 📋 `planned` | — | Transaksi tanpa koneksi internet dengan sync rules |
+| **POS Offline Mode** | ✅ `implemented` | 2026-09-05 | Transaksi offline dengan IndexedDB, sync queue, service worker — Phase 5 |
+| **POS Offline — IndexedDB** | ✅ `implemented` | 2026-09-05 | Local storage: products, transactions, sessions via Dexie.js ([`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts)) |
+| **POS Offline — Sync Queue** | ✅ `implemented` | 2026-09-05 | Background sync dengan retry, exponential backoff, conflict detection ([`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts)) |
+| **POS Offline — Service Worker** | ✅ `implemented` | 2026-09-05 | Cache-first static assets, network-first API, offline fallback ([`apps/web/public/sw.js`](apps/web/public/sw.js)) |
+| **POS Offline — Offline Indicator** | ✅ `implemented` | 2026-09-05 | Visual online/offline status badge ([`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx)) |
+| **POS Offline — Sync Status Badge** | ✅ `implemented` | 2026-09-05 | Pending count, sync progress, manual sync button ([`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx)) |
 | **POS Closing** | 📋 `planned` | — | Daily/shift closing dengan approval workflow |
 | **POS Audit Trail** | 📋 `planned` | — | Jejak audit lengkap untuk semua transaksi POS |
 | **POS Dashboard** | ✅ `implemented` | 2026-09-04 | POS overview dashboard API with stats (Phase 2) |
@@ -1649,6 +1654,17 @@ Electron-based desktop application.
 - **Status Summary** — implemented: 33→36, planned: 156→153, total: 274→277
 - **POS Total** — Phase 1-4 complete: 23 API routes, 12 UI pages, 9 Prisma models, 180+ i18n keys
 
-**Last Updated:** September 4, 2026 (POS Phase 4 — Loyalty + Analytics + Multi-terminal)
+### v10.0.0 (September 5, 2026) — POS Phase 5: Offline Mode
+- **POS Offline Mode** — Full offline capability for POS terminal: IndexedDB local storage, background sync queue, service worker caching, UI indicators
+- **5A: IndexedDB Core** — TypeScript interfaces + Dexie.js-based IndexedDB wrapper ([`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts), [`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts))
+- **5B: Sync Queue & API Client** — Background sync with retry/backoff + offline-aware API client ([`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts), [`apps/web/lib/pos-offline/api-client.ts`](apps/web/lib/pos-offline/api-client.ts))
+- **5C+5D: React Hooks & UI** — Offline detection hooks + product cache hook + UI indicator components ([`apps/web/hooks/use-pos-offline.ts`](apps/web/hooks/use-pos-offline.ts), [`apps/web/hooks/use-pos-products.ts`](apps/web/hooks/use-pos-products.ts), [`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx), [`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx))
+- **5E: Service Worker** — Cache-first static assets + network-first API + offline fallback ([`apps/web/public/sw.js`](apps/web/public/sw.js), [`apps/web/lib/pos-offline/service-worker.ts`](apps/web/lib/pos-offline/service-worker.ts))
+- **5F: Integration** — POS terminal + layout integrated with offline indicators ([`apps/web/app/dashboard/pos/terminal/page.tsx`](apps/web/app/dashboard/pos/terminal/page.tsx), [`apps/web/app/dashboard/pos/layout.tsx`](apps/web/app/dashboard/pos/layout.tsx))
+- **TypeScript Check** — PASS (0 errors)
+- **Files Created/Modified:** 10 files
+- **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
+
+**Last Updated:** September 5, 2026 (POS Phase 5 — Offline Mode)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 9.0 — POS Phase 4 Complete
+**Document Version:** 10.0 — POS Phase 5 Complete
