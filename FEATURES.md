@@ -1166,6 +1166,14 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **Kitchen — API Routes** | ✅ `implemented` | 2026-09-05 | 9 API routes: orders CRUD, stations CRUD, stats — state machine (NEW→PREPARING→READY→COMPLETED) |
 | **Kitchen — Custom Hook** | ✅ `implemented` | 2026-09-05 | [`use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts) — filter, actions, real-time updates |
 | **Kitchen — Database Models** | ✅ `implemented` | 2026-09-05 | 3 Prisma models: PosKitchenOrder, PosKitchenOrderItem, PosKitchenStation + Product extensions |
+| **Table Management** | ✅ `implemented` | 2026-09-05 | Table management with grid/list view, quick status change, reservations, zone filtering — 2 models, 6 API routes, 2 components |
+| **Table Management — Database** | ✅ `implemented` | 2026-09-05 | 2 Prisma models: `PosTable` (with layout coordinates), `PosTableReservation` |
+| **Table Management — API Routes** | ✅ `implemented` | 2026-09-05 | 6 API routes: tables CRUD, status change, reservations CRUD, stats — RBAC, tenant isolation, Zod validation |
+| **Table Management — UI Page** | ✅ `implemented` | 2026-09-05 | Grid View + List View, quick status change, zone filtering, reservation form, create table form ([`apps/web/app/dashboard/pos/tables/page.tsx`](apps/web/app/dashboard/pos/tables/page.tsx)) |
+| **Table Management — Table Card** | ✅ `implemented` | 2026-09-05 | Visual card with color-coded status, expand for status change buttons, reservation info ([`apps/web/components/pos/table-card.tsx`](apps/web/components/pos/table-card.tsx)) |
+| **Table Management — Reservation Form** | ✅ `implemented` | 2026-09-05 | Modal form for creating reservations with table auto-suggest ([`apps/web/components/pos/reservation-form.tsx`](apps/web/components/pos/reservation-form.tsx)) |
+| **Table Management — Custom Hook** | ✅ `implemented` | 2026-09-05 | [`use-pos-tables.ts`](apps/web/hooks/use-pos-tables.ts) — Auto-refresh 15s, CRUD operations, filters, stats |
+| **Table Management — Status Machine** | ✅ `implemented` | 2026-09-05 | Valid transitions: AVAILABLE→(OCCUPIED,RESERVED,CLEANING,DISABLED), OCCUPIED→(AVAILABLE,CLEANING,RESERVED), etc. |
 
 ### 15.2 POS Permissions by Role
 

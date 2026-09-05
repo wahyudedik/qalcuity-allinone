@@ -1,6 +1,6 @@
-> **Last Updated:** 5 September 2026 (POS Kitchen Display System — Phase 1+2 Complete)
-> **Version:** v8.3.0
-> **Status:** POS Phase 1-6 COMPLETE + Kitchen Display System + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+> **Last Updated:** 5 September 2026 (POS Table Management — Complete)
+> **Version:** v8.4.0
+> **Status:** POS Phase 1-6 COMPLETE + Kitchen Display System + Table Management + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
 
 ---
 
@@ -374,7 +374,7 @@
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
-| **POS Module** | ✅ Phase 1-6 Complete | 88% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display) |
+| **POS Module** | ✅ Phase 1-6 Complete | 90% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display + Table Management) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Financial Reports** | ✅ Implemented | 60% (Trial Balance, Balance Sheet, Income Statement) |
 | **HR Enhancement** | ✅ Implemented | 70% (PPh21/BPJS calculator, payroll enhancement) |
@@ -989,7 +989,7 @@ _None currently._
 
 ## 📊 Metrics
 
-### Codebase Stats (Updated: 5 September 2026 — Kitchen Display System Complete)
+### Codebase Stats (Updated: 5 September 2026 — Table Management Complete)
 
 | Metric | Count |
 |--------|-------|
@@ -1008,11 +1008,12 @@ _None currently._
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
 | UI Components | 11 (Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider) |
 | Mobile screens | 14 (12 + Login + Register) |
-| POS API Routes | 32 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor, kitchen/orders, kitchen/orders/[id], kitchen/stations, kitchen/stations/[id], kitchen/stats) |
-| POS UI Pages | 21 (terminal, sessions, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, kitchen, layout, offline-indicator, sync-status-badge, kitchen-order-card, kitchen-stats-bar, kitchen-station-filter, kitchen-order-timer) |
+| POS API Routes | 38 (terminals, sessions, transactions, dashboard, products, refunds, loyalty/programs, loyalty/members, analytics/overview, analytics/products, analytics/cashiers, analytics/export, monitor, kitchen/orders, kitchen/orders/[id], kitchen/stations, kitchen/stations/[id], kitchen/stats, tables, tables/[id], tables/[id]/status, tables/reservations, tables/reservations/[id], tables/stats) |
+| POS UI Pages | 23 (terminal, sessions, tables, transactions, refunds, reports, terminals, loyalty/programs, loyalty/members, monitor, kitchen, layout, loading/tables, offline-indicator, sync-status-badge, kitchen-order-card, kitchen-stats-bar, kitchen-station-filter, kitchen-order-timer, reservation-form, table-card) |
 | POS Kitchen Display Files | 8 (kitchen/page.tsx, kitchen/loading.tsx, kitchen/error.tsx, kitchen-order-card.tsx, kitchen-stats-bar.tsx, kitchen-station-filter.tsx, kitchen-order-timer.tsx, use-kitchen-orders.ts) |
 | POS Offline Files | 10 (types.ts, db.ts, sync.ts, api-client.ts, service-worker.ts, sw.js, use-pos-offline.ts, use-pos-products.ts, offline-indicator.tsx, sync-status-badge.tsx) |
-| POS Prisma Models | 12 (PosTerminal, PosSession, PosTransaction, PosTransactionItem, PosRefund, PosPayment, LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward, PosKitchenOrder, PosKitchenOrderItem, PosKitchenStation) |
+| POS Table Management Files | 8 (tables/page.tsx, tables/loading.tsx, table-card.tsx, reservation-form.tsx, use-pos-tables.ts, tables API route, tables/[id] API, tables/[id]/status API, tables/reservations API, tables/reservations/[id] API, tables/stats API) |
+| POS Prisma Models | 14 (PosTerminal, PosSession, PosTransaction, PosTransactionItem, PosRefund, PosPayment, LoyaltyProgram, LoyaltyPointsLedger, LoyaltyReward, PosKitchenOrder, PosKitchenOrderItem, PosKitchenStation, PosTable, PosTableReservation) |
 | Permission-integrated routes | ~90+ |
 | Workflow-integrated entities | 5 (Invoice, Payment, PO, Quotation, Leaves) |
 | Prisma Migrations (Total) | 12+ (POS Loyalty, POS Core, Tax Engine, Period Closing, Approval Engine, Decimal Fix, 2FA/Sessions/LoginLogs, Reports, etc.) |
@@ -1043,6 +1044,28 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 5 September 2026 — POS Table Management
+
+**Table Management — Database, API, UI:**
+- **Database** — 2 new Prisma models: `PosTable` (with layout coordinates: posX, posY, width, height), `PosTableReservation`
+- **Migration** — [`20260905210000_add_table_management`](packages/db/prisma/migrations/20260905210000_add_table_management/migration.sql)
+- **6 API Routes** — with RBAC, tenant isolation, Zod validation, rate limiting:
+  - [`apps/web/app/api/pos/tables/route.ts`](apps/web/app/api/pos/tables/route.ts) — GET (list with filters) + POST (create)
+  - [`apps/web/app/api/pos/tables/[id]/route.ts`](apps/web/app/api/pos/tables/[id]/route.ts) — GET (detail) + PATCH (update) + DELETE
+  - [`apps/web/app/api/pos/tables/[id]/status/route.ts`](apps/web/app/api/pos/tables/[id]/status/route.ts) — PATCH (status change with state machine)
+  - [`apps/web/app/api/pos/tables/reservations/route.ts`](apps/web/app/api/pos/tables/reservations/route.ts) — GET (list) + POST (create with conflict check)
+  - [`apps/web/app/api/pos/tables/reservations/[id]/route.ts`](apps/web/app/api/pos/tables/reservations/[id]/route.ts) — GET (detail) + PATCH (update) + DELETE
+  - [`apps/web/app/api/pos/tables/stats/route.ts`](apps/web/app/api/pos/tables/stats/route.ts) — GET (table statistics & utilization)
+- **UI Page** — [`apps/web/app/dashboard/pos/tables/page.tsx`](apps/web/app/dashboard/pos/tables/page.tsx) — Grid View + List View, quick status change, zone filtering, reservation form, create table form
+- **Loading** — [`apps/web/app/dashboard/pos/tables/loading.tsx`](apps/web/app/dashboard/pos/tables/loading.tsx) — Skeleton loading
+- **Components** — [`table-card.tsx`](apps/web/components/pos/table-card.tsx) (visual card with status colors, expand for actions) + [`reservation-form.tsx`](apps/web/components/pos/reservation-form.tsx) (modal form for creating reservations)
+- **Custom Hook** — [`use-pos-tables.ts`](apps/web/hooks/use-pos-tables.ts) — Auto-refresh 15s, CRUD operations, filters
+- **POS Layout Updated** — 10 tabs (added Tables tab with LayoutGrid icon)
+- **Zod Validation** — `createTableSchema`, `updateTableSchema`, `updateTableStatusSchema`, `createReservationSchema`, `updateReservationSchema`
+- **i18n** — English + Indonesian keys for tables tab and page
+- **Commit:** `afb54cf` (18 files, 2835 insertions)
+- **TypeScript Check** — PASS (0 errors)
 
 ### 5 September 2026 — Kitchen Display System (KDS)
 
