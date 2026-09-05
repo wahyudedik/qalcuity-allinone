@@ -105,6 +105,13 @@ Apakah ini:
 Baru tentukan tempat implementasi
 ```
 
+### Rule 8: Deployment Method
+
+- VPS menggunakan **aaPanel Node.js Project Manager** (bukan PM2)
+- Update command: `bash update.sh` dari local, lalu pull + build di VPS
+- JANGAN gunakan PM2 commands di VPS
+- `.env` di VPS harus punya production values
+
 ---
 
 ## 2. AI Agent Roles
@@ -274,7 +281,8 @@ docs/UI_UX.md     ← Aturan UI/UX
 | **Styling** | Tailwind CSS 3.4 | ✅ Active |
 | **Icons** | Lucide React | ✅ Active |
 | **ORM** | Prisma 5.15 | ✅ Active |
-| **Database** | PostgreSQL (DBngin local) | ✅ Active |
+| **Database** | PostgreSQL (DBngin local, aaPanel prod) | ✅ Active |
+| **Deployment** | aaPanel Node.js Project Manager (VPS) | ✅ Active |
 | **Auth** | NextAuth 4.24 (JWT) | ✅ Active |
 | **Validation** | Zod (14+ schemas) | ✅ Active |
 | **Monorepo** | pnpm workspaces | ✅ Active |
@@ -876,6 +884,27 @@ npx tsc --noEmit
 # E2E tests
 cd apps/web && npx tsx __tests__/e2e-test.ts
 ```
+
+### VPS Production Deployment (aaPanel)
+
+| Komponen | Detail |
+|----------|--------|
+| **Process Manager** | aaPanel Node.js Project Manager |
+| **Deployment Path** | /www/wwwroot/qalcuity |
+| **App Port** | 3000 |
+| **App URL** | https://qalcuity.com |
+| **Node Version** | v24.15.0 |
+| **Database** | PostgreSQL (aaPanel) |
+| **Prisma Engine** | library (PRISMA_QUERY_ENGINE_TYPE=library) |
+| **Update Command** | `bash update.sh` |
+
+#### Deployment Notes
+
+- aaPanel auto-restart setelah build
+- `.env` file values menang atas env vars lain (dotenv tidak override)
+- NEXTAUTH_URL harus `"https://qalcuity.com"` (bukan localhost)
+- NEXTAUTH_SECRET harus production value
+- Prisma migrations: `cd packages/db && npx prisma migrate deploy`
 
 ---
 
