@@ -56,18 +56,18 @@ type JournalEntry = {
 // STATUS CONFIG
 // ============================================
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    DRAFT: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
-    POSTED: { label: 'Posted', color: 'bg-green-100 text-green-700' },
-    VOID: { label: 'Void', color: 'bg-red-100 text-red-700' },
+const statusColors: Record<string, string> = {
+    DRAFT: 'bg-gray-100 text-gray-700',
+    POSTED: 'bg-green-100 text-green-700',
+    VOID: 'bg-red-100 text-red-700',
 }
 
-const sourceTypeLabels: Record<string, string> = {
-    manual: 'Manual',
-    invoice: 'Invoice',
-    payment: 'Pembayaran',
-    purchase_order: 'Purchase Order',
-    payroll: 'Payroll',
+const sourceTypeKeys: Record<string, string> = {
+    manual: 'manual',
+    invoice: 'invoice',
+    payment: 'payment',
+    purchase_order: 'purchaseOrder',
+    payroll: 'payroll',
 }
 
 // ============================================
@@ -185,9 +185,15 @@ export default function JournalEntriesPage() {
     // HANDLERS
     // ============================================
 
+    const getStatusLabel = (status: string) => t(`finance.journalEntries.statusLabels.${status}`) || status
+    const getSourceLabel = (sourceType: string) => {
+        const key = sourceTypeKeys[sourceType] || sourceType
+        return t(`finance.journalEntries.sourceTypes.${key}`) || sourceType
+    }
+
     const handleCreateEntry = async () => {
         if (!createForm.description.trim()) {
-            setToast({ message: 'Deskripsi wajib diisi', type: 'error' })
+            setToast({ message: t('finance.journalEntries.validation.descriptionRequired'), type: 'error' })
             return
         }
 
@@ -196,7 +202,7 @@ export default function JournalEntriesPage() {
             (item) => item.accountId && (item.debit > 0 || item.credit > 0)
         )
         if (validItems.length < 2) {
-            setToast({ message: 'Minimal 2 item jurnal diperlukan', type: 'error' })
+            setToast({ message: t('finance.journalEntries.validation.minItems'), type: 'error' })
             return
         }
 
@@ -204,7 +210,7 @@ export default function JournalEntriesPage() {
         const totalCredit = validItems.reduce((sum, item) => sum + item.credit, 0)
         if (Math.abs(totalDebit - totalCredit) >= 0.01) {
             setToast({
-                message: `Total debit (${formatCurrency(totalDebit)}) harus sama dengan total credit (${formatCurrency(totalCredit)})`,
+                message: `${t('finance.journalEntries.validation.balanceRequired')}: ${formatCurrency(totalDebit)} / ${formatCurrency(totalCredit)}`,
                 type: 'error',
             })
             return
@@ -242,20 +248,20 @@ export default function JournalEntriesPage() {
                     ],
                 })
                 fetchEntries()
-                setToast({ message: 'Journal entry berhasil dibuat', type: 'success' })
+                setToast({ message: t('finance.journalEntries.toast.createSuccess'), type: 'success' })
             } else {
-                setToast({ message: `Gagal membuat: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('finance.journalEntries.toast.createFailed')}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal membuat journal entry', type: 'error' })
+            setToast({ message: t('finance.journalEntries.toast.createFailed'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus journal entry ini?')
+        setConfirmTitle(t('finance.journalEntries.confirm.title'))
+        setConfirmMessage(t('finance.journalEntries.confirm.message'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/finance/journal-entries/${id}`, {
@@ -264,12 +270,12 @@ export default function JournalEntriesPage() {
                 const result = await response.json()
                 if (result.success) {
                     fetchEntries()
-                    setToast({ message: 'Journal entry berhasil dihapus', type: 'success' })
+                    setToast({ message: t('finance.journalEntries.toast.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: `${t('finance.journalEntries.toast.deleteFailed')}: ${result.error}`, type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus journal entry', type: 'error' })
+                setToast({ message: t('finance.journalEntries.toast.deleteFailed'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -440,9 +446,9 @@ export default function JournalEntriesPage() {
                                     <p className="text-sm text-gray-500 mt-1">{entry.description}</p>
                                 </div>
                                 <span
-                                    className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[entry.status]?.color || 'bg-gray-100 text-gray-700'}`}
+                                    className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusColors[entry.status] || 'bg-gray-100 text-gray-700'}`}
                                 >
-                                    {statusConfig[entry.status]?.label || entry.status}
+                                    {getStatusLabel(entry.status)}
                                 </span>
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
@@ -460,7 +466,7 @@ export default function JournalEntriesPage() {
                                 </div>
                                 <div>
                                     <span className="text-gray-500">{t('finance.journalEntries.table.source')}:</span>
-                                    <span className="ml-1">{sourceTypeLabels[entry.sourceType] || entry.sourceType}</span>
+                                    <span className="ml-1">{getSourceLabel(entry.sourceType)}</span>
                                 </div>
                             </div>
                             <div className="mt-3 flex gap-2">
@@ -539,7 +545,7 @@ export default function JournalEntriesPage() {
                                         </td>
                                         <td className="px-6 py-4 text-gray-900 max-w-xs truncate">{entry.description}</td>
                                         <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-gray-500">
-                                            {sourceTypeLabels[entry.sourceType] || entry.sourceType}
+                                            {getSourceLabel(entry.sourceType)}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right">
                                             <span className="inline-flex items-center gap-1 font-medium text-gray-900">
@@ -555,9 +561,9 @@ export default function JournalEntriesPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-center">
                                             <span
-                                                className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[entry.status]?.color || 'bg-gray-100 text-gray-700'}`}
+                                                className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusColors[entry.status] || 'bg-gray-100 text-gray-700'}`}
                                             >
-                                                {statusConfig[entry.status]?.label || entry.status}
+                                                {getStatusLabel(entry.status)}
                                             </span>
                                         </td>
                                         <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-right">
@@ -615,7 +621,7 @@ export default function JournalEntriesPage() {
                                         setCreateForm((prev) => ({ ...prev, description: e.target.value }))
                                     }
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Masukkan deskripsi jurnal"
+                                    placeholder={t('finance.journalEntries.formPlaceholder.description')}
                                 />
                             </div>
 
@@ -666,7 +672,7 @@ export default function JournalEntriesPage() {
                                         setCreateForm((prev) => ({ ...prev, reference: e.target.value }))
                                     }
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Nomor referensi"
+                                    placeholder={t('finance.journalEntries.formPlaceholder.reference')}
                                 />
                             </div>
 
@@ -694,7 +700,7 @@ export default function JournalEntriesPage() {
                                                 onChange={(e) => updateItem(index, 'accountId', e.target.value)}
                                                 className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
                                             >
-                                                <option value="">Pilih Akun</option>
+                                                <option value="">{t('finance.journalEntries.formPlaceholder.selectAccount')}</option>
                                                 {accounts.map((acc) => (
                                                     <option key={acc.id} value={acc.id}>
                                                         {acc.code} - {acc.name}
@@ -711,7 +717,7 @@ export default function JournalEntriesPage() {
                                                         updateItem(index, 'debit', parseFloat(e.target.value) || 0)
                                                     }
                                                     className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-                                                    placeholder="Debit"
+                                                    placeholder={t('finance.journalEntries.formPlaceholder.debit')}
                                                 />
                                             </div>
                                             <div className="w-32">
@@ -724,7 +730,7 @@ export default function JournalEntriesPage() {
                                                         updateItem(index, 'credit', parseFloat(e.target.value) || 0)
                                                     }
                                                     className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-                                                    placeholder="Credit"
+                                                    placeholder={t('finance.journalEntries.formPlaceholder.credit')}
                                                 />
                                             </div>
                                             {createForm.items.length > 2 && (
@@ -747,7 +753,7 @@ export default function JournalEntriesPage() {
                                     <span
                                         className={`font-medium ${isBalanced ? 'text-green-600' : 'text-red-600'}`}
                                     >
-                                        {isBalanced ? 'Seimbang' : 'Tidak Seimbang'}
+                                        {isBalanced ? t('finance.journalEntries.balance.balanced') : t('finance.journalEntries.balance.unbalanced')}
                                     </span>
                                 </div>
                             </div>
@@ -764,7 +770,7 @@ export default function JournalEntriesPage() {
                                 disabled={submitting || !isBalanced}
                                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {submitting ? 'Menyimpan...' : t('common.save')}
+                                {submitting ? t('finance.journalEntries.saving') : t('common.save')}
                             </button>
                         </div>
                     </div>

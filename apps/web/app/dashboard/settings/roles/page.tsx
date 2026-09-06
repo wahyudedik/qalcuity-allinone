@@ -171,7 +171,7 @@ export default function RolesSettingsPage() {
     }
 
     const handleDeleteRole = async (roleId: string, roleName: string) => {
-        if (!confirm(`Hapus role "${roleName}"?`)) return
+        if (!confirm(t('settings.roles.deleteConfirmMsg').replace('{name}', roleName))) return
 
         setDeleting(roleId)
         try {
@@ -236,10 +236,10 @@ export default function RolesSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-8">
                 <div className="flex flex-col items-center text-center">
                     <Shield className="h-12 w-12 text-red-500 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Gagal Memuat Roles</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.roles.loadError')}</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button onClick={fetchRoles} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Coba Lagi
+                        {t('settings.retry')}
                     </button>
                 </div>
             </div>
@@ -260,15 +260,15 @@ export default function RolesSettingsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Roles & Permission</h2>
-                    <p className="text-gray-600 mt-1">Kelola role dan hak akses anggota tim</p>
+                    <h2 className="text-xl font-bold text-gray-900">{t('settings.roles.title')}</h2>
+                    <p className="text-gray-600 mt-1">{t('settings.roles.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     <Plus className="h-4 w-4" />
-                    Buat Role
+                    {t('settings.roles.createRole')}
                 </button>
             </div>
 
@@ -288,7 +288,7 @@ export default function RolesSettingsPage() {
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold text-gray-900">{role.name}</span>
                                         {role.isSystem && (
-                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">System</span>
+                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{t('settings.roles.system')}</span>
                                         )}
                                     </div>
                                     <p className="text-sm text-gray-500">{role.description}</p>
@@ -297,10 +297,10 @@ export default function RolesSettingsPage() {
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1 text-sm text-gray-500">
                                     <Users className="h-4 w-4" />
-                                    {role.userCount} user
+                                    {role.userCount} {t('settings.roles.userCount')}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                    {role.permissions.length} permissions
+                                    {role.permissions.length} {t('settings.roles.permissionCount')}
                                 </div>
                                 {!role.isSystem && (
                                     <button
@@ -329,8 +329,8 @@ export default function RolesSettingsPage() {
                                                         <span
                                                             key={perm.key}
                                                             className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${hasPerm
-                                                                    ? 'bg-green-100 text-green-700'
-                                                                    : 'bg-gray-100 text-gray-400'
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-gray-100 text-gray-400'
                                                                 }`}
                                                         >
                                                             {hasPerm ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -353,7 +353,7 @@ export default function RolesSettingsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">Buat Role Baru</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t('settings.roles.createModalTitle')}</h3>
                             <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                                 <X className="h-5 w-5" />
                             </button>
@@ -362,22 +362,22 @@ export default function RolesSettingsPage() {
                             {/* Name & Description */}
                             <div className="space-y-4 mb-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Role *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.roles.roleNameLabel')}</label>
                                     <input
                                         type="text"
                                         value={newRole.name}
                                         onChange={e => setNewRole(prev => ({ ...prev, name: e.target.value }))}
-                                        placeholder="Contoh: Sales Manager"
+                                        placeholder={t('settings.roles.roleNamePlaceholder')}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.roles.descriptionLabel')}</label>
                                     <input
                                         type="text"
                                         value={newRole.description}
                                         onChange={e => setNewRole(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Deskripsi singkat role ini"
+                                        placeholder={t('settings.roles.descriptionPlaceholder')}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
@@ -385,7 +385,7 @@ export default function RolesSettingsPage() {
 
                             {/* Permission Selection */}
                             <div>
-                                <h4 className="font-medium text-gray-900 mb-3">Pilih Permission</h4>
+                                <h4 className="font-medium text-gray-900 mb-3">{t('settings.roles.selectPermissions')}</h4>
                                 <div className="space-y-3">
                                     {PERMISSION_CATEGORIES.map(cat => {
                                         const allPerms = cat.permissions.map(p => p.key)
@@ -428,7 +428,7 @@ export default function RolesSettingsPage() {
                                 onClick={() => setShowCreateModal(false)}
                                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                             >
-                                Batal
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={handleCreateRole}
@@ -436,7 +436,7 @@ export default function RolesSettingsPage() {
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
                                 {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-                                Buat Role
+                                {t('settings.roles.createBtn')}
                             </button>
                         </div>
                     </div>

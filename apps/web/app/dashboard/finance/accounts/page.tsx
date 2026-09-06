@@ -54,12 +54,12 @@ interface AccountFormData {
 // HELPER FUNCTIONS
 // ============================================
 
-const TYPE_CONFIG: Record<Account['type'], { label: string; color: string; bgColor: string }> = {
-    ASSET: { label: 'Aset', color: 'text-blue-700', bgColor: 'bg-blue-100' },
-    LIABILITY: { label: 'Kewajiban', color: 'text-red-700', bgColor: 'bg-red-100' },
-    EQUITY: { label: 'Ekuitas', color: 'text-purple-700', bgColor: 'bg-purple-100' },
-    REVENUE: { label: 'Pendapatan', color: 'text-green-700', bgColor: 'bg-green-100' },
-    EXPENSE: { label: 'Beban', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+const TYPE_COLORS: Record<Account['type'], { bgColor: string; color: string }> = {
+    ASSET: { bgColor: 'bg-blue-100', color: 'text-blue-700' },
+    LIABILITY: { bgColor: 'bg-red-100', color: 'text-red-700' },
+    EQUITY: { bgColor: 'bg-purple-100', color: 'text-purple-700' },
+    REVENUE: { bgColor: 'bg-green-100', color: 'text-green-700' },
+    EXPENSE: { bgColor: 'bg-orange-100', color: 'text-orange-700' },
 }
 
 function buildTree(accounts: Account[]): Account[] {
@@ -137,9 +137,17 @@ function AccountNode({
     searchQuery: string
     canMutate?: boolean
 }) {
+    const { t } = useTranslation()
     const hasChildren = account.children && account.children.length > 0
     const isExpanded = expandedIds.has(account.id)
-    const config = TYPE_CONFIG[account.type]
+    const config = TYPE_COLORS[account.type]
+    const typeLabels: Record<string, string> = {
+        ASSET: t('finance.accounts.types.asset'),
+        LIABILITY: t('finance.accounts.types.liability'),
+        EQUITY: t('finance.accounts.types.equity'),
+        REVENUE: t('finance.accounts.types.revenue'),
+        EXPENSE: t('finance.accounts.types.expense'),
+    }
     const computedBalance = sumBalanceRecursive(account, allAccounts)
     const isGroup = hasChildren && account.children!.some((c) => c.children && c.children!.length > 0) || (hasChildren && account.balance === 0 && computedBalance !== 0)
 
@@ -181,7 +189,7 @@ function AccountNode({
 
                 {/* Type badge */}
                 <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:inline-block ${config.bgColor} ${config.color}`}>
-                    {config.label}
+                    {typeLabels[account.type]}
                 </span>
 
                 {/* Balance */}
@@ -191,7 +199,7 @@ function AccountNode({
 
                 {/* Status */}
                 <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:inline-block ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {account.isActive ? 'Aktif' : 'Nonaktif'}
+                    {account.isActive ? t('finance.accounts.active') : t('finance.accounts.inactive')}
                 </span>
 
                 {/* Actions */}
@@ -199,7 +207,7 @@ function AccountNode({
                     {canMutate && (
                         <button
                             onClick={() => onAddChild(account.id)}
-                            title="Tambah Sub-akun"
+                            title={t('finance.accounts.actions.addChild')}
                             className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
                         >
                             <Plus className="h-3.5 w-3.5" />
@@ -208,7 +216,7 @@ function AccountNode({
                     {canMutate && (
                         <button
                             onClick={() => onEdit(account)}
-                            title="Edit"
+                            title={t('finance.accounts.edit')}
                             className="rounded p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700"
                         >
                             <Pencil className="h-3.5 w-3.5" />
@@ -217,7 +225,7 @@ function AccountNode({
                     {canMutate && (
                         <button
                             onClick={() => onDelete(account)}
-                            title="Hapus"
+                            title={t('finance.accounts.actions.delete')}
                             className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -307,17 +315,17 @@ export default function ChartOfAccountsPage() {
             const res = await fetch('/api/finance/accounts')
             const json = await res.json()
             if (!json.success) {
-                throw new Error(json.message || 'Gagal mengambil data akun')
+                throw new Error(json.message || t('finance.accounts.fetchError'))
             }
             setAccounts(json.data)
             // Auto-expand root accounts on first load
             setExpandedIds(new Set(json.data.filter((a: Account) => a.parentId === null).map((a: Account) => a.id)))
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
+            setError(err instanceof Error ? err.message : t('finance.accounts.errorOccurred'))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         fetchAccounts()
@@ -451,7 +459,7 @@ export default function ChartOfAccountsPage() {
     const handleSave = useCallback(async () => {
         // Validation
         if (!formData.code.trim() || !formData.name.trim()) {
-            showToast('Kode dan nama akun wajib diisi', 'error')
+            showToast(t('finance.accounts.codeAndNameRequired'), 'error')
             return
         }
 
@@ -465,10 +473,10 @@ export default function ChartOfAccountsPage() {
                 })
                 const json = await res.json()
                 if (!json.success) {
-                    showToast(json.message || 'Gagal memperbarui akun', 'error')
+                    showToast(json.message || t('finance.accounts.updateFailed'), 'error')
                     return
                 }
-                showToast(`Akun ${formData.name} berhasil diperbarui`)
+                showToast(t('finance.accounts.updateSuccess'))
             } else {
                 // Create via POST
                 const res = await fetch('/api/finance/accounts', {
@@ -478,10 +486,10 @@ export default function ChartOfAccountsPage() {
                 })
                 const json = await res.json()
                 if (!json.success) {
-                    showToast(json.message || 'Gagal membuat akun', 'error')
+                    showToast(json.message || t('finance.accounts.createFailed'), 'error')
                     return
                 }
-                showToast(`Akun ${formData.name} berhasil dibuat`)
+                showToast(t('finance.accounts.createSuccess'))
             }
 
             // Refresh data from API
@@ -489,9 +497,9 @@ export default function ChartOfAccountsPage() {
             setModalOpen(false)
             setEditingAccount(null)
         } catch {
-            showToast('Terjadi kesalahan saat menyimpan', 'error')
+            showToast(t('finance.accounts.saveError'), 'error')
         }
-    }, [formData, editingAccount, fetchAccounts, showToast])
+    }, [formData, editingAccount, fetchAccounts, showToast, t])
 
     // Delete via API
     const handleDelete = useCallback(async () => {
@@ -503,18 +511,18 @@ export default function ChartOfAccountsPage() {
             })
             const json = await res.json()
             if (!json.success) {
-                showToast(json.message || 'Gagal menghapus akun', 'error')
+                showToast(json.message || t('finance.accounts.deleteFailed'), 'error')
                 return
             }
 
             // Refresh data from API
             await fetchAccounts()
-            showToast(`Akun ${deleteTarget.name} berhasil dihapus`)
+            showToast(t('finance.accounts.deleteSuccess'))
             setDeleteTarget(null)
         } catch {
-            showToast('Terjadi kesalahan saat menghapus', 'error')
+            showToast(t('finance.accounts.deleteError'), 'error')
         }
-    }, [deleteTarget, fetchAccounts, showToast])
+    }, [deleteTarget, fetchAccounts, showToast, t])
 
     // Toggle active status via API
     const toggleActive = useCallback(async (account: Account) => {
@@ -526,15 +534,15 @@ export default function ChartOfAccountsPage() {
             })
             const json = await res.json()
             if (!json.success) {
-                showToast(json.message || 'Gagal mengubah status', 'error')
+                showToast(json.message || t('finance.accounts.toggleFailed'), 'error')
                 return
             }
             await fetchAccounts()
-            showToast(`Akun ${account.name} ${account.isActive ? 'dinonaktifkan' : 'diaktifkan'}`)
+            showToast(`${account.name} ${account.isActive ? t('finance.accounts.inactive') : t('finance.accounts.active')}`)
         } catch {
-            showToast('Terjadi kesalahan', 'error')
+            showToast(t('finance.accounts.toggleError'), 'error')
         }
-    }, [fetchAccounts, showToast])
+    }, [fetchAccounts, showToast, t])
 
     // Parent options for form
     const parentOptions = useMemo(() => {
@@ -567,7 +575,7 @@ export default function ChartOfAccountsPage() {
                 </div>
                 <div className="flex items-center justify-center py-16">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                    <span className="ml-3 text-sm text-gray-500">Memuat data akun...</span>
+                    <span className="ml-3 text-sm text-gray-500">{t('finance.accounts.loading')}</span>
                 </div>
             </div>
         )
@@ -591,7 +599,7 @@ export default function ChartOfAccountsPage() {
                         onClick={fetchAccounts}
                         className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('finance.accounts.retry')}
                     </button>
                 </div>
             </div>
@@ -619,7 +627,7 @@ export default function ChartOfAccountsPage() {
                         {t('finance.accounts.title')}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('finance.accounts.subtitle')} · {totalAccounts} akun ({activeAccounts} aktif)
+                        {t('finance.accounts.subtitle')} · {totalAccounts} {t('finance.accounts.accountsCount')} ({activeAccounts} {t('finance.accounts.active')})
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -688,7 +696,7 @@ export default function ChartOfAccountsPage() {
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                         >
-                            {type === 'all' ? 'Semua' : TYPE_CONFIG[type].label}
+                            {type === 'all' ? t('finance.accounts.filter.all') : t(`finance.accounts.types.${type.toLowerCase()}`)}
                         </button>
                     ))}
                 </div>
@@ -699,22 +707,22 @@ export default function ChartOfAccountsPage() {
                             ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400'
                             }`}
-                        title={showInactive ? 'Menyembunyikan akun nonaktif' : 'Menampilkan akun nonaktif'}
+                        title={showInactive ? t('finance.accounts.status.activeHidden') : t('finance.accounts.status.inactiveHidden')}
                     >
                         {showInactive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                        Nonaktif
+                        {t('finance.accounts.inactive')}
                     </button>
                     <button
                         onClick={expandAll}
                         className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400"
-                        title="Buka Semua"
+                        title={t('finance.accounts.actions.expandAll')}
                     >
                         <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                     <button
                         onClick={collapseAll}
                         className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400"
-                        title="Tutup Semua"
+                        title={t('finance.accounts.actions.collapseAll')}
                     >
                         <ChevronRight className="h-3.5 w-3.5" />
                     </button>
@@ -726,11 +734,11 @@ export default function ChartOfAccountsPage() {
                 {/* Table header */}
                 <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                     <span className="w-6" />
-                    <span className="w-16 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300" onClick={() => toggleSort('code')}>Kode<SortIcon field="code" /></span>
-                    <span className="flex-1 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300" onClick={() => toggleSort('name')}>Nama Akun<SortIcon field="name" /></span>
-                    <span className="hidden w-24 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300 sm:block" onClick={() => toggleSort('type')}>Jenis<SortIcon field="type" /></span>
-                    <span className="w-36 text-right">Saldo</span>
-                    <span className="hidden w-20 sm:block">Status</span>
+                    <span className="w-16 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300" onClick={() => toggleSort('code')}>{t('finance.accounts.table.code')}<SortIcon field="code" /></span>
+                    <span className="flex-1 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300" onClick={() => toggleSort('name')}>{t('finance.accounts.table.accountName')}<SortIcon field="name" /></span>
+                    <span className="hidden w-24 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300 sm:block" onClick={() => toggleSort('type')}>{t('finance.accounts.table.type')}<SortIcon field="type" /></span>
+                    <span className="w-36 text-right">{t('finance.accounts.table.balance')}</span>
+                    <span className="hidden w-20 sm:block">{t('finance.accounts.table.status')}</span>
                     <span className="w-24" />
                 </div>
 
@@ -773,7 +781,7 @@ export default function ChartOfAccountsPage() {
                     <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800">
                         <div className="mb-5 flex items-center justify-between">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                                {editingAccount ? 'Edit Akun' : 'Tambah Akun Baru'}
+                                {editingAccount ? t('finance.accounts.modal.editTitle') : t('finance.accounts.modal.title')}
                             </h2>
                             <button onClick={() => setModalOpen(false)} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <X className="h-5 w-5 text-gray-500" />
@@ -785,19 +793,19 @@ export default function ChartOfAccountsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Kode Akun <span className="text-red-500">*</span>
+                                        {t('finance.accounts.modal.accountCode')} <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.code}
                                         onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))}
-                                        placeholder="Contoh: 1104"
+                                        placeholder={t('finance.accounts.modal.accountCodePlaceholder')}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     />
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Jenis Akun <span className="text-red-500">*</span>
+                                        {t('finance.accounts.modal.accountType')} <span className="text-red-500">*</span>
                                     </label>
                                     <select
                                         value={formData.type}
@@ -807,8 +815,8 @@ export default function ChartOfAccountsPage() {
                                         }}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     >
-                                        {Object.entries(TYPE_CONFIG).map(([key, val]) => (
-                                            <option key={key} value={key}>{val.label}</option>
+                                        {(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'] as const).map((key) => (
+                                            <option key={key} value={key}>{t(`finance.accounts.types.${key.toLowerCase()}`)}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -817,13 +825,13 @@ export default function ChartOfAccountsPage() {
                             {/* Name */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Nama Akun <span className="text-red-500">*</span>
+                                    {t('finance.accounts.modal.accountName')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                                    placeholder="Nama akun"
+                                    placeholder={t('finance.accounts.modal.accountNamePlaceholder')}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
@@ -831,14 +839,14 @@ export default function ChartOfAccountsPage() {
                             {/* Parent */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Akun Induk <span className="text-xs text-gray-400">(opsional)</span>
+                                    {t('finance.accounts.modal.parentLabel')} <span className="text-xs text-gray-400">{t('finance.accounts.modal.parentOptional')}</span>
                                 </label>
                                 <select
                                     value={formData.parentId ?? ''}
                                     onChange={(e) => setFormData((p) => ({ ...p, parentId: e.target.value || null }))}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 >
-                                    <option value="">— Tidak ada induk (akun induk) —</option>
+                                    <option value="">{t('finance.accounts.modal.noParent')}</option>
                                     {parentOptions.map((a) => (
                                         <option key={a.id} value={a.id}>
                                             {a.code} — {a.name}
@@ -850,12 +858,12 @@ export default function ChartOfAccountsPage() {
                             {/* Description */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Deskripsi <span className="text-xs text-gray-400">(opsional)</span>
+                                    {t('finance.accounts.modal.descriptionLabel')} <span className="text-xs text-gray-400">{t('finance.accounts.modal.parentOptional')}</span>
                                 </label>
                                 <textarea
                                     value={formData.description}
                                     onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                                    placeholder="Deskripsi akun"
+                                    placeholder={t('finance.accounts.modal.descriptionPlaceholder')}
                                     rows={2}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 />
@@ -864,7 +872,7 @@ export default function ChartOfAccountsPage() {
                             {/* Balance */}
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Saldo Awal
+                                    {t('finance.accounts.modal.initialBalance')}
                                 </label>
                                 <input
                                     type="number"
@@ -887,7 +895,7 @@ export default function ChartOfAccountsPage() {
                                 onClick={handleSave}
                                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                             >
-                                {editingAccount ? 'Perbarui' : 'Simpan'}
+                                {editingAccount ? t('finance.accounts.modal.update') : t('finance.accounts.modal.save')}
                             </button>
                         </div>
                     </div>
@@ -903,19 +911,19 @@ export default function ChartOfAccountsPage() {
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Hapus Akun?</h3>
-                                <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan.</p>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('finance.accounts.deleteConfirm.title')}</h3>
+                                <p className="text-sm text-gray-500">{t('finance.accounts.deleteConfirm.irreversible')}</p>
                             </div>
                         </div>
                         <p className="mb-1 text-sm text-gray-700 dark:text-gray-300">
-                            Anda yakin ingin menghapus akun berikut?
+                            {t('finance.accounts.deleteConfirm.message')}
                         </p>
                         <div className="mb-5 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                             <p className="font-mono text-sm font-semibold text-gray-900 dark:text-white">
                                 {deleteTarget.code} — {deleteTarget.name}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {TYPE_CONFIG[deleteTarget.type].label} · {formatCurrency(Number(deleteTarget.balance))}
+                                {t(`finance.accounts.types.${deleteTarget.type.toLowerCase()}`)} · {formatCurrency(Number(deleteTarget.balance))}
                             </p>
                         </div>
                         <div className="flex justify-end gap-2">
@@ -948,19 +956,19 @@ export default function ChartOfAccountsPage() {
                     e.target.value = ''
 
                     if (!file.name.endsWith('.csv')) {
-                        showToast('Hanya file CSV yang didukung', 'error')
+                        showToast(t('finance.accounts.csv.onlyCsv'), 'error')
                         return
                     }
 
                     setImporting(true)
-                    showToast(`Mengimpor file "${file.name}"...`, 'success')
+                    showToast(t('finance.accounts.csv.importing').replace('{name}', file.name), 'success')
 
                     try {
                         const text = await file.text()
                         const result = parseCsv(text)
 
                         if (result.rows.length === 0) {
-                            showToast('File CSV kosong atau format tidak sesuai', 'error')
+                            showToast(t('finance.accounts.csv.empty'), 'error')
                             return
                         }
 
@@ -971,7 +979,7 @@ export default function ChartOfAccountsPage() {
                         const typeIdx = headers.findIndex((h) => h === 'type' || h === 'tipe' || h === 'account_type' || h === 'tipe_akun')
 
                         if (codeIdx === -1 || nameIdx === -1) {
-                            showToast('CSV harus memiliki kolom "code" (kode) dan "name" (nama akun)', 'error')
+                            showToast(t('finance.accounts.csv.missingColumns'), 'error')
                             return
                         }
 
@@ -1013,28 +1021,28 @@ export default function ChartOfAccountsPage() {
                                 } else {
                                     skipped++
                                     if (json.message && !json.message.includes('sudah digunakan')) {
-                                        errors.push(`Baris ${i + 1}: ${json.message}`)
+                                        errors.push(t('finance.accounts.csv.rowError').replace('{row}', String(i + 1)).replace('{message}', json.message))
                                     }
                                 }
                             } catch {
                                 skipped++
-                                errors.push(`Baris ${i + 1}: Gagal mengirim data`)
+                                errors.push(t('finance.accounts.csv.rowError').replace('{row}', String(i + 1)).replace('{message}', t('finance.accounts.csv.sendFailed')))
                             }
                         }
 
                         // Refresh data
                         await fetchAccounts()
 
-                        const summary = `Impor selesai: ${imported} akun berhasil, ${skipped} dilewati`
+                        const summary = t('finance.accounts.csv.summary').replace('{imported}', String(imported)).replace('{skipped}', String(skipped))
                         if (errors.length > 0 && errors.length <= 5) {
                             showToast(`${summary}. ${errors[0]}`, imported > 0 ? 'success' : 'error')
                         } else if (errors.length > 5) {
-                            showToast(`${summary}. ${errors.length} error lainnya`, imported > 0 ? 'success' : 'error')
+                            showToast(`${summary}. ${t('finance.accounts.csv.errorsOther').replace('{count}', String(errors.length))}`, imported > 0 ? 'success' : 'error')
                         } else {
                             showToast(summary, imported > 0 ? 'success' : 'error')
                         }
                     } catch {
-                        showToast('Gagal membaca file CSV', 'error')
+                        showToast(t('finance.accounts.csv.readFailed'), 'error')
                     } finally {
                         setImporting(false)
                     }

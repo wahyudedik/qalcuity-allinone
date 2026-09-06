@@ -58,15 +58,6 @@ type ApprovalHistoryItem = {
 
 type TabType = 'workflows' | 'history'
 
-const ENTITY_LABELS: Record<string, string> = {
-    INVOICE: 'Invoice',
-    QUOTATION: 'Quotation',
-    PURCHASE_ORDER: 'Purchase Order',
-    LEAVE: 'Cuti',
-    PAYROLL: 'Payroll',
-    DEAL: 'Deal',
-}
-
 const STATE_COLORS: Record<string, string> = {
     DRAFT: 'bg-gray-100 text-gray-700',
     PENDING: 'bg-yellow-100 text-yellow-700',
@@ -83,11 +74,19 @@ const STATE_COLORS: Record<string, string> = {
     PROCESSING: 'bg-blue-100 text-blue-700',
 }
 
-const STATUS_CONFIG: Record<string, { color: string; icon: typeof CheckCircle; label: string }> = {
-    PENDING: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock, label: 'Menunggu' },
-    APPROVED: { color: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle, label: 'Disetujui' },
-    REJECTED: { color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle, label: 'Ditolak' },
-    CANCELLED: { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: XCircle, label: 'Dibatalkan' },
+function getStatusConfig(t: (key: string) => string): Record<string, { color: string; icon: typeof CheckCircle; label: string }> {
+    return {
+        PENDING: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock, label: t('settings.workflow.pending') },
+        APPROVED: { color: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle, label: t('settings.workflow.approved') },
+        REJECTED: { color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle, label: t('settings.workflow.rejected') },
+        CANCELLED: { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: XCircle, label: t('settings.workflow.cancelled') },
+    }
+}
+
+function getEntityLabel(entityType: string, t: (key: string) => string): string {
+    const key = `settings.workflow.entity.${entityType}`
+    const translated = t(key)
+    return translated === key ? entityType : translated
 }
 
 function getStateColor(state: string): string {
@@ -119,8 +118,8 @@ export default function WorkflowSettingsPage() {
 
             {/* Header */}
             <div>
-                <h2 className="text-xl font-bold text-gray-900">Workflow & Approval</h2>
-                <p className="text-gray-600 mt-1">Konfigurasi alur kerja dan riwayat persetujuan transaksi</p>
+                <h2 className="text-xl font-bold text-gray-900">{t('settings.workflow.title')}</h2>
+                <p className="text-gray-600 mt-1">{t('settings.workflow.subtitle')}</p>
             </div>
 
             {/* Tabs */}
@@ -134,7 +133,7 @@ export default function WorkflowSettingsPage() {
                             }`}
                     >
                         <GitBranch className="h-4 w-4" />
-                        Workflow Configuration
+                        {t('settings.workflow.configTab')}
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
@@ -144,7 +143,7 @@ export default function WorkflowSettingsPage() {
                             }`}
                     >
                         <History className="h-4 w-4" />
-                        Approval History
+                        {t('settings.workflow.historyTab')}
                     </button>
                 </nav>
             </div>
@@ -165,6 +164,7 @@ export default function WorkflowSettingsPage() {
 // ============================================
 
 function WorkflowsTab() {
+    const { t } = useTranslation()
     const [workflows, setWorkflows] = useState<WorkflowDef[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -179,14 +179,14 @@ function WorkflowsTab() {
             if (data.success) {
                 setWorkflows(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data workflow')
+                setError(data.error || t('settings.errorConnectServer'))
             }
         } catch {
-            setError('Gagal terhubung ke server')
+            setError(t('settings.errorConnectServer'))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         fetchWorkflows()
@@ -218,10 +218,10 @@ function WorkflowsTab() {
             <div className="bg-white rounded-xl border border-gray-200 p-8">
                 <div className="flex flex-col items-center text-center">
                     <GitBranch className="h-12 w-12 text-red-500 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Gagal Memuat Workflow</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.workflow.loadFailed')}</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button onClick={fetchWorkflows} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Coba Lagi
+                        {t('settings.workflow.retry')}
                     </button>
                 </div>
             </div>
@@ -233,8 +233,8 @@ function WorkflowsTab() {
             {workflows.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                     <GitBranch className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Workflow</h3>
-                    <p className="text-gray-600">Workflow akan dibuat otomatis untuk setiap jenis transaksi.</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.workflow.emptyWorkflowTitle')}</h3>
+                    <p className="text-gray-600">{t('settings.workflow.emptyWorkflowDesc')}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -256,11 +256,11 @@ function WorkflowsTab() {
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-semibold text-gray-900">{wf.name}</span>
                                                     {wf.isSystem && (
-                                                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">System</span>
+                                                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{t('settings.roles.system')}</span>
                                                     )}
                                                 </div>
                                                 <p className="text-sm text-gray-500">
-                                                    {ENTITY_LABELS[wf.entityType] || wf.entityType}
+                                                    {getEntityLabel(wf.entityType, t)}
                                                     {wf.description && ` — ${wf.description}`}
                                                 </p>
                                             </div>
@@ -274,7 +274,7 @@ function WorkflowsTab() {
                                         <div className="mb-4">
                                             <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                                                 <Settings className="h-4 w-4" />
-                                                States
+                                                {t('settings.workflow.states')}
                                             </h4>
                                             <div className="flex flex-wrap gap-2">
                                                 {config.states.map(state => (
@@ -295,7 +295,7 @@ function WorkflowsTab() {
                                         <div>
                                             <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                                                 <ArrowRight className="h-4 w-4" />
-                                                Transitions
+                                                {t('settings.workflow.transitions')}
                                             </h4>
                                             <div className="space-y-1.5">
                                                 {config.transitions.map((trans, idx) => (
@@ -334,6 +334,7 @@ function WorkflowsTab() {
 // ============================================
 
 function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: string; type: 'success' | 'error' } | null) => void }) {
+    const { t } = useTranslation()
     const [history, setHistory] = useState<ApprovalHistoryItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -342,6 +343,8 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [total, setTotal] = useState(0)
+
+    const statusConfig = getStatusConfig(t)
 
     const fetchHistory = useCallback(async () => {
         try {
@@ -362,14 +365,14 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                 setTotalPages(data.totalPages || 1)
                 setTotal(data.total || 0)
             } else {
-                setError(data.error || 'Gagal memuat riwayat approval')
+                setError(data.error || t('settings.errorConnectServer'))
             }
         } catch {
-            setError('Gagal terhubung ke server')
+            setError(t('settings.errorConnectServer'))
         } finally {
             setLoading(false)
         }
-    }, [page, filterStatus, filterEntityType])
+    }, [page, filterStatus, filterEntityType, t])
 
     useEffect(() => {
         fetchHistory()
@@ -384,13 +387,13 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
             })
             const data = await res.json()
             if (data.success) {
-                showToast({ message: 'Approval berhasil', type: 'success' })
+                showToast({ message: t('settings.workflow.approvalSuccess'), type: 'success' })
                 fetchHistory()
             } else {
-                showToast({ message: data.error || 'Gagal approve', type: 'error' })
+                showToast({ message: data.error || t('settings.workflow.approvalFailed'), type: 'error' })
             }
         } catch {
-            showToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            showToast({ message: t('settings.errorConnectServer'), type: 'error' })
         }
     }
 
@@ -403,13 +406,13 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
             })
             const data = await res.json()
             if (data.success) {
-                showToast({ message: 'Rejection berhasil', type: 'success' })
+                showToast({ message: t('settings.workflow.rejectionSuccess'), type: 'success' })
                 fetchHistory()
             } else {
-                showToast({ message: data.error || 'Gagal reject', type: 'error' })
+                showToast({ message: data.error || t('settings.workflow.rejectionFailed'), type: 'error' })
             }
         } catch {
-            showToast({ message: 'Gagal terhubung ke server', type: 'error' })
+            showToast({ message: t('settings.errorConnectServer'), type: 'error' })
         }
     }
 
@@ -419,31 +422,31 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
             <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Filter:</span>
+                    <span className="text-sm font-medium text-gray-700">{t('settings.workflow.filter')}</span>
                 </div>
                 <select
                     value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
-                    <option value="ALL">Semua Status</option>
-                    <option value="PENDING">Menunggu</option>
-                    <option value="APPROVED">Disetujui</option>
-                    <option value="REJECTED">Ditolak</option>
-                    <option value="CANCELLED">Dibatalkan</option>
+                    <option value="ALL">{t('settings.workflow.allStatus')}</option>
+                    <option value="PENDING">{t('settings.workflow.pending')}</option>
+                    <option value="APPROVED">{t('settings.workflow.approved')}</option>
+                    <option value="REJECTED">{t('settings.workflow.rejected')}</option>
+                    <option value="CANCELLED">{t('settings.workflow.cancelled')}</option>
                 </select>
                 <select
                     value={filterEntityType}
                     onChange={(e) => { setFilterEntityType(e.target.value); setPage(1) }}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
-                    <option value="ALL">Semua Jenis</option>
-                    <option value="INVOICE">Invoice</option>
-                    <option value="PURCHASE_ORDER">Purchase Order</option>
-                    <option value="QUOTATION">Quotation</option>
+                    <option value="ALL">{t('settings.workflow.allTypes')}</option>
+                    <option value="INVOICE">{t('settings.workflow.entity.INVOICE')}</option>
+                    <option value="PURCHASE_ORDER">{t('settings.workflow.entity.PURCHASE_ORDER')}</option>
+                    <option value="QUOTATION">{t('settings.workflow.entity.QUOTATION')}</option>
                 </select>
                 <span className="text-sm text-gray-500">
-                    {total} data
+                    {total} {t('settings.workflow.allStatus').toLowerCase().replace(t('settings.workflow.allStatus'), 'data')}
                 </span>
             </div>
 
@@ -451,7 +454,7 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
             {loading && (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                    <span className="ml-3 text-gray-600">Memuat riwayat...</span>
+                    <span className="ml-3 text-gray-600">{t('settings.workflow.loadingHistory')}</span>
                 </div>
             )}
 
@@ -459,10 +462,10 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
             {!loading && error && (
                 <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
                     <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Gagal Memuat Riwayat</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.workflow.loadHistoryFailed')}</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button onClick={fetchHistory} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Coba Lagi
+                        {t('settings.workflow.retry')}
                     </button>
                 </div>
             )}
@@ -471,8 +474,8 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
             {!loading && !error && history.length === 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                     <ClipboardCheck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Riwayat</h3>
-                    <p className="text-gray-600">Riwayat approval akan muncul di sini setelah ada transaksi yang memerlukan persetujuan.</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.workflow.emptyHistoryTitle')}</h3>
+                    <p className="text-gray-600">{t('settings.workflow.emptyHistoryDesc')}</p>
                 </div>
             )}
 
@@ -484,23 +487,23 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 bg-gray-50">
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomor</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Diajukan Oleh</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Diproses Oleh</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colType')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colNumber')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colStatus')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colRequestedBy')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colProcessedBy')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colDate')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('settings.workflow.colAction')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {history.map((item) => {
-                                    const statusConf = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING
+                                    const statusConf = statusConfig[item.status] || statusConfig.PENDING
                                     const StatusIcon = statusConf.icon
                                     return (
                                         <tr key={item.id} className="hover:bg-gray-50">
                                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                {ENTITY_LABELS[item.entityType] || item.entityType}
+                                                {getEntityLabel(item.entityType, t)}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-700">
                                                 {item.entityDisplay || item.entityId}
@@ -517,7 +520,7 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-700">
-                                                {item.requesterName || 'Unknown'}
+                                                {item.requesterName || '—'}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-700">
                                                 {item.resolverName || '—'}
@@ -532,13 +535,13 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                                                             onClick={() => handleApprove(item.id)}
                                                             className="rounded-md bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700 transition-colors"
                                                         >
-                                                            Approve
+                                                            {t('settings.workflow.approve')}
                                                         </button>
                                                         <button
                                                             onClick={() => handleReject(item.id)}
                                                             className="rounded-md bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 transition-colors"
                                                         >
-                                                            Reject
+                                                            {t('settings.workflow.reject')}
                                                         </button>
                                                     </div>
                                                 )}
@@ -558,14 +561,14 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                     {/* Mobile: Cards */}
                     <div className="md:hidden space-y-3">
                         {history.map((item) => {
-                            const statusConf = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING
+                            const statusConf = statusConfig[item.status] || statusConfig.PENDING
                             const StatusIcon = statusConf.icon
                             return (
                                 <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-4">
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <span className="text-sm font-semibold text-gray-900">
-                                                {ENTITY_LABELS[item.entityType] || item.entityType}
+                                                {getEntityLabel(item.entityType, t)}
                                             </span>
                                             <span className="ml-2 text-sm text-gray-500">
                                                 {item.entityDisplay || item.entityId}
@@ -582,7 +585,7 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                                         </p>
                                     )}
                                     <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                                        <span>Oleh: {item.requesterName || 'Unknown'}</span>
+                                        <span>{item.requesterName || '—'}</span>
                                         <span>{formatDateTime(item.requestedAt)}</span>
                                     </div>
                                     {item.status === 'PENDING' && (
@@ -591,13 +594,13 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                                                 onClick={() => handleApprove(item.id)}
                                                 className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm text-white hover:bg-green-700 transition-colors"
                                             >
-                                                Approve
+                                                {t('settings.workflow.approve')}
                                             </button>
                                             <button
                                                 onClick={() => handleReject(item.id)}
                                                 className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700 transition-colors"
                                             >
-                                                Reject
+                                                {t('settings.workflow.reject')}
                                             </button>
                                         </div>
                                     )}
@@ -610,7 +613,7 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500">
-                                Halaman {page} dari {totalPages}
+                                {t('settings.workflow.prevPage')} {page} {t('settings.pageOf')} {totalPages}
                             </span>
                             <div className="flex items-center gap-2">
                                 <button
@@ -618,14 +621,14 @@ function ApprovalHistoryTab({ showToast }: { showToast: (toast: { message: strin
                                     disabled={page <= 1}
                                     className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Sebelumnya
+                                    {t('settings.workflow.prev')}
                                 </button>
                                 <button
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                     disabled={page >= totalPages}
                                     className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Selanjutnya
+                                    {t('settings.workflow.next')}
                                 </button>
                             </div>
                         </div>

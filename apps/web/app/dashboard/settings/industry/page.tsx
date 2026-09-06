@@ -34,24 +34,30 @@ const INDUSTRY_ICONS: Record<IndustryType, typeof Factory> = {
     general: Building,
 }
 
-const INDUSTRY_LABELS: Record<IndustryType, string> = {
-    retail: 'Retail',
-    manufacturing: 'Manufaktur',
-    services: 'Jasa',
-    construction: 'Konstruksi',
-    healthcare: 'Kesehatan',
-    education: 'Pendidikan',
-    food_beverage: 'Food & Beverage',
-    general: 'Umum',
+function getIndustryLabel(industry: IndustryType, t: (key: string) => string): string {
+    const labels: Record<IndustryType, string> = {
+        retail: t('settings.industry.labelRetail'),
+        manufacturing: t('settings.industry.labelManufacturing'),
+        services: t('settings.industry.labelServices'),
+        construction: t('settings.industry.labelConstruction'),
+        healthcare: t('settings.industry.labelHealthcare'),
+        education: t('settings.industry.labelEducation'),
+        food_beverage: t('settings.industry.labelFoodBeverage'),
+        general: t('settings.industry.labelGeneral'),
+    }
+    return labels[industry]
 }
 
-const MODULE_LABELS: Record<string, string> = {
-    finance: 'Finance',
-    crm: 'CRM',
-    hr: 'HR',
-    inventory: 'Inventory',
-    billing: 'Billing',
-    analytics: 'Analytics',
+function getModuleLabel(module: string, t: (key: string) => string): string {
+    const labels: Record<string, string> = {
+        finance: t('settings.industry.moduleFinance'),
+        crm: t('settings.industry.moduleCrm'),
+        hr: t('settings.industry.moduleHr'),
+        inventory: t('settings.industry.moduleInventory'),
+        billing: t('settings.industry.moduleBilling'),
+        analytics: t('settings.industry.moduleAnalytics'),
+    }
+    return labels[module] || module
 }
 
 export default function IndustrySettingsPage() {
@@ -160,17 +166,17 @@ export default function IndustrySettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-8">
                 <div className="flex flex-col items-center text-center">
                     <Factory className="h-12 w-12 text-red-500 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Gagal Memuat Konfigurasi</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.industry.loadError')}</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button onClick={fetchConfig} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Coba Lagi
+                        {t('settings.retry')}
                     </button>
                 </div>
             </div>
         )
     }
 
-    const industries = Object.keys(INDUSTRY_LABELS) as IndustryType[]
+    const industries: IndustryType[] = ['retail', 'manufacturing', 'services', 'construction', 'healthcare', 'education', 'food_beverage', 'general']
 
     return (
         <div className="space-y-6">
@@ -185,8 +191,8 @@ export default function IndustrySettingsPage() {
 
             {/* Header */}
             <div>
-                <h2 className="text-xl font-bold text-gray-900">Konfigurasi Industri</h2>
-                <p className="text-gray-600 mt-1">Pilih industri bisnis Anda untuk menyesuaikan modul dan fitur</p>
+                <h2 className="text-xl font-bold text-gray-900">{t('settings.industry.title')}</h2>
+                <p className="text-gray-600 mt-1">{t('settings.industry.subtitle')}</p>
             </div>
 
             {/* Current Config */}
@@ -195,17 +201,17 @@ export default function IndustrySettingsPage() {
                     <div className="flex items-center gap-3">
                         <Factory className="h-5 w-5 text-blue-600" />
                         <div>
-                            <span className="text-sm text-blue-600 font-medium">Industri saat ini:</span>
+                            <span className="text-sm text-blue-600 font-medium">{t('settings.industry.currentIndustry')}</span>
                             <span className="ml-2 text-blue-900 font-semibold">{config.name}</span>
                         </div>
                     </div>
-                    <span className="text-sm text-blue-600">{config.customFieldCount} custom fields</span>
+                    <span className="text-sm text-blue-600">{config.customFieldCount} {t('settings.industry.customFieldsCount')}</span>
                 </div>
             )}
 
             {/* Industry Selection */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Pilih Industri</h3>
+                <h3 className="font-semibold text-gray-900 mb-4">{t('settings.industry.selectIndustry')}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {industries.map(industry => {
                         const Icon = INDUSTRY_ICONS[industry]
@@ -215,13 +221,13 @@ export default function IndustrySettingsPage() {
                                 key={industry}
                                 onClick={() => handleIndustrySelect(industry)}
                                 className={`p-4 rounded-xl border-2 transition-all text-center ${isSelected
-                                        ? 'border-blue-500 bg-blue-50 shadow-sm'
-                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    ? 'border-blue-500 bg-blue-50 shadow-sm'
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                             >
                                 <Icon className={`h-8 w-8 mx-auto mb-2 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
                                 <span className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
-                                    {INDUSTRY_LABELS[industry]}
+                                    {getIndustryLabel(industry, t)}
                                 </span>
                             </button>
                         )
@@ -231,15 +237,15 @@ export default function IndustrySettingsPage() {
 
             {/* Module Configuration */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Aktifkan Modul</h3>
-                <p className="text-sm text-gray-500 mb-4">Pilih modul mana yang ingin diaktifkan untuk bisnis Anda</p>
+                <h3 className="font-semibold text-gray-900 mb-4">{t('settings.industry.enableModules')}</h3>
+                <p className="text-sm text-gray-500 mb-4">{t('settings.industry.enableModulesDesc')}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {(Object.keys(MODULE_LABELS) as (keyof ModuleConfig)[]).map(module => (
+                    {(Object.keys(modules) as (keyof ModuleConfig)[]).map(module => (
                         <label
                             key={module}
                             className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${modules[module]
-                                    ? 'border-green-500 bg-green-50'
-                                    : 'border-gray-200 bg-gray-50 opacity-60'
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 bg-gray-50 opacity-60'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
@@ -249,11 +255,11 @@ export default function IndustrySettingsPage() {
                                     onChange={() => toggleModule(module)}
                                     className="h-4 w-4 text-green-600 rounded"
                                 />
-                                <span className="font-medium text-gray-900">{MODULE_LABELS[module]}</span>
+                                <span className="font-medium text-gray-900">{getModuleLabel(module, t)}</span>
                             </div>
                             <span className={`text-xs font-medium px-2 py-1 rounded-full ${modules[module] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                                 }`}>
-                                {modules[module] ? 'Aktif' : 'Nonaktif'}
+                                {modules[module] ? t('settings.industry.active') : t('settings.industry.inactive')}
                             </span>
                         </label>
                     ))}
@@ -268,7 +274,7 @@ export default function IndustrySettingsPage() {
                     className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
                 >
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Simpan Konfigurasi
+                    {t('settings.industry.saveBtn')}
                 </button>
             </div>
         </div>

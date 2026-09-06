@@ -131,7 +131,7 @@ export default function WarehousesPage() {
 
     const handleSubmit = async () => {
         if (!formName.trim() || !formCode.trim()) {
-            setToast({ message: 'Nama dan kode gudang wajib diisi', type: 'error' })
+            setToast({ message: t('inventory.warehouses.validateRequired'), type: 'error' })
             return
         }
         setSubmitting(true)
@@ -160,35 +160,35 @@ export default function WarehousesPage() {
             const data = await res.json()
             if (data.success) {
                 setToast({
-                    message: editingId ? 'Gudang berhasil diupdate' : 'Gudang berhasil dibuat',
+                    message: editingId ? t('inventory.warehouses.toast.updateSuccess') : t('inventory.warehouses.toast.createSuccess'),
                     type: 'success',
                 })
                 setShowModal(false)
                 resetForm()
                 fetchWarehouses()
             } else {
-                setToast({ message: data.error || 'Gagal menyimpan gudang', type: 'error' })
+                setToast({ message: data.error || t('inventory.warehouses.toast.saveError'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Terjadi kesalahan', type: 'error' })
+            setToast({ message: t('inventory.warehouses.toast.genericError'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
     }
 
     const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`Hapus gudang "${name}"?`)) return
+        if (!confirm(t('inventory.warehouses.confirm.deleteMessage').replace('{name}', name))) return
         try {
             const res = await fetch(`/api/inventory/warehouses/${id}`, { method: 'DELETE' })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Gudang berhasil dihapus', type: 'success' })
+                setToast({ message: t('inventory.warehouses.toast.deleteSuccess'), type: 'success' })
                 fetchWarehouses()
             } else {
-                setToast({ message: data.error || 'Gagal menghapus gudang', type: 'error' })
+                setToast({ message: data.error || t('inventory.warehouses.toast.deleteError'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Terjadi kesalahan', type: 'error' })
+            setToast({ message: t('inventory.warehouses.toast.genericError'), type: 'error' })
         }
     }
 
@@ -259,15 +259,15 @@ export default function WarehousesPage() {
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Gudang</p>
+                    <p className="text-sm text-gray-500">{t('inventory.warehouses.stats.total')}</p>
                     <p className="text-2xl font-bold text-gray-900">{warehouses.length}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Gudang Aktif</p>
+                    <p className="text-sm text-gray-500">{t('inventory.warehouses.stats.active')}</p>
                     <p className="text-2xl font-bold text-green-600">{warehouses.filter(w => w.isActive).length}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Produk</p>
+                    <p className="text-sm text-gray-500">{t('inventory.warehouses.stats.products')}</p>
                     <p className="text-2xl font-bold text-blue-600">{warehouses.reduce((sum, w) => sum + w.productCount, 0)}</p>
                 </div>
             </div>
@@ -277,7 +277,7 @@ export default function WarehousesPage() {
                 {filtered.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                         <Warehouse className="mx-auto h-12 w-12 text-gray-300" />
-                        <p className="mt-2 text-gray-500">Belum ada gudang</p>
+                        <p className="mt-2 text-gray-500">{t('inventory.warehouses.emptyState')}</p>
                     </div>
                 ) : (
                     filtered.map((warehouse) => (
@@ -292,7 +292,7 @@ export default function WarehousesPage() {
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-sm text-gray-500">Kode: {warehouse.code}</p>
+                                    <p className="text-sm text-gray-500">{warehouse.code}</p>
                                 </div>
                                 {canMutate && (
                                     <div className="flex gap-1">
@@ -319,7 +319,7 @@ export default function WarehousesPage() {
                                 )}
                             </div>
                             <div className="flex gap-4 text-xs text-gray-500">
-                                <span><Package className="inline h-3 w-3" /> {warehouse.productCount} produk</span>
+                                <span><Package className="inline h-3 w-3" /> {warehouse.productCount} {t('inventory.warehouses.productsUnit')}</span>
                                 <span><ClipboardList className="inline h-3 w-3" /> {warehouse.opnameCount} opname</span>
                             </div>
                         </div>
@@ -332,12 +332,12 @@ export default function WarehousesPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gudang</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lokasi</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kontak</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produk</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            {canMutate && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.warehouses.table.warehouse')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.warehouses.table.location')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.warehouses.table.contact')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.warehouses.table.product')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.warehouses.table.status')}</th>
+                            {canMutate && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.warehouses.table.actions')}</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -345,7 +345,7 @@ export default function WarehousesPage() {
                             <tr>
                                 <td colSpan={canMutate ? 6 : 5} className="px-6 py-12 text-center">
                                     <Building2 className="mx-auto h-12 w-12 text-gray-300" />
-                                    <p className="mt-2 text-gray-500">Belum ada gudang</p>
+                                    <p className="mt-2 text-gray-500">{t('inventory.warehouses.emptyState')}</p>
                                 </td>
                             </tr>
                         ) : (
@@ -371,11 +371,11 @@ export default function WarehousesPage() {
                                         <div className="text-xs text-gray-400">{warehouse.manager || ''}</div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-600">
-                                        {warehouse.productCount} produk
+                                        {warehouse.productCount} {t('inventory.warehouses.productsUnit')}
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${warehouse.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                            {warehouse.isActive ? 'Aktif' : 'Nonaktif'}
+                                            {warehouse.isActive ? t('inventory.warehouses.statusActive') : t('inventory.warehouses.statusInactive')}
                                         </span>
                                     </td>
                                     {canMutate && (
@@ -405,7 +405,7 @@ export default function WarehousesPage() {
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                             <h2 className="text-lg font-semibold text-gray-900">
-                                {editingId ? 'Edit Gudang' : 'Tambah Gudang Baru'}
+                                {editingId ? t('inventory.warehouses.form.titleEdit') : t('inventory.warehouses.form.titleCreate')}
                             </h2>
                             <button onClick={() => { setShowModal(false); resetForm() }} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
@@ -414,52 +414,52 @@ export default function WarehousesPage() {
                         <div className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Gudang *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.nameLabel')}</label>
                                     <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Gudang Utama" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kode *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.codeLabel')}</label>
                                     <input type="text" value={formCode} onChange={(e) => setFormCode(e.target.value.toUpperCase())} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="GU-001" />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.addressLabel')}</label>
                                 <input type="text" value={formAddress} onChange={(e) => setFormAddress(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Jl. Contoh No. 123" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kota</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.cityLabel')}</label>
                                     <input type="text" value={formCity} onChange={(e) => setFormCity(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Jakarta" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.phoneLabel')}</label>
                                     <input type="text" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="021-1234567" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.emailLabel')}</label>
                                     <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="gudang@contoh.com" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.warehouses.form.managerLabel')}</label>
                                     <input type="text" value={formManager} onChange={(e) => setFormManager(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Budi Santoso" />
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input type="checkbox" id="isDefault" checked={formIsDefault} onChange={(e) => setFormIsDefault(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                                <label htmlFor="isDefault" className="text-sm text-gray-700">Jadikan sebagai gudang default</label>
+                                <label htmlFor="isDefault" className="text-sm text-gray-700">{t('inventory.warehouses.form.defaultLabel')}</label>
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
                             <button onClick={() => { setShowModal(false); resetForm() }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                                Batal
+                                {t('inventory.warehouses.form.cancel')}
                             </button>
                             <button onClick={handleSubmit} disabled={submitting} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                                {submitting ? 'Menyimpan...' : (
+                                {submitting ? t('inventory.warehouses.form.saving') : (
                                     <>
                                         <Check className="h-4 w-4" />
-                                        {editingId ? 'Update' : 'Simpan'}
+                                        {editingId ? t('inventory.warehouses.form.update') : t('inventory.warehouses.form.save')}
                                     </>
                                 )}
                             </button>

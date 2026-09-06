@@ -181,12 +181,12 @@ export default function SecuritySettingsPage() {
         setPasswordError(null)
 
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            setPasswordError(t('settings.passwordMismatch') || 'Password baru dan konfirmasi tidak cocok')
+            setPasswordError(t('settings.passwordMismatch'))
             return
         }
 
         if (passwordData.newPassword.length < 8) {
-            setPasswordError(t('settings.passwordMinLength') || 'Password minimal 8 karakter')
+            setPasswordError(t('settings.passwordMinLength'))
             return
         }
 
@@ -205,7 +205,7 @@ export default function SecuritySettingsPage() {
                 setShowChangePassword(false)
                 setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
                 setPasswordSuccess(true)
-                setToast({ message: t('settings.passwordChanged') || 'Password berhasil diubah', type: 'success' })
+                setToast({ message: t('settings.passwordChanged'), type: 'success' })
             } else {
                 setPasswordError(data.error || t('settings.errorChangePassword'))
             }
@@ -251,7 +251,7 @@ export default function SecuritySettingsPage() {
 
     const handleTwoFaVerify = async () => {
         if (twoFaCode.length !== 6) {
-            setTwoFaError(t('settings.twoFaInvalidCode') || 'Kode harus 6 digit')
+            setTwoFaError(t('settings.twoFaInvalidCode'))
             return
         }
         setTwoFaLoading(true)
@@ -269,9 +269,9 @@ export default function SecuritySettingsPage() {
                 setShowBackupCodes(true)
                 setShowTwoFaModal(false)
                 setTwoFaStatus({ enabled: true, backupCodesRemaining: data.data.backupCodesCount })
-                setToast({ message: t('settings.twoFaEnabled') || '2FA berhasil diaktifkan', type: 'success' })
+                setToast({ message: t('settings.twoFaEnabled'), type: 'success' })
             } else {
-                setTwoFaError(data.error || t('settings.twoFaVerifyFailed') || 'Kode verifikasi salah')
+                setTwoFaError(data.error || t('settings.twoFaVerifyFailed'))
             }
         } catch {
             setTwoFaError(t('settings.errorConnectServer'))
@@ -294,7 +294,7 @@ export default function SecuritySettingsPage() {
                 setTwoFaStatus({ enabled: false, backupCodesRemaining: 0 })
                 setShowTwoFaDisableConfirm(false)
                 setTwoFaDisablePassword('')
-                setToast({ message: t('settings.twoFaDisabled') || '2FA telah dinonaktifkan', type: 'success' })
+                setToast({ message: t('settings.twoFaDisabled'), type: 'success' })
             } else {
                 setTwoFaError(data.error)
                 setToast({ message: data.error || t('settings.disable2faFailed'), type: 'error' })
@@ -323,7 +323,7 @@ export default function SecuritySettingsPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: t('settings.disableSessionSuccess') || 'Session disabled', type: 'success' })
+                setToast({ message: t('settings.disableSessionSuccess'), type: 'success' })
                 fetchSessions()
             } else {
                 setToast({ message: data.error || t('settings.disableSessionFailed'), type: 'error' })
@@ -374,10 +374,10 @@ export default function SecuritySettingsPage() {
         const diffHour = Math.floor(diffMs / 3600000)
         const diffDay = Math.floor(diffMs / 86400000)
 
-        if (diffMin < 1) return 'Baru saja'
-        if (diffMin < 60) return `${diffMin} menit lalu`
-        if (diffHour < 24) return `${diffHour} jam lalu`
-        if (diffDay < 7) return `${diffDay} hari lalu`
+        if (diffMin < 1) return t('settings.securityTimeJustNow')
+        if (diffMin < 60) return `${diffMin} ${t('settings.minutesAgo')}`
+        if (diffHour < 24) return `${diffHour} ${t('settings.hoursAgo')}`
+        if (diffDay < 7) return `${diffDay} ${t('settings.daysAgo')}`
         return formatDateTime(dateStr)
     }
 
@@ -387,9 +387,9 @@ export default function SecuritySettingsPage() {
         return (
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-900">{t('settings.securityTitle') || 'Keamanan'}</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('settings.securityTitle')}</h2>
                     <p className="text-sm text-gray-600 mt-1">
-                        {t('settings.securitySubtitle') || 'Kelola password dan keamanan akun Anda'}
+                        {t('settings.securitySubtitle')}
                     </p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-12 flex flex-col items-center justify-center">
@@ -405,9 +405,9 @@ export default function SecuritySettingsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-lg font-semibold text-gray-900">{t('settings.securityTitle') || 'Keamanan'}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('settings.securityTitle')}</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                    {t('settings.securitySubtitle') || 'Kelola password dan keamanan akun Anda'}
+                    {t('settings.securitySubtitle')}
                 </p>
             </div>
 
@@ -431,9 +431,9 @@ export default function SecuritySettingsPage() {
                             <Key className="w-5 h-5 text-gray-600" />
                         </div>
                         <div>
-                            <h3 className="font-medium text-gray-900">{t('settings.changePassword') || 'Password'}</h3>
+                            <h3 className="font-medium text-gray-900">{t('settings.changePassword')}</h3>
                             <p className="text-sm text-gray-500">
-                                {t('settings.lastChanged') || 'Terakhir diubah'}: {formatDateTime(new Date().toISOString())}
+                                {t('settings.lastChanged')}: {formatDateTime(new Date().toISOString())}
                             </p>
                         </div>
                     </div>
@@ -448,7 +448,7 @@ export default function SecuritySettingsPage() {
                             onClick={() => setShowChangePassword(!showChangePassword)}
                             className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                            {t('settings.changePassword') || 'Ubah Password'}
+                            {t('settings.changePassword')}
                         </button>
                     </div>
                 </div>
@@ -462,7 +462,7 @@ export default function SecuritySettingsPage() {
                         )}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                {t('settings.currentPassword') || 'Password Saat Ini'}
+                                {t('settings.currentPassword')}
                             </label>
                             <input
                                 type="password"
@@ -474,7 +474,7 @@ export default function SecuritySettingsPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                {t('settings.newPassword') || 'Password Baru'}
+                                {t('settings.newPassword')}
                             </label>
                             <input
                                 type="password"
@@ -488,7 +488,7 @@ export default function SecuritySettingsPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                {t('settings.confirmNewPassword') || 'Konfirmasi Password Baru'}
+                                {t('settings.confirmNewPassword')}
                             </label>
                             <input
                                 type="password"
@@ -508,7 +508,7 @@ export default function SecuritySettingsPage() {
                                 }}
                                 className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                             >
-                                {t('common.cancel') || 'Batal'}
+                                {t('common.cancel')}
                             </button>
                             <button
                                 type="submit"
@@ -516,7 +516,7 @@ export default function SecuritySettingsPage() {
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                             >
                                 {passwordLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {t('settings.savePassword') || 'Simpan Password'}
+                                {t('settings.savePassword')}
                             </button>
                         </div>
                     </form>
@@ -533,8 +533,8 @@ export default function SecuritySettingsPage() {
                             <Shield className={`w-5 h-5 ${twoFaStatus.enabled ? 'text-green-600' : 'text-yellow-600'}`} />
                         </div>
                         <div>
-                            <h3 className="font-medium text-gray-900">{t('settings.twoFactor') || 'Two-Factor Authentication (2FA)'}</h3>
-                            <p className="text-sm text-gray-500">{t('settings.twoFactorDesc') || 'Tambahkan lapisan keamanan ekstra ke akun Anda'}</p>
+                            <h3 className="font-medium text-gray-900">{t('settings.twoFactor')}</h3>
+                            <p className="text-sm text-gray-500">{t('settings.twoFactorDesc')}</p>
                         </div>
                     </div>
                     <button
@@ -546,7 +546,7 @@ export default function SecuritySettingsPage() {
                             }`}
                     >
                         {twoFaLoading && <Loader2 className="w-4 h-4 animate-spin inline mr-1" />}
-                        {twoFaStatus.enabled ? (t('settings.disable2fa') || 'Nonaktifkan 2FA') : (t('settings.enable2fa') || 'Aktifkan 2FA')}
+                        {twoFaStatus.enabled ? t('settings.disable2fa') : t('settings.enable2fa')}
                     </button>
                 </div>
                 {twoFaStatus.enabled ? (
@@ -554,13 +554,13 @@ export default function SecuritySettingsPage() {
                         <div className="flex items-start gap-3">
                             <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                             <div>
-                                <p className="text-sm text-green-800 font-medium">{t('settings.twoFactorActive') || '2FA aktif'}</p>
+                                <p className="text-sm text-green-800 font-medium">{t('settings.twoFactorActive')}</p>
                                 <p className="text-sm text-green-700 mt-1">
-                                    {t('settings.twoFactorActiveDesc') || 'Akun Anda dilindungi dengan Two-Factor Authentication.'}
+                                    {t('settings.twoFactorActiveDesc')}
                                 </p>
                                 {twoFaStatus.backupCodesRemaining > 0 && (
                                     <p className="text-xs text-green-600 mt-2">
-                                        {twoFaStatus.backupCodesRemaining} kode backup tersisa
+                                        {t('settings.securityBackupCodesRemaining').replace('{count}', String(twoFaStatus.backupCodesRemaining))}
                                     </p>
                                 )}
                             </div>
@@ -571,9 +571,9 @@ export default function SecuritySettingsPage() {
                         <div className="flex items-start gap-3">
                             <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                             <div>
-                                <p className="text-sm text-yellow-800 font-medium">{t('settings.twoFactorNotActive') || '2FA belum aktif'}</p>
+                                <p className="text-sm text-yellow-800 font-medium">{t('settings.twoFactorNotActive')}</p>
                                 <p className="text-sm text-yellow-700 mt-1">
-                                    {t('settings.twoFactorWarning') || 'Kami sangat menyarankan untuk mengaktifkan 2FA untuk keamanan akun yang lebih baik.'}
+                                    {t('settings.twoFactorWarning')}
                                 </p>
                             </div>
                         </div>
@@ -591,8 +591,8 @@ export default function SecuritySettingsPage() {
                             <Monitor className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                            <h3 className="font-medium text-gray-900">{t('settings.activeSessions') || 'Sesi Aktif'}</h3>
-                            <p className="text-sm text-gray-500">{t('settings.activeSessionsDesc') || 'Perangkat yang sedang login ke akun Anda'}</p>
+                            <h3 className="font-medium text-gray-900">{t('settings.activeSessions')}</h3>
+                            <p className="text-sm text-gray-500">{t('settings.activeSessionsDesc')}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -608,7 +608,7 @@ export default function SecuritySettingsPage() {
                                 onClick={() => setShowRevokeAllConfirm(true)}
                                 className="px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
                             >
-                                Nonaktifkan Semua Sesi Lain
+                                {t('settings.securityDisableAllSessions')}
                             </button>
                         )}
                     </div>
@@ -621,7 +621,7 @@ export default function SecuritySettingsPage() {
                 ) : sessions.length === 0 ? (
                     <div className="text-center py-8">
                         <Monitor className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm text-gray-500">Tidak ada sesi aktif</p>
+                        <p className="text-sm text-gray-500">{t('settings.securityNoActiveSessions')}</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -642,7 +642,7 @@ export default function SecuritySettingsPage() {
                                             <span className="font-medium text-gray-900 text-sm">{session.device}</span>
                                             {session.isCurrent && (
                                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                                    {t('settings.currentSession') || 'Sesi ini'}
+                                                    {t('settings.currentSession')}
                                                 </span>
                                             )}
                                         </div>
@@ -655,7 +655,7 @@ export default function SecuritySettingsPage() {
                                     <button
                                         onClick={() => handleRevokeSession(session.id)}
                                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Nonaktifkan sesi ini"
+                                        title={t('settings.securityRevokeSessionTitle')}
                                     >
                                         <LogOut className="w-4 h-4" />
                                     </button>
@@ -671,8 +671,8 @@ export default function SecuritySettingsPage() {
             {/* ═══════════════════════════════════════════════════════════════════ */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium text-gray-900">{t('settings.loginHistory') || 'Riwayat Login'}</h3>
-                    <span className="text-xs text-gray-500">{loginPagination.total} total percobaan</span>
+                    <h3 className="font-medium text-gray-900">{t('settings.loginHistory')}</h3>
+                    <span className="text-xs text-gray-500">{loginPagination.total} {t('settings.securityTotalAttempts')}</span>
                 </div>
 
                 {loginHistoryLoading ? (
@@ -682,7 +682,7 @@ export default function SecuritySettingsPage() {
                 ) : loginHistory.length === 0 ? (
                     <div className="text-center py-8">
                         <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm text-gray-500">{t('settings.noLoginHistory') || 'Belum ada riwayat login'}</p>
+                        <p className="text-sm text-gray-500">{t('settings.noLoginHistory')}</p>
                     </div>
                 ) : (
                     <>
@@ -694,8 +694,8 @@ export default function SecuritySettingsPage() {
                                         <div>
                                             <div className="text-sm text-gray-900">
                                                 {entry.success
-                                                    ? (t('settings.loginSuccess') || 'Login berhasil')
-                                                    : (t('settings.loginFailed') || 'Login gagal')
+                                                    ? t('settings.loginSuccess')
+                                                    : t('settings.loginFailed')
                                                 }
                                                 {entry.failureReason && (
                                                     <span className="text-xs text-red-500 ml-2">({entry.failureReason})</span>
@@ -715,7 +715,7 @@ export default function SecuritySettingsPage() {
                         {loginPagination.totalPages > 1 && (
                             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                                 <span className="text-xs text-gray-500">
-                                    Halaman {loginPagination.page} dari {loginPagination.totalPages}
+                                    {t('settings.securityPageXofY').replace('{current}', String(loginPagination.page)).replace('{total}', String(loginPagination.totalPages))}
                                 </span>
                                 <div className="flex gap-2">
                                     <button
@@ -723,14 +723,14 @@ export default function SecuritySettingsPage() {
                                         disabled={loginPagination.page <= 1}
                                         className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Sebelumnya
+                                        {t('settings.securityPrevious')}
                                     </button>
                                     <button
                                         onClick={() => fetchLoginHistory(loginPagination.page + 1)}
                                         disabled={loginPagination.page >= loginPagination.totalPages}
                                         className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Berikutnya
+                                        {t('settings.securityNext')}
                                     </button>
                                 </div>
                             </div>
@@ -749,7 +749,7 @@ export default function SecuritySettingsPage() {
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900">
-                                {twoFaStep === 'setup' ? (t('settings.twoFaSetupTitle') || 'Aktifkan 2FA') : (t('settings.twoFaVerifyTitle') || 'Verifikasi Kode')}
+                                {twoFaStep === 'setup' ? t('settings.twoFaSetupTitle') : t('settings.twoFaVerifyTitle')}
                             </h3>
                             <button onClick={() => setShowTwoFaModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                                 <X className="h-5 w-5" />
@@ -765,7 +765,7 @@ export default function SecuritySettingsPage() {
                         {twoFaStep === 'setup' ? (
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600">
-                                    {t('settings.twoFaSetupDesc') || 'Gunakan aplikasi authenticator seperti Google Authenticator atau Authy untuk memindai kode QR berikut.'}
+                                    {t('settings.twoFaSetupDesc')}
                                 </p>
 
                                 {/* QR Code placeholder with otpauth URI */}
@@ -773,7 +773,7 @@ export default function SecuritySettingsPage() {
                                     <div className="w-48 h-48 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
                                         <div className="text-center px-4">
                                             <Shield className="w-10 h-10 text-blue-500 mx-auto mb-2" />
-                                            <p className="text-xs text-gray-500 mb-2">Scan QR di authenticator app</p>
+                                            <p className="text-xs text-gray-500 mb-2">{t('settings.securityScanQr')}</p>
                                             <p className="text-[10px] text-gray-400 break-all font-mono leading-tight">
                                                 {twoFaOtpAuthUri.substring(0, 60)}...
                                             </p>
@@ -784,7 +784,7 @@ export default function SecuritySettingsPage() {
                                 {/* Manual entry key */}
                                 <div className="bg-gray-50 rounded-lg p-3">
                                     <p className="text-xs text-gray-500 mb-2">
-                                        {t('settings.twoFaManualEntry') || 'Atau masukkan kode manual:'}
+                                        {t('settings.twoFaManualEntry')}
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <span className="font-mono font-medium text-gray-700 text-sm tracking-wider flex-1 break-all">
@@ -793,7 +793,7 @@ export default function SecuritySettingsPage() {
                                         <button
                                             onClick={handleCopyKey}
                                             className="p-1.5 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
-                                            title="Salin kode"
+                                            title={t('settings.securityCopyKey')}
                                         >
                                             {copiedKey ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
                                         </button>
@@ -802,21 +802,21 @@ export default function SecuritySettingsPage() {
 
                                 <div className="flex justify-end gap-3 pt-2">
                                     <button onClick={() => setShowTwoFaModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                        {t('common.cancel') || 'Batal'}
+                                        {t('common.cancel')}
                                     </button>
                                     <button onClick={() => setTwoFaStep('verify')} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                                        {t('settings.next') || 'Selanjutnya'}
+                                        {t('settings.next')}
                                     </button>
                                 </div>
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600">
-                                    {t('settings.twoFaVerifyDesc') || 'Masukkan 6 digit kode dari aplikasi authenticator Anda.'}
+                                    {t('settings.twoFaVerifyDesc')}
                                 </p>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        {t('settings.twoFaCode') || 'Kode Verifikasi'}
+                                        {t('settings.twoFaCode')}
                                     </label>
                                     <input
                                         type="text"
@@ -830,7 +830,7 @@ export default function SecuritySettingsPage() {
                                 </div>
                                 <div className="flex justify-end gap-3 pt-2">
                                     <button onClick={() => setTwoFaStep('setup')} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                        {t('common.back') || 'Kembali'}
+                                        {t('common.back')}
                                     </button>
                                     <button
                                         onClick={handleTwoFaVerify}
@@ -838,7 +838,7 @@ export default function SecuritySettingsPage() {
                                         className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {twoFaLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                                        {t('settings.verifyAndEnable') || 'Verifikasi & Aktifkan'}
+                                        {t('settings.verifyAndEnable')}
                                     </button>
                                 </div>
                             </div>
@@ -852,7 +852,7 @@ export default function SecuritySettingsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">Kode Backup</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t('settings.securityBackupCodesTitle')}</h3>
                             <button onClick={() => setShowBackupCodes(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                                 <X className="h-5 w-5" />
                             </button>
@@ -860,10 +860,10 @@ export default function SecuritySettingsPage() {
 
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                             <p className="text-sm text-yellow-800 font-medium">
-                                Simpan kode backup ini di tempat yang aman!
+                                {t('settings.securityBackupCodesWarning')}
                             </p>
                             <p className="text-xs text-yellow-700 mt-1">
-                                Kode ini hanya ditampilkan sekali. Gunakan jika Anda kehilangan akses ke aplikasi authenticator.
+                                {t('settings.securityBackupCodesDesc')}
                             </p>
                         </div>
 
@@ -881,12 +881,12 @@ export default function SecuritySettingsPage() {
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(twoFaBackupCodes.join('\n'))
-                                    setToast({ message: 'Kode backup disalin ke clipboard', type: 'success' })
+                                    setToast({ message: t('settings.securityBackupCopied'), type: 'success' })
                                 }}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
                             >
                                 <Copy className="w-4 h-4" />
-                                Salin Semua Kode
+                                {t('settings.securityCopyAllCodes')}
                             </button>
                         </div>
                     </div>
@@ -902,9 +902,9 @@ export default function SecuritySettingsPage() {
                     setTwoFaError(null)
                 }}
                 onConfirm={handleTwoFaDisable}
-                title="Nonaktifkan 2FA"
-                message={t('settings.confirmDisable2fa') || 'Masukkan password Anda untuk menonaktifkan 2FA. Semua sesi aktif akan dinonaktifkan.'}
-                confirmText="Nonaktifkan"
+                title={t('settings.disable2faTitle')}
+                message={t('settings.confirmDisable2fa')}
+                confirmText={t('settings.disable2faConfirmText')}
                 variant="warning"
             />
 
@@ -913,9 +913,9 @@ export default function SecuritySettingsPage() {
                 isOpen={showRevokeAllConfirm}
                 onClose={() => setShowRevokeAllConfirm(false)}
                 onConfirm={handleRevokeAllSessions}
-                title="Nonaktifkan Semua Sesi Lain"
-                message="Semua sesi login di perangkat lain akan dinonaktifkan. Anda tetap login di sesi ini."
-                confirmText="Nonaktifkan Semua"
+                title={t('settings.disableAllSessionsTitle')}
+                message={t('settings.disableAllSessionsMsg')}
+                confirmText={t('settings.disableAllConfirmText')}
                 variant="warning"
             />
 

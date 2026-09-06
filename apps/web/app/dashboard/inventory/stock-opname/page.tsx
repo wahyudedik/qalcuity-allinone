@@ -61,15 +61,15 @@ const statusStyles: Record<string, string> = {
     CANCELLED: 'bg-gray-100 text-gray-800',
 }
 
-const statusLabels: Record<string, string> = {
-    DRAFT: 'Draft',
-    IN_PROGRESS: 'Dalam Proses',
-    COMPLETED: 'Selesai',
-    CANCELLED: 'Dibatalkan',
-}
-
 export default function StockOpnamePage() {
     const { t } = useTranslation()
+
+    const statusLabels: Record<string, string> = {
+        DRAFT: t('inventory.stockOpname.statusDraft'),
+        IN_PROGRESS: t('inventory.stockOpname.statusInProgress'),
+        COMPLETED: t('inventory.stockOpname.statusCompleted'),
+        CANCELLED: t('inventory.stockOpname.statusCancelled'),
+    }
     const { data: session } = useSession()
     const canMutate = session?.user?.role !== 'VIEWER'
     const [opnames, setOpnames] = useState<StockOpnameItem[]>([])
@@ -116,7 +116,7 @@ export default function StockOpnamePage() {
             if (warehouseJson.success) setWarehouses(warehouseJson.data)
             if (productJson.success) setProducts(productJson.data)
         } catch {
-            setError('Gagal memuat data')
+            setError(t('inventory.stockOpname.fetchError'))
         } finally {
             setLoading(false)
         }
@@ -147,13 +147,13 @@ export default function StockOpnamePage() {
 
     const handleSubmit = async () => {
         if (form.items.length === 0) {
-            setToast({ message: 'Minimal 1 item stock opname', type: 'error' })
+            setToast({ message: t('inventory.stockOpname.toast.minItems'), type: 'error' })
             return
         }
 
         const hasEmptyProduct = form.items.some((item) => !item.productId)
         if (hasEmptyProduct) {
-            setToast({ message: 'Semua item harus memilih produk', type: 'error' })
+            setToast({ message: t('inventory.stockOpname.toast.selectProduct'), type: 'error' })
             return
         }
 
@@ -170,15 +170,15 @@ export default function StockOpnamePage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Stock opname berhasil dibuat', type: 'success' })
+                setToast({ message: t('inventory.stockOpname.toast.createSuccess'), type: 'success' })
                 setShowModal(false)
                 setForm({ warehouseId: '', notes: '', items: [] })
                 fetchData()
             } else {
-                setToast({ message: data.error || 'Gagal membuat stock opname', type: 'error' })
+                setToast({ message: data.error || t('inventory.stockOpname.toast.createError'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Terjadi kesalahan', type: 'error' })
+            setToast({ message: t('inventory.stockOpname.toast.error'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -220,13 +220,13 @@ export default function StockOpnamePage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Stock Opname</h1>
-                    <p className="text-gray-500">Inventory fisik vs sistem</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('inventory.stockOpname.title')}</h1>
+                    <p className="text-gray-500">{t('inventory.stockOpname.subtitle')}</p>
                 </div>
                 {canMutate && (
                     <button onClick={() => { setForm({ warehouseId: '', notes: '', items: [] }); setShowModal(true) }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                         <Plus className="h-4 w-4" />
-                        Buat Opname
+                        {t('inventory.stockOpname.createButton')}
                     </button>
                 )}
             </div>
@@ -239,7 +239,7 @@ export default function StockOpnamePage() {
                         onClick={() => setFilterStatus(status)}
                         className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filterStatus === status ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                     >
-                        {status === 'all' ? 'Semua' : statusLabels[status] || status}
+                        {status === 'all' ? t('inventory.stockOpname.filterAll') : statusLabels[status] || status}
                     </button>
                 ))}
             </div>
@@ -249,12 +249,12 @@ export default function StockOpnamePage() {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Opname</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gudang</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Selisih</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.table.opnameNumber')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.table.date')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.table.warehouse')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.table.items')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.table.difference')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.table.status')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -262,7 +262,7 @@ export default function StockOpnamePage() {
                             <tr>
                                 <td colSpan={6} className="px-6 py-12 text-center">
                                     <ClipboardList className="mx-auto h-12 w-12 text-gray-300" />
-                                    <p className="mt-2 text-gray-500">Belum ada stock opname</p>
+                                    <p className="mt-2 text-gray-500">{t('inventory.stockOpname.emptyState')}</p>
                                 </td>
                             </tr>
                         ) : (
@@ -281,11 +281,11 @@ export default function StockOpnamePage() {
                                         {opname.warehouseName}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-600">
-                                        {opname.itemCount} item
+                                        {opname.itemCount} {t('inventory.stockOpname.itemUnit')}
                                     </td>
                                     <td className="px-6 py-4 text-sm">
                                         <span className={opname.totalDifference > 0 ? 'text-red-600 font-medium' : 'text-gray-600'}>
-                                            {opname.totalDifference} selisih
+                                            {opname.totalDifference} {t('inventory.stockOpname.differenceUnit')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -305,48 +305,48 @@ export default function StockOpnamePage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                            <h2 className="text-lg font-semibold text-gray-900">Buat Stock Opname Baru</h2>
+                            <h2 className="text-lg font-semibold text-gray-900">{t('inventory.stockOpname.form.title')}</h2>
                             <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Gudang (Opsional)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stockOpname.form.warehouseLabel')}</label>
                                 <select
                                     value={form.warehouseId}
                                     onChange={(e) => setForm((prev) => ({ ...prev, warehouseId: e.target.value }))}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                 >
-                                    <option value="">Semua Gudang</option>
+                                    <option value="">{t('inventory.stockOpname.form.warehouseAll')}</option>
                                     {warehouses.map((w) => (
                                         <option key={w.id} value={w.id}>{w.name} ({w.code})</option>
                                     ))}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stockOpname.form.notesLabel')}</label>
                                 <textarea
                                     value={form.notes}
                                     onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
                                     rows={2}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Catatan opname..."
+                                    placeholder={t('inventory.stockOpname.form.notesPlaceholder')}
                                 />
                             </div>
 
                             {/* Items */}
                             <div>
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="block text-sm font-medium text-gray-700">Item Stock Opname</label>
+                                    <label className="block text-sm font-medium text-gray-700">{t('inventory.stockOpname.form.itemsLabel')}</label>
                                     <button onClick={addItem} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
-                                        <Plus className="h-4 w-4" /> Tambah Item
+                                        <Plus className="h-4 w-4" /> {t('inventory.stockOpname.form.addItem')}
                                     </button>
                                 </div>
                                 {form.items.length === 0 ? (
                                     <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
                                         <Package className="mx-auto h-8 w-8 text-gray-300" />
-                                        <p className="mt-2 text-sm text-gray-500">Klik "Tambah Item" untuk memulai</p>
+                                        <p className="mt-2 text-sm text-gray-500">{t('inventory.stockOpname.form.emptyItems')}</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -360,7 +360,7 @@ export default function StockOpnamePage() {
                                                             onChange={(e) => updateItem(index, 'productId', e.target.value)}
                                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                                         >
-                                                            <option value="">Pilih Produk</option>
+                                                            <option value="">{t('inventory.stockOpname.form.selectProduct')}</option>
                                                             {products.map((p) => (
                                                                 <option key={p.id} value={p.id}>{p.name} ({p.sku}) - Stok: {p.stock}</option>
                                                             ))}
@@ -372,7 +372,7 @@ export default function StockOpnamePage() {
                                                             value={item.physicalQuantity}
                                                             onChange={(e) => updateItem(index, 'physicalQuantity', parseInt(e.target.value) || 0)}
                                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                                            placeholder="Qty fisik"
+                                                            placeholder={t('inventory.stockOpname.form.qtyPlaceholder')}
                                                             min={0}
                                                         />
                                                     </div>
@@ -395,13 +395,13 @@ export default function StockOpnamePage() {
                         </div>
                         <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
                             <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                                Batal
+                                {t('inventory.stockOpname.form.cancel')}
                             </button>
                             <button onClick={handleSubmit} disabled={submitting || form.items.length === 0} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                                {submitting ? 'Menyimpan...' : (
+                                {submitting ? t('inventory.stockOpname.form.saving') : (
                                     <>
                                         <Check className="h-4 w-4" />
-                                        Simpan Opname
+                                        {t('inventory.stockOpname.form.save')}
                                     </>
                                 )}
                             </button>

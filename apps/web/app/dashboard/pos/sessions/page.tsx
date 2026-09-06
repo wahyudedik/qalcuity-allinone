@@ -64,14 +64,14 @@ export default function POSSessionsPage() {
             if (data.success) {
                 setSessions(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data sesi')
+                setError(data.error || (t('pos.sessions.errorLoad') || 'Gagal memuat data sesi'))
             }
         } catch {
-            setError('Gagal memuat data sesi. Periksa koneksi jaringan Anda.')
+            setError(t('pos.sessions.errorLoadNetwork') || 'Gagal memuat data sesi. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
-    }, [filterStatus])
+    }, [filterStatus, t])
 
     useEffect(() => {
         fetchSessions()
@@ -98,16 +98,16 @@ export default function POSSessionsPage() {
             })
             const data = await response.json()
             if (data.success) {
-                setToast({ message: 'Sesi berhasil ditutup', type: 'success' })
+                setToast({ message: t('pos.sessions.successClose') || 'Sesi berhasil ditutup', type: 'success' })
                 setShowCloseModal(false)
                 setClosingSessionId(null)
                 setClosingCash(0)
                 fetchSessions()
             } else {
-                setToast({ message: data.error || 'Gagal menutup sesi', type: 'error' })
+                setToast({ message: data.error || (t('pos.sessions.errorClose') || 'Gagal menutup sesi'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menutup sesi', type: 'error' })
+            setToast({ message: t('pos.sessions.errorClose') || 'Gagal menutup sesi', type: 'error' })
         } finally {
             setClosing(false)
         }
@@ -130,7 +130,7 @@ export default function POSSessionsPage() {
                         <BookOpen className="h-6 w-6" />
                         {t('pos.sessions.title') || 'Sesi Kasir'}
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">Kelola sesi kasir dan penutupan kas</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('pos.sessions.description') || 'Kelola sesi kasir dan penutupan kas'}</p>
                 </div>
             </div>
 
@@ -140,7 +140,7 @@ export default function POSSessionsPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari terminal atau kasir..."
+                        placeholder={t('pos.sessions.searchPlaceholder') || 'Cari terminal atau kasir...'}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -152,11 +152,11 @@ export default function POSSessionsPage() {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${filterStatus === status
-                                    ? 'bg-blue-600 text-white border-blue-600'
-                                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600'
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600'
                                 }`}
                         >
-                            {status === 'all' ? 'Semua' : status === 'OPEN' ? 'Aktif' : 'Tertutup'}
+                            {status === 'all' ? (t('pos.sessions.all') || 'Semua') : status === 'OPEN' ? (t('pos.sessions.open') || 'Aktif') : (t('pos.sessions.closed') || 'Tertutup')}
                         </button>
                     ))}
                 </div>
@@ -171,10 +171,10 @@ export default function POSSessionsPage() {
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
                     <p className="text-sm text-gray-500">{error}</p>
-                    <button onClick={fetchSessions} className="mt-3 text-sm text-blue-600 hover:underline">Coba Lagi</button>
+                    <button onClick={fetchSessions} className="mt-3 text-sm text-blue-600 hover:underline">{t('pos.sessions.retry') || 'Coba Lagi'}</button>
                 </div>
             ) : filtered.length === 0 ? (
-                <EmptyState icon={BookOpen} title="Belum ada sesi" description="Sesi kasir akan muncul di sini setelah dibuka." />
+                <EmptyState icon={BookOpen} title={t('pos.sessions.empty') || 'Belum ada sesi'} description={t('pos.sessions.emptyDescription') || 'Sesi kasir akan muncul di sini setelah dibuka.'} />
             ) : (
                 <>
                     {/* Desktop Table */}
@@ -182,14 +182,14 @@ export default function POSSessionsPage() {
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-800">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Terminal</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kasir</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Uang Awal</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Penjualan</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Uang Tutup</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Selisih</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.terminal') || 'Terminal'}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.cashier') || 'Kasir'}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.openingCash') || 'Uang Awal'}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.sales') || 'Penjualan'}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.closingCash') || 'Uang Tutup'}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.variance') || 'Selisih'}</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.status') || 'Status'}</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.sessions.actions') || 'Aksi'}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
@@ -206,18 +206,18 @@ export default function POSSessionsPage() {
                                             {s.closingCash !== null ? formatCurrency(s.closingCash) : '-'}
                                         </td>
                                         <td className={`px-4 py-3 text-sm text-right font-medium ${s.variance === null ? 'text-gray-400' :
-                                                s.variance === 0 ? 'text-green-600' :
-                                                    'text-red-600'
+                                            s.variance === 0 ? 'text-green-600' :
+                                                'text-red-600'
                                             }`}>
                                             {s.variance !== null ? formatCurrency(s.variance) : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.status === 'OPEN'
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                                                 }`}>
                                                 {s.status === 'OPEN' ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                                                {s.status === 'OPEN' ? 'Aktif' : 'Tertutup'}
+                                                {s.status === 'OPEN' ? (t('pos.sessions.open') || 'Aktif') : (t('pos.sessions.closed') || 'Tertutup')}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -231,7 +231,7 @@ export default function POSSessionsPage() {
                                                     className="inline-flex items-center gap-1 rounded-lg bg-orange-100 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400"
                                                 >
                                                     <Lock className="h-3 w-3" />
-                                                    Tutup
+                                                    {t('pos.sessions.close') || 'Tutup'}
                                                 </button>
                                             )}
                                         </td>
@@ -251,27 +251,27 @@ export default function POSSessionsPage() {
                                         <p className="text-xs text-gray-400">{s.terminalCode} • {s.cashierName}</p>
                                     </div>
                                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.status === 'OPEN'
-                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                                         }`}>
-                                        {s.status === 'OPEN' ? 'Aktif' : 'Tertutup'}
+                                        {s.status === 'OPEN' ? (t('pos.sessions.open') || 'Aktif') : (t('pos.sessions.closed') || 'Tertutup')}
                                     </span>
                                 </div>
                                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                     <div>
-                                        <p className="text-gray-400 text-xs">Uang Awal</p>
+                                        <p className="text-gray-400 text-xs">{t('pos.sessions.openingCash') || 'Uang Awal'}</p>
                                         <p className="font-medium">{formatCurrency(s.openingCash)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-400 text-xs">Penjualan</p>
+                                        <p className="text-gray-400 text-xs">{t('pos.sessions.sales') || 'Penjualan'}</p>
                                         <p className="font-medium">{formatCurrency(s.totalSales)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-400 text-xs">Uang Tutup</p>
+                                        <p className="text-gray-400 text-xs">{t('pos.sessions.closingCash') || 'Uang Tutup'}</p>
                                         <p>{s.closingCash !== null ? formatCurrency(s.closingCash) : '-'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-400 text-xs">Selisih</p>
+                                        <p className="text-gray-400 text-xs">{t('pos.sessions.variance') || 'Selisih'}</p>
                                         <p className={s.variance === null ? '' : s.variance === 0 ? 'text-green-600' : 'text-red-600'}>
                                             {s.variance !== null ? formatCurrency(s.variance) : '-'}
                                         </p>
@@ -287,7 +287,7 @@ export default function POSSessionsPage() {
                                         className="mt-3 w-full inline-flex items-center justify-center gap-1 rounded-lg bg-orange-100 px-3 py-2 text-xs font-medium text-orange-700 hover:bg-orange-200"
                                     >
                                         <Lock className="h-3 w-3" />
-                                        Tutup Sesi
+                                        {t('pos.sessions.closeSession') || 'Tutup Sesi'}
                                     </button>
                                 )}
                             </div>
@@ -301,7 +301,7 @@ export default function POSSessionsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !closing && setShowCloseModal(false)}>
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tutup Sesi</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.sessions.closeModalTitle') || 'Tutup Sesi'}</h3>
                             {!closing && (
                                 <button onClick={() => setShowCloseModal(false)} className="text-gray-400 hover:text-gray-600">
                                     <X className="h-5 w-5" />
@@ -309,7 +309,7 @@ export default function POSSessionsPage() {
                             )}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Uang Tutup (Closing Cash)</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.sessions.closingCashLabel') || 'Uang Tutup (Closing Cash)'}</label>
                             <input
                                 type="number"
                                 value={closingCash || ''}
@@ -324,14 +324,14 @@ export default function POSSessionsPage() {
                                 disabled={closing}
                                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                             >
-                                Batal
+                                {t('pos.sessions.cancel') || 'Batal'}
                             </button>
                             <button
                                 onClick={handleCloseSession}
                                 disabled={closing}
                                 className="flex-1 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
                             >
-                                {closing ? 'Menutup...' : 'Tutup Sesi'}
+                                {closing ? (t('pos.sessions.closing') || 'Menutup...') : (t('pos.sessions.closeSession') || 'Tutup Sesi')}
                             </button>
                         </div>
                     </div>

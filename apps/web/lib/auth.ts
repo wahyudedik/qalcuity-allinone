@@ -222,6 +222,25 @@ export const authOptions: NextAuthOptions = {
             }
             return session;
         },
+        // Redirect callback — safety net to prevent redirect loops.
+        // When signIn() with redirect:true succeeds, NextAuth calls this to determine
+        // where to redirect. Without this, default behavior may redirect back to /login
+        // in edge cases (e.g., after registration when callbackUrl points to /login).
+        // This ensures post-auth redirects always go to a safe app page.
+        async redirect({ url, baseUrl }) {
+            // If url is already on the app (same origin), allow it
+            if (url.startsWith('/')) return `${baseUrl}${url}`;
+            // If url is on the same origin, allow it
+            try {
+                const urlObj = new URL(url);
+                const baseObj = new URL(baseUrl);
+                if (urlObj.origin === baseObj.origin) return url;
+            } catch {
+                // Invalid URL — fall through to default
+            }
+            // Default: redirect to dashboard
+            return `${baseUrl}/dashboard`;
+        },
     },
     pages: {
         signIn: "/login",

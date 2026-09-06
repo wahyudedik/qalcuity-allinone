@@ -3,7 +3,7 @@
 /**
  * Project Detail Page — Detail proyek dengan tabs
  *
- * Tabs: Overview, Tasks, Members, Budget
+ * Tabs: Overview, Tasks, Members, Budget, Gantt, Resources
  * Follows pattern dari kitchen/page.tsx dengan tab-based navigation.
  */
 
@@ -26,22 +26,29 @@ import {
     ChevronDown,
     Tag,
     Eye,
+    GanttChart,
+    LayoutGrid,
 } from 'lucide-react';
 import { useProjects, type ProjectDetail, type Task, type ProjectMember, type TaskStatus, type MemberRole } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { GanttChart as GanttChartComponent, type GanttData } from '@/components/operations/gantt-chart';
+import { ResourceHeatmap, type ResourceData } from '@/components/operations/resource-heatmap';
+import { ProjectTimeline, type TimelineData } from '@/components/operations/project-timeline';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-type TabKey = 'overview' | 'tasks' | 'members' | 'budget';
+type TabKey = 'overview' | 'tasks' | 'members' | 'budget' | 'gantt' | 'resources';
 
 const TABS: { key: TabKey; label: string; icon: typeof FileText }[] = [
     { key: 'overview', label: 'Ringkasan', icon: BarChart3 },
     { key: 'tasks', label: 'Task', icon: CheckCircle2 },
     { key: 'members', label: 'Anggota', icon: Users },
     { key: 'budget', label: 'Anggaran', icon: DollarSign },
+    { key: 'gantt', label: 'Gantt', icon: GanttChart },
+    { key: 'resources', label: 'Resource', icon: LayoutGrid },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -608,6 +615,158 @@ function BudgetTab({ project }: { project: ProjectDetail }) {
 }
 
 // =============================================================================
+// Tab: Gantt
+// =============================================================================
+
+function GanttTab({ projectId }: { projectId: string }) {
+    const [ganttData, setGanttData] = useState<GanttData | null>(null);
+    const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await fetch(`/api/projects/${projectId}/gantt`);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Gagal memuat data Gantt');
+                }
+                const data = await response.json();
+                setGanttData(data);
+                if (data.project) {
+                    setTimelineData({
+                        project: data.project,
+                        tasks: (data.tasks || []).map((t: GanttData['tasks'][0]) => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
+                            startDate: t.startDate,
+                            endDate: t.endDate,
+                            dueDate: t.dueDate,
+                            progress: t.progress,
+                            priority: t.priority,
+                        })),
+                    });
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+            } finally {
+                setLoading(false);
+            }
+        };
+        void fetchData();
+    }, [projectId]);
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[200px] rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <AlertCircle className="h-8 w-8 text-red-400 mb-2" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            <ProjectTimeline data={timelineData} loading={loading} />
+            <GanttChartComponent data={ganttData} loading={loading} />
+        </div>
+    );
+}
+
+// =============================================================================
+// Tab: Resources
+// =============================================================================
+
+function ResourcesTab({ projectId }: { projectId: string }) {
+    const [resourceData, setResourceData] = useState<ResourceData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await fetch(`/api/projects/${projectId}/resources?active=true`);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Gagal memuat data resource');
+                }
+                const data = await response.json();
+                setResourceData(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+            } finally {
+                setLoading(false);
+            }
+        };
+        void fetchData();
+    }, [projectId]);
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[200px] rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <AlertCircle className="h-8 w-8 text-red-400 mb-2" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            <ResourceHeatmap data={resourceData} loading={loading} />
+            {!loading && resourceData && resourceData.data.length > 0 && (
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Detail Alokasi</h3>
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Karyawan</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Peran</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Alokasi</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Periode</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                                {resourceData.data.map((item) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.employeeId}</td>
+                                        <td className="px-6 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                            {item.role === 'MANAGER' ? 'Manajer' : item.role === 'CONSULTANT' ? 'Konsultan' : 'Anggota'}
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-2 w-24 rounded-full bg-gray-200 dark:bg-gray-700">
+                                                    <div
+                                                        className={`h-2 rounded-full ${item.allocationPct > 100 ? 'bg-red-500' : item.allocationPct > 75 ? 'bg-orange-500' : 'bg-green-500'}`}
+                                                        style={{ width: `${Math.min(item.allocationPct, 100)}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.allocationPct}%</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                            {formatDate(item.startDate)} — {formatDate(item.endDate)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -721,6 +880,8 @@ export default function ProjectDetailPage() {
                 />
             )}
             {activeTab === 'budget' && <BudgetTab project={currentProject} />}
+            {activeTab === 'gantt' && <GanttTab projectId={projectId} />}
+            {activeTab === 'resources' && <ResourcesTab projectId={projectId} />}
         </div>
     );
 }

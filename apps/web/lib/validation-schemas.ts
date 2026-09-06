@@ -1208,6 +1208,171 @@ export const updateProjectMemberSchema = z.object({
 });
 
 // ============================================
+// OPERATIONS MODULE — PHASE B Schemas
+// ============================================
+
+export const createProjectBudgetSchema = z.object({
+    category: z.enum(['LABOR', 'MATERIAL', 'EQUIPMENT', 'TRAVEL', 'SOFTWARE', 'OTHER'], {
+        message: 'Kategori harus LABOR, MATERIAL, EQUIPMENT, TRAVEL, SOFTWARE, atau OTHER',
+    }),
+    name: z.string().min(1, 'Nama item wajib diisi').max(255, 'Nama item maksimal 255 karakter'),
+    description: z.string().max(2000, 'Deskripsi maksimal 2000 karakter').optional().nullable(),
+    planned: z.number().min(0, 'Anggaran tidak boleh negatif'),
+    actual: z.number().min(0, 'Actual tidak boleh negatif').optional(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});
+
+export const updateProjectBudgetSchema = z.object({
+    category: z.enum(['LABOR', 'MATERIAL', 'EQUIPMENT', 'TRAVEL', 'SOFTWARE', 'OTHER'], {
+        message: 'Kategori harus LABOR, MATERIAL, EQUIPMENT, TRAVEL, SOFTWARE, atau OTHER',
+    }).optional(),
+    name: z.string().min(1, 'Nama item wajib diisi').max(255, 'Nama item maksimal 255 karakter').optional(),
+    description: z.string().max(2000, 'Deskripsi maksimal 2000 karakter').optional().nullable(),
+    planned: z.number().min(0, 'Anggaran tidak boleh negatif').optional(),
+    actual: z.number().min(0, 'Actual tidak boleh negatif').optional(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const createResourceAllocationSchema = z.object({
+    employeeId: z.string().min(1, 'ID karyawan wajib diisi').max(50, 'ID karyawan maksimal 50 karakter'),
+    role: z.enum(['MANAGER', 'MEMBER', 'CONSULTANT'], {
+        message: 'Role harus MANAGER, MEMBER, atau CONSULTANT',
+    }).optional(),
+    allocationPct: z.number().int('Persentase harus bilangan bulat').min(1, 'Minimal 1%').max(100, 'Maksimal 100%'),
+    startDate: z.string().min(1, 'Tanggal mulai wajib diisi'),
+    endDate: z.string().min(1, 'Tanggal selesai wajib diisi'),
+    hourlyRate: z.number().min(0, 'Rate per jam tidak boleh negatif').optional().nullable(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});
+
+export const updateResourceAllocationSchema = z.object({
+    role: z.enum(['MANAGER', 'MEMBER', 'CONSULTANT'], {
+        message: 'Role harus MANAGER, MEMBER, atau CONSULTANT',
+    }).optional(),
+    allocationPct: z.number().int('Persentase harus bilangan bulat').min(1, 'Minimal 1%').max(100, 'Maksimal 100%').optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    hourlyRate: z.number().min(0, 'Rate per jam tidak boleh negatif').optional().nullable(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const updateTaskScheduleSchema = z.object({
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+    progress: z.number().int('Progress harus bilangan bulat').min(0, 'Progress minimal 0').max(100, 'Progress maksimal 100').optional(),
+    dependsOnId: z.string().optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+// ============================================
+// OPERATIONS MODULE — PHASE C: FIELD SERVICE Schemas
+// ============================================
+
+export const createFieldJobSchema = z.object({
+    projectId: z.string().optional().nullable(),
+    title: z.string().min(1, 'Judul pekerjaan wajib diisi').max(255, 'Judul maksimal 255 karakter'),
+    description: z.string().max(5000, 'Deskripsi maksimal 5000 karakter').optional().nullable(),
+    location: z.string().max(255, 'Lokasi maksimal 255 karakter').optional().nullable(),
+    address: z.string().max(500, 'Alamat maksimal 500 karakter').optional().nullable(),
+    latitude: z.number().min(-90, 'Latitude minimal -90').max(90, 'Latitude maksimal 90').optional().nullable(),
+    longitude: z.number().min(-180, 'Longitude minimal -180').max(180, 'Longitude maksimal 180').optional().nullable(),
+    scheduledDate: z.string().optional().nullable(),
+    scheduledTime: z.string().max(5, 'Format waktu tidak valid').optional().nullable(),
+    estimatedDuration: z.number().int('Durasi harus bilangan bulat').min(0, 'Durasi tidak boleh negatif').optional().nullable(),
+    status: z.enum(['SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], {
+        message: 'Status harus SCHEDULED, EN_ROUTE, IN_PROGRESS, COMPLETED, atau CANCELLED',
+    }).optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+        message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+    }).optional(),
+    customerName: z.string().max(255, 'Nama customer maksimal 255 karakter').optional().nullable(),
+    customerPhone: z.string().max(50, 'Telepon customer maksimal 50 karakter').optional().nullable(),
+    customerEmail: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    notes: z.string().max(5000, 'Catatan maksimal 5000 karakter').optional().nullable(),
+});
+
+export const updateFieldJobSchema = z.object({
+    projectId: z.string().optional().nullable(),
+    title: z.string().min(1, 'Judul pekerjaan wajib diisi').max(255, 'Judul maksimal 255 karakter').optional(),
+    description: z.string().max(5000, 'Deskripsi maksimal 5000 karakter').optional().nullable(),
+    location: z.string().max(255, 'Lokasi maksimal 255 karakter').optional().nullable(),
+    address: z.string().max(500, 'Alamat maksimal 500 karakter').optional().nullable(),
+    latitude: z.number().min(-90, 'Latitude minimal -90').max(90, 'Latitude maksimal 90').optional().nullable(),
+    longitude: z.number().min(-180, 'Longitude minimal -180').max(180, 'Longitude maksimal 180').optional().nullable(),
+    scheduledDate: z.string().optional().nullable(),
+    scheduledTime: z.string().max(5, 'Format waktu tidak valid').optional().nullable(),
+    estimatedDuration: z.number().int('Durasi harus bilangan bulat').min(0, 'Durasi tidak boleh negatif').optional().nullable(),
+    status: z.enum(['SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], {
+        message: 'Status harus SCHEDULED, EN_ROUTE, IN_PROGRESS, COMPLETED, atau CANCELLED',
+    }).optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+        message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+    }).optional(),
+    customerName: z.string().max(255, 'Nama customer maksimal 255 karakter').optional().nullable(),
+    customerPhone: z.string().max(50, 'Telepon customer maksimal 50 karakter').optional().nullable(),
+    customerEmail: z.string().email('Format email tidak valid').max(255).optional().nullable(),
+    notes: z.string().max(5000, 'Catatan maksimal 5000 karakter').optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const createFieldJobAssignmentSchema = z.object({
+    employeeId: z.string().min(1, 'ID karyawan wajib diisi').max(50, 'ID karyawan maksimal 50 karakter'),
+    role: z.enum(['LEAD', 'TECHNICIAN', 'HELPER'], {
+        message: 'Role harus LEAD, TECHNICIAN, atau HELPER',
+    }).optional(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});
+
+export const createFieldChecklistSchema = z.object({
+    name: z.string().min(1, 'Nama checklist wajib diisi').max(255, 'Nama checklist maksimal 255 karakter'),
+    description: z.string().max(2000, 'Deskripsi maksimal 2000 karakter').optional().nullable(),
+    category: z.enum(['GENERAL', 'SAFETY', 'INSTALLATION', 'MAINTENANCE', 'INSPECTION'], {
+        message: 'Kategori harus GENERAL, SAFETY, INSTALLATION, MAINTENANCE, atau INSPECTION',
+    }).optional(),
+    items: z.array(z.object({
+        id: z.string(),
+        label: z.string().min(1, 'Label item wajib diisi'),
+        type: z.enum(['CHECKBOX', 'TEXT', 'NUMBER', 'PHOTO', 'SIGNATURE']),
+        required: z.boolean().optional(),
+    })).min(1, 'Minimal satu item checklist').max(50, 'Maksimal 50 item'),
+});
+
+export const updateFieldChecklistSchema = z.object({
+    name: z.string().min(1, 'Nama checklist wajib diisi').max(255, 'Nama checklist maksimal 255 karakter').optional(),
+    description: z.string().max(2000, 'Deskripsi maksimal 2000 karakter').optional().nullable(),
+    category: z.enum(['GENERAL', 'SAFETY', 'INSTALLATION', 'MAINTENANCE', 'INSPECTION'], {
+        message: 'Kategori harus GENERAL, SAFETY, INSTALLATION, MAINTENANCE, atau INSPECTION',
+    }).optional(),
+    items: z.array(z.object({
+        id: z.string(),
+        label: z.string().min(1, 'Label item wajib diisi'),
+        type: z.enum(['CHECKBOX', 'TEXT', 'NUMBER', 'PHOTO', 'SIGNATURE']),
+        required: z.boolean().optional(),
+    })).min(1, 'Minimal satu item checklist').max(50, 'Maksimal 50 item').optional(),
+    isActive: z.boolean().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
+export const submitFieldChecklistResultSchema = z.object({
+    checklistId: z.string().min(1, 'ID checklist wajib diisi'),
+    employeeId: z.string().min(1, 'ID karyawan wajib diisi'),
+    answers: z.array(z.object({
+        itemId: z.string(),
+        value: z.union([z.string(), z.boolean(), z.number()]),
+        notes: z.string().optional(),
+    })),
+    photos: z.string().optional().nullable(),
+    notes: z.string().max(5000, 'Catatan maksimal 5000 karakter').optional().nullable(),
+});
+
+// ============================================
 // AI Schemas
 // ============================================
 
@@ -1226,4 +1391,35 @@ export const aiChatSchema = z.object({
 export const aiQuerySchema = z.object({
     query: z.string().min(1, 'Query tidak boleh kosong').max(500, 'Query maksimal 500 karakter'),
     module: z.string().max(50, 'Module maksimal 50 karakter').optional(),
+});
+
+// ============================================
+// AI Document Extraction Schemas
+// ============================================
+
+export const aiExtractDocumentSchema = z.object({
+    fileBase64: z.string().min(1, 'File tidak boleh kosong'),
+    fileName: z.string().min(1, 'Nama file wajib diisi').max(255, 'Nama file maksimal 255 karakter'),
+    documentType: z.enum(['INVOICE', 'PURCHASE_ORDER', 'RECEIPT', 'KTP', 'NPWP'], {
+        message: 'Tipe dokumen tidak valid',
+    }),
+    mimeType: z.enum(['image/png', 'image/jpeg', 'application/pdf'], {
+        message: 'Tipe file tidak didukung',
+    }),
+});
+
+// ============================================
+// AI Anomaly Detection Schemas
+// ============================================
+
+export const aiAnomalyScanSchema = z.object({
+    force: z.boolean().optional(),
+});
+
+export const aiAnomalyQuerySchema = z.object({
+    severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
+    status: z.enum(['OPEN', 'DISMISSED', 'INVESTIGATING', 'BLOCKED']).optional(),
+    entityType: z.enum(['INVOICE', 'PAYMENT', 'PURCHASE_ORDER', 'QUOTATION', 'JOURNAL_ENTRY']).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    offset: z.number().int().min(0).optional(),
 });

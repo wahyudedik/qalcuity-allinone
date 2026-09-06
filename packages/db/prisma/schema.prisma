@@ -99,6 +99,10 @@ model Tenant {
   workflowDefinitions   WorkflowDefinition[]
   workflowHistory       WorkflowHistory[]
 
+  // Field Service
+  fieldJobs           FieldJob[]
+  fieldChecklists     FieldChecklist[]
+
   // Industry Configuration Engine
   industryConfig    IndustryConfiguration?
   customFields      TenantCustomField[]
@@ -137,6 +141,8 @@ model Tenant {
 
   // Operations Module
   projects             Project[]
+  projectBudgets       ProjectBudget[]
+  resourceAllocations  ResourceAllocation[]
 }
 
 model User {
@@ -2182,9 +2188,12 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant  Tenant          @relation(fields: [tenantId], references: [id])
+  tenant  Tenant              @relation(fields: [tenantId], references: [id])
   members ProjectMember[]
   tasks   Task[]
+  budgets ProjectBudget[]
+  resourceAllocations ResourceAllocation[]
+  fieldJobs FieldJob[]
 
   @@index([tenantId, status])
   @@index([tenantId, managerId])
@@ -2214,6 +2223,10 @@ model Task {
   priority    String   @default("MEDIUM")      // LOW, MEDIUM, HIGH, URGENT
   assigneeId  String?                          // Employee ID
   dueDate     DateTime?
+  startDate   DateTime?                        // Phase B: Gantt chart start date
+  endDate     DateTime?                        // Phase B: Gantt chart end date
+  progress    Int      @default(0)             // Phase B: 0-100 percent progress
+  dependsOnId String?                          // Phase B: Task dependency (blocker task ID)
   estimatedHours Decimal? @db.Decimal(5, 2)
   actualHours   Decimal? @default(0) @db.Decimal(5, 2)
   tags        String?  // comma-separated tags
@@ -2224,10 +2237,13 @@ model Task {
   project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   comments  TaskComment[]
   timeLogs  TimeLog[]
+  dependsOn Task?        @relation("TaskDependencies", fields: [dependsOnId], references: [id])
+  dependents Task[]      @relation("TaskDependencies")
 
   @@index([tenantId, projectId])
   @@index([tenantId, status])
   @@index([tenantId, assigneeId])
+  @@index([dependsOnId])
 }
 
 model TaskComment {
@@ -2259,4 +2275,143 @@ model TimeLog {
 
   @@index([tenantId, taskId])
   @@index([tenantId, employeeId, date])
+}
+
+// ============================================
+// OPERATIONS MODULE — PHASE B
+// ============================================
+
+model ProjectBudget {
+  id          String   @id @default(cuid())
+  tenantId    String
+  projectId   String
+  category    String                             // LABOR, MATERIAL, EQUIPMENT, TRAVEL, SOFTWARE, OTHER
+  name        String                             // Budget line item name
+  description String?
+  planned     Decimal  @db.Decimal(15, 2)        // Planned/budgeted amount
+  actual      Decimal  @default(0) @db.Decimal(15, 2)  // Actual spending
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, projectId])
+  @@index([tenantId, projectId, category])
+}
+
+model ResourceAllocation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  projectId   String
+  employeeId  String                             // Employee ID from HR module
+  role        String   @default("MEMBER")        // MANAGER, MEMBER, CONSULTANT
+  allocationPct Int    @default(100)             // Allocation percentage (0-100)
+  startDate   DateTime                           // Allocation start date
+  endDate     DateTime                           // Allocation end date
+  hourlyRate  Decimal? @db.Decimal(10, 2)        // Hourly rate for cost calculation
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, employeeId, startDate])
+  @@index([tenantId, projectId])
+  @@index([tenantId, employeeId])
+  @@index([tenantId, projectId, employeeId])
+}
+
+// ============================================
+// OPERATIONS MODULE — PHASE C: FIELD SERVICE
+// ============================================
+
+model FieldJob {
+  id             String   @id @default(cuid())
+  tenantId       String
+  projectId      String?
+  title          String
+  description    String?
+  location       String?
+  address        String?
+  latitude       Decimal? @db.Decimal(10, 7)
+  longitude      Decimal? @db.Decimal(10, 7)
+  scheduledDate  DateTime?
+  scheduledTime  String?  // e.g., "09:00" — time of day
+  estimatedDuration Int?   // minutes
+  status         String   @default("SCHEDULED") // SCHEDULED, EN_ROUTE, IN_PROGRESS, COMPLETED, CANCELLED
+  priority       String   @default("MEDIUM")    // LOW, MEDIUM, HIGH, URGENT
+  customerName   String?
+  customerPhone  String?
+  customerEmail  String?
+  notes          String?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id])
+  project    Project?            @relation(fields: [projectId], references: [id])
+  assignments FieldJobAssignment[]
+  checklistResults FieldChecklistResult[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, scheduledDate])
+  @@index([tenantId, projectId])
+}
+
+model FieldJobAssignment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  jobId       String
+  employeeId  String   // dari HR module
+  role        String   @default("TECHNICIAN") // LEAD, TECHNICIAN, HELPER
+  assignedAt  DateTime @default(now())
+  notes       String?
+
+  job FieldJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, employeeId])
+  @@index([tenantId, jobId])
+  @@index([tenantId, employeeId])
+}
+
+model FieldChecklist {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  category    String   @default("GENERAL") // GENERAL, SAFETY, INSTALLATION, MAINTENANCE, INSPECTION
+  items       Json     @default("[]")      // Array of checklist items [{id, label, type, required}]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  results  FieldChecklistResult[]
+
+  @@index([tenantId, category])
+  @@index([tenantId, isActive])
+}
+
+model FieldChecklistResult {
+  id          String   @id @default(cuid())
+  tenantId    String
+  jobId       String
+  checklistId String
+  employeeId  String   // Employee who filled the checklist
+  answers     Json     @default("[]")  // Array of answers [{itemId, value, notes}]
+  photos      String?  // comma-separated photo URLs
+  notes       String?
+  signedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  job       FieldJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  checklist FieldChecklist @relation(fields: [checklistId], references: [id])
+
+  @@index([tenantId, jobId])
+  @@index([tenantId, checklistId])
+  @@index([tenantId, employeeId])
 }

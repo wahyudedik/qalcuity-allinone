@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
 import { Eye, EyeOff } from 'lucide-react'
@@ -12,8 +11,41 @@ interface Providers {
     google: boolean;
 }
 
+/**
+ * Unregister any existing Service Workers and clear all caches.
+ * This fixes issues where an old cached SW intercepts auth requests
+ * and drops Set-Cookie headers, preventing login after registration.
+ *
+ * Returns a Promise that resolves when all SWs are unregistered.
+ * Must be awaited before performing signIn() to ensure the browser
+ * handles auth requests directly without SW interference.
+ */
+function unregisterOldServiceWorkers(): Promise<void> {
+    if (!('serviceWorker' in navigator)) {
+        return Promise.resolve()
+    }
+
+    return navigator.serviceWorker.getRegistrations()
+        .then(async (registrations) => {
+            for (const registration of registrations) {
+                console.log('[Auth] Unregistering old SW:', registration.scope)
+                registration.unregister()
+            }
+
+            if ('caches' in window) {
+                const cacheNames = await caches.keys()
+                await Promise.all(
+                    cacheNames.map((name) => caches.delete(name))
+                )
+                console.log('[Auth] Cleared all caches:', cacheNames.length, 'caches removed')
+            }
+        })
+        .catch(() => {
+            // Silently ignore — SW unregistration is best-effort
+        })
+}
+
 export default function RegisterPage() {
-    const router = useRouter()
     const { t } = useTranslation()
     const [formData, setFormData] = useState({
         companyName: '',
@@ -27,6 +59,14 @@ export default function RegisterPage() {
     const [error, setError] = useState('')
     const [agreed, setAgreed] = useState(false)
     const [providers, setProviders] = useState<Providers>({ credentials: true, google: false })
+    const [swReady, setSwReady] = useState(false)
+
+    // Unregister old Service Workers on register page load.
+    // Old cached SWs can intercept /api/auth/ requests and drop Set-Cookie headers,
+    // which breaks the auto-login flow after registration.
+    useEffect(() => {
+        unregisterOldServiceWorkers().then(() => setSwReady(true))
+    }, [])
 
     // Fetch available auth providers from server
     // Replaces static NEXT_PUBLIC_GOOGLE_CLIENT_ID check with dynamic
@@ -83,20 +123,25 @@ export default function RegisterPage() {
                 return
             }
 
+            // Wait for SW unregistration to complete before signIn.
+            // An active SW can intercept the POST /api/auth/callback/credentials request
+            // and drop the Set-Cookie header, breaking the entire login flow.
+            if (!swReady) {
+                await unregisterOldServiceWorkers()
+            }
+
             // Auto login setelah register
-            const signInResult = await signIn('credentials', {
+            // FIX: Use signIn() with default redirect (redirect:true) to ensure
+            // the browser processes Set-Cookie headers from the 302 response.
+            // Previously used redirect:false which uses fetch() with redirect:'manual',
+            // preventing the browser from storing the session cookie.
+            await signIn('credentials', {
                 email: formData.email,
                 password: formData.password,
-                redirect: false,
+                callbackUrl: '/dashboard?onboard=true',
             })
-
-            if (signInResult?.error) {
-                // Jika auto login gagal, redirect ke login
-                router.push('/login')
-            } else {
-                router.push('/dashboard?onboard=true')
-                router.refresh()
-            }
+            // Note: If signIn succeeds, the browser navigates to /dashboard?onboard=true
+            // If signIn fails, NextAuth redirects to /login?error=...
         } catch (err) {
             setError(t('common.error'))
         } finally {

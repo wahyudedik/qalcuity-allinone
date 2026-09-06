@@ -89,7 +89,7 @@ export default function AttendancePage() {
                 setHistoricalData(historyDataResult.data)
             }
         } catch {
-            setError('Gagal memuat data absensi')
+            setError(t('hr.attendance.fetchError') || 'Gagal memuat data absensi')
         } finally {
             setLoading(false)
         }
@@ -137,12 +137,12 @@ export default function AttendancePage() {
             const result = await response.json()
             if (result.success) {
                 fetchAttendance()
-                setToast({ message: 'Data absensi berhasil dihapus', type: 'success' })
+                setToast({ message: t('hr.attendance.toast.deleteSuccess') || 'Data absensi berhasil dihapus', type: 'success' })
             } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('hr.attendance.toast.deleteError') || 'Gagal menghapus'}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus data absensi', type: 'error' })
+            setToast({ message: t('hr.attendance.toast.deleteErrorGeneric') || 'Gagal menghapus data absensi', type: 'error' })
         } finally {
             setDeleteTargetId(null)
         }
@@ -167,7 +167,7 @@ export default function AttendancePage() {
                 <AlertTriangle className="h-10 w-10 text-yellow-500" />
                 <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
                 <button onClick={fetchAttendance} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    Coba Lagi
+                    {t('hr.attendance.retry') || 'Coba Lagi'}
                 </button>
             </div>
         )
@@ -176,19 +176,19 @@ export default function AttendancePage() {
     const handleExport = () => {
         const exportData = historyDataFiltered.length > 0 ? historyDataFiltered : todayData
         if (exportData.length === 0) {
-            setToast({ message: 'Tidak ada data untuk di-export', type: 'error' })
+            setToast({ message: t('hr.attendance.toast.noDataExport') || 'Tidak ada data untuk di-export', type: 'error' })
             return
         }
         const csvData = exportData.map(record => ({
-            'Tanggal': new Date(record.date).toLocaleDateString('id-ID'),
-            'Karyawan': record.employeeName,
-            'Status': statusConfig[record.status]?.label || record.status,
-            'Jam Masuk': record.clockIn || '-',
-            'Jam Keluar': record.clockOut || '-',
-            'Jam Kerja': record.workHours,
+            [t('hr.attendance.csv.date') || 'Tanggal']: new Date(record.date).toLocaleDateString('id-ID'),
+            [t('hr.attendance.csv.employee') || 'Karyawan']: record.employeeName,
+            [t('hr.attendance.csv.status') || 'Status']: statusConfig[record.status]?.label || record.status,
+            [t('hr.attendance.csv.clockIn') || 'Jam Masuk']: record.clockIn || '-',
+            [t('hr.attendance.csv.clockOut') || 'Jam Keluar']: record.clockOut || '-',
+            [t('hr.attendance.csv.workHours') || 'Jam Kerja']: record.workHours,
         }))
         exportToCSV(csvData, `absensi-${selectedDate}`)
-        setToast({ message: 'Data absensi berhasil di-export', type: 'success' })
+        setToast({ message: t('hr.attendance.toast.exportSuccess') || 'Data absensi berhasil di-export', type: 'success' })
     }
 
     return (
@@ -285,7 +285,7 @@ export default function AttendancePage() {
                         {todayData.length === 0 ? (
                             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
                                 <Users className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                                <p className="text-sm">Belum ada data kehadiran hari ini</p>
+                                <p className="text-sm">{t('hr.attendance.emptyToday') || 'Belum ada data kehadiran hari ini'}</p>
                             </div>
                         ) : (
                             todayData.map((record) => (
@@ -318,7 +318,7 @@ export default function AttendancePage() {
                                             onClick={() => { setSelectedRecord(record); setShowDetailModal(true) }}
                                             className="text-sm text-blue-600 hover:text-blue-700"
                                         >
-                                            Detail
+                                            {t('hr.attendance.detail') || 'Detail'}
                                         </button>
                                     </div>
                                 </div>
@@ -331,8 +331,8 @@ export default function AttendancePage() {
                         {todayData.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
                                 <Users className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Belum ada data kehadiran hari ini</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Data kehadiran karyawan akan muncul di sini</p>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('hr.attendance.emptyToday') || 'Belum ada data kehadiran hari ini'}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('hr.attendance.emptyTodayHint') || 'Data kehadiran karyawan akan muncul di sini'}</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -368,7 +368,7 @@ export default function AttendancePage() {
                                                     {record.clockOut || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">
-                                                    {record.workHours > 0 ? `${record.workHours} jam` : '-'}
+                                                    {record.workHours > 0 ? `${record.workHours} ${t('hr.attendance.hourUnit') || 'jam'}` : '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button
@@ -376,7 +376,7 @@ export default function AttendancePage() {
                                                         className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                                                     >
                                                         <Eye className="h-4 w-4" />
-                                                        Detail
+                                                        {t('hr.attendance.detail') || 'Detail'}
                                                     </button>
                                                 </td>
                                             </tr>
@@ -396,7 +396,7 @@ export default function AttendancePage() {
                         {historyDataFiltered.length === 0 ? (
                             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
                                 <Calendar className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                                <p className="text-sm">Belum ada riwayat kehadiran</p>
+                                <p className="text-sm">{t('hr.attendance.emptyHistory') || 'Belum ada riwayat kehadiran'}</p>
                             </div>
                         ) : (
                             historyDataFiltered.map((record) => (
@@ -439,15 +439,15 @@ export default function AttendancePage() {
                         {historyDataFiltered.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
                                 <Calendar className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Belum ada riwayat kehadiran</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Riwayat kehadiran karyawan akan muncul di sini</p>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('hr.attendance.emptyHistory') || 'Belum ada riwayat kehadiran'}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('hr.attendance.emptyHistoryHint') || 'Riwayat kehadiran karyawan akan muncul di sini'}</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 border-b border-gray-200">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.date') || 'Tanggal'}</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.title') || 'Karyawan'}</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.type') || 'Status'}</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.attendance.clockIn') || 'Jam Masuk'}</th>
@@ -473,14 +473,14 @@ export default function AttendancePage() {
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{record.clockIn || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{record.clockOut || '-'}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-600">{record.workHours} jam</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{record.workHours} {t('hr.attendance.hourUnit') || 'jam'}</td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button
                                                         onClick={() => { setSelectedRecord(record); setShowDetailModal(true) }}
                                                         className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                                                     >
                                                         <Eye className="h-4 w-4" />
-                                                        Detail
+                                                        {t('hr.attendance.detail') || 'Detail'}
                                                     </button>
                                                 </td>
                                             </tr>
@@ -497,28 +497,28 @@ export default function AttendancePage() {
             <div className="rounded-xl border border-gray-200 bg-white p-6">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
                     <BarChart3 className="h-5 w-5 text-blue-600" />
-                    Ringkasan Kehadiran Minggu Ini
+                    {t('hr.attendance.summary.title') || 'Ringkasan Kehadiran Minggu Ini'}
                 </h3>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
                     <div className="text-center">
                         <div className="text-3xl font-bold text-green-600">{attendanceRate}%</div>
-                        <div className="text-sm text-gray-500">Tingkat Kehadiran</div>
+                        <div className="text-sm text-gray-500">{t('hr.attendance.summary.attendanceRate') || 'Tingkat Kehadiran'}</div>
                     </div>
                     <div className="text-center">
                         <div className="text-3xl font-bold text-yellow-600">{avgWorkHours}</div>
-                        <div className="text-sm text-gray-500">Rata-rata Jam Kerja</div>
+                        <div className="text-sm text-gray-500">{t('hr.attendance.summary.avgWorkHours') || 'Rata-rata Jam Kerja'}</div>
                     </div>
                     <div className="text-center">
                         <div className="text-3xl font-bold text-red-600">{totalLate}</div>
-                        <div className="text-sm text-gray-500">Total Keterlambatan</div>
+                        <div className="text-sm text-gray-500">{t('hr.attendance.summary.totalLate') || 'Total Keterlambatan'}</div>
                     </div>
                     <div className="text-center">
                         <div className="text-3xl font-bold text-blue-600">{totalWFH}</div>
-                        <div className="text-sm text-gray-500">Total WFH</div>
+                        <div className="text-sm text-gray-500">{t('hr.attendance.summary.totalWFH') || 'Total WFH'}</div>
                     </div>
                     <div className="text-center">
                         <div className="text-3xl font-bold text-purple-600">{totalLeave}</div>
-                        <div className="text-sm text-gray-500">Total Cuti</div>
+                        <div className="text-sm text-gray-500">{t('hr.attendance.summary.totalLeave') || 'Total Cuti'}</div>
                     </div>
                 </div>
             </div>
@@ -568,7 +568,7 @@ export default function AttendancePage() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-500">{t('hr.attendance.workHours') || 'Jam Kerja'}</span>
                                     <span className="text-sm font-medium text-gray-900">
-                                        {selectedRecord.workHours > 0 ? `${selectedRecord.workHours} jam` : '-'}
+                                        {selectedRecord.workHours > 0 ? `${selectedRecord.workHours} ${t('hr.attendance.hourUnit') || 'jam'}` : '-'}
                                     </span>
                                 </div>
                             </div>
@@ -590,9 +590,9 @@ export default function AttendancePage() {
                 isOpen={showDeleteConfirm}
                 onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null) }}
                 onConfirm={confirmDelete}
-                title="Hapus Absensi"
-                message="Apakah Anda yakin ingin menghapus data absensi ini?"
-                confirmText="Hapus"
+                title={t('hr.attendance.confirm.deleteTitle') || 'Hapus Absensi'}
+                message={t('hr.attendance.confirm.deleteMessage') || 'Apakah Anda yakin ingin menghapus data absensi ini?'}
+                confirmText={t('hr.attendance.confirm.deleteConfirm') || 'Hapus'}
                 variant="danger"
             />
 

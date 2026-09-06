@@ -159,10 +159,10 @@ export default function EmployeesPage() {
             if (data.success) {
                 setEmployees(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data karyawan')
+                setError(data.error || (t('hr.employees.fetchError') || 'Gagal memuat data karyawan'))
             }
         } catch {
-            setError('Gagal memuat data karyawan. Periksa koneksi jaringan Anda.')
+            setError(t('hr.employees.fetchErrorNetwork') || 'Gagal memuat data karyawan. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
@@ -220,12 +220,12 @@ export default function EmployeesPage() {
             const result = await response.json()
             if (result.success) {
                 fetchEmployees()
-                setToast({ message: 'Karyawan berhasil dihapus', type: 'success' })
+                setToast({ message: t('hr.employees.toast.deleteSuccess') || 'Karyawan berhasil dihapus', type: 'success' })
             } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('hr.employees.toast.deleteError') || 'Gagal menghapus'}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus karyawan', type: 'error' })
+            setToast({ message: t('hr.employees.toast.deleteErrorGeneric') || 'Gagal menghapus karyawan', type: 'error' })
         } finally {
             setDeleteTargetId(null)
         }
@@ -292,14 +292,14 @@ export default function EmployeesPage() {
                 setShowForm(false)
                 fetchEmployees()
                 setToast({
-                    message: editingEmployee ? 'Karyawan berhasil diupdate' : 'Karyawan berhasil ditambahkan',
+                    message: editingEmployee ? (t('hr.employees.toast.updateSuccess') || 'Karyawan berhasil diupdate') : (t('hr.employees.toast.createSuccess') || 'Karyawan berhasil ditambahkan'),
                     type: 'success',
                 })
             } else {
-                setToast({ message: result.error || 'Gagal menyimpan data', type: 'error' })
+                setToast({ message: result.error || (t('hr.employees.toast.saveError') || 'Gagal menyimpan data'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menyimpan data karyawan', type: 'error' })
+            setToast({ message: t('hr.employees.toast.saveErrorGeneric') || 'Gagal menyimpan data karyawan', type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -322,7 +322,7 @@ export default function EmployeesPage() {
     const statusLabels = {
         'ACTIVE': t('hr.employees.active') || 'Aktif',
         'INACTIVE': t('hr.employees.inactive') || 'Tidak Aktif',
-        'TERMINATED': 'Dikeluarkan',
+        'TERMINATED': t('hr.employees.terminated') || 'Dikeluarkan',
     }
 
     const avatarColors = [
@@ -398,7 +398,7 @@ export default function EmployeesPage() {
                     <div className="text-2xl font-bold text-red-600">
                         {employees.filter(e => e.status === 'TERMINATED').length}
                     </div>
-                    <div className="text-sm text-gray-500">Dikeluarkan</div>
+                    <div className="text-sm text-gray-500">{t('hr.employees.terminated') || 'Dikeluarkan'}</div>
                 </div>
             </div>
 
@@ -432,7 +432,7 @@ export default function EmployeesPage() {
                     <option value="All">{t('hr.employees.allStatuses') || 'Semua Status'}</option>
                     <option value="ACTIVE">{t('hr.employees.active') || 'Aktif'}</option>
                     <option value="INACTIVE">{t('hr.employees.inactive') || 'Tidak Aktif'}</option>
-                    <option value="TERMINATED">Dikeluarkan</option>
+                    <option value="TERMINATED">{t('hr.employees.terminated') || 'Dikeluarkan'}</option>
                 </select>
                 <div className="flex rounded-lg border border-gray-300">
                     <button
@@ -492,13 +492,13 @@ export default function EmployeesPage() {
                                         onClick={() => openEditForm(emp)}
                                         className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                     >
-                                        Edit
+                                        {t('hr.employees.edit') || 'Edit'}
                                     </button>
                                     <Link
                                         href={`/dashboard/hr/employees/${emp.id}`}
                                         className="text-sm font-medium text-gray-600 hover:text-gray-700"
                                     >
-                                        Detail
+                                        {t('hr.employees.detail') || 'Detail'}
                                     </Link>
                                 </div>
                             </div>
@@ -535,11 +535,11 @@ export default function EmployeesPage() {
                                         <span className="ml-1">{new Date(emp.joinDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-500">Email:</span>
+                                        <span className="text-gray-500">{t('hr.employees.email') || 'Email'}:</span>
                                         <span className="ml-1">{emp.email}</span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-500">Telepon:</span>
+                                        <span className="text-gray-500">{t('hr.employees.phone') || 'Telepon'}:</span>
                                         <span className="ml-1">{emp.phone || '-'}</span>
                                     </div>
                                 </div>
@@ -548,19 +548,19 @@ export default function EmployeesPage() {
                                         onClick={() => openEditForm(emp)}
                                         className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                     >
-                                        Edit
+                                        {t('hr.employees.edit') || 'Edit'}
                                     </button>
                                     <Link
                                         href={`/dashboard/hr/employees/${emp.id}`}
                                         className="text-sm font-medium text-gray-600 hover:text-gray-700"
                                     >
-                                        Detail
+                                        {t('hr.employees.detail') || 'Detail'}
                                     </Link>
                                     <button
                                         onClick={() => handleDelete(emp.id)}
                                         className="text-sm font-medium text-red-600 hover:text-red-700"
                                     >
-                                        Hapus
+                                        {t('hr.employees.delete') || 'Hapus'}
                                     </button>
                                 </div>
                             </div>
@@ -584,7 +584,7 @@ export default function EmployeesPage() {
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.status') || 'Status'}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hr.employees.hireDate') || 'Bergabung'}</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('hr.employees.actions') || 'Aksi'}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -617,19 +617,19 @@ export default function EmployeesPage() {
                                                         onClick={() => openEditForm(emp)}
                                                         className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                                     >
-                                                        Edit
+                                                        {t('hr.employees.edit') || 'Edit'}
                                                     </button>
                                                     <Link
                                                         href={`/dashboard/hr/employees/${emp.id}`}
                                                         className="text-sm font-medium text-gray-600 hover:text-gray-700"
                                                     >
-                                                        Detail
+                                                        {t('hr.employees.detail') || 'Detail'}
                                                     </Link>
                                                     {canMutate && (
                                                         <button
                                                             onClick={() => handleDelete(emp.id)}
                                                             className="text-red-500 hover:text-red-700"
-                                                            title="Hapus"
+                                                            title={t('hr.employees.delete') || 'Hapus'}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
@@ -661,7 +661,7 @@ export default function EmployeesPage() {
                     <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                             <h2 className="text-lg font-semibold text-gray-900">
-                                {editingEmployee ? 'Edit Karyawan' : 'Tambah Karyawan Baru'}
+                                {editingEmployee ? (t('hr.employees.form.titleEdit') || 'Edit Karyawan') : (t('hr.employees.form.titleCreate') || 'Tambah Karyawan Baru')}
                             </h2>
                             <button
                                 onClick={() => setShowForm(false)}
@@ -674,7 +674,7 @@ export default function EmployeesPage() {
                             {/* Name */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nama <span className="text-red-500">*</span>
+                                    {t('hr.employees.form.nameLabel') || 'Nama'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -684,7 +684,7 @@ export default function EmployeesPage() {
                                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="Masukkan nama lengkap"
+                                    placeholder={t('hr.employees.form.namePlaceholder') || 'Masukkan nama lengkap'}
                                 />
                                 {formErrors.name && (
                                     <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>
@@ -694,7 +694,7 @@ export default function EmployeesPage() {
                             {/* Email */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Email <span className="text-red-500">*</span>
+                                    {t('hr.employees.form.emailLabel') || 'Email'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="email"
@@ -704,7 +704,7 @@ export default function EmployeesPage() {
                                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="nama@perusahaan.com"
+                                    placeholder={t('hr.employees.form.emailPlaceholder') || 'nama@perusahaan.com'}
                                 />
                                 {formErrors.email && (
                                     <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>
@@ -714,7 +714,7 @@ export default function EmployeesPage() {
                             {/* Phone */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Telepon
+                                    {t('hr.employees.form.phoneLabel') || 'Telepon'}
                                 </label>
                                 <input
                                     type="tel"
@@ -724,7 +724,7 @@ export default function EmployeesPage() {
                                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="081234567890"
+                                    placeholder={t('hr.employees.form.phonePlaceholder') || '081234567890'}
                                 />
                                 {formErrors.phone && (
                                     <p className="mt-1 text-xs text-red-600">{formErrors.phone}</p>
@@ -734,7 +734,7 @@ export default function EmployeesPage() {
                             {/* Position */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Posisi <span className="text-red-500">*</span>
+                                    {t('hr.employees.form.positionLabel') || 'Posisi'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -744,7 +744,7 @@ export default function EmployeesPage() {
                                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="Contoh: Software Engineer"
+                                    placeholder={t('hr.employees.form.positionPlaceholder') || 'Contoh: Software Engineer'}
                                 />
                                 {formErrors.position && (
                                     <p className="mt-1 text-xs text-red-600">{formErrors.position}</p>
@@ -754,7 +754,7 @@ export default function EmployeesPage() {
                             {/* Department */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Departemen <span className="text-red-500">*</span>
+                                    {t('hr.employees.form.departmentLabel') || 'Departemen'} <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     value={formData.department}
@@ -764,7 +764,7 @@ export default function EmployeesPage() {
                                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
                                 >
-                                    <option value="">Pilih departemen</option>
+                                    <option value="">{t('hr.employees.form.departmentPlaceholder') || 'Pilih departemen'}</option>
                                     {DEPARTMENTS.map(dept => (
                                         <option key={dept} value={dept}>{dept}</option>
                                     ))}
@@ -777,7 +777,7 @@ export default function EmployeesPage() {
                             {/* Join Date */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tanggal Bergabung <span className="text-red-500">*</span>
+                                    {t('hr.employees.form.joinDateLabel') || 'Tanggal Bergabung'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="date"
@@ -796,7 +796,7 @@ export default function EmployeesPage() {
                             {/* Salary */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Gaji (Rp)
+                                    {t('hr.employees.form.salaryLabel') || 'Gaji (Rp)'}
                                 </label>
                                 <input
                                     type="number"
@@ -811,16 +811,16 @@ export default function EmployeesPage() {
                             {/* Status */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Status
+                                    {t('hr.employees.form.statusLabel') || 'Status'}
                                 </label>
                                 <select
                                     value={formData.status}
                                     onChange={(e) => handleFormChange('status', e.target.value)}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                    <option value="ACTIVE">Aktif</option>
-                                    <option value="INACTIVE">Tidak Aktif</option>
-                                    <option value="TERMINATED">Dikeluarkan</option>
+                                    <option value="ACTIVE">{t('hr.employees.form.statusActive') || 'Aktif'}</option>
+                                    <option value="INACTIVE">{t('hr.employees.form.statusInactive') || 'Tidak Aktif'}</option>
+                                    <option value="TERMINATED">{t('hr.employees.form.statusTerminated') || 'Dikeluarkan'}</option>
                                 </select>
                             </div>
 
@@ -832,7 +832,7 @@ export default function EmployeesPage() {
                                     className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                                     disabled={submitting}
                                 >
-                                    Batal
+                                    {t('hr.employees.form.cancel') || 'Batal'}
                                 </button>
                                 <button
                                     type="submit"
@@ -840,7 +840,7 @@ export default function EmployeesPage() {
                                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {submitting ? 'Menyimpan...' : (editingEmployee ? 'Update' : 'Simpan')}
+                                    {submitting ? (t('hr.employees.form.saving') || 'Menyimpan...') : (editingEmployee ? (t('hr.employees.form.update') || 'Update') : (t('hr.employees.form.save') || 'Simpan'))}
                                 </button>
                             </div>
                         </form>
@@ -853,9 +853,9 @@ export default function EmployeesPage() {
                 isOpen={showDeleteConfirm}
                 onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null) }}
                 onConfirm={confirmDelete}
-                title="Hapus Karyawan"
-                message="Apakah Anda yakin ingin menghapus karyawan ini?"
-                confirmText="Hapus"
+                title={t('hr.employees.confirm.deleteTitle') || 'Hapus Karyawan'}
+                message={t('hr.employees.confirm.deleteMessage') || 'Apakah Anda yakin ingin menghapus karyawan ini?'}
+                confirmText={t('hr.employees.confirm.deleteConfirm') || 'Hapus'}
                 variant="danger"
             />
 

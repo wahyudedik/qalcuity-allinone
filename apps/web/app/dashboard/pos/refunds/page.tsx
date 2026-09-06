@@ -40,24 +40,24 @@ type RefundDetail = Refund & {
     }
 }
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-    CASH: 'Tunai',
-    CARD: 'Kartu',
-    QRIS: 'QRIS',
-    E_WALLET: 'E-Wallet',
-    BANK_TRANSFER: 'Transfer',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-    PENDING: 'Menunggu',
-    APPROVED: 'Disetujui',
-    REJECTED: 'Ditolak',
-}
-
 export default function POSRefundsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
     const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+
+    const PAYMENT_METHOD_LABELS: Record<string, string> = {
+        CASH: t('pos.reports.paymentCash') || 'Tunai',
+        CARD: t('pos.reports.paymentCard') || 'Kartu',
+        QRIS: t('pos.reports.paymentQris') || 'QRIS',
+        E_WALLET: t('pos.reports.paymentEWallet') || 'E-Wallet',
+        BANK_TRANSFER: t('pos.reports.paymentTransfer') || 'Transfer',
+    }
+
+    const STATUS_LABELS: Record<string, string> = {
+        PENDING: t('pos.refunds.pending') || 'Menunggu',
+        APPROVED: t('pos.refunds.approved') || 'Disetujui',
+        REJECTED: t('pos.refunds.rejected') || 'Ditolak',
+    }
 
     const [refunds, setRefunds] = useState<Refund[]>([])
     const [loading, setLoading] = useState(true)
@@ -97,14 +97,14 @@ export default function POSRefundsPage() {
                 setRefunds(data.data)
                 setTotalPages(data.totalPages)
             } else {
-                setError(data.error || 'Gagal memuat data refund')
+                setError(data.error || t('pos.refunds.errorLoad') || 'Gagal memuat data refund')
             }
         } catch {
-            setError('Gagal memuat data refund. Periksa koneksi jaringan Anda.')
+            setError(t('pos.refunds.errorLoadNetwork') || 'Gagal memuat data refund. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
-    }, [filterStatus, page])
+    }, [filterStatus, page, t])
 
     useEffect(() => {
         fetchRefunds()
@@ -132,16 +132,18 @@ export default function POSRefundsPage() {
             const data = await response.json()
             if (data.success) {
                 setToast({
-                    message: actionModal.type === 'APPROVED' ? 'Refund berhasil disetujui' : 'Refund berhasil ditolak',
+                    message: actionModal.type === 'APPROVED'
+                        ? (t('pos.refunds.successApprove') || 'Refund berhasil disetujui')
+                        : (t('pos.refunds.successReject') || 'Refund berhasil ditolak'),
                     type: 'success',
                 })
                 setActionModal(null)
                 fetchRefunds()
             } else {
-                setToast({ message: data.error || 'Gagal memproses refund', type: 'error' })
+                setToast({ message: data.error || t('pos.refunds.errorProcess') || 'Gagal memproses refund', type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal memproses refund', type: 'error' })
+            setToast({ message: t('pos.refunds.errorProcess') || 'Gagal memproses refund', type: 'error' })
         } finally {
             setActionLoading(false)
         }
@@ -156,7 +158,7 @@ export default function POSRefundsPage() {
                 setShowDetail(true)
             }
         } catch {
-            setToast({ message: 'Gagal memuat detail refund', type: 'error' })
+            setToast({ message: t('pos.refunds.errorLoadDetail') || 'Gagal memuat detail refund', type: 'error' })
         }
     }
 
@@ -214,7 +216,7 @@ export default function POSRefundsPage() {
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
                     <p className="text-sm text-gray-500">{error}</p>
-                    <button onClick={fetchRefunds} className="mt-3 text-sm text-blue-600 hover:underline">Coba Lagi</button>
+                    <button onClick={fetchRefunds} className="mt-3 text-sm text-blue-600 hover:underline">{t('pos.refunds.retry') || 'Coba Lagi'}</button>
                 </div>
             ) : filtered.length === 0 ? (
                 <EmptyState icon={RotateCcw} title={t('pos.refunds.empty') || 'Belum ada permintaan refund'} description={t('pos.refunds.emptyDescription') || 'Permintaan refund akan muncul di sini.'} />
@@ -257,7 +259,7 @@ export default function POSRefundsPage() {
                                                     className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                                 >
                                                     <Eye className="h-3.5 w-3.5" />
-                                                    Detail
+                                                    {t('pos.refunds.detailBtn') || 'Detail'}
                                                 </button>
                                                 {r.status === 'PENDING' && canManage && (
                                                     <>
@@ -266,14 +268,14 @@ export default function POSRefundsPage() {
                                                             className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
                                                         >
                                                             <Check className="h-3.5 w-3.5" />
-                                                            Setujui
+                                                            {t('pos.refunds.approveBtn') || 'Setujui'}
                                                         </button>
                                                         <button
                                                             onClick={() => setActionModal({ type: 'REJECTED', refund: r })}
                                                             className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                                                         >
                                                             <Ban className="h-3.5 w-3.5" />
-                                                            Tolak
+                                                            {t('pos.refunds.rejectBtn') || 'Tolak'}
                                                         </button>
                                                     </>
                                                 )}
@@ -316,7 +318,7 @@ export default function POSRefundsPage() {
                                             onClick={() => fetchDetail(r.id)}
                                             className="rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
                                         >
-                                            Detail
+                                            {t('pos.refunds.detailBtn') || 'Detail'}
                                         </button>
                                         {r.status === 'PENDING' && canManage && (
                                             <>
@@ -324,13 +326,13 @@ export default function POSRefundsPage() {
                                                     onClick={() => setActionModal({ type: 'APPROVED', refund: r })}
                                                     className="rounded-lg px-3 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50"
                                                 >
-                                                    Setujui
+                                                    {t('pos.refunds.approveBtn') || 'Setujui'}
                                                 </button>
                                                 <button
                                                     onClick={() => setActionModal({ type: 'REJECTED', refund: r })}
                                                     className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                                 >
-                                                    Tolak
+                                                    {t('pos.refunds.rejectBtn') || 'Tolak'}
                                                 </button>
                                             </>
                                         )}
@@ -343,7 +345,7 @@ export default function POSRefundsPage() {
                     {/* Pagination */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-500">Halaman {page} dari {totalPages}</p>
+                            <p className="text-sm text-gray-500">{t('pos.refunds.pageOf') || `Halaman ${page} dari ${totalPages}`}</p>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -351,14 +353,14 @@ export default function POSRefundsPage() {
                                     className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
-                                    Sebelumnya
+                                    {t('pos.refunds.previous') || 'Sebelumnya'}
                                 </button>
                                 <button
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                     disabled={page === totalPages}
                                     className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600"
                                 >
-                                    Selanjutnya
+                                    {t('pos.refunds.next') || 'Selanjutnya'}
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
                             </div>
@@ -372,7 +374,7 @@ export default function POSRefundsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDetail(false)}>
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Detail Refund</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.refunds.detailTitle') || 'Detail Refund'}</h3>
                             <button onClick={() => setShowDetail(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
@@ -380,31 +382,31 @@ export default function POSRefundsPage() {
 
                         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Nomor Refund</span>
+                                <span className="text-gray-500">{t('pos.refunds.refundNoLabel') || 'Nomor Refund'}</span>
                                 <span className="font-mono font-medium">{detailRefund.refundNo}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Nomor Transaksi</span>
+                                <span className="text-gray-500">{t('pos.refunds.transactionNoLabel') || 'Nomor Transaksi'}</span>
                                 <span className="font-mono font-medium">{detailRefund.transaction.transactionNo}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Tanggal Transaksi</span>
+                                <span className="text-gray-500">{t('pos.refunds.transactionDate') || 'Tanggal Transaksi'}</span>
                                 <span>{formatDateTime(detailRefund.transaction.createdAt)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Pelanggan</span>
+                                <span className="text-gray-500">{t('pos.refunds.customerLabel') || 'Pelanggan'}</span>
                                 <span>{detailRefund.customerName}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Total Transaksi</span>
+                                <span className="text-gray-500">{t('pos.refunds.transactionTotal') || 'Total Transaksi'}</span>
                                 <span className="font-medium">{formatCurrency(detailRefund.transaction.totalAmount)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Metode Pembayaran</span>
+                                <span className="text-gray-500">{t('pos.refunds.paymentMethodLabel') || 'Metode Pembayaran'}</span>
                                 <span>{PAYMENT_METHOD_LABELS[detailRefund.paymentMethod] || detailRefund.paymentMethod}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Status</span>
+                                <span className="text-gray-500">{t('pos.refunds.status') || 'Status'}</span>
                                 <span className={`font-medium ${detailRefund.status === 'APPROVED' ? 'text-green-600' :
                                     detailRefund.status === 'REJECTED' ? 'text-red-600' : 'text-yellow-600'
                                     }`}>
@@ -414,23 +416,23 @@ export default function POSRefundsPage() {
                         </div>
 
                         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2 text-sm">
-                            <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Detail Refund</h4>
+                            <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('pos.refunds.refundInfoLabel') || 'Detail Refund'}</h4>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Jumlah Refund</span>
+                                <span className="text-gray-500">{t('pos.refunds.refundAmount') || 'Jumlah Refund'}</span>
                                 <span className="font-bold text-red-600">{formatCurrency(detailRefund.amount)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Alasan</span>
+                                <span className="text-gray-500">{t('pos.refunds.reason') || 'Alasan'}</span>
                                 <span className="text-right max-w-[60%]">{detailRefund.reason}</span>
                             </div>
                             {detailRefund.approvedAt && (
                                 <div className="flex justify-between">
-                                    <span className="text-gray-500">Disetujui pada</span>
+                                    <span className="text-gray-500">{t('pos.refunds.approvedAt') || 'Disetujui pada'}</span>
                                     <span>{formatDateTime(detailRefund.approvedAt)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Diajukan pada</span>
+                                <span className="text-gray-500">{t('pos.refunds.submittedAt') || 'Diajukan pada'}</span>
                                 <span>{formatDateTime(detailRefund.createdAt)}</span>
                             </div>
                         </div>
@@ -439,7 +441,7 @@ export default function POSRefundsPage() {
                             onClick={() => setShowDetail(false)}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                         >
-                            Tutup
+                            {t('pos.refunds.closeBtn') || 'Tutup'}
                         </button>
                     </div>
                 </div>
@@ -451,7 +453,7 @@ export default function POSRefundsPage() {
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {actionModal.type === 'APPROVED' ? 'Setujui Refund' : 'Tolak Refund'}
+                                {actionModal.type === 'APPROVED' ? (t('pos.refunds.approveTitle') || 'Setujui Refund') : (t('pos.refunds.rejectTitle') || 'Tolak Refund')}
                             </h3>
                             {!actionLoading && (
                                 <button onClick={() => setActionModal(null)} className="text-gray-400 hover:text-gray-600">
@@ -461,22 +463,22 @@ export default function POSRefundsPage() {
                         </div>
                         <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 text-sm space-y-1">
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Refund</span>
+                                <span className="text-gray-500">{t('pos.refunds.refundLabel') || 'Refund'}</span>
                                 <span className="font-mono">{actionModal.refund.refundNo}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Transaksi</span>
+                                <span className="text-gray-500">{t('pos.refunds.transactionLabel') || 'Transaksi'}</span>
                                 <span className="font-mono">{actionModal.refund.transactionNo}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Jumlah</span>
+                                <span className="text-gray-500">{t('pos.refunds.amount') || 'Jumlah'}</span>
                                 <span className="font-bold">{formatCurrency(actionModal.refund.amount)}</span>
                             </div>
                         </div>
                         <p className="text-sm text-gray-500">
                             {actionModal.type === 'APPROVED'
-                                ? 'Dengan menyetujui refund ini, status transaksi akan diubah menjadi REFUNDED.'
-                                : 'Apakah Anda yakin ingin menolak permintaan refund ini?'}
+                                ? (t('pos.refunds.approveConfirmText') || 'Dengan menyetujui refund ini, status transaksi akan diubah menjadi REFUNDED.')
+                                : (t('pos.refunds.rejectConfirmText') || 'Apakah Anda yakin ingin menolak permintaan refund ini?')}
                         </p>
                         <div className="flex gap-3">
                             <button
@@ -484,7 +486,7 @@ export default function POSRefundsPage() {
                                 disabled={actionLoading}
                                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                             >
-                                Batal
+                                {t('pos.refunds.cancel') || 'Batal'}
                             </button>
                             <button
                                 onClick={handleApproveReject}
@@ -494,7 +496,7 @@ export default function POSRefundsPage() {
                                     : 'bg-red-600 hover:bg-red-700'
                                     }`}
                             >
-                                {actionLoading ? 'Memproses...' : actionModal.type === 'APPROVED' ? 'Ya, Setujui' : 'Ya, Tolak'}
+                                {actionLoading ? (t('pos.refunds.processing') || 'Memproses...') : actionModal.type === 'APPROVED' ? (t('pos.refunds.confirmApprove') || 'Ya, Setujui') : (t('pos.refunds.confirmReject') || 'Ya, Tolak')}
                             </button>
                         </div>
                     </div>

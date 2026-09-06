@@ -450,15 +450,21 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         (async () => {
-            // Remove old caches that don't match current version
+            // Remove ALL caches that don't match current version.
+            // This is aggressive but ensures no stale cached responses (including
+            // old auth responses with dropped Set-Cookie headers) persist.
+            // The current SW will re-populate caches as needed via fetch strategies.
             const cacheNames = await caches.keys();
             const oldCaches = cacheNames.filter(
-                (name) => !ALL_CACHES.includes(name) && name.startsWith('qalcuity-')
+                (name) => !ALL_CACHES.includes(name)
             );
 
-            await Promise.all(
-                oldCaches.map((name) => caches.delete(name))
-            );
+            if (oldCaches.length > 0) {
+                console.log('[SW] Cleaning old caches:', oldCaches);
+                await Promise.all(
+                    oldCaches.map((name) => caches.delete(name))
+                );
+            }
 
             // Claim all clients immediately
             await self.clients.claim();
@@ -486,6 +492,17 @@ self.addEventListener('fetch', (event) => {
 
     // Skip chrome-extension and other non-http schemes
     if (!url.protocol.startsWith('http')) {
+        return;
+    }
+
+    // CRITICAL: Skip auth API routes entirely — NEVER intercept authentication requests.
+    // Service Worker proxy can interfere with Set-Cookie header processing in some browsers,
+    // causing session cookies to not be set after login. This breaks the entire auth flow:
+    //   signIn() → POST /api/auth/callback/credentials → Set-Cookie dropped → no session
+    // By returning early (without event.respondWith), the browser handles auth requests directly.
+    // Affected routes: /api/auth/csrf, /api/auth/callback/*, /api/auth/session,
+    //   /api/auth/signin, /api/auth/signout, /api/auth/providers, etc.
+    if (url.pathname.startsWith('/api/auth/')) {
         return;
     }
 

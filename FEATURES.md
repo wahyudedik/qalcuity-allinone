@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 6, 2026 (Industry Packs: Retail + Manufacturing)
+**Last Updated:** September 6, 2026 (Quality Sprint: Error Boundaries, Loading States, i18n Migration)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 14.0 — Industry Packs Complete (Retail + Manufacturing + F&B — 3 packs)
+**Document Version:** 14.1 — Quality Sprint Complete (63 error boundaries, 94 loading states, 1100+ i18n keys)
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -103,7 +103,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Demo Data** | 🚀 `production_ready` | 2026-08-30 | Comprehensive seed data for all modules |
 | **Dark Mode** | 🚀 `production_ready` | 2026-08-30 | Tailwind dark theme support |
 | **Global Search** | 🚀 `production_ready` | 2026-08-30 | Ctrl+K shortcut, cross-module search |
-| **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-01 | Custom provider, 433+ keys, 22+ pages localized |
+| **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-06 | Custom provider, 1100+ keys, all modules localized (Settings 135+, POS 130+, Finance/HR/Inventory 16 keys added) |
 | **Responsive Design** | 🚀 `production_ready` | 2026-09-01 | Mobile-first, 44x44px touch targets, Reports page 12 sub-components |
 | **Responsive Tables** | 🚀 `production_ready` | 2026-09-01 | Dual layout: mobile cards + desktop tables (19 pages) |
 | **Zod Validation** | 🚀 `production_ready` | 2026-08-30 | 14+ schemas, all mutation routes validated |
@@ -113,7 +113,8 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Toast Notifications** | 🚀 `production_ready` | 2026-09-01 | Centralized toast provider — toast.tsx + ToastProvider in layout |
 | **Confirmation Dialogs** | 🚀 `production_ready` | 2026-09-01 | ConfirmDialog component — 24 window.confirm calls replaced |
 | **Navigation Links** | 🚀 `production_ready` | 2026-08-30 | Cross-entity navigation (e.g., Invoice → Contact) |
-| **Loading States** | 🚀 `production_ready` | 2026-09-01 | 28 loading.tsx files for detail & workspace pages |
+| **Loading States** | 🚀 `production_ready` | 2026-09-06 | 94 loading.tsx files — all detail, workspace, and module pages covered |
+| **Error Boundaries** | 🚀 `production_ready` | 2026-09-06 | 63 error.tsx files — all module sections + detail pages covered (HR, CRM, Inventory, Finance, POS, Settings, Analytics, Platform) |
 | **Inline Error Banners** | 🚀 `production_ready` | 2026-09-01 | Inline error display on form pages — replaces silent failures |
 | **Security Hardening** | 🚀 `production_ready` | 2026-09-01 | .gitignore hardened, .env removed from git history |
 | **.env.example Updated** | 🚀 `production_ready` | 2026-09-01 | Comprehensive env template with comments for all config vars |
@@ -1464,7 +1465,7 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~62 | ~35% |
+| `production_ready` | 🚀 | ~64 | ~35% |
 | `implemented` | ✅ | ~48 | ~27% |
 | `verified` | ✔️ | 1 | ~1% |
 | `partial` | 🔄 | ~21 | ~12% |
@@ -1472,8 +1473,9 @@ Electron-based desktop application.
 | `planned` | 📋 | ~141 | ~39% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~286** | **100%** |
+| **Total** | | **~288** | **100%** |
 
+> **Quality Sprint Impact (6 Sep):** +2 production_ready (Error Boundaries, Loading States updated with new counts), +281 i18n keys → Net: production_ready 62→64, total 286→288
 > **Mega Sprint Impact (5 Sep):** +3 implemented (F&B Pack, AI Chat real, AI Provider real), -3 planned → Net: implemented 45→48, planned 144→141, total 286→286
 > **POS Phase 7 Impact (Table Management):** +8 implemented (Table Management, Database, API Routes, UI Page, Table Card, Reservation Form, Custom Hook, Status Machine), -8 planned → Net: implemented 37→45, planned 152→144, total 289→289 (adjusted for new features)
 > **POS Phase 6 Impact (Kitchen Display):** +9 implemented (KDS Display, Order Card, Station Filter, Timer, Stats Bar, API Routes, Custom Hook, Database Models, Kitchen Display System), -9 planned → Net: implemented 36→45, planned 153→144, total 277→286
@@ -1484,6 +1486,13 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v14.1.0 (September 6, 2026) — Quality Sprint Complete
+- **Error Boundaries** — 18 new error.tsx files for detail pages across HR (employees/[id], leaves/[id]), CRM (contacts/[id], deals/[id], leads/[id]), Inventory (products/[id], stock-opname/[id], suppliers/[id]), Finance (invoices/[id], payments/[id], purchase-orders/[id], quotations/[id]), POS (kitchen, loyalty, refunds, sessions, tables, terminals) — Total: 63 error.tsx files
+- **Loading States** — 1 new loading.tsx for POS root — Total: 94 loading.tsx files
+- **i18n Migration** — 281+ new strings migrated: Settings module (5 files, 135+ strings), POS module (8 files, 130+ strings), Finance/HR/Inventory (9 files, 16 new keys) — Total: 1100+ i18n keys
+- **Bug Fix** — `journal-entries/page.tsx`: `sourceTypeLabels` → `getSourceLabel()` for i18n consistency
+- **Status Summary** — production_ready: 62→64, total: 286→288
 
 ### v13.0.0 (September 5, 2026) — Mega Sprint Complete
 - **POS Offline Mode (Phase 5)** — Full offline capability: IndexedDB (Dexie.js), sync queue with exponential backoff, service worker (cache-first/network-first), React hooks, UI indicators, 10 files

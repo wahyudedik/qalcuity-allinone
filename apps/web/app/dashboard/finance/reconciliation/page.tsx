@@ -819,27 +819,27 @@ export default function ReconciliationPage() {
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmtDate(selectedDetailTx.date)}</span>
                                 </div>
                                 <div className="mt-2 flex items-center justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Jumlah</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('finance.reconciliation.amount') || 'Jumlah'}</span>
                                     <span className={`text-sm font-semibold ${selectedDetailTx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                         {selectedDetailTx.amount >= 0 ? '+' : ''}{formatCurrencyFull(selectedDetailTx.amount)}
                                     </span>
                                 </div>
                                 <div className="mt-2 flex items-center justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Tipe</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('finance.reconciliation.type') || 'Tipe'}</span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{selectedDetailTx.type}</span>
                                 </div>
                                 <div className="mt-2 flex items-center justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('finance.reconciliation.status') || 'Status'}</span>
                                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${selectedDetailTx.status === 'matched' ? 'bg-green-100 text-green-700' :
-                                            selectedDetailTx.status === 'discrepancy' ? 'bg-red-100 text-red-700' :
-                                                'bg-yellow-100 text-yellow-700'
+                                        selectedDetailTx.status === 'discrepancy' ? 'bg-red-100 text-red-700' :
+                                            'bg-yellow-100 text-yellow-700'
                                         }`}>
                                         {selectedDetailTx.status}
                                     </span>
                                 </div>
                                 {selectedDetailTx.bankReference && (
                                     <div className="mt-2 flex items-center justify-between">
-                                        <span className="text-sm text-gray-500 dark:text-gray-400">Referensi Bank</span>
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">{t('finance.reconciliation.bankReference') || 'Referensi Bank'}</span>
                                         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedDetailTx.bankReference}</span>
                                     </div>
                                 )}
