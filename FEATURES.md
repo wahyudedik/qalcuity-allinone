@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 5, 2026 (Mega Sprint Complete)
+**Last Updated:** September 6, 2026 (Industry Packs: Retail + Manufacturing)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 13.0 — Mega Sprint Complete (POS Offline + KDS + Tables + Operations + AI + API Package + F&B Pack)
+**Document Version:** 14.0 — Industry Packs Complete (Retail + Manufacturing + F&B — 3 packs)
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -375,19 +375,21 @@ HR yang efisien dengan automation untuk fokus pada people.
 
 ## 6. Operations & Project
 
-Manage projects dan field operations dengan efisien. **MVP Phase A Complete** (5 September 2026).
+Manage projects dan field operations dengan efisien. **Phase A + Phase B Complete** (5 September 2026).
 
 ### 6.1 Project Management
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Project CRUD** | ✅ `implemented` | 2026-09-05 | Full CRUD: list (grid cards), detail (4 tabs: Overview, Tasks, Members, Budget), search/filter — [`apps/web/app/dashboard/projects/`](apps/web/app/dashboard/projects/) |
+| **Project CRUD** | ✅ `implemented` | 2026-09-05 | Full CRUD: list (grid cards), detail (6 tabs: Overview, Tasks, Members, Budget, Gantt, Resources), search/filter — [`apps/web/app/dashboard/projects/`](apps/web/app/dashboard/projects/) |
 | **Project Members** | ✅ `implemented` | 2026-09-05 | Add/remove members with role (LEAD/MEMBER/VIEWER) — API + UI integrated |
-| **Project Budget Tracking** | ✅ `implemented` | 2026-09-05 | Budget field on Project model, displayed in project detail Budget tab |
+| **Project Budget Tracking** | ✅ `implemented` | 2026-09-05 | Budget vs actual per category (LABOR/MATERIAL/EQUIPMENT/TRAVEL/SOFTWARE/OTHER), progress bars, line items — [`apps/web/app/api/projects/[id]/budget/route.ts`](apps/web/app/api/projects/[id]/budget/route.ts) |
 | **Kanban Board** | ✅ `implemented` | 2026-09-05 | 4 columns (TODO/IN_PROGRESS/IN_REVIEW/DONE), button-based status change — [`apps/web/app/dashboard/projects/[id]/board.tsx`](apps/web/app/dashboard/projects/[id]/board.tsx) |
+| **Gantt Chart** | ✅ `implemented` | 2026-09-05 | Visual timeline with task bars, progress, dependencies, today marker, desktop + mobile views — [`apps/web/app/dashboard/projects/[id]/gantt/page.tsx`](apps/web/app/dashboard/projects/[id]/gantt/page.tsx) |
+| **Resource Allocation** | ✅ `implemented` | 2026-09-05 | Employee utilization heatmap, allocation %, overlap detection, hourly rate — [`apps/web/app/dashboard/projects/[id]/resources/page.tsx`](apps/web/app/dashboard/projects/[id]/resources/page.tsx) |
+| **Task Dependencies** | ✅ `implemented` | 2026-09-05 | Self-referential dependency with circular detection, inline editor — [`task-dependency-editor.tsx`](apps/web/components/operations/task-dependency-editor.tsx) |
+| **Project Timeline** | ✅ `implemented` | 2026-09-05 | Milestone visualization, progress tracking, today marker — [`project-timeline.tsx`](apps/web/components/operations/project-timeline.tsx) |
 | **Project Types** | 📋 `planned` | — | Belum ada kode |
-| **Gantt Chart** | 📋 `planned` | — | Belum ada kode |
-| **Resource Allocation** | 📋 `planned` | — | Belum ada kode |
 
 ### 6.2 Task & Time Tracking
 
@@ -402,14 +404,16 @@ Manage projects dan field operations dengan efisien. **MVP Phase A Complete** (5
 
 ### 6.3 Field Service Module
 
+> **Phase C Complete** (5 September 2026) — Job scheduling, technician assignment, mobile checklist
+
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Job Scheduling** | 📋 `planned` | — | Belum ada kode |
-| **Technician Assignment** | 📋 `planned` | — | Belum ada kode |
-| **Mobile Checklist** | 📋 `planned` | — | Belum ada kode |
-| **Before-After Photos** | 📋 `planned` | — | Belum ada kode |
-| **Digital Signature** | 📋 `planned` | — | Belum ada kode |
-| **Job Status Update** | 📋 `planned` | — | Belum ada kode |
+| **Job Scheduling** | ✅ `implemented` | 2026-09-05 | Field job CRUD with GPS, scheduling, customer info — [`apps/web/app/dashboard/field/jobs/page.tsx`](apps/web/app/dashboard/field/jobs/page.tsx) |
+| **Technician Assignment** | ✅ `implemented` | 2026-09-05 | Multi-technician assignment with role (LEAD/TECHNICIAN/HELPER) — API + UI |
+| **Mobile Checklist** | ✅ `implemented` | 2026-09-05 | Mobile-first checklist form with checkbox/text/number/photo/signature — [`apps/web/app/dashboard/field/checklists/page.tsx`](apps/web/app/dashboard/field/checklists/page.tsx) |
+| **Before-After Photos** | ✅ `implemented` | 2026-09-05 | Photo capture support in checklist items (PHOTO type) |
+| **Digital Signature** | ✅ `implemented` | 2026-09-05 | Signature capture support in checklist items (SIGNATURE type) |
+| **Job Status Update** | ✅ `implemented` | 2026-09-05 | Status workflow: PENDING→IN_PROGRESS→COMPLETED with timestamps |
 
 ### 6.4 Quality & Compliance
 
@@ -592,7 +596,10 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **PDF Processing** | 📋 `planned` | — | Belum ada kode |
+| **Document Extraction Engine** | ✅ `implemented` | 2026-09-05 | AI vision + regex fallback, 5 document types (Invoice, PO, Receipt, KTP, NPWP) |
+| **Extraction API** | ✅ `implemented` | 2026-09-05 | POST `/api/ai/extract` — base64 upload, RBAC, rate limiting, audit logging |
+| **Document Extractor UI** | ✅ `implemented` | 2026-09-05 | Drag-and-drop upload, document type selector, confidence display, apply-to-form |
+| **Document Extraction Page** | ✅ `implemented` | 2026-09-05 | `/dashboard/ai/documents` — extraction + history sidebar with type filter |
 | **OCR** | 📋 `planned` | — | Belum ada kode |
 | **Auto-validation** | 📋 `planned` | — | Belum ada kode |
 | **Auto-entry** | 📋 `planned` | — | Belum ada kode |
@@ -610,8 +617,11 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
+| **Anomaly Detection Engine** | ✅ `implemented` | 2026-09-05 | 12 rule-based detection rules + AI enrichment, severity levels (CRITICAL/HIGH/MEDIUM/LOW) |
+| **Anomaly Detection API** | ✅ `implemented` | 2026-09-05 | GET+POST `/api/ai/anomalies` — scan, filter, pagination, in-memory cache (5min TTL) |
+| **Anomaly List UI** | ✅ `implemented` | 2026-09-05 | Expandable cards, severity/status badges, AI risk score, action buttons (Investigate/Dismiss/Block) |
+| **Anomaly Detection Page** | ✅ `implemented` | 2026-09-05 | `/dashboard/ai/anomalies` — severity dashboard, scan now, filters |
 | **Fraud Detection** | 📋 `planned` | — | Belum ada kode |
-| **Data Error** | 📋 `planned` | — | Belum ada kode |
 | **Compliance Alert** | 📋 `planned` | — | Belum ada kode |
 | **Performance Anomaly** | 📋 `planned` | — | Belum ada kode |
 
@@ -1029,11 +1039,14 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Retail Pack** | 📋 `planned` | — | Default config untuk retail industry |
-| **POS Integration** | 📋 `planned` | — | Point of Sale workflow configuration |
-| **Stock Replenishment** | 📋 `planned` | — | Auto-reorder workflow |
-| **Barcode Management** | 📋 `planned` | — | Barcode field + scanning workflow |
-| **Dashboard: Sales, Stock, Top Products, Cash, Customer** | 📋 `planned` | — | Retail-specific dashboard widgets |
+| **Retail Pack** | ✅ `implemented` | 2026-09-06 | Retail pack: custom fields, workflows, dashboard — [`packages/industry-config/src/packs/retail.ts`](packages/industry-config/src/packs/retail.ts) |
+| **POS Integration** | ✅ `implemented` | 2026-09-06 | POS settings: In-Store order type, loyalty enabled |
+| **Stock Replenishment** | ✅ `implemented` | 2026-09-06 | Purchase order workflow: DRAFT→APPROVED→ORDERED→RECEIVED |
+| **Barcode Management** | ✅ `implemented` | 2026-09-06 | SKU (required), barcode, size, color, brand, season fields |
+| **Customer Loyalty** | ✅ `implemented` | 2026-09-06 | Membership tier, points balance, preferred category fields |
+| **Return/Exchange Flow** | ✅ `implemented` | 2026-09-06 | Workflow: REQUESTED→APPROVED→PROCESSED/DENIED |
+| **Stock Adjustment** | ✅ `implemented` | 2026-09-06 | Approval workflow for stock adjustments |
+| **Dashboard: Sales, Stock, Brands, Retention** | ✅ `implemented` | 2026-09-06 | 5 widgets: sales by category, inventory turnover, top brands, retention, low stock |
 
 ### 14.2 Industry Pack: Wholesale/Distribution
 
@@ -1049,13 +1062,14 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Manufacturing Pack** | 📋 `planned` | — | Default config untuk manufacturing |
-| **Work Order** | 📋 `planned` | — | Custom document: Work Order workflow |
-| **Bill of Materials (BOM)** | 📋 `planned` | — | BOM configuration |
-| **Quality Report** | 📋 `planned` | — | Custom document: Quality Control Report |
-| **Production Line** | 📋 `planned` | — | Production line field + assignment |
-| **Batch/Lot Tracking** | 📋 `planned` | — | Batch number + expiry date fields |
-| **Dashboard: Production, Material, Machine, Quality, WIP, Inventory** | 📋 `planned` | — | Manufacturing-specific dashboard |
+| **Manufacturing Pack** | ✅ `implemented` | 2026-09-06 | Manufacturing pack: custom fields, workflows, dashboard — [`packages/industry-config/src/packs/manufacturing.ts`](packages/industry-config/src/packs/manufacturing.ts) |
+| **Production Order** | ✅ `implemented` | 2026-09-06 | Workflow: PLANNED→IN_PROGRESS→QC→COMPLETED |
+| **Bill of Materials (BOM)** | ✅ `implemented` | 2026-09-06 | BOM approval workflow: DRAFT→PENDING_APPROVAL→APPROVED/REJECTED |
+| **Quality Control** | ✅ `implemented` | 2026-09-06 | QC status field (Pending/Passed/Failed/On Hold), defect rate widget |
+| **Production Line** | ✅ `implemented` | 2026-09-06 | Production line, machine ID, shift, quality score fields |
+| **Batch/Lot Tracking** | ✅ `implemented` | 2026-09-06 | Lot number, expiry date, serial number, QC status fields |
+| **Maintenance Management** | ✅ `implemented` | 2026-09-06 | Maintenance request workflow: SUBMITTED→IN_PROGRESS→COMPLETED/DEFERRED |
+| **Dashboard: Production, Quality, Machine, OEE** | ✅ `implemented` | 2026-09-06 | 5 widgets: production output, defect rate, machine utilization, OEE, low stock |
 
 ### 14.4 Industry Pack: Construction
 
@@ -1288,7 +1302,7 @@ Electron-based desktop application.
 
 | Module | Harga | Status | Notes |
 |--------|-------|--------|-------|
-| Field Service | Rp 199rb/bulan | 📋 `planned` | Belum ada kode |
+| Field Service | Rp 199rb/bulan | ✅ `implemented` | Phase C Complete — Job scheduling + Mobile checklist |
 | Advanced AI Agent | Rp 299rb/bulan | 📋 `planned` | Belum ada kode |
 | White-label | Rp 499rb/bulan | 📋 `planned` | Belum ada kode |
 | Dedicated Support | Rp 399rb/bulan | 📋 `planned` | Belum ada kode |
@@ -1567,7 +1581,7 @@ Electron-based desktop application.
 ### v4.0.0 (August 31, 2026) — Business Operating System Architecture
 - **Architecture Formalization** — Qalcuity defined as "Business Operating System" (not ERP)
 - **Three Foundation Engines** — Permission Engine, Workflow Engine, Industry Configuration Engine
-- **Industry Packs** — 9 industry packs planned (Retail, Wholesale, Manufacturing, F&B, Construction, Property, Logistics, Services, Education, Healthcare)
+- **Industry Packs** — 3 packs implemented (Retail, Manufacturing, F&B), 7 planned (Wholesale, Construction, Consulting, Logistics, Education, Healthcare)
 - **New Section 13** — Architecture Engines (Permission, Workflow, Industry Config)
 - **New Section 14** — Industry Packs (9 industries with custom workflows, fields, documents)
 - **Sections renumbered** — Mobile → 15, Desktop → 16, Pricing → 17
