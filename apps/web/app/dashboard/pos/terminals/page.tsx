@@ -31,16 +31,16 @@ type TerminalDetail = Terminal & {
     }[]
 }
 
-const STATUS_LABELS: Record<string, string> = {
-    ACTIVE: 'Aktif',
-    INACTIVE: 'Nonaktif',
-    MAINTENANCE: 'Perawatan',
-}
-
 export default function POSTerminalsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
     const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+
+    const STATUS_LABELS: Record<string, string> = {
+        ACTIVE: t('pos.terminals.active') || 'Aktif',
+        INACTIVE: t('pos.terminals.inactive') || 'Nonaktif',
+        MAINTENANCE: t('pos.terminals.maintenance') || 'Perawatan',
+    }
 
     const [terminals, setTerminals] = useState<Terminal[]>([])
     const [loading, setLoading] = useState(true)
@@ -86,14 +86,14 @@ export default function POSTerminalsPage() {
                 setTerminals(data.data)
                 setTotalPages(1)
             } else {
-                setError(data.error || 'Gagal memuat data terminal')
+                setError(data.error || (t('pos.terminals.errorLoad') || 'Gagal memuat data terminal'))
             }
         } catch {
-            setError('Gagal memuat data terminal. Periksa koneksi jaringan Anda.')
+            setError(t('pos.terminals.errorLoadNetwork') || 'Gagal memuat data terminal. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
-    }, [filterStatus, searchQuery])
+    }, [filterStatus, searchQuery, t])
 
     useEffect(() => {
         fetchTerminals()
@@ -143,16 +143,16 @@ export default function POSTerminalsPage() {
             const data = await response.json()
             if (data.success) {
                 setToast({
-                    message: editingTerminal ? 'Terminal berhasil diperbarui' : 'Terminal berhasil dibuat',
+                    message: editingTerminal ? (t('pos.terminals.successUpdate') || 'Terminal berhasil diperbarui') : (t('pos.terminals.successCreate') || 'Terminal berhasil dibuat'),
                     type: 'success',
                 })
                 setShowFormModal(false)
                 fetchTerminals()
             } else {
-                setFormError(data.error || data.details?.[0]?.[0] || 'Gagal menyimpan terminal')
+                setFormError(data.error || data.details?.[0]?.[0] || (t('pos.terminals.errorSave') || 'Gagal menyimpan terminal'))
             }
         } catch {
-            setFormError('Gagal menyimpan terminal')
+            setFormError(t('pos.terminals.errorSave') || 'Gagal menyimpan terminal')
         } finally {
             setFormLoading(false)
         }
@@ -165,14 +165,14 @@ export default function POSTerminalsPage() {
             const response = await fetch(`/api/pos/terminals/${showDeleteModal.id}`, { method: 'DELETE' })
             const data = await response.json()
             if (data.success) {
-                setToast({ message: 'Terminal berhasil dihapus', type: 'success' })
+                setToast({ message: t('pos.terminals.successDelete') || 'Terminal berhasil dihapus', type: 'success' })
                 setShowDeleteModal(null)
                 fetchTerminals()
             } else {
-                setToast({ message: data.error || 'Gagal menghapus terminal', type: 'error' })
+                setToast({ message: data.error || (t('pos.terminals.errorDelete') || 'Gagal menghapus terminal'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus terminal', type: 'error' })
+            setToast({ message: t('pos.terminals.errorDelete') || 'Gagal menghapus terminal', type: 'error' })
         } finally {
             setDeleteLoading(false)
         }
@@ -187,7 +187,7 @@ export default function POSTerminalsPage() {
                 setShowDetail(true)
             }
         } catch {
-            setToast({ message: 'Gagal memuat detail terminal', type: 'error' })
+            setToast({ message: t('pos.terminals.errorLoadDetail') || 'Gagal memuat detail terminal', type: 'error' })
         }
     }
 
@@ -256,7 +256,7 @@ export default function POSTerminalsPage() {
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <AlertCircle className="h-12 w-12 text-red-400 mb-3" />
                     <p className="text-sm text-gray-500">{error}</p>
-                    <button onClick={fetchTerminals} className="mt-3 text-sm text-blue-600 hover:underline">Coba Lagi</button>
+                    <button onClick={fetchTerminals} className="mt-3 text-sm text-blue-600 hover:underline">{t('pos.terminals.retry') || 'Coba Lagi'}</button>
                 </div>
             ) : filtered.length === 0 ? (
                 <EmptyState
@@ -277,7 +277,7 @@ export default function POSTerminalsPage() {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.terminals.name') || 'Nama'}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.terminals.location') || 'Lokasi'}</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.terminals.status') || 'Status'}</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Sesi</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.terminals.session') || 'Sesi'}</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.terminals.actions') || 'Aksi'}</th>
                                 </tr>
                             </thead>
@@ -289,8 +289,8 @@ export default function POSTerminalsPage() {
                                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{terminal.location || '-'}</td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${terminal.status === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                    terminal.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                        'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                                                terminal.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                    'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
                                                 }`}>
                                                 {STATUS_LABELS[terminal.status] || terminal.status}
                                             </span>
@@ -312,7 +312,7 @@ export default function POSTerminalsPage() {
                                                     className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                                 >
                                                     <Eye className="h-3.5 w-3.5" />
-                                                    Detail
+                                                    {t('pos.terminals.detailBtn') || 'Detail'}
                                                 </button>
                                                 {canManage && (
                                                     <>
@@ -321,14 +321,14 @@ export default function POSTerminalsPage() {
                                                             className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/20"
                                                         >
                                                             <Pencil className="h-3.5 w-3.5" />
-                                                            Edit
+                                                            {t('pos.terminals.editBtn') || 'Edit'}
                                                         </button>
                                                         <button
                                                             onClick={() => setShowDeleteModal(terminal)}
                                                             className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
-                                                            Hapus
+                                                            {t('pos.terminals.deleteBtn') || 'Hapus'}
                                                         </button>
                                                     </>
                                                 )}
@@ -347,25 +347,25 @@ export default function POSTerminalsPage() {
                                 <div className="flex items-start justify-between">
                                     <div>
                                         <p className="font-mono text-sm font-medium text-gray-900 dark:text-white">{terminal.code}</p>
-                                        <p className="text-xs text-gray-400">{terminal.location || 'Tidak ada lokasi'}</p>
+                                        <p className="text-xs text-gray-400">{terminal.location || (t('pos.terminals.noLocation') || 'Tidak ada lokasi')}</p>
                                     </div>
                                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${terminal.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                                            terminal.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-gray-100 text-gray-700'
+                                        terminal.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-gray-100 text-gray-700'
                                         }`}>
                                         {STATUS_LABELS[terminal.status] || terminal.status}
                                     </span>
                                 </div>
                                 <p className="mt-1 text-sm text-gray-600">{terminal.name}</p>
                                 {terminal.activeSession && (
-                                    <p className="mt-1 text-xs text-green-600">Sesi aktif: {terminal.activeSession.cashierName}</p>
+                                    <p className="mt-1 text-xs text-green-600">{t('pos.terminals.activeSession') || 'Sesi aktif:'} {terminal.activeSession.cashierName}</p>
                                 )}
                                 <div className="mt-3 flex gap-1">
                                     <button
                                         onClick={() => fetchDetail(terminal.id)}
                                         className="rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
                                     >
-                                        Detail
+                                        {t('pos.terminals.detailBtn') || 'Detail'}
                                     </button>
                                     {canManage && (
                                         <>
@@ -373,13 +373,13 @@ export default function POSTerminalsPage() {
                                                 onClick={() => openEditModal(terminal)}
                                                 className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
                                             >
-                                                Edit
+                                                {t('pos.terminals.editBtn') || 'Edit'}
                                             </button>
                                             <button
                                                 onClick={() => setShowDeleteModal(terminal)}
                                                 className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                             >
-                                                Hapus
+                                                {t('pos.terminals.deleteBtn') || 'Hapus'}
                                             </button>
                                         </>
                                     )}
@@ -395,7 +395,7 @@ export default function POSTerminalsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDetail(false)}>
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Detail Terminal</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.terminals.terminalDetails') || 'Detail Terminal'}</h3>
                             <button onClick={() => setShowDetail(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
@@ -403,21 +403,21 @@ export default function POSTerminalsPage() {
 
                         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Kode</span>
+                                <span className="text-gray-500">{t('pos.terminals.form.code') || 'Kode'}</span>
                                 <span className="font-mono font-medium">{detailTerminal.code}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Nama</span>
+                                <span className="text-gray-500">{t('pos.terminals.form.name') || 'Nama'}</span>
                                 <span className="font-medium">{detailTerminal.name}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Lokasi</span>
+                                <span className="text-gray-500">{t('pos.terminals.form.location') || 'Lokasi'}</span>
                                 <span>{detailTerminal.location || '-'}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Status</span>
+                                <span className="text-gray-500">{t('pos.terminals.form.status') || 'Status'}</span>
                                 <span className={`font-medium ${detailTerminal.status === 'ACTIVE' ? 'text-green-600' :
-                                        detailTerminal.status === 'MAINTENANCE' ? 'text-yellow-600' : 'text-gray-600'
+                                    detailTerminal.status === 'MAINTENANCE' ? 'text-yellow-600' : 'text-gray-600'
                                     }`}>
                                     {STATUS_LABELS[detailTerminal.status] || detailTerminal.status}
                                 </span>
@@ -426,7 +426,7 @@ export default function POSTerminalsPage() {
 
                         {/* Sessions History */}
                         <div>
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Riwayat Sesi</h4>
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('pos.terminals.sessionHistory') || 'Riwayat Sesi'}</h4>
                             {detailTerminal.sessions.length > 0 ? (
                                 <div className="space-y-1.5">
                                     {detailTerminal.sessions.map((s) => (
@@ -434,7 +434,7 @@ export default function POSTerminalsPage() {
                                             <div>
                                                 <span className="font-medium">{s.cashierName}</span>
                                                 <span className={`ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${s.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                    {s.status === 'OPEN' ? 'Buka' : 'Tutup'}
+                                                    {s.status === 'OPEN' ? (t('pos.terminals.sessionOpen') || 'Buka') : (t('pos.terminals.sessionClosed') || 'Tutup')}
                                                 </span>
                                             </div>
                                             <span className="text-xs text-gray-400">{new Date(s.openedAt).toLocaleDateString('id-ID')}</span>
@@ -442,7 +442,7 @@ export default function POSTerminalsPage() {
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-sm text-gray-400">Belum ada riwayat sesi</p>
+                                <p className="text-sm text-gray-400">{t('pos.terminals.noSessionHistory') || 'Belum ada riwayat sesi'}</p>
                             )}
                         </div>
 
@@ -450,7 +450,7 @@ export default function POSTerminalsPage() {
                             onClick={() => setShowDetail(false)}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                         >
-                            Tutup
+                            {t('pos.terminals.cancel') || 'Tutup'}
                         </button>
                     </div>
                 </div>
@@ -462,7 +462,7 @@ export default function POSTerminalsPage() {
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {editingTerminal ? 'Edit Terminal' : 'Tambah Terminal'}
+                                {editingTerminal ? (t('pos.terminals.editTerminal') || 'Edit Terminal') : (t('pos.terminals.addTerminal') || 'Tambah Terminal')}
                             </h3>
                             {!formLoading && (
                                 <button onClick={() => setShowFormModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -479,47 +479,47 @@ export default function POSTerminalsPage() {
 
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Terminal *</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.terminals.nameLabel') || 'Nama Terminal *'}</label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="Contoh: Kasir Utama"
+                                    placeholder={t('pos.terminals.form.namePlaceholder') || 'contoh: Kasir Utama'}
                                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kode Terminal *</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.terminals.codeLabel') || 'Kode Terminal *'}</label>
                                 <input
                                     type="text"
                                     value={formData.code}
                                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                    placeholder="Contoh: KSR-001"
+                                    placeholder={t('pos.terminals.form.codePlaceholder') || 'contoh: T001'}
                                     disabled={!!editingTerminal}
                                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lokasi</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.terminals.form.location') || 'Lokasi'}</label>
                                 <input
                                     type="text"
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    placeholder="Contoh: Lantai 1, Depan Kasir"
+                                    placeholder={t('pos.terminals.form.locationPlaceholder') || 'contoh: Lantai Dasar'}
                                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
                             {editingTerminal && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.terminals.form.status') || 'Status'}</label>
                                     <select
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     >
-                                        <option value="ACTIVE">Aktif</option>
-                                        <option value="INACTIVE">Nonaktif</option>
-                                        <option value="MAINTENANCE">Perawatan</option>
+                                        <option value="ACTIVE">{t('pos.terminals.active') || 'Aktif'}</option>
+                                        <option value="INACTIVE">{t('pos.terminals.inactive') || 'Nonaktif'}</option>
+                                        <option value="MAINTENANCE">{t('pos.terminals.maintenance') || 'Perawatan'}</option>
                                     </select>
                                 </div>
                             )}
@@ -531,14 +531,14 @@ export default function POSTerminalsPage() {
                                 disabled={formLoading}
                                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                             >
-                                Batal
+                                {t('pos.terminals.cancel') || 'Batal'}
                             </button>
                             <button
                                 onClick={handleFormSubmit}
                                 disabled={formLoading || !formData.name || !formData.code}
                                 className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                             >
-                                {formLoading ? 'Menyimpan...' : editingTerminal ? 'Simpan Perubahan' : 'Buat Terminal'}
+                                {formLoading ? (t('pos.terminals.saving') || 'Menyimpan...') : editingTerminal ? (t('pos.terminals.saveChanges') || 'Simpan Perubahan') : (t('pos.terminals.createTerminal') || 'Buat Terminal')}
                             </button>
                         </div>
                     </div>
@@ -550,7 +550,7 @@ export default function POSTerminalsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !deleteLoading && setShowDeleteModal(null)}>
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Hapus Terminal</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.terminals.deleteTitle') || 'Hapus Terminal'}</h3>
                             {!deleteLoading && (
                                 <button onClick={() => setShowDeleteModal(null)} className="text-gray-400 hover:text-gray-600">
                                     <X className="h-5 w-5" />
@@ -558,7 +558,7 @@ export default function POSTerminalsPage() {
                             )}
                         </div>
                         <p className="text-sm text-gray-500">
-                            Apakah Anda yakin ingin menghapus terminal <strong>{showDeleteModal.name}</strong> ({showDeleteModal.code})? Tindakan ini tidak dapat dibatalkan.
+                            {t('pos.terminals.deleteConfirm') || 'Apakah Anda yakin ingin menghapus terminal'} <strong>{showDeleteModal.name}</strong> ({showDeleteModal.code})? {t('pos.terminals.deleteWarning') || 'Tindakan ini tidak dapat dibatalkan. Semua sesi dan transaksi terkait akan terpengaruh.'}
                         </p>
                         <div className="flex gap-3">
                             <button
@@ -566,14 +566,14 @@ export default function POSTerminalsPage() {
                                 disabled={deleteLoading}
                                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                             >
-                                Batal
+                                {t('pos.terminals.cancel') || 'Batal'}
                             </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={deleteLoading}
                                 className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                             >
-                                {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
+                                {deleteLoading ? (t('pos.terminals.deleting') || 'Menghapus...') : (t('pos.terminals.confirmDeleteButton') || 'Ya, Hapus')}
                             </button>
                         </div>
                     </div>

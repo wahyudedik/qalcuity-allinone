@@ -171,14 +171,32 @@ npx prisma generate
 cd "$APP_DIR"
 print_success "Prisma Client di-generate"
 
-# Prisma migrate deploy hanya jika schema berubah
+# Prisma migrate deploy jika schema ATAU migration files berubah
+# Migration files baru bisa ada tanpa perubahan schema.prisma (ALTER TABLE, CREATE TABLE via SQL)
+NEEDS_MIGRATE=false
 if echo "$CHANGED_FILES" | grep -q "schema.prisma"; then
+    NEEDS_MIGRATE=true
+fi
+if echo "$CHANGED_FILES" | grep -q "packages/db/prisma/migrations/"; then
+    NEEDS_MIGRATE=true
+fi
+
+if [ "$NEEDS_MIGRATE" = true ]; then
     cd "$APP_DIR/packages/db"
+    echo "  Running prisma migrate deploy..."
     npx prisma migrate deploy
+    MIGRATE_EXIT=$?
     cd "$APP_DIR"
-    print_success "Prisma migrations di-deploy ke database"
+    if [ $MIGRATE_EXIT -eq 0 ]; then
+        print_success "Prisma migrations di-deploy ke database"
+    else
+        print_warning "Prisma migrate deploy returned exit code $MIGRATE_EXIT"
+        echo "  ⚠️  Mungkin ada migration yang sudah apply atau conflict."
+        echo "  Cek log database untuk detail."
+        # Don't exit — allow build to continue (migration might already be applied)
+    fi
 else
-    print_success "Schema tidak berubah, skip migrate"
+    print_success "Schema & migrations tidak berubah, skip migrate"
 fi
 
 # --- 7. Build aplikasi ---

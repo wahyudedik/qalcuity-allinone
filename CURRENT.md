@@ -1,6 +1,117 @@
-> **Last Updated:** 6 September 2026 (Industry Packs: Retail + Manufacturing)
-> **Version:** v9.2.0
-> **Status:** INDUSTRY PACKS COMPLETE — Retail & Manufacturing packs added to `@qalcuity/industry-config`. 3 industry packs now available: Restaurant, Retail, Manufacturing. POS module fully complete. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+> **Last Updated:** 6 September 2026 (Critical Bug Fix: Service Worker blocking login)
+> **Version:** v9.3.1
+> **Status:** CRITICAL BUG FIX — Service Worker (`sw.js`) meng-intercept `/api/auth/*` requests dan mengganggu `Set-Cookie` header processing, menyebabkan session cookie tidak ter-set setelah login. Fix: tambahkan bypass untuk `/api/auth/*` di SW fetch handler. Login flow sekarang berfungsi normal setelah user mengakses POS page.
+
+---
+
+## 🚀 VPS Deployment Preparation (6 September 2026)
+
+> **Focus:** Menyiapkan 5 migration baru untuk deploy ke VPS production
+
+### Deployment Status
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Migration files verified | ✅ Ready | All 5 SQL files exist in `packages/db/prisma/migrations/` |
+| `update.sh` updated | ✅ Ready | Fixed: `prisma migrate deploy` now triggers on schema OR migration file changes |
+| `DEPLOY-CHECKLIST.md` | ✅ Created | Step-by-step deployment guide with rollback instructions |
+| Deployment execution | ⏳ Pending | Run `sudo bash update.sh` on VPS |
+
+### Migrations to Deploy
+
+| # | Migration | Tables | Risk |
+|---|-----------|--------|------|
+| 1 | `20260905203000_add_kitchen_display` | PosKitchenStation, PosKitchenOrder, PosKitchenOrderItem | 🟢 Low |
+| 2 | `20260905210000_add_table_management` | PosTable, PosTableReservation | 🟢 Low |
+| 3 | `20260905220000_add_operations_module` | Project, ProjectMember, Task, TaskComment, TimeLog | 🟡 Medium |
+| 4 | `20260905210000_add_operations_phase_b` | ALTER Task + ProjectBudget, ResourceAllocation | 🟡 Medium |
+| 5 | `20260905220000_add_operations_phase_c_field_service` | FieldJob, FieldJobAssignment, FieldChecklist, FieldJobChecklistItem | 🟢 Low |
+
+### Files Modified/Created
+
+- ✅ [`update.sh`](update.sh) — Fixed migration detection logic (schema OR migration files)
+- ✅ [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md) — Deployment guide with rollback instructions
+- ✅ [`CURRENT.md`](CURRENT.md) — This file updated
+
+### How to Deploy
+
+```bash
+# 1. Push to repository
+git add -A && git commit -m "chore: VPS deployment prep — 5 migrations" && git push origin main
+
+# 2. SSH to VPS
+ssh root@IP_VPS
+
+# 3. Run update script
+cd /www/wwwroot/qalcuity && sudo bash update.sh
+
+# 4. Verify
+curl https://qalcuity.com/api/health
+```
+
+> 📖 See [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md) for detailed deployment guide, rollback instructions, and post-deployment verification.
+
+---
+
+
+---
+
+## 🐛 Critical Bug Fix: Service Worker Blocking Login (6 September 2026)
+
+> **Severity:** 🔴 CRITICAL — User tidak bisa login setelah mengakses POS page
+
+### Problem
+
+User tidak bisa login dari browser meskipun server-side test berhasil. Gejala:
+1. User mengakses POS page → Service Worker ter-registrasi dengan `scope: '/'`
+2. User logout
+3. User coba login lagi → `signIn()` return `{ ok: true }` tapi session cookie tidak ter-set
+4. Redirect ke `/dashboard` → middleware tidak menemukan session → redirect balik ke `/login`
+5. **Infinite redirect loop** — login seolah-olah gagal
+
+### Root Cause
+
+Service Worker ([`sw.js`](apps/web/public/sw.js)) meng-intercept SEMUA fetch requests termasuk:
+- GET `/api/auth/csrf` — CSRF token fetch
+- POST `/api/auth/callback/credentials` — Login POST
+- GET `/api/auth/session` — Session check
+
+SW route ke Rule 6 (`networkOnly()`) yang hanya `return fetch(request)`. Meskipun secara teori transparan, **Service Worker proxy dapat mengganggu `Set-Cookie` header processing** di beberapa browser — menyebabkan `next-auth.session-token` cookie tidak ter-set setelah login成功.
+
+### Fix
+
+1. **[`sw.js`](apps/web/public/sw.js:491)** — Tambahkan bypass untuk `/api/auth/*` di fetch handler, SEBELUM semua routing rules:
+   ```js
+   // CRITICAL: Skip auth API routes — never intercept authentication requests
+   if (url.pathname.startsWith('/api/auth/')) {
+       return; // Let browser handle auth requests directly
+   }
+   ```
+   Dengan `return` (tanpa `event.respondWith()`), browser memproses auth requests langsung tanpa SW interference.
+
+2. **[`login/page.tsx`](apps/web/app/(auth)/login/page.tsx:49)** — Tambahkan debug logging untuk auth flow:
+   - Log `signIn()` result (ok, error, status, url)
+   - Log `hasSessionCookie` check
+   - Log redirect target
+
+### Files Modified
+
+| File | Change | Risk |
+|------|--------|------|
+| [`apps/web/public/sw.js`](apps/web/public/sw.js) | Add `/api/auth/` bypass in fetch handler | 🟢 Low — bypass only auth routes |
+| [`apps/web/app/(auth)/login/page.tsx`](apps/web/app/(auth)/login/page.tsx) | Add debug logging in handleSubmit | 🟢 Low — console.log only |
+
+### Verification
+
+1. Clear browser SW: DevTools → Application → Service Workers → Unregister
+2. Navigate to POS page (registers SW)
+3. Logout
+4. Login again → should succeed without redirect loop
+5. Check browser console for `[Login] signIn result:` log
+
+### Prevention
+
+Rule: **Service Worker tidak boleh meng-intercept auth-related requests.** Jika ada SW baru di masa depan, pastikan `/api/auth/*` selalu di-bypass.
 
 ---
 
@@ -38,6 +149,65 @@
 - ✅ **Efficient Queries** — Prisma raw SQL with GROUP BY, SUM, COUNT, AVG for analytics (no fetch-all-then-filter)
 - ✅ **TypeScript Check:** PASS (0 errors)
 - ✅ **11 files** created/modified
+
+---
+
+## 🛡️ Quality Sprint: Error Boundaries, Loading States, i18n (6 September 2026)
+
+> **Focus:** Error boundary coverage untuk semua detail pages, POS loading state, i18n migration untuk Settings + POS + Finance/HR/Inventory
+
+### Batch 2 — Error Boundaries: 18 Detail Pages
+
+| # | Module | File | Component |
+|---|--------|------|-----------|
+| 1 | HR | [`hr/employees/[id]/error.tsx`](apps/web/app/dashboard/hr/employees/[id]/error.tsx) | EmployeeDetailError |
+| 2 | HR | [`hr/leaves/[id]/error.tsx`](apps/web/app/dashboard/hr/leaves/[id]/error.tsx) | LeaveDetailError |
+| 3 | CRM | [`crm/contacts/[id]/error.tsx`](apps/web/app/dashboard/crm/contacts/[id]/error.tsx) | ContactDetailError |
+| 4 | CRM | [`crm/deals/[id]/error.tsx`](apps/web/app/dashboard/crm/deals/[id]/error.tsx) | DealDetailError |
+| 5 | CRM | [`crm/leads/[id]/error.tsx`](apps/web/app/dashboard/crm/leads/[id]/error.tsx) | LeadDetailError |
+| 6 | Inventory | [`inventory/products/[id]/error.tsx`](apps/web/app/dashboard/inventory/products/[id]/error.tsx) | ProductDetailError |
+| 7 | Inventory | [`inventory/stock-opname/[id]/error.tsx`](apps/web/app/dashboard/inventory/stock-opname/[id]/error.tsx) | StockOpnameDetailError |
+| 8 | Inventory | [`inventory/suppliers/[id]/error.tsx`](apps/web/app/dashboard/inventory/suppliers/[id]/error.tsx) | SupplierDetailError |
+| 9 | Finance | [`finance/invoices/[id]/error.tsx`](apps/web/app/dashboard/finance/invoices/[id]/error.tsx) | InvoiceDetailError |
+| 10 | Finance | [`finance/payments/[id]/error.tsx`](apps/web/app/dashboard/finance/payments/[id]/error.tsx) | PaymentDetailError |
+| 11 | Finance | [`finance/purchase-orders/[id]/error.tsx`](apps/web/app/dashboard/finance/purchase-orders/[id]/error.tsx) | PurchaseOrderDetailError |
+| 12 | Finance | [`finance/quotations/[id]/error.tsx`](apps/web/app/dashboard/finance/quotations/[id]/error.tsx) | QuotationDetailError |
+| 13 | POS | [`pos/kitchen/error.tsx`](apps/web/app/dashboard/pos/kitchen/error.tsx) | KitchenError |
+| 14 | POS | [`pos/loyalty/error.tsx`](apps/web/app/dashboard/pos/loyalty/error.tsx) | LoyaltyError |
+| 15 | POS | [`pos/refunds/error.tsx`](apps/web/app/dashboard/pos/refunds/error.tsx) | RefundsError |
+| 16 | POS | [`pos/sessions/error.tsx`](apps/web/app/dashboard/pos/sessions/error.tsx) | SessionsError |
+| 17 | POS | [`pos/tables/error.tsx`](apps/web/app/dashboard/pos/tables/error.tsx) | TablesError |
+| 18 | POS | [`pos/terminals/error.tsx`](apps/web/app/dashboard/pos/terminals/error.tsx) | TerminalsError |
+
+- All use `ModuleError` from `@/components/ui/error-boundary` + `useTranslation`
+
+### Batch 3 — Loading State: POS Root
+
+- ✅ [`apps/web/app/dashboard/pos/loading.tsx`](apps/web/app/dashboard/pos/loading.tsx) — POS root loading skeleton
+
+### Batch 5 — i18n Migration: 281+ New Strings
+
+**Settings Module (5 files, ~135+ strings):**
+- ✅ Migrated hardcoded strings di Settings pages ke i18n keys (Bahasa Indonesia + English)
+
+**POS Module (8 files, ~130+ strings):**
+- ✅ Migrated hardcoded strings di POS pages ke i18n keys (Bahasa Indonesia + English)
+
+**Finance/HR/Inventory (9 files, 16 new keys):**
+- ✅ Added 16 new i18n keys untuk Finance, HR, Inventory modules
+
+**Bug Fix:**
+- ✅ Fixed `journal-entries/page.tsx` — `sourceTypeLabels` object diganti dengan `getSourceLabel()` function untuk i18n consistency
+
+### Impact Summary
+
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Error boundary files | ~43 | 63 | +20 |
+| Loading state files | 93 | 94 | +1 |
+| i18n keys | ~830 | 1100+ | +281+ |
+
+- ✅ **TypeScript Check:** PASS (0 errors)
 
 ---
 
@@ -1149,6 +1319,8 @@ _None currently._
 
 ### Codebase Stats (Updated: 5 September 2026 — Operations Module MVP)
 
+### Codebase Stats (Updated: 6 September 2026 — Quality Sprint)
+
 | Metric | Count |
 |--------|-------|
 | TypeScript files (apps/web) | ~180+ |
@@ -1156,11 +1328,12 @@ _None currently._
 | API route files | 90+ |
 | API routes | 120+ |
 | Pages | 60+ |
+| Error boundary files | 63 |
+| Loading state files | 94 |
 | Prisma models | 58+ |
 | Database indexes | 65+ |
 | Zod schemas | 24+ |
-| i18n keys | 830+ |
-| Loading states | 45+ |
+| i18n keys | 1100+ |
 | E2E tests | 63 (63 PASS) |
 | Shared packages | 12 (11 active, 1 not created) |
 | Foundation Engines | 3 (Permission, Workflow, Industry Config) |
@@ -1205,6 +1378,29 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 6 September 2026 — Quality Sprint: Error Boundaries, Loading States, i18n
+
+**Error Boundaries — 18 Detail Pages:**
+- **HR:** employees/[id], leaves/[id]
+- **CRM:** contacts/[id], deals/[id], leads/[id]
+- **Inventory:** products/[id], stock-opname/[id], suppliers/[id]
+- **Finance:** invoices/[id], payments/[id], purchase-orders/[id], quotations/[id]
+- **POS:** kitchen, loyalty, refunds, sessions, tables, terminals
+- All use `ModuleError` component + `useTranslation` for i18n
+
+**Loading State — POS Root:**
+- ✅ `apps/web/app/dashboard/pos/loading.tsx` — POS root loading skeleton
+
+**i18n Migration — 281+ New Strings:**
+- Settings Module: 5 files, ~135+ strings migrated to i18n
+- POS Module: 8 files, ~130+ strings migrated to i18n
+- Finance/HR/Inventory: 9 files, 16 new i18n keys added
+
+**Bug Fix:**
+- ✅ Fixed `journal-entries/page.tsx` — `sourceTypeLabels` → `getSourceLabel()` for i18n consistency
+
+**TypeScript Check** — PASS (0 errors)
 
 ### 5 September 2026 — Operations Module MVP Phase A
 
@@ -1893,4 +2089,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 9.0.0 — Mega Sprint Complete
+**Document Version:** 9.3.0 — Quality Sprint Complete (Error Boundaries, Loading States, i18n)

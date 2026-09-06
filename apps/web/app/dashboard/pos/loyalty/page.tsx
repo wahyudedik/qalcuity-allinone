@@ -47,16 +47,16 @@ const TIER_COLORS: Record<string, string> = {
     PLATINUM: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
-const TYPE_LABELS: Record<string, string> = {
-    EARN: 'Earned',
-    REDEEM: 'Redeemed',
-    ADJUST: 'Adjusted',
-    EXPIRE: 'Expired',
-}
-
 export default function LoyaltyDashboardPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
+
+    const TYPE_LABELS: Record<string, string> = {
+        EARN: t('pos.loyalty.typeEarn') || 'Earned',
+        REDEEM: t('pos.loyalty.typeRedeem') || 'Redeemed',
+        ADJUST: t('pos.loyalty.typeAdjust') || 'Adjusted',
+        EXPIRE: t('pos.loyalty.typeExpire') || 'Expired',
+    }
 
     const [members, setMembers] = useState<Member[]>([])
     const [rewards, setRewards] = useState<Reward[]>([])
@@ -77,11 +77,11 @@ export default function LoyaltyDashboardPage() {
             if (membersData.success) setMembers(membersData.data)
             if (rewardsData.success) setRewards(rewardsData.data)
         } catch {
-            setError('Gagal memuat data loyalty')
+            setError(t('pos.loyalty.errorLoad') || 'Gagal memuat data loyalty')
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         fetchData()
@@ -186,7 +186,7 @@ export default function LoyaltyDashboardPage() {
                                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${TIER_COLORS[tier]}`}>
                                             {tier}
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400">{count} members ({percentage.toFixed(0)}%)</span>
+                                        <span className="text-gray-600 dark:text-gray-400">{count} {t('pos.loyalty.membersLabel') || 'anggota'} ({percentage.toFixed(0)}%)</span>
                                     </div>
                                     <div className="mt-1 h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700">
                                         <div
@@ -234,7 +234,7 @@ export default function LoyaltyDashboardPage() {
                                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TIER_COLORS[member.tier]}`}>
                                                 {member.tier}
                                             </span>
-                                            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{member.points.toLocaleString()} pts</p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{member.points.toLocaleString()} {t('pos.loyalty.pts') || 'pt'}</p>
                                         </div>
                                     </div>
                                 ))}

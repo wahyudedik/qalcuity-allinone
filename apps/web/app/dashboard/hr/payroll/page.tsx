@@ -111,22 +111,26 @@ interface PayrollCalculationResult {
 // Status Kawin Options
 // ============================================
 
-const STATUS_KAWIN_OPTIONS = [
-    { value: 'TK/0', label: 'TK/0 (Belum Kawin, 0 Tanggungan)', ptkp: 54000000 },
-    { value: 'TK/1', label: 'TK/1 (Belum Kawin, 1 Tanggungan)', ptkp: 58500000 },
-    { value: 'TK/2', label: 'TK/2 (Belum Kawin, 2 Tanggungan)', ptkp: 63000000 },
-    { value: 'TK/3', label: 'TK/3 (Belum Kawin, 3 Tanggungan)', ptkp: 67500000 },
-    { value: 'K/0', label: 'K/0 (Kawin, 0 Tanggungan)', ptkp: 58500000 },
-    { value: 'K/1', label: 'K/1 (Kawin, 1 Tanggungan)', ptkp: 63000000 },
-    { value: 'K/2', label: 'K/2 (Kawin, 2 Tanggungan)', ptkp: 67500000 },
-    { value: 'K/3', label: 'K/3 (Kawin, 3 Tanggungan)', ptkp: 72000000 },
-]
+function getStatusKawinOptions(t: (key: string) => string) {
+    return [
+        { value: 'TK/0', label: t('hr.payroll.calc.statusKawinOptions.TK0'), ptkp: 54000000 },
+        { value: 'TK/1', label: t('hr.payroll.calc.statusKawinOptions.TK1'), ptkp: 58500000 },
+        { value: 'TK/2', label: t('hr.payroll.calc.statusKawinOptions.TK2'), ptkp: 63000000 },
+        { value: 'TK/3', label: t('hr.payroll.calc.statusKawinOptions.TK3'), ptkp: 67500000 },
+        { value: 'K/0', label: t('hr.payroll.calc.statusKawinOptions.K0'), ptkp: 58500000 },
+        { value: 'K/1', label: t('hr.payroll.calc.statusKawinOptions.K1'), ptkp: 63000000 },
+        { value: 'K/2', label: t('hr.payroll.calc.statusKawinOptions.K2'), ptkp: 67500000 },
+        { value: 'K/3', label: t('hr.payroll.calc.statusKawinOptions.K3'), ptkp: 72000000 },
+    ]
+}
 
-const JKK_RISK_OPTIONS = [
-    { value: 'low', label: 'Rendah (0.24%)' },
-    { value: 'medium', label: 'Sedang (0.89%)' },
-    { value: 'high', label: 'Tinggi (1.74%)' },
-]
+function getJkkRiskOptions(t: (key: string) => string) {
+    return [
+        { value: 'low', label: t('hr.payroll.calc.jkkRiskOptions.low') },
+        { value: 'medium', label: t('hr.payroll.calc.jkkRiskOptions.medium') },
+        { value: 'high', label: t('hr.payroll.calc.jkkRiskOptions.high') },
+    ]
+}
 
 // ============================================
 // Main Component
@@ -293,7 +297,7 @@ export default function PayrollPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Payroll berhasil disimpan', type: 'success' })
+                setToast({ message: t('hr.payroll.toast.saveSuccess'), type: 'success' })
                 // Reset form
                 setCalcForm(prev => ({
                     ...prev,
@@ -311,10 +315,10 @@ export default function PayrollPage() {
                 // Refresh list if on list tab
                 fetchPayroll()
             } else {
-                setToast({ message: data.error || 'Gagal menyimpan payroll', type: 'error' })
+                setToast({ message: data.error || t('hr.payroll.toast.saveError'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menyimpan payroll', type: 'error' })
+            setToast({ message: t('hr.payroll.toast.saveError'), type: 'error' })
         } finally {
             setSaving(false)
         }
@@ -325,20 +329,20 @@ export default function PayrollPage() {
     // ============================================
     const handleExport = () => {
         if (filteredData.length === 0) {
-            setToast({ message: 'Tidak ada data untuk di-export', type: 'error' })
+            setToast({ message: t('hr.payroll.toast.noDataExport'), type: 'error' })
             return
         }
         const csvData = filteredData.map(record => ({
-            'Karyawan': record.employeeName,
-            'Periode': record.period,
-            'Gaji Pokok': record.baseSalary,
-            'Tunjangan': record.allowances,
-            'Potongan': record.deductions,
-            'Gaji Bersih': record.netSalary,
-            'Status': statusConfig[record.status]?.label || record.status,
+            [t('hr.payroll.csv.employee')]: record.employeeName,
+            [t('hr.payroll.csv.period')]: record.period,
+            [t('hr.payroll.csv.baseSalary')]: record.baseSalary,
+            [t('hr.payroll.csv.allowances')]: record.allowances,
+            [t('hr.payroll.csv.deductions')]: record.deductions,
+            [t('hr.payroll.csv.netSalary')]: record.netSalary,
+            [t('hr.payroll.csv.status')]: statusConfig[record.status]?.label || record.status,
         }))
         exportToCSV(csvData, `payroll-${new Date().toISOString().split('T')[0]}`)
-        setToast({ message: 'Data payroll berhasil di-export', type: 'success' })
+        setToast({ message: t('hr.payroll.toast.exportSuccess'), type: 'success' })
     }
 
     // ============================================
@@ -347,7 +351,7 @@ export default function PayrollPage() {
     const handleProcessPayroll = () => {
         const pendingRecords = payrollData.filter(p => p.status === 'pending')
         if (pendingRecords.length === 0) {
-            setToast({ message: 'Tidak ada payroll yang perlu diproses', type: 'error' })
+            setToast({ message: t('hr.payroll.toast.noPending'), type: 'error' })
             return
         }
         setPendingCount(pendingRecords.length)
@@ -372,12 +376,12 @@ export default function PayrollPage() {
             const failed = results.filter(r => !r.success).length
             fetchPayroll()
             if (failed === 0) {
-                setToast({ message: `${succeeded} payroll berhasil diproses`, type: 'success' })
+                setToast({ message: t('hr.payroll.toast.processSuccess').replace('{count}', String(succeeded)), type: 'success' })
             } else {
-                setToast({ message: `${succeeded} berhasil, ${failed} gagal diproses`, type: 'error' })
+                setToast({ message: t('hr.payroll.toast.processPartial').replace('{succeeded}', String(succeeded)).replace('{failed}', String(failed)), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal memproses payroll', type: 'error' })
+            setToast({ message: t('hr.payroll.toast.processError'), type: 'error' })
         } finally {
             setProcessing(false)
         }
@@ -408,10 +412,10 @@ export default function PayrollPage() {
             if (data.success) {
                 setPayrollData(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data payroll')
+                setError(data.error || t('hr.payroll.fetchError'))
             }
         } catch {
-            setError('Gagal memuat data payroll. Periksa koneksi jaringan Anda.')
+            setError(t('hr.payroll.fetchErrorNetwork'))
         } finally {
             setLoading(false)
         }
@@ -439,12 +443,12 @@ export default function PayrollPage() {
             const result = await response.json()
             if (result.success) {
                 fetchPayroll()
-                setToast({ message: 'Data payroll berhasil dihapus', type: 'success' })
+                setToast({ message: t('hr.payroll.toast.deleteSuccess'), type: 'success' })
             } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                setToast({ message: t('hr.payroll.toast.deleteError').replace('{error}', result.error), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus data payroll', type: 'error' })
+            setToast({ message: t('hr.payroll.toast.deleteErrorGeneric'), type: 'error' })
         } finally {
             setDeleteTargetId(null)
         }
@@ -501,7 +505,7 @@ export default function PayrollPage() {
                 <AlertTriangle className="h-10 w-10 text-yellow-500" />
                 <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
                 <button onClick={fetchPayroll} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    Coba Lagi
+                    {t('hr.payroll.retry')}
                 </button>
             </div>
         )
@@ -531,7 +535,7 @@ export default function PayrollPage() {
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                                {processing ? 'Memproses...' : (t('hr.payroll.processPayroll') || 'Proses Payroll')}
+                                {processing ? t('hr.payroll.processing') : (t('hr.payroll.processPayroll') || 'Proses Payroll')}
                             </button>
                         </>
                     )}
@@ -543,23 +547,23 @@ export default function PayrollPage() {
                 <button
                     onClick={() => setActiveTab('list')}
                     className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'list'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                 >
                     <List className="h-4 w-4" />
-                    Daftar Payroll
+                    {t('hr.payroll.listTab')}
                 </button>
                 {canMutate && (
                     <button
                         onClick={() => setActiveTab('calculate')}
                         className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'calculate'
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             }`}
                     >
                         <Calculator className="h-4 w-4" />
-                        Hitung Payroll
+                        {t('hr.payroll.calculateTab')}
                     </button>
                 )}
             </div>
@@ -612,7 +616,7 @@ export default function PayrollPage() {
                         {filteredData.length === 0 ? (
                             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
                                 <Play className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                                <p className="text-sm">Belum ada data payroll</p>
+                                <p className="text-sm">{t('hr.payroll.emptyState')}</p>
                             </div>
                         ) : (
                             filteredData.map((record) => (
@@ -674,15 +678,15 @@ export default function PayrollPage() {
                         {filteredData.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
                                 <Play className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Belum ada data payroll</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Data payroll akan muncul setelah proses penggajian dilakukan</p>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('hr.payroll.emptyState')}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('hr.payroll.emptyHint')}</p>
                                 <button
                                     onClick={handleProcessPayroll}
                                     disabled={processing}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                                    Proses Payroll
+                                    {t('hr.payroll.processPayroll')}
                                 </button>
                             </div>
                         ) : (
@@ -720,7 +724,7 @@ export default function PayrollPage() {
                                                         <button
                                                             onClick={() => handleDelete(record.id)}
                                                             className="text-red-500 hover:text-red-700"
-                                                            title="Hapus"
+                                                            title={t('common.delete') || 'Hapus'}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
@@ -763,10 +767,10 @@ export default function PayrollPage() {
                     <div className="space-y-6">
                         {/* Employee & Period */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Data Karyawan & Periode</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.calc.employeePeriod')}</h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Karyawan *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.employee')}</label>
                                     <select
                                         value={calcForm.employeeId}
                                         onChange={(e) => handleEmployeeSelect(e.target.value)}
@@ -774,7 +778,7 @@ export default function PayrollPage() {
                                         disabled={employeesLoading}
                                     >
                                         <option value="">
-                                            {employeesLoading ? 'Memuat karyawan...' : 'Pilih karyawan'}
+                                            {employeesLoading ? t('hr.payroll.calc.loadingEmployees') : t('hr.payroll.calc.selectEmployee')}
                                         </option>
                                         {employees.map(emp => (
                                             <option key={emp.id} value={emp.id}>
@@ -784,7 +788,7 @@ export default function PayrollPage() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Periode *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.period')}</label>
                                     <input
                                         type="month"
                                         value={calcForm.period}
@@ -797,15 +801,15 @@ export default function PayrollPage() {
 
                         {/* Base Salary */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Gaji Pokok</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.calc.baseSalarySection')}</h3>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Gaji Pokok (Rp) *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.baseSalaryLabel')}</label>
                                 <input
                                     type="number"
                                     value={calcForm.baseSalary || ''}
                                     onChange={(e) => handleFormChange('baseSalary', Number(e.target.value))}
                                     className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Masukkan gaji pokok"
+                                    placeholder={t('hr.payroll.calc.baseSalaryPlaceholder')}
                                     min={0}
                                 />
                             </div>
@@ -813,10 +817,10 @@ export default function PayrollPage() {
 
                         {/* Allowances */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Tunjangan</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.allowances')}</h3>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Transport</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.transport')}</label>
                                     <input
                                         type="number"
                                         value={calcForm.transportAllowance || ''}
@@ -827,7 +831,7 @@ export default function PayrollPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Makan</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.meal')}</label>
                                     <input
                                         type="number"
                                         value={calcForm.mealAllowance || ''}
@@ -838,7 +842,7 @@ export default function PayrollPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lainnya</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.otherAllowance')}</label>
                                     <input
                                         type="number"
                                         value={calcForm.otherAllowance || ''}
@@ -853,10 +857,10 @@ export default function PayrollPage() {
 
                         {/* Deductions */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Potongan</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.deductions')}</h3>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Terlambat</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.late')}</label>
                                     <input
                                         type="number"
                                         value={calcForm.lateDeduction || ''}
@@ -867,7 +871,7 @@ export default function PayrollPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Alpha</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.absent')}</label>
                                     <input
                                         type="number"
                                         value={calcForm.absentDeduction || ''}
@@ -878,7 +882,7 @@ export default function PayrollPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lainnya</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.otherDeduction')}</label>
                                     <input
                                         type="number"
                                         value={calcForm.otherDeduction || ''}
@@ -893,9 +897,9 @@ export default function PayrollPage() {
 
                         {/* Bonus */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Bonus</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.bonus')}</h3>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Bonus (Rp)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.bonusLabel')}</label>
                                 <input
                                     type="number"
                                     value={calcForm.bonus || ''}
@@ -909,28 +913,28 @@ export default function PayrollPage() {
 
                         {/* Tax & BPJS Settings */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Pajak & BPJS</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.calc.taxBpjs')}</h3>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status Kawin (PPh21)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.maritalStatus')}</label>
                                     <select
                                         value={calcForm.statusKawin}
                                         onChange={(e) => handleFormChange('statusKawin', e.target.value)}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                                     >
-                                        {STATUS_KAWIN_OPTIONS.map(opt => (
+                                        {getStatusKawinOptions(t).map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Risiko JKK</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('hr.payroll.calc.jkkRisk')}</label>
                                     <select
                                         value={calcForm.jkkRiskLevel}
                                         onChange={(e) => handleFormChange('jkkRiskLevel', e.target.value)}
                                         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                                     >
-                                        {JKK_RISK_OPTIONS.map(opt => (
+                                        {getJkkRiskOptions(t).map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
@@ -940,13 +944,13 @@ export default function PayrollPage() {
 
                         {/* Notes */}
                         <div className="rounded-xl border border-gray-200 bg-white p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Catatan</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">{t('hr.payroll.notes')}</h3>
                             <textarea
                                 value={calcForm.notes}
                                 onChange={(e) => handleFormChange('notes', e.target.value)}
                                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                                 rows={3}
-                                placeholder="Catatan opsional..."
+                                placeholder={t('hr.payroll.calc.notesPlaceholder')}
                             />
                         </div>
                     </div>
@@ -957,7 +961,7 @@ export default function PayrollPage() {
                         {calculating && (
                             <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 text-center">
                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
-                                <p className="mt-2 text-sm text-blue-600">Menghitung payroll...</p>
+                                <p className="mt-2 text-sm text-blue-600">{t('hr.payroll.calculating')}</p>
                             </div>
                         )}
 
@@ -965,9 +969,9 @@ export default function PayrollPage() {
                         {!calculating && !calcResult && (
                             <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
                                 <Calculator className="mx-auto h-12 w-12 text-gray-400" />
-                                <h3 className="mt-4 text-lg font-medium text-gray-900">Belum Ada Hasil</h3>
+                                <h3 className="mt-4 text-lg font-medium text-gray-900">{t('hr.payroll.noResult')}</h3>
                                 <p className="mt-2 text-sm text-gray-500">
-                                    Pilih karyawan dan masukkan data gaji untuk menghitung payroll
+                                    {t('hr.payroll.noResultHint')}
                                 </p>
                             </div>
                         )}
@@ -978,7 +982,7 @@ export default function PayrollPage() {
                                 {/* Net Salary Highlight */}
                                 <div className="rounded-xl border border-green-200 bg-green-50 p-6">
                                     <div className="text-center">
-                                        <div className="text-sm text-green-600 font-medium">Gaji Bersih</div>
+                                        <div className="text-sm text-green-600 font-medium">{t('hr.payroll.netSalary')}</div>
                                         <div className="mt-2 text-4xl font-bold text-green-700">
                                             {formatCurrency(calcResult.netSalary)}
                                         </div>
@@ -993,29 +997,29 @@ export default function PayrollPage() {
                                     <div className="rounded-xl border border-gray-200 bg-white p-4">
                                         <div className="flex items-center gap-2 text-sm text-gray-500">
                                             <PiggyBank className="h-4 w-4" />
-                                            Gaji Kotor
+                                            {t('hr.payroll.grossSalary')}
                                         </div>
                                         <div className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(calcResult.grossSalary)}</div>
                                     </div>
                                     <div className="rounded-xl border border-gray-200 bg-white p-4">
                                         <div className="flex items-center gap-2 text-sm text-gray-500">
                                             <Receipt className="h-4 w-4" />
-                                            PPh21
+                                            {t('hr.payroll.pph21') || 'PPh21'}
                                         </div>
                                         <div className="mt-1 text-xl font-bold text-red-600">-{formatCurrency(calcResult.pph21.pph21Monthly)}</div>
-                                        <div className="text-xs text-gray-400">Efektif: {calcResult.pph21.effectiveRate}%</div>
+                                        <div className="text-xs text-gray-400">{t('hr.payroll.effectiveRate').replace('{rate}', String(calcResult.pph21.effectiveRate))}</div>
                                     </div>
                                     <div className="rounded-xl border border-gray-200 bg-white p-4">
                                         <div className="flex items-center gap-2 text-sm text-gray-500">
                                             <Shield className="h-4 w-4" />
-                                            BPJS (Karyawan)
+                                            {t('hr.payroll.bpjsEmployee') || 'BPJS (Karyawan)'}
                                         </div>
                                         <div className="mt-1 text-xl font-bold text-red-600">-{formatCurrency(calcResult.bpjs.totalEmployee)}</div>
                                     </div>
                                     <div className="rounded-xl border border-gray-200 bg-white p-4">
                                         <div className="flex items-center gap-2 text-sm text-gray-500">
                                             <Building2 className="h-4 w-4" />
-                                            BPJS (Perusahaan)
+                                            {t('hr.payroll.bpjsCompany') || 'BPJS (Perusahaan)'}
                                         </div>
                                         <div className="mt-1 text-xl font-bold text-blue-600">{formatCurrency(calcResult.bpjs.totalEmployer)}</div>
                                     </div>
@@ -1027,7 +1031,7 @@ export default function PayrollPage() {
                                         onClick={() => setShowBreakdown(!showBreakdown)}
                                         className="flex w-full items-center justify-between p-6 text-left"
                                     >
-                                        <h3 className="text-lg font-semibold text-gray-900">Rincian Lengkap</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900">{t('hr.payroll.breakdown')}</h3>
                                         {showBreakdown ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
                                     </button>
 
@@ -1035,26 +1039,26 @@ export default function PayrollPage() {
                                         <div className="border-t border-gray-100 px-6 pb-6">
                                             {/* Allowances */}
                                             <div className="mb-4">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Tunjangan</h4>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('hr.payroll.allowances')}</h4>
                                                 <div className="space-y-1 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">Gaji Pokok</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.baseSalary')}</span>
                                                         <span>{formatCurrency(calcResult.baseSalary)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">Transport</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.transport')}</span>
                                                         <span className="text-green-600">+{formatCurrency(calcResult.allowances.transport)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">Makan</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.meal')}</span>
                                                         <span className="text-green-600">+{formatCurrency(calcResult.allowances.meal)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">Lainnya</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.other')}</span>
                                                         <span className="text-green-600">+{formatCurrency(calcResult.allowances.other)}</span>
                                                     </div>
                                                     <div className="flex justify-between border-t border-gray-100 pt-1 font-medium">
-                                                        <span>Total Tunjangan</span>
+                                                        <span>{t('hr.payroll.totalAllowances')}</span>
                                                         <span className="text-green-600">+{formatCurrency(calcResult.allowances.total)}</span>
                                                     </div>
                                                 </div>
@@ -1062,26 +1066,26 @@ export default function PayrollPage() {
 
                                             {/* PPh21 */}
                                             <div className="mb-4">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">PPh21 (Pajak Penghasilan)</h4>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('hr.payroll.pph21Section') || 'PPh21 (Pajak Penghasilan)'}</h4>
                                                 <div className="space-y-1 text-sm">
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-500">Status</span>
                                                         <span>{calcResult.pph21.statusKawin}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">PTKP/Tahun</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.ptkpYearly')}</span>
                                                         <span>{formatCurrency(calcResult.pph21.ptkpYearly)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">PKP/Tahun</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.pkpYearly')}</span>
                                                         <span>{formatCurrency(calcResult.pph21.pkpYearly)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">PPh21/Tahun</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.pph21Yearly')}</span>
                                                         <span>{formatCurrency(calcResult.pph21.pph21Yearly)}</span>
                                                     </div>
                                                     <div className="flex justify-between border-t border-gray-100 pt-1 font-medium">
-                                                        <span>PPh21/Bulan (Dipotong)</span>
+                                                        <span>{t('hr.payroll.breakdownLabels.pph21Monthly')}</span>
                                                         <span className="text-red-600">-{formatCurrency(calcResult.pph21.pph21Monthly)}</span>
                                                     </div>
                                                 </div>
@@ -1089,14 +1093,14 @@ export default function PayrollPage() {
 
                                             {/* BPJS Kesehatan */}
                                             <div className="mb-4">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">BPJS Kesehatan (4% + 4%)</h4>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('hr.payroll.breakdownLabels.bpjsKesehatan')}</h4>
                                                 <div className="space-y-1 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">Iuran Karyawan</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.employeeContribution')}</span>
                                                         <span className="text-red-600">-{formatCurrency(calcResult.bpjs.kesehatan.employee)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">Iuran Perusahaan</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.employerContribution')}</span>
                                                         <span className="text-blue-600">{formatCurrency(calcResult.bpjs.kesehatan.employer)}</span>
                                                     </div>
                                                 </div>
@@ -1104,30 +1108,30 @@ export default function PayrollPage() {
 
                                             {/* BPJS Ketenagakerjaan */}
                                             <div className="mb-4">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">BPJS Ketenagakerjaan</h4>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('hr.payroll.breakdownLabels.bpjsKetenagakerjaan')}</h4>
                                                 <div className="space-y-1 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">JKK (Perusahaan)</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.jkk')}</span>
                                                         <span className="text-blue-600">{formatCurrency(calcResult.bpjs.ketenagakerjaan.jkk)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">JKM (Perusahaan)</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.jkm')}</span>
                                                         <span className="text-blue-600">{formatCurrency(calcResult.bpjs.ketenagakerjaan.jkm)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">JHT Karyawan (2%)</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.jhtEmployee')}</span>
                                                         <span className="text-red-600">-{formatCurrency(calcResult.bpjs.ketenagakerjaan.jhtEmployee)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">JHT Perusahaan (3.7%)</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.jhtEmployer')}</span>
                                                         <span className="text-blue-600">{formatCurrency(calcResult.bpjs.ketenagakerjaan.jhtEmployer)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">JP Karyawan (1%)</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.jpEmployee')}</span>
                                                         <span className="text-red-600">-{formatCurrency(calcResult.bpjs.ketenagakerjaan.jpEmployee)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-500">JP Perusahaan (2%)</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.jpEmployer')}</span>
                                                         <span className="text-blue-600">{formatCurrency(calcResult.bpjs.ketenagakerjaan.jpEmployer)}</span>
                                                     </div>
                                                 </div>
@@ -1136,9 +1140,9 @@ export default function PayrollPage() {
                                             {/* Bonus */}
                                             {calcResult.bonus > 0 && (
                                                 <div className="mb-4">
-                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Bonus</h4>
+                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">{t('hr.payroll.bonus')}</h4>
                                                     <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-500">Bonus</span>
+                                                        <span className="text-gray-500">{t('hr.payroll.breakdownLabels.bonus')}</span>
                                                         <span className="text-green-600">+{formatCurrency(calcResult.bonus)}</span>
                                                     </div>
                                                 </div>
@@ -1146,32 +1150,32 @@ export default function PayrollPage() {
 
                                             {/* Final Calculation */}
                                             <div className="rounded-lg bg-gray-50 p-4 mt-4">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-3">Perhitungan Akhir</h4>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-3">{t('hr.payroll.finalCalculation')}</h4>
                                                 <div className="space-y-2 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span>Gaji Kotor</span>
+                                                        <span>{t('hr.payroll.grossSalary')}</span>
                                                         <span>{formatCurrency(calcResult.grossSalary)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-red-600">
-                                                        <span>- PPh21</span>
+                                                        <span>{t('hr.payroll.breakdownLabels.deductionPph21')}</span>
                                                         <span>-{formatCurrency(calcResult.pph21.pph21Monthly)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-red-600">
-                                                        <span>- BPJS Karyawan</span>
+                                                        <span>{t('hr.payroll.breakdownLabels.deductionBpjs')}</span>
                                                         <span>-{formatCurrency(calcResult.bpjs.totalEmployee)}</span>
                                                     </div>
                                                     <div className="flex justify-between text-red-600">
-                                                        <span>- Potongan Lain</span>
+                                                        <span>{t('hr.payroll.breakdownLabels.otherDeductions')}</span>
                                                         <span>-{formatCurrency(calcResult.deductions.total)}</span>
                                                     </div>
                                                     {calcResult.bonus > 0 && (
                                                         <div className="flex justify-between text-green-600">
-                                                            <span>+ Bonus</span>
+                                                            <span>{t('hr.payroll.breakdownLabels.bonus')}</span>
                                                             <span>+{formatCurrency(calcResult.bonus)}</span>
                                                         </div>
                                                     )}
                                                     <div className="flex justify-between border-t-2 border-gray-300 pt-2 text-lg font-bold text-green-700">
-                                                        <span>Gaji Bersih</span>
+                                                        <span>{t('hr.payroll.netSalary')}</span>
                                                         <span>{formatCurrency(calcResult.netSalary)}</span>
                                                     </div>
                                                 </div>
@@ -1188,7 +1192,7 @@ export default function PayrollPage() {
                                         className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        {saving ? 'Menyimpan...' : 'Simpan Payroll'}
+                                        {saving ? t('hr.payroll.saving') : t('hr.payroll.savePayroll')}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -1209,7 +1213,7 @@ export default function PayrollPage() {
                                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
                                     >
                                         <RefreshCw className="h-4 w-4" />
-                                        Reset
+                                        {t('hr.payroll.reset')}
                                     </button>
                                 </div>
                             </>
@@ -1223,9 +1227,9 @@ export default function PayrollPage() {
                 isOpen={showProcessConfirm}
                 onClose={() => setShowProcessConfirm(false)}
                 onConfirm={confirmProcess}
-                title="Proses Payroll"
-                message={`Proses ${pendingCount} payroll yang belum diproses?`}
-                confirmText="Proses"
+                title={t('hr.payroll.confirmProcessTitle')}
+                message={t('hr.payroll.confirmProcessMessage').replace('{count}', String(pendingCount))}
+                confirmText={t('hr.payroll.confirmProcess')}
                 variant="warning"
                 isLoading={processing}
             />
@@ -1235,9 +1239,9 @@ export default function PayrollPage() {
                 isOpen={showDeleteConfirm}
                 onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null) }}
                 onConfirm={confirmDelete}
-                title="Hapus Payroll"
-                message="Apakah Anda yakin ingin menghapus data payroll ini?"
-                confirmText="Hapus"
+                title={t('hr.payroll.confirmDeleteTitle')}
+                message={t('hr.payroll.confirmDeleteMessage')}
+                confirmText={t('common.delete') || 'Hapus'}
                 variant="danger"
             />
 

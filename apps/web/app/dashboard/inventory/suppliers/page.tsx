@@ -42,27 +42,27 @@ interface FormErrors {
     address?: string
 }
 
-function validateSupplierForm(data: SupplierFormData): FormErrors {
+function validateSupplierForm(data: SupplierFormData, t: (key: string) => string): FormErrors {
     const errors: FormErrors = {}
 
     if (!data.name || data.name.trim().length === 0) {
-        errors.name = 'Nama supplier wajib diisi'
+        errors.name = t('inventory.suppliers.validation.nameRequired')
     }
 
     if (!data.contactPerson || data.contactPerson.trim().length === 0) {
-        errors.contactPerson = 'Nama kontak wajib diisi'
+        errors.contactPerson = t('inventory.suppliers.validation.contactRequired')
     }
 
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-        errors.email = 'Format email tidak valid'
+        errors.email = t('inventory.suppliers.validation.emailInvalid')
     }
 
     if (data.phone && !/^(\+62|62|0)8[1-9][0-9]{6,11}$/.test(data.phone.replace(/[\s-]/g, ''))) {
-        errors.phone = 'Format telepon Indonesia tidak valid (contoh: 081234567890)'
+        errors.phone = t('inventory.suppliers.validation.phoneInvalid')
     }
 
     if (!data.address || data.address.trim().length === 0) {
-        errors.address = 'Alamat wajib diisi'
+        errors.address = t('inventory.suppliers.validation.addressRequired')
     }
 
     return errors
@@ -82,7 +82,7 @@ export default function SuppliersPage() {
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
-    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmTitle, setConfirmTitle] = useState(t('inventory.suppliers.confirmTitle'))
     const [confirmMessage, setConfirmMessage] = useState('')
 
     // Form modal state
@@ -116,10 +116,10 @@ export default function SuppliersPage() {
             if (data.success) {
                 setSuppliers(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data supplier')
+                setError(data.error || t('inventory.suppliers.fetchError'))
             }
         } catch {
-            setError('Gagal memuat data supplier. Periksa koneksi jaringan Anda.')
+            setError(t('inventory.suppliers.fetchErrorNetwork'))
         } finally {
             setLoading(false)
         }
@@ -171,20 +171,20 @@ export default function SuppliersPage() {
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus supplier ini?')
+        setConfirmTitle(t('inventory.suppliers.confirmTitle'))
+        setConfirmMessage(t('inventory.suppliers.confirmMessage'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/inventory/suppliers?id=${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchSuppliers()
-                    setToast({ message: result.message || 'Supplier berhasil dihapus', type: 'success' })
+                    setToast({ message: result.message || t('inventory.suppliers.toast.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: result.error || t('inventory.suppliers.toast.deleteError'), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus supplier', type: 'error' })
+                setToast({ message: t('inventory.suppliers.toast.deleteErrorGeneric'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -222,7 +222,7 @@ export default function SuppliersPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const errors = validateSupplierForm(formData)
+        const errors = validateSupplierForm(formData, t)
         setFormErrors(errors)
         if (Object.keys(errors).length > 0) return
 
@@ -248,14 +248,14 @@ export default function SuppliersPage() {
                 setShowForm(false)
                 fetchSuppliers()
                 setToast({
-                    message: editingSupplier ? 'Supplier berhasil diupdate' : 'Supplier berhasil ditambahkan',
+                    message: editingSupplier ? t('inventory.suppliers.toast.updateSuccess') : t('inventory.suppliers.toast.createSuccess'),
                     type: 'success',
                 })
             } else {
-                setToast({ message: result.error || 'Gagal menyimpan data', type: 'error' })
+                setToast({ message: result.error || t('inventory.suppliers.toast.saveError'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menyimpan data supplier', type: 'error' })
+            setToast({ message: t('inventory.suppliers.toast.saveErrorGeneric'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -383,7 +383,7 @@ export default function SuppliersPage() {
                     <EmptyState
                         icon={Building2}
                         title={t('inventory.suppliers.noSuppliers') || 'Tidak ada supplier'}
-                        description={searchQuery || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan supplier pertama Anda'}
+                        description={searchQuery || filterStatus !== 'all' ? t('inventory.suppliers.emptyFilterHint') : t('inventory.suppliers.emptyFirstHint')}
                         actionLabel={canMutate ? (t('inventory.suppliers.addSupplier') || 'Tambah Supplier') : undefined}
                         onAction={canMutate ? openCreateForm : undefined}
                     />
@@ -427,7 +427,7 @@ export default function SuppliersPage() {
                                     onClick={() => openEditForm(supplier)}
                                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                 >
-                                    Edit
+                                    {t('inventory.suppliers.editButton')}
                                 </button>
                                 <button
                                     onClick={() => handleDelete(supplier.id)}
@@ -466,7 +466,7 @@ export default function SuppliersPage() {
                                         <EmptyState
                                             icon={Building2}
                                             title={t('inventory.suppliers.noSuppliers') || 'Tidak ada supplier'}
-                                            description={searchQuery || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan supplier pertama Anda'}
+                                            description={searchQuery || filterStatus !== 'all' ? t('inventory.suppliers.emptyFilterHint') : t('inventory.suppliers.emptyFirstHint')}
                                             actionLabel={canMutate ? (t('inventory.suppliers.addSupplier') || 'Tambah Supplier') : undefined}
                                             onAction={canMutate ? openCreateForm : undefined}
                                         />
@@ -507,13 +507,13 @@ export default function SuppliersPage() {
                                                     onClick={() => openEditForm(supplier)}
                                                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                                 >
-                                                    Edit
+                                                    {t('inventory.suppliers.editButton')}
                                                 </button>
                                                 {canMutate && (
                                                     <button
                                                         onClick={() => handleDelete(supplier.id)}
                                                         className="text-red-500 hover:text-red-700"
-                                                        title="Hapus"
+                                                        title={t('common.delete')}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
@@ -534,7 +534,7 @@ export default function SuppliersPage() {
                     <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                             <h2 className="text-lg font-semibold text-gray-900">
-                                {editingSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}
+                                {editingSupplier ? t('inventory.suppliers.form.titleEdit') : t('inventory.suppliers.form.titleCreate')}
                             </h2>
                             <button onClick={() => setShowForm(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                                 <X className="h-5 w-5" />
@@ -544,7 +544,7 @@ export default function SuppliersPage() {
                             {/* Name */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nama Supplier <span className="text-red-500">*</span>
+                                    {t('inventory.suppliers.form.nameLabel')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -552,7 +552,7 @@ export default function SuppliersPage() {
                                     onChange={(e) => handleFormChange('name', e.target.value)}
                                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="Nama perusahaan / supplier"
+                                    placeholder={t('inventory.suppliers.form.namePlaceholder')}
                                 />
                                 {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
                             </div>
@@ -560,7 +560,7 @@ export default function SuppliersPage() {
                             {/* Contact Person */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nama Kontak <span className="text-red-500">*</span>
+                                    {t('inventory.suppliers.form.contactLabel')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -568,14 +568,14 @@ export default function SuppliersPage() {
                                     onChange={(e) => handleFormChange('contactPerson', e.target.value)}
                                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.contactPerson ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="Nama person yang bisa dihubungi"
+                                    placeholder={t('inventory.suppliers.form.contactPlaceholder')}
                                 />
                                 {formErrors.contactPerson && <p className="mt-1 text-xs text-red-600">{formErrors.contactPerson}</p>}
                             </div>
 
                             {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.suppliers.form.emailLabel')}</label>
                                 <input
                                     type="email"
                                     value={formData.email}
@@ -589,7 +589,7 @@ export default function SuppliersPage() {
 
                             {/* Phone */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.suppliers.form.phoneLabel')}</label>
                                 <input
                                     type="tel"
                                     value={formData.phone}
@@ -604,7 +604,7 @@ export default function SuppliersPage() {
                             {/* Address */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Alamat <span className="text-red-500">*</span>
+                                    {t('inventory.suppliers.form.addressLabel')} <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     value={formData.address}
@@ -612,14 +612,14 @@ export default function SuppliersPage() {
                                     rows={2}
                                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.address ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="Alamat lengkap supplier"
+                                    placeholder={t('inventory.suppliers.form.addressPlaceholder')}
                                 />
                                 {formErrors.address && <p className="mt-1 text-xs text-red-600">{formErrors.address}</p>}
                             </div>
 
                             {/* City */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Kota</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.suppliers.form.cityLabel')}</label>
                                 <input
                                     type="text"
                                     value={formData.city}
@@ -631,24 +631,24 @@ export default function SuppliersPage() {
 
                             {/* Notes */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.suppliers.form.notesLabel')}</label>
                                 <textarea
                                     value={formData.notes}
                                     onChange={(e) => handleFormChange('notes', e.target.value)}
                                     rows={2}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Catatan tambahan (opsional)"
+                                    placeholder={t('inventory.suppliers.form.notesPlaceholder')}
                                 />
                             </div>
 
                             {/* Actions */}
                             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                                 <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" disabled={submitting}>
-                                    Batal
+                                    {t('inventory.suppliers.form.cancel')}
                                 </button>
                                 <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {submitting ? 'Menyimpan...' : (editingSupplier ? 'Update' : 'Simpan')}
+                                    {submitting ? t('inventory.suppliers.form.saving') : (editingSupplier ? t('inventory.suppliers.form.update') : t('inventory.suppliers.form.save'))}
                                 </button>
                             </div>
                         </form>
@@ -674,8 +674,8 @@ export default function SuppliersPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('inventory.suppliers.confirmText')}
+                cancelText={t('inventory.suppliers.cancelText')}
                 variant="danger"
             />
         </div>

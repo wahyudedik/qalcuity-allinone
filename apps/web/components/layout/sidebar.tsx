@@ -23,6 +23,8 @@ import {
     CheckCircle,
     Monitor,
     FolderKanban,
+    Wrench,
+    Sparkles,
     type LucideIcon,
 } from "lucide-react";
 
@@ -127,6 +129,26 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.projects") || "Projects", href: "/dashboard/projects" },
                 { label: t("nav.myTasks") || "My Tasks", href: "/dashboard/tasks" },
                 { label: t("nav.timesheet") || "Timesheet", href: "/dashboard/timesheet" },
+            ],
+        },
+        // 7b. Field Service — ADMIN, MEMBER, VIEWER (read-only)
+        {
+            label: t("nav.fieldService") || "Field Service",
+            href: "/dashboard/field",
+            icon: Wrench,
+            children: [
+                { label: t("nav.fieldJobs") || "Field Jobs", href: "/dashboard/field/jobs" },
+                { label: t("nav.fieldChecklists") || "Checklists", href: "/dashboard/field/checklists" },
+            ],
+        },
+        // 7c. AI Features — ADMIN+, MEMBER+ for doc extraction
+        {
+            label: t("nav.aiFeatures") || "AI Features",
+            href: "/dashboard/ai",
+            icon: Sparkles,
+            children: [
+                { label: t("nav.documentExtraction") || "Document Extraction", href: "/dashboard/ai/documents" },
+                { label: t("nav.anomalyDetection") || "Anomaly Detection", href: "/dashboard/ai/anomalies" },
             ],
         },
         // 8. Approvals — all roles

@@ -40,20 +40,20 @@ type CashierData = {
 
 type PeriodOption = 'daily' | 'weekly' | 'monthly' | 'custom'
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-    CASH: 'Tunai',
-    CARD: 'Kartu',
-    QRIS: 'QRIS',
-    E_WALLET: 'E-Wallet',
-    BANK_TRANSFER: 'Transfer',
-}
-
 const PAYMENT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899']
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function POSReportsPage() {
     const { t } = useTranslation()
+
+    const PAYMENT_METHOD_LABELS: Record<string, string> = {
+        CASH: t('pos.reports.paymentCash') || 'Tunai',
+        CARD: t('pos.reports.paymentCard') || 'Kartu',
+        QRIS: t('pos.reports.paymentQris') || 'QRIS',
+        E_WALLET: t('pos.reports.paymentEWallet') || 'E-Wallet',
+        BANK_TRANSFER: t('pos.reports.paymentTransfer') || 'Transfer',
+    }
 
     const [summary, setSummary] = useState<SummaryData | null>(null)
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
@@ -149,18 +149,18 @@ export default function POSReportsPage() {
             if (analyticsData.success) {
                 setAnalytics(analyticsData.data)
             } else {
-                setError(analyticsData.error || 'Gagal memuat data analitik')
+                setError(analyticsData.error || t('pos.reports.errorLoad') || 'Gagal memuat data analitik')
             }
 
             if (cashiersData.success) {
                 setCashiers(cashiersData.data.cashiers)
             }
         } catch {
-            setError('Gagal memuat data analitik. Periksa koneksi jaringan Anda.')
+            setError(t('pos.reports.errorLoadNetwork') || 'Gagal memuat data analitik. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
-    }, [selectedPeriod, dateFrom, dateTo])
+    }, [selectedPeriod, dateFrom, dateTo, t])
 
     useEffect(() => {
         fetchSummary()
@@ -172,27 +172,27 @@ export default function POSReportsPage() {
         if (!analytics) return
 
         const rows: string[] = []
-        rows.push('Tanggal,Total,Jumlah Transaksi')
+        rows.push(t('pos.reports.csvHeaderDate') || 'Tanggal,Total,Jumlah Transaksi')
         for (const row of analytics.salesByPeriod) {
             rows.push(`${row.date},${row.total},${row.count}`)
         }
         rows.push('')
-        rows.push('Produk,Qty Terjual,Pendapatan')
+        rows.push(t('pos.reports.csvHeaderProduct') || 'Produk,Qty Terjual,Pendapatan')
         for (const p of analytics.topProducts) {
             rows.push(`"${p.name}",${p.quantity},${p.revenue}`)
         }
         rows.push('')
-        rows.push('Kategori,Qty Terjual,Pendapatan')
+        rows.push(t('pos.reports.csvHeaderCategory') || 'Kategori,Qty Terjual,Pendapatan')
         for (const c of analytics.salesByCategory) {
             rows.push(`"${c.category}",${c.quantity},${c.revenue}`)
         }
         rows.push('')
-        rows.push('Metode Pembayaran,Jumlah,Total,Persentase')
+        rows.push(t('pos.reports.csvHeaderPayment') || 'Metode Pembayaran,Jumlah,Total,Persentase')
         for (const p of analytics.paymentMethodBreakdown) {
             rows.push(`${PAYMENT_METHOD_LABELS[p.method] || p.method},${p.count},${p.total},${p.percentage}%`)
         }
         rows.push('')
-        rows.push('Kasir,Transaksi,Total Penjualan,Rata-rata,Sesi')
+        rows.push(t('pos.reports.csvHeaderCashier') || 'Kasir,Transaksi,Total Penjualan,Rata-rata,Sesi')
         for (const c of cashiers) {
             rows.push(`"${c.cashierName}",${c.transactionCount},${c.totalSales},${Math.round(c.avgTransactionValue)},${c.sessionCount}`)
         }
@@ -205,8 +205,8 @@ export default function POSReportsPage() {
         link.download = `pos-report-${dateFrom}-${dateTo}.csv`
         link.click()
         URL.revokeObjectURL(url)
-        setToast({ message: 'Berhasil diekspor ke CSV', type: 'success' })
-    }, [analytics, cashiers, dateFrom, dateTo])
+        setToast({ message: t('pos.reports.successExport') || 'Berhasil diekspor ke CSV', type: 'success' })
+    }, [analytics, cashiers, dateFrom, dateTo, t, PAYMENT_METHOD_LABELS])
 
     // Chart data
     const salesChartLabels = analytics?.salesByPeriod.map((d) => {
@@ -274,8 +274,8 @@ export default function POSReportsPage() {
                             key={opt.key}
                             onClick={() => handlePeriodChange(opt.key)}
                             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${selectedPeriod === opt.key
-                                    ? 'bg-blue-600 text-white'
-                                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                                 }`}
                         >
                             {opt.label}
@@ -333,7 +333,7 @@ export default function POSReportsPage() {
                             icon={<Receipt className="h-5 w-5 text-green-600" />}
                             iconBg="bg-green-100 dark:bg-green-900/30"
                             label={t('pos.reports.todayTransactions') || 'Transaksi Hari Ini'}
-                            value={`${todayCount} transaksi`}
+                            value={`${todayCount} ${t('pos.reports.transactions') || 'transaksi'}`}
                             change={countChange}
                         />
                         <SummaryCard

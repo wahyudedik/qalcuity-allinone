@@ -144,7 +144,7 @@ export default function CustomFieldsSettingsPage() {
     }
 
     const handleDelete = async (fieldId: string, fieldLabel: string) => {
-        if (!confirm(`Hapus custom field "${fieldLabel}"?`)) return
+        if (!confirm(t('settings.customFields.deleteConfirmMsg').replace('{name}', fieldLabel))) return
 
         setDeleting(fieldId)
         try {
@@ -196,10 +196,10 @@ export default function CustomFieldsSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-8">
                 <div className="flex flex-col items-center text-center">
                     <FileText className="h-12 w-12 text-red-500 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Gagal Memuat Custom Fields</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.customFields.loadError')}</h3>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button onClick={fetchFields} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Coba Lagi
+                        {t('settings.retry')}
                     </button>
                 </div>
             </div>
@@ -220,28 +220,28 @@ export default function CustomFieldsSettingsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Custom Fields</h2>
-                    <p className="text-gray-600 mt-1">Kelola field kustom untuk setiap entitas bisnis</p>
+                    <h2 className="text-xl font-bold text-gray-900">{t('settings.customFields.title')}</h2>
+                    <p className="text-gray-600 mt-1">{t('settings.customFields.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     <Plus className="h-4 w-4" />
-                    Tambah Field
+                    {t('settings.customFields.addField')}
                 </button>
             </div>
 
             {/* Filter */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700">Filter Entitas:</span>
+                    <span className="text-sm font-medium text-gray-700">{t('settings.customFields.filterEntity')}</span>
                     <select
                         value={filterEntity}
                         onChange={e => setFilterEntity(e.target.value)}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                        <option value="">Semua Entitas</option>
+                        <option value="">{t('settings.customFields.allEntities')}</option>
                         {ENTITY_OPTIONS.map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
@@ -253,14 +253,14 @@ export default function CustomFieldsSettingsPage() {
             {fields.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                     <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Custom Fields</h3>
-                    <p className="text-gray-600 mb-4">Tambahkan field kustom untuk menyesuaikan data dengan kebutuhan bisnis Anda.</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.customFields.emptyTitle')}</h3>
+                    <p className="text-gray-600 mb-4">{t('settings.customFields.emptyDesc')}</p>
                     <button
                         onClick={() => setShowCreateModal(true)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <Plus className="h-4 w-4 inline mr-1" />
-                        Tambah Field Pertama
+                        {t('settings.customFields.addFirstField')}
                     </button>
                 </div>
             ) : (
@@ -269,7 +269,7 @@ export default function CustomFieldsSettingsPage() {
                         <div key={entity} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
                                 <h3 className="font-semibold text-gray-900">{entityLabels[entity] || entity}</h3>
-                                <p className="text-sm text-gray-500">{entityFields.length} field</p>
+                                <p className="text-sm text-gray-500">{entityFields.length} {t('settings.customFields.fieldCount')}</p>
                             </div>
                             <div className="divide-y divide-gray-100">
                                 {entityFields.map(field => {
@@ -286,16 +286,16 @@ export default function CustomFieldsSettingsPage() {
                                                         <span className="font-medium text-gray-900 text-sm">{field.fieldLabel}</span>
                                                         <span className="text-xs text-gray-400">({field.fieldName})</span>
                                                         {field.required && (
-                                                            <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-xs rounded font-medium">Wajib</span>
+                                                            <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-xs rounded font-medium">{t('settings.customFields.required')}</span>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-xs text-gray-500">{field.fieldType}</span>
                                                         {field.options && (
-                                                            <span className="text-xs text-gray-400">• Opsi: {field.options.join(', ')}</span>
+                                                            <span className="text-xs text-gray-400">• {t('settings.customFields.optionsLabel')}: {field.options.join(', ')}</span>
                                                         )}
                                                         {field.defaultValue && (
-                                                            <span className="text-xs text-gray-400">• Default: {field.defaultValue}</span>
+                                                            <span className="text-xs text-gray-400">• {t('settings.customFields.defaultLabel')}: {field.defaultValue}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -321,7 +321,7 @@ export default function CustomFieldsSettingsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">Tambah Custom Field</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t('settings.customFields.createModalTitle')}</h3>
                             <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                                 <X className="h-5 w-5" />
                             </button>
@@ -329,7 +329,7 @@ export default function CustomFieldsSettingsPage() {
                         <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
                             {/* Entity */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Entitas *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.customFields.entityLabel')}</label>
                                 <select
                                     value={newField.entity}
                                     onChange={e => setNewField(prev => ({ ...prev, entity: e.target.value }))}
@@ -343,31 +343,31 @@ export default function CustomFieldsSettingsPage() {
 
                             {/* Field Name */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Field (ID) *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.customFields.fieldNameLabel')}</label>
                                 <input
                                     type="text"
                                     value={newField.fieldName}
                                     onChange={e => setNewField(prev => ({ ...prev, fieldName: e.target.value }))}
-                                    placeholder="contoh: warna_produk"
+                                    placeholder={t('settings.customFields.fieldNamePlaceholder')}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
 
                             {/* Field Label */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Label *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.customFields.fieldLabelLabel')}</label>
                                 <input
                                     type="text"
                                     value={newField.fieldLabel}
                                     onChange={e => setNewField(prev => ({ ...prev, fieldLabel: e.target.value }))}
-                                    placeholder="contoh: Warna Produk"
+                                    placeholder={t('settings.customFields.fieldLabelPlaceholder')}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
 
                             {/* Field Type */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Field *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.customFields.fieldTypeLabel')}</label>
                                 <div className="grid grid-cols-5 gap-2">
                                     {FIELD_TYPE_OPTIONS.map(opt => {
                                         const Icon = opt.icon
@@ -393,12 +393,12 @@ export default function CustomFieldsSettingsPage() {
                             {/* Options (for select type) */}
                             {newField.fieldType === 'select' && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Opsi (pisahkan dengan koma)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.customFields.optionsPlaceholder')}</label>
                                     <input
                                         type="text"
                                         value={newField.options}
                                         onChange={e => setNewField(prev => ({ ...prev, options: e.target.value }))}
-                                        placeholder="Merah, Biru, Hijau"
+                                        placeholder={t('settings.customFields.optionsExample')}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
@@ -406,12 +406,12 @@ export default function CustomFieldsSettingsPage() {
 
                             {/* Default Value */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Default Value</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.customFields.defaultPlaceholder')}</label>
                                 <input
                                     type="text"
                                     value={newField.defaultValue}
                                     onChange={e => setNewField(prev => ({ ...prev, defaultValue: e.target.value }))}
-                                    placeholder="Opsional"
+                                    placeholder={t('settings.customFields.optionalPlaceholder')}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
@@ -424,7 +424,7 @@ export default function CustomFieldsSettingsPage() {
                                     onChange={e => setNewField(prev => ({ ...prev, required: e.target.checked }))}
                                     className="h-4 w-4 text-blue-600 rounded"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Wajib diisi</span>
+                                <span className="text-sm font-medium text-gray-700">{t('settings.customFields.requiredLabel')}</span>
                             </label>
                         </div>
                         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
@@ -432,7 +432,7 @@ export default function CustomFieldsSettingsPage() {
                                 onClick={() => setShowCreateModal(false)}
                                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                             >
-                                Batal
+                                {t('settings.customFields.cancel')}
                             </button>
                             <button
                                 onClick={handleCreate}
@@ -440,7 +440,7 @@ export default function CustomFieldsSettingsPage() {
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
                                 {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-                                Tambah Field
+                                {t('settings.customFields.createBtn')}
                             </button>
                         </div>
                     </div>

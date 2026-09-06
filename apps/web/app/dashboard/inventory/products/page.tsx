@@ -53,31 +53,31 @@ interface FormErrors {
     categoryId?: string
 }
 
-function validateProductForm(data: ProductFormData): FormErrors {
+function validateProductForm(data: ProductFormData, t: (key: string) => string): FormErrors {
     const errors: FormErrors = {}
 
     if (!data.name || data.name.trim().length < 2) {
-        errors.name = 'Nama produk harus minimal 2 karakter'
+        errors.name = t('inventory.products.validation.nameMinLength')
     }
 
     if (!data.sku || data.sku.trim().length === 0) {
-        errors.sku = 'SKU wajib diisi'
+        errors.sku = t('inventory.products.validation.skuRequired')
     }
 
     if (data.price < 0) {
-        errors.price = 'Harga jual tidak boleh negatif'
+        errors.price = t('inventory.products.validation.priceNegative')
     }
 
     if (data.cost < 0) {
-        errors.cost = 'Harga beli tidak boleh negatif'
+        errors.cost = t('inventory.products.validation.costNegative')
     }
 
     if (data.stock < 0) {
-        errors.stock = 'Stok tidak boleh negatif'
+        errors.stock = t('inventory.products.validation.stockNegative')
     }
 
     if (data.minStock < 0) {
-        errors.minStock = 'Stok minimum tidak boleh negatif'
+        errors.minStock = t('inventory.products.validation.minStockNegative')
     }
 
     return errors
@@ -136,10 +136,10 @@ export default function ProductsPage() {
             if (data.success) {
                 setProducts(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data produk')
+                setError(data.error || t('inventory.products.fetchError'))
             }
         } catch {
-            setError('Gagal memuat data produk. Periksa koneksi jaringan Anda.')
+            setError(t('inventory.products.fetchErrorNetwork'))
         } finally {
             setLoading(false)
         }
@@ -204,20 +204,20 @@ export default function ProductsPage() {
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus produk ini?')
+        setConfirmTitle(t('inventory.products.confirmTitle'))
+        setConfirmMessage(t('inventory.products.confirmMessage'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/inventory/products?id=${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchProducts()
-                    setToast({ message: result.message || 'Produk berhasil dihapus', type: 'success' })
+                    setToast({ message: result.message || t('inventory.products.toast.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: result.error || t('inventory.products.toast.deleteError'), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus produk', type: 'error' })
+                setToast({ message: t('inventory.products.toast.deleteErrorGeneric'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -259,7 +259,7 @@ export default function ProductsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const errors = validateProductForm(formData)
+        const errors = validateProductForm(formData, t)
         setFormErrors(errors)
         if (Object.keys(errors).length > 0) return
 
@@ -285,14 +285,14 @@ export default function ProductsPage() {
                 setShowForm(false)
                 fetchProducts()
                 setToast({
-                    message: editingProduct ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan',
+                    message: editingProduct ? t('inventory.products.toast.updateSuccess') : t('inventory.products.toast.createSuccess'),
                     type: 'success',
                 })
             } else {
-                setToast({ message: result.error || 'Gagal menyimpan data', type: 'error' })
+                setToast({ message: result.error || t('inventory.products.toast.saveError'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menyimpan data produk', type: 'error' })
+            setToast({ message: t('inventory.products.toast.saveErrorGeneric'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -435,7 +435,7 @@ export default function ProductsPage() {
                     <EmptyState
                         icon={Package}
                         title={t('inventory.products.noProducts') || 'Tidak ada produk'}
-                        description={searchQuery || filterCategory !== 'all' || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan produk pertama Anda'}
+                        description={searchQuery || filterCategory !== 'all' || filterStatus !== 'all' ? t('inventory.products.emptyFilterHint') : t('inventory.products.emptyFirstHint')}
                         actionLabel={canMutate ? (t('inventory.products.addProduct') || 'Tambah Produk') : undefined}
                         onAction={canMutate ? openCreateForm : undefined}
                     />
@@ -480,13 +480,13 @@ export default function ProductsPage() {
                                     onClick={() => openEditForm(product)}
                                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                 >
-                                    Edit
+                                    {t('inventory.products.editButton')}
                                 </button>
                                 <button
                                     onClick={() => handleDelete(product.id)}
                                     className="text-sm font-medium text-red-600 hover:text-red-700"
                                 >
-                                    Hapus
+                                    {t('inventory.products.deleteButton')}
                                 </button>
                             </div>
                         </div>
@@ -524,7 +524,7 @@ export default function ProductsPage() {
                                         <EmptyState
                                             icon={Package}
                                             title={t('inventory.products.noProducts') || 'Tidak ada produk'}
-                                            description={searchQuery || filterCategory !== 'all' || filterStatus !== 'all' ? 'Coba ubah filter atau kata kunci pencarian' : 'Mulai tambahkan produk pertama Anda'}
+                                            description={searchQuery || filterCategory !== 'all' || filterStatus !== 'all' ? t('inventory.products.emptyFilterHint') : t('inventory.products.emptyFirstHint')}
                                             actionLabel={canMutate ? (t('inventory.products.addProduct') || 'Tambah Produk') : undefined}
                                             onAction={canMutate ? openCreateForm : undefined}
                                         />
@@ -567,13 +567,13 @@ export default function ProductsPage() {
                                                     onClick={() => openEditForm(product)}
                                                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                                 >
-                                                    Edit
+                                                    {t('inventory.products.editButton')}
                                                 </button>
                                                 {canMutate && (
                                                     <button
                                                         onClick={() => handleDelete(product.id)}
                                                         className="text-red-500 hover:text-red-700"
-                                                        title="Hapus"
+                                                        title={t('inventory.products.deleteButton')}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
@@ -589,12 +589,12 @@ export default function ProductsPage() {
             </div>
 
             {/* Form Modal */}
-            <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'} size="md">
+            <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingProduct ? t('inventory.products.form.titleEdit') : t('inventory.products.form.titleCreate')} size="md">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Name */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nama Produk <span className="text-red-500">*</span>
+                            {t('inventory.products.form.nameLabel')} <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -602,7 +602,7 @@ export default function ProductsPage() {
                             onChange={(e) => handleFormChange('name', e.target.value)}
                             className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                 }`}
-                            placeholder="Nama produk"
+                            placeholder={t('inventory.products.form.namePlaceholder')}
                         />
                         {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
                     </div>
@@ -625,25 +625,25 @@ export default function ProductsPage() {
 
                     {/* Description */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.products.form.descriptionLabel')}</label>
                         <textarea
                             value={formData.description}
                             onChange={(e) => handleFormChange('description', e.target.value)}
                             rows={2}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Deskripsi produk (opsional)"
+                            placeholder={t('inventory.products.form.descriptionPlaceholder')}
                         />
                     </div>
 
                     {/* Category */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.products.form.categoryLabel')}</label>
                         <select
                             value={formData.categoryId}
                             onChange={(e) => handleFormChange('categoryId', e.target.value)}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         >
-                            <option value="">Pilih kategori</option>
+                            <option value="">{t('inventory.products.form.categoryPlaceholder')}</option>
                             {categories.map((cat) => (
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
@@ -654,7 +654,7 @@ export default function ProductsPage() {
                         {/* Price */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Harga Jual (Rp) <span className="text-red-500">*</span>
+                                {t('inventory.products.form.sellPriceLabel')} <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
@@ -670,7 +670,7 @@ export default function ProductsPage() {
                         {/* Cost */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Harga Beli (Rp) <span className="text-red-500">*</span>
+                                {t('inventory.products.form.buyPriceLabel')} <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
@@ -688,7 +688,7 @@ export default function ProductsPage() {
                         {/* Stock */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Stok <span className="text-red-500">*</span>
+                                {t('inventory.products.form.stockLabel')} <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
@@ -703,7 +703,7 @@ export default function ProductsPage() {
 
                         {/* Min Stock */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Min Stok</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.products.form.minStockLabel')}</label>
                             <input
                                 type="number"
                                 value={formData.minStock}
@@ -715,7 +715,7 @@ export default function ProductsPage() {
 
                         {/* Unit */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.products.form.unitLabel')}</label>
                             <select
                                 value={formData.unit}
                                 onChange={(e) => handleFormChange('unit', e.target.value)}
@@ -734,11 +734,11 @@ export default function ProductsPage() {
                     {/* Actions */}
                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                         <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" disabled={submitting}>
-                            Batal
+                            {t('inventory.products.form.cancel')}
                         </button>
                         <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                            {submitting ? 'Menyimpan...' : (editingProduct ? 'Update' : 'Simpan')}
+                            {submitting ? t('inventory.products.form.saving') : (editingProduct ? t('inventory.products.form.update') : t('inventory.products.form.save'))}
                         </button>
                     </div>
                 </form>
@@ -776,8 +776,8 @@ export default function ProductsPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('inventory.products.confirmText')}
+                cancelText={t('inventory.products.cancelText')}
                 variant="danger"
             />
         </div>

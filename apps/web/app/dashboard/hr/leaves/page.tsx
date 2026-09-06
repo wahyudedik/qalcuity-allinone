@@ -54,29 +54,29 @@ interface FormErrors {
     reason?: string
 }
 
-function validateLeaveForm(data: LeaveFormData): FormErrors {
+function validateLeaveForm(data: LeaveFormData, t: (key: string) => string): FormErrors {
     const errors: FormErrors = {}
 
     if (!data.type) {
-        errors.type = 'Tipe cuti wajib dipilih'
+        errors.type = t('hr.leaves.validation.typeRequired')
     }
 
     if (!data.startDate) {
-        errors.startDate = 'Tanggal mulai wajib diisi'
+        errors.startDate = t('hr.leaves.validation.startDateRequired')
     }
 
     if (!data.endDate) {
-        errors.endDate = 'Tanggal selesai wajib diisi'
+        errors.endDate = t('hr.leaves.validation.endDateRequired')
     } else if (data.startDate && data.endDate) {
         const start = new Date(data.startDate)
         const end = new Date(data.endDate)
         if (end < start) {
-            errors.endDate = 'Tanggal selesai harus setelah tanggal mulai'
+            errors.endDate = t('hr.leaves.validation.endDateAfterStart')
         }
     }
 
     if (!data.reason || data.reason.trim().length < 10) {
-        errors.reason = 'Alasan cuti harus minimal 10 karakter'
+        errors.reason = t('hr.leaves.validation.reasonMinLength')
     }
 
     return errors
@@ -157,10 +157,10 @@ export default function LeavesPage() {
             if (data.success) {
                 setLeaveRequests(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data cuti')
+                setError(data.error || (t('hr.leaves.fetchError') || 'Gagal memuat data cuti'))
             }
         } catch {
-            setError('Gagal memuat data cuti. Periksa koneksi jaringan Anda.')
+            setError(t('hr.leaves.fetchErrorNetwork') || 'Gagal memuat data cuti. Periksa koneksi jaringan Anda.')
         } finally {
             setLoading(false)
         }
@@ -195,12 +195,12 @@ export default function LeavesPage() {
             const result = await res.json()
             if (result.success) {
                 fetchLeaves()
-                setToast({ message: 'Permohonan cuti berhasil disetujui', type: 'success' })
+                setToast({ message: t('hr.leaves.toast.approveSuccess') || 'Permohonan cuti berhasil disetujui', type: 'success' })
             } else {
-                setToast({ message: `Gagal menyetujui: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('hr.leaves.toast.approveError') || 'Gagal menyetujui'}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menyetujui permohonan cuti', type: 'error' })
+            setToast({ message: t('hr.leaves.toast.approveErrorGeneric') || 'Gagal menyetujui permohonan cuti', type: 'error' })
         } finally {
             setProcessingId(null)
             setConfirmActionId(null)
@@ -225,12 +225,12 @@ export default function LeavesPage() {
             const result = await res.json()
             if (result.success) {
                 fetchLeaves()
-                setToast({ message: 'Permohonan cuti ditolak', type: 'success' })
+                setToast({ message: t('hr.leaves.toast.rejectSuccess') || 'Permohonan cuti ditolak', type: 'success' })
             } else {
-                setToast({ message: `Gagal menolak: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('hr.leaves.toast.rejectError') || 'Gagal menolak'}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menolak permohonan cuti', type: 'error' })
+            setToast({ message: t('hr.leaves.toast.rejectErrorGeneric') || 'Gagal menolak permohonan cuti', type: 'error' })
         } finally {
             setProcessingId(null)
             setConfirmActionId(null)
@@ -250,12 +250,12 @@ export default function LeavesPage() {
             const result = await response.json()
             if (result.success) {
                 fetchLeaves()
-                setToast({ message: 'Permohonan cuti berhasil dihapus', type: 'success' })
+                setToast({ message: t('hr.leaves.toast.deleteSuccess') || 'Permohonan cuti berhasil dihapus', type: 'success' })
             } else {
-                setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('hr.leaves.toast.deleteError') || 'Gagal menghapus'}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menghapus permohonan cuti', type: 'error' })
+            setToast({ message: t('hr.leaves.toast.deleteErrorGeneric') || 'Gagal menghapus permohonan cuti', type: 'error' })
         } finally {
             setConfirmActionId(null)
         }
@@ -263,7 +263,7 @@ export default function LeavesPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const errors = validateLeaveForm(formData)
+        const errors = validateLeaveForm(formData, t)
         setFormErrors(errors)
 
         if (Object.keys(errors).length > 0) return
@@ -284,12 +284,12 @@ export default function LeavesPage() {
                 setShowForm(false)
                 setFormData({ type: '', startDate: '', endDate: '', reason: '' })
                 fetchLeaves()
-                setToast({ message: 'Permohonan cuti berhasil diajukan', type: 'success' })
+                setToast({ message: t('hr.leaves.toast.submitSuccess') || 'Permohonan cuti berhasil diajukan', type: 'success' })
             } else {
-                setToast({ message: result.error || 'Gagal mengajukan cuti', type: 'error' })
+                setToast({ message: result.error || (t('hr.leaves.toast.submitError') || 'Gagal mengajukan cuti'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal mengajukan permohonan cuti', type: 'error' })
+            setToast({ message: t('hr.leaves.toast.submitErrorGeneric') || 'Gagal mengajukan permohonan cuti', type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -331,7 +331,7 @@ export default function LeavesPage() {
                 <AlertTriangle className="h-10 w-10 text-yellow-500" />
                 <h3 className="mt-4 text-lg font-medium text-gray-900">{error}</h3>
                 <button onClick={fetchLeaves} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    Coba Lagi
+                    {t('hr.leaves.retry') || 'Coba Lagi'}
                 </button>
             </div>
         )
@@ -476,7 +476,7 @@ export default function LeavesPage() {
                                                     </span>
                                                     <span className="flex items-center gap-1">
                                                         <Clock className="h-3.5 w-3.5" />
-                                                        {request.days} hari
+                                                        {request.days} {t('hr.leaves.daysUnit') || 'hari'}
                                                     </span>
                                                 </div>
                                                 <p className="mt-2 flex items-center gap-1 text-sm text-gray-500">
@@ -525,8 +525,8 @@ export default function LeavesPage() {
                     {filteredRequests.length === 0 && (
                         <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
                             <ClipboardList className="mx-auto h-10 w-10 text-gray-400" />
-                            <h3 className="mt-4 text-lg font-medium text-gray-900">Tidak ada permohonan cuti</h3>
-                            <p className="mt-2 text-gray-500">Belum ada permohonan cuti yang sesuai dengan filter</p>
+                            <h3 className="mt-4 text-lg font-medium text-gray-900">{t('hr.leaves.emptyState') || 'Tidak ada permohonan cuti'}</h3>
+                            <p className="mt-2 text-gray-500">{t('hr.leaves.emptyHint') || 'Belum ada permohonan cuti yang sesuai dengan filter'}</p>
                         </div>
                     )}
                 </>
@@ -548,20 +548,20 @@ export default function LeavesPage() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-gray-900">{config.label}</h3>
-                                            <p className="text-sm text-gray-500">Tahun {new Date().getFullYear()}</p>
+                                            <p className="text-sm text-gray-500">{t('hr.leaves.balance.year') || 'Tahun'} {new Date().getFullYear()}</p>
                                         </div>
                                     </div>
                                     <div className="space-y-3">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-gray-500">Terpakai</span>
-                                            <span className="font-medium text-gray-900">{balance.used} dari {balance.total} hari</span>
+                                            <span className="text-gray-500">{t('hr.leaves.balance.used') || 'Terpakai'}</span>
+                                            <span className="font-medium text-gray-900">{balance.used} {t('hr.leaves.balance.of') || 'dari'} {balance.total} {t('hr.leaves.daysUnit') || 'hari'}</span>
                                         </div>
                                         <div className="h-2 w-full rounded-full bg-gray-100">
                                             <div className="h-2 rounded-full bg-blue-600" style={{ width: `${percentage}%` }} />
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-gray-500">Sisa</span>
-                                            <span className="font-bold text-green-600">{balance.remaining} hari</span>
+                                            <span className="text-gray-500">{t('hr.leaves.balance.remaining') || 'Sisa'}</span>
+                                            <span className="font-bold text-green-600">{balance.remaining} {t('hr.leaves.daysUnit') || 'hari'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -582,7 +582,7 @@ export default function LeavesPage() {
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                        {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(day => (
+                        {[t('hr.leaves.calendar.mon') || 'Sen', t('hr.leaves.calendar.tue') || 'Sel', t('hr.leaves.calendar.wed') || 'Rab', t('hr.leaves.calendar.thu') || 'Kam', t('hr.leaves.calendar.fri') || 'Jum', t('hr.leaves.calendar.sat') || 'Sab', t('hr.leaves.calendar.sun') || 'Min'].map(day => (
                             <div key={day} className="py-2 font-medium text-gray-500">{day}</div>
                         ))}
                         {Array.from({ length: 35 }, (_, i) => {
@@ -609,7 +609,7 @@ export default function LeavesPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                            <h2 className="text-lg font-semibold text-gray-900">Ajukan Cuti Baru</h2>
+                            <h2 className="text-lg font-semibold text-gray-900">{t('hr.leaves.form.title') || 'Ajukan Cuti Baru'}</h2>
                             <button onClick={() => setShowForm(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
@@ -618,7 +618,7 @@ export default function LeavesPage() {
                             {/* Leave Type */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tipe Cuti <span className="text-red-500">*</span>
+                                    {t('hr.leaves.form.typeLabel') || 'Tipe Cuti'} <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     value={formData.type}
@@ -626,12 +626,12 @@ export default function LeavesPage() {
                                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.type ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
                                 >
-                                    <option value="">Pilih tipe cuti</option>
-                                    <option value="annual">Cuti Tahunan</option>
-                                    <option value="sick">Sakit</option>
-                                    <option value="personal">Cuti Pribadi</option>
-                                    <option value="maternity">Cuti Melahirkan</option>
-                                    <option value="unpaid">Cuti Tanpa Gaji</option>
+                                    <option value="">{t('hr.leaves.form.typePlaceholder') || 'Pilih tipe cuti'}</option>
+                                    <option value="annual">{t('hr.leaves.annual') || 'Cuti Tahunan'}</option>
+                                    <option value="sick">{t('hr.leaves.sick') || 'Sakit'}</option>
+                                    <option value="personal">{t('hr.leaves.personal') || 'Cuti Pribadi'}</option>
+                                    <option value="maternity">{t('hr.leaves.maternity') || 'Cuti Melahirkan'}</option>
+                                    <option value="unpaid">{t('hr.leaves.unpaid') || 'Cuti Tanpa Gaji'}</option>
                                 </select>
                                 {formErrors.type && <p className="mt-1 text-xs text-red-600">{formErrors.type}</p>}
                             </div>
@@ -639,7 +639,7 @@ export default function LeavesPage() {
                             {/* Start Date */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tanggal Mulai <span className="text-red-500">*</span>
+                                    {t('hr.leaves.form.startDateLabel') || 'Tanggal Mulai'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="date"
@@ -654,7 +654,7 @@ export default function LeavesPage() {
                             {/* End Date */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tanggal Selesai <span className="text-red-500">*</span>
+                                    {t('hr.leaves.form.endDateLabel') || 'Tanggal Selesai'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="date"
@@ -667,7 +667,7 @@ export default function LeavesPage() {
                                 {formErrors.endDate && <p className="mt-1 text-xs text-red-600">{formErrors.endDate}</p>}
                                 {formData.startDate && formData.endDate && (
                                     <p className="mt-1 text-xs text-gray-500">
-                                        Total: {calculateDays(formData.startDate, formData.endDate)} hari
+                                        {t('hr.leaves.form.totalDays') || 'Total'}: {calculateDays(formData.startDate, formData.endDate)} {t('hr.leaves.daysUnit') || 'hari'}
                                     </p>
                                 )}
                             </div>
@@ -675,7 +675,7 @@ export default function LeavesPage() {
                             {/* Reason */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Alasan <span className="text-red-500">*</span>
+                                    {t('hr.leaves.form.reasonLabel') || 'Alasan'} <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     value={formData.reason}
@@ -683,7 +683,7 @@ export default function LeavesPage() {
                                     rows={3}
                                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${formErrors.reason ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                                         }`}
-                                    placeholder="Jelaskan alasan cuti Anda (minimal 10 karakter)"
+                                    placeholder={t('hr.leaves.form.reasonPlaceholder') || 'Jelaskan alasan cuti Anda (minimal 10 karakter)'}
                                 />
                                 {formErrors.reason && <p className="mt-1 text-xs text-red-600">{formErrors.reason}</p>}
                             </div>
@@ -691,11 +691,11 @@ export default function LeavesPage() {
                             {/* Actions */}
                             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                                 <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" disabled={submitting}>
-                                    Batal
+                                    {t('hr.leaves.form.cancel') || 'Batal'}
                                 </button>
                                 <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {submitting ? 'Mengirim...' : 'Ajukan Cuti'}
+                                    {submitting ? (t('hr.leaves.form.submitting') || 'Mengirim...') : (t('hr.leaves.form.submit') || 'Ajukan Cuti')}
                                 </button>
                             </div>
                         </form>
@@ -708,9 +708,9 @@ export default function LeavesPage() {
                 isOpen={showApproveConfirm}
                 onClose={() => { setShowApproveConfirm(false); setConfirmActionId(null) }}
                 onConfirm={confirmApprove}
-                title="Setujui Cuti"
-                message="Apakah Anda yakin ingin menyetujui permohonan cuti ini?"
-                confirmText="Setujui"
+                title={t('hr.leaves.confirm.approveTitle') || 'Setujui Cuti'}
+                message={t('hr.leaves.confirm.approveMessage') || 'Apakah Anda yakin ingin menyetujui permohonan cuti ini?'}
+                confirmText={t('hr.leaves.confirm.approveConfirm') || 'Setujui'}
                 variant="info"
                 isLoading={processingId === confirmActionId}
             />
@@ -720,9 +720,9 @@ export default function LeavesPage() {
                 isOpen={showRejectConfirm}
                 onClose={() => { setShowRejectConfirm(false); setConfirmActionId(null) }}
                 onConfirm={confirmReject}
-                title="Tolak Cuti"
-                message="Apakah Anda yakin ingin menolak permohonan cuti ini?"
-                confirmText="Tolak"
+                title={t('hr.leaves.confirm.rejectTitle') || 'Tolak Cuti'}
+                message={t('hr.leaves.confirm.rejectMessage') || 'Apakah Anda yakin ingin menolak permohonan cuti ini?'}
+                confirmText={t('hr.leaves.confirm.rejectConfirm') || 'Tolak'}
                 variant="warning"
                 isLoading={processingId === confirmActionId}
             />
@@ -732,9 +732,9 @@ export default function LeavesPage() {
                 isOpen={showDeleteConfirm}
                 onClose={() => { setShowDeleteConfirm(false); setConfirmActionId(null) }}
                 onConfirm={confirmDelete}
-                title="Hapus Cuti"
-                message="Apakah Anda yakin ingin menghapus permohonan cuti ini?"
-                confirmText="Hapus"
+                title={t('hr.leaves.confirm.deleteTitle') || 'Hapus Cuti'}
+                message={t('hr.leaves.confirm.deleteMessage') || 'Apakah Anda yakin ingin menghapus permohonan cuti ini?'}
+                confirmText={t('hr.leaves.confirm.deleteConfirm') || 'Hapus'}
                 variant="danger"
             />
 

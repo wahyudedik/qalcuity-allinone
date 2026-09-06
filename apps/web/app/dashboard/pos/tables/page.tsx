@@ -39,14 +39,6 @@ import { ReservationForm } from '@/components/pos/reservation-form';
 
 const STATUS_OPTIONS = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'CLEANING', 'DISABLED'];
 
-const STATUS_LABELS: Record<string, string> = {
-    AVAILABLE: 'Tersedia',
-    OCCUPIED: 'Terisi',
-    RESERVED: 'Direservasi',
-    CLEANING: 'Bersih-bersih',
-    DISABLED: 'Nonaktif',
-};
-
 const STATUS_COLORS: Record<string, string> = {
     AVAILABLE: 'bg-green-100 text-green-800',
     OCCUPIED: 'bg-red-100 text-red-800',
@@ -75,6 +67,15 @@ export default function TablesPage() {
         deleteTable,
         createReservation,
     } = usePosTables();
+
+    // STATUS_LABELS must be inside component to use t()
+    const STATUS_LABELS: Record<string, string> = {
+        AVAILABLE: t('pos.tables.statusAvailable') || 'Tersedia',
+        OCCUPIED: t('pos.tables.statusOccupied') || 'Terisi',
+        RESERVED: t('pos.tables.statusReserved') || 'Direservasi',
+        CLEANING: t('pos.tables.statusCleaning') || 'Bersih-bersih',
+        DISABLED: t('pos.tables.statusDisabled') || 'Nonaktif',
+    };
 
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
@@ -141,7 +142,7 @@ export default function TablesPage() {
 
     // Handle delete
     const handleDelete = async (id: string) => {
-        if (window.confirm('Apakah Anda yakin ingin menghapus meja ini?')) {
+        if (window.confirm(t('pos.tables.confirmDelete') || 'Apakah Anda yakin ingin menghapus meja ini?')) {
             await deleteTable(id);
         }
     };
@@ -190,14 +191,14 @@ export default function TablesPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
                     >
                         <Calendar className="h-4 w-4" />
-                        Reservasi
+                        {t('pos.tables.reservation') || 'Reservasi'}
                     </button>
                     <button
                         onClick={() => setShowCreateForm(true)}
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <Plus className="h-4 w-4" />
-                        Tambah Meja
+                        {t('pos.tables.addTable') || 'Tambah Meja'}
                     </button>
                     <button
                         onClick={() => { fetchTables(); fetchStats(); }}
@@ -219,29 +220,29 @@ export default function TablesPage() {
             {/* Stats Bar */}
             <div className="flex flex-wrap gap-2">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
-                    <span className="font-medium text-gray-500">Total:</span>
+                    <span className="font-medium text-gray-500">{t('pos.tables.total') || 'Total'}:</span>
                     <span className="font-bold text-gray-900">{totalTables}</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-sm">
-                    <span className="font-medium text-green-700">Tersedia:</span>
+                    <span className="font-medium text-green-700">{t('pos.tables.available') || 'Tersedia'}:</span>
                     <span className="font-bold text-green-800">{availableTables}</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-sm">
-                    <span className="font-medium text-red-700">Terisi:</span>
+                    <span className="font-medium text-red-700">{t('pos.tables.occupied') || 'Terisi'}:</span>
                     <span className="font-bold text-red-800">{occupiedTables}</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                    <span className="font-medium text-blue-700">Direservasi:</span>
+                    <span className="font-medium text-blue-700">{t('pos.tables.reserved') || 'Direservasi'}:</span>
                     <span className="font-bold text-blue-800">{reservedTables}</span>
                 </div>
                 {cleaningTables > 0 && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
-                        <span className="font-medium text-yellow-700">Bersih-bersih:</span>
+                        <span className="font-medium text-yellow-700">{t('pos.tables.cleaning') || 'Bersih-bersih'}:</span>
                         <span className="font-bold text-yellow-800">{cleaningTables}</span>
                     </div>
                 )}
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-                    <span className="font-medium text-gray-500">Utilisasi:</span>
+                    <span className="font-medium text-gray-500">{t('pos.tables.utilization') || 'Utilisasi'}:</span>
                     <span className="font-bold text-gray-900">{utilizationRate}%</span>
                 </div>
             </div>
@@ -259,7 +260,7 @@ export default function TablesPage() {
                                 }`}
                         >
                             <LayoutGrid className="h-4 w-4" />
-                            Grid
+                            {t('pos.tables.grid') || 'Grid'}
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
@@ -269,7 +270,7 @@ export default function TablesPage() {
                                 }`}
                         >
                             <List className="h-4 w-4" />
-                            List
+                            {t('pos.tables.list') || 'List'}
                         </button>
                     </div>
 
@@ -280,7 +281,7 @@ export default function TablesPage() {
                             onChange={(e) => setFilters({ ...filters, zone: e.target.value || undefined })}
                             className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                         >
-                            <option value="">Semua Zona</option>
+                            <option value="">{t('pos.tables.allZones') || 'Semua Zona'}</option>
                             {zones.map((zone) => (
                                 <option key={zone} value={zone}>
                                     {zone}
@@ -295,7 +296,7 @@ export default function TablesPage() {
                         onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
                         className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                     >
-                        <option value="">Semua Status</option>
+                        <option value="">{t('pos.tables.allStatus') || 'Semua Status'}</option>
                         {STATUS_OPTIONS.map((status) => (
                             <option key={status} value={status}>
                                 {STATUS_LABELS[status]}
@@ -309,7 +310,7 @@ export default function TablesPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari meja..."
+                        placeholder={t('pos.tables.searchPlaceholder') || 'Cari meja...'}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white w-48"
@@ -319,13 +320,13 @@ export default function TablesPage() {
 
             {/* Content */}
             {loading ? (
-                <div className="text-center py-12 text-gray-500">Memuat data meja...</div>
+                <div className="text-center py-12 text-gray-500">{t('pos.tables.loading') || 'Memuat data meja...'}</div>
             ) : filteredTables.length === 0 ? (
                 <div className="text-center py-12">
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">Belum ada meja</p>
+                    <p className="text-gray-500 font-medium">{t('pos.tables.empty') || 'Belum ada meja'}</p>
                     <p className="text-sm text-gray-400 mt-1">
-                        Klik "Tambah Meja" untuk menambahkan meja pertama Anda.
+                        {t('pos.tables.emptyDescription') || 'Klik "Tambah Meja" untuk menambahkan meja pertama Anda.'}
                     </p>
                 </div>
             ) : viewMode === 'grid' ? (
@@ -346,13 +347,13 @@ export default function TablesPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">No.</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kapasitas</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zona</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reservasi</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.no') || 'No.'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.name') || 'Nama'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.capacity') || 'Kapasitas'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.status') || 'Status'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.zone') || 'Zona'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.reservations') || 'Reservasi'}</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.tables.actions') || 'Aksi'}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -395,7 +396,7 @@ export default function TablesPage() {
                                                 onClick={() => handleDelete(table.id)}
                                                 className="text-xs text-red-600 hover:text-red-800 px-1.5 py-1"
                                             >
-                                                Hapus
+                                                {t('pos.tables.delete') || 'Hapus'}
                                             </button>
                                         </div>
                                     </td>
@@ -411,13 +412,13 @@ export default function TablesPage() {
                 isOpen={showReservationForm}
                 onClose={() => setShowReservationForm(false)}
                 onSubmit={handleReservationSubmit}
-                tables={tables.map((t) => ({
-                    id: t.id,
-                    number: t.number,
-                    name: t.name,
-                    capacity: t.capacity,
-                    zone: t.zone,
-                    status: t.status,
+                tables={tables.map((tr) => ({
+                    id: tr.id,
+                    number: tr.number,
+                    name: tr.name,
+                    capacity: tr.capacity,
+                    zone: tr.zone,
+                    status: tr.status,
                 }))}
             />
 
@@ -429,7 +430,7 @@ export default function TablesPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tambah Meja Baru</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.tables.addTableTitle') || 'Tambah Meja Baru'}</h3>
                             <button
                                 onClick={() => setShowCreateForm(false)}
                                 className="text-gray-400 hover:text-gray-600"
@@ -440,7 +441,7 @@ export default function TablesPage() {
                         <form onSubmit={handleCreateTable} className="px-6 py-4 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nomor Meja *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.tables.tableNumber') || 'Nomor Meja *'}</label>
                                     <input
                                         type="number"
                                         min={1}
@@ -451,7 +452,7 @@ export default function TablesPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kapasitas</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.tables.tableCapacity') || 'Kapasitas'}</label>
                                     <input
                                         type="number"
                                         min={1}
@@ -463,45 +464,45 @@ export default function TablesPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Meja</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.tables.tableName') || 'Nama Meja'}</label>
                                 <input
                                     type="text"
                                     value={createFormData.name}
                                     onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    placeholder="Contoh: VIP 1"
+                                    placeholder={t('pos.tables.tableNamePlaceholder') || 'Contoh: VIP 1'}
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Zona</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.tables.tableZone') || 'Zona'}</label>
                                     <input
                                         type="text"
                                         value={createFormData.zone}
                                         onChange={(e) => setCreateFormData({ ...createFormData, zone: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                        placeholder="Contoh: Indoor"
+                                        placeholder={t('pos.tables.tableZonePlaceholder') || 'Contoh: Indoor'}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lantai</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.tables.tableFloor') || 'Lantai'}</label>
                                     <input
                                         type="text"
                                         value={createFormData.floor}
                                         onChange={(e) => setCreateFormData({ ...createFormData, floor: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                        placeholder="Contoh: 1"
+                                        placeholder={t('pos.tables.tableFloorPlaceholder') || 'Contoh: 1'}
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Catatan</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.tables.tableNotes') || 'Catatan'}</label>
                                 <textarea
                                     value={createFormData.notes}
                                     onChange={(e) => setCreateFormData({ ...createFormData, notes: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     rows={2}
-                                    placeholder="Catatan opsional..."
+                                    placeholder={t('pos.tables.tableNotesPlaceholder') || 'Catatan opsional...'}
                                 />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
@@ -510,14 +511,14 @@ export default function TablesPage() {
                                     onClick={() => setShowCreateForm(false)}
                                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                                 >
-                                    Batal
+                                    {t('pos.tables.cancel') || 'Batal'}
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={creating}
                                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                                 >
-                                    {creating ? 'Menyimpan...' : 'Simpan'}
+                                    {creating ? (t('pos.tables.saving') || 'Menyimpan...') : (t('pos.tables.save') || 'Simpan')}
                                 </button>
                             </div>
                         </form>

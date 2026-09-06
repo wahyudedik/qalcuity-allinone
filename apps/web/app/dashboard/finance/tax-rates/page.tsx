@@ -17,10 +17,10 @@ type TaxRate = {
     createdAt: string
 }
 
-const typeConfig: Record<string, { label: string; color: string }> = {
-    VAT: { label: 'PPN', color: 'bg-blue-100 text-blue-700' },
-    INCOME_TAX: { label: 'PPh', color: 'bg-green-100 text-green-700' },
-    OTHER: { label: 'Lainnya', color: 'bg-gray-100 text-gray-700' },
+const typeColors: Record<string, string> = {
+    VAT: 'bg-blue-100 text-blue-700',
+    INCOME_TAX: 'bg-green-100 text-green-700',
+    OTHER: 'bg-gray-100 text-gray-700',
 }
 
 export default function TaxRatesPage() {
@@ -28,6 +28,7 @@ export default function TaxRatesPage() {
     const { data: session } = useSession()
     const canMutate = session?.user?.role !== 'VIEWER'
     const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const getTypeLabel = (type: string) => t(`finance.taxRates.types.${type}`) || type
 
     const [taxRates, setTaxRates] = useState<TaxRate[]>([])
     const [loading, setLoading] = useState(true)
@@ -70,10 +71,10 @@ export default function TaxRatesPage() {
             if (data.success) {
                 setTaxRates(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data')
+                setError(data.error || t('finance.taxRates.errors.load'))
             }
         } catch {
-            setError('Gagal memuat data pajak')
+            setError(t('finance.taxRates.errors.loadTax'))
         } finally {
             setLoading(false)
         }
@@ -88,15 +89,15 @@ export default function TaxRatesPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Data pajak berhasil dibuat', type: 'success' })
+                setToast({ message: t('finance.taxRates.toast.createSuccess'), type: 'success' })
                 setShowForm(false)
                 resetForm()
                 fetchTaxRates()
             } else {
-                setToast({ message: data.error || 'Gagal membuat data pajak', type: 'error' })
+                setToast({ message: data.error || t('finance.taxRates.toast.createFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal membuat data pajak', type: 'error' })
+            setToast({ message: t('finance.taxRates.toast.createFailed'), type: 'error' })
         }
     }
 
@@ -110,32 +111,32 @@ export default function TaxRatesPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Data pajak berhasil diperbarui', type: 'success' })
+                setToast({ message: t('finance.taxRates.toast.updateSuccess'), type: 'success' })
                 setShowForm(false)
                 resetForm()
                 fetchTaxRates()
             } else {
-                setToast({ message: data.error || 'Gagal memperbarui data pajak', type: 'error' })
+                setToast({ message: data.error || t('finance.taxRates.toast.updateFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal memperbarui data pajak', type: 'error' })
+            setToast({ message: t('finance.taxRates.toast.updateFailed'), type: 'error' })
         }
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmMessage('Apakah Anda yakin ingin menghapus data pajak ini?')
+        setConfirmMessage(t('finance.taxRates.confirmMessage'))
         setConfirmAction(() => async () => {
             try {
                 const res = await fetch(`/api/finance/tax-rates/${id}`, { method: 'DELETE' })
                 const data = await res.json()
                 if (data.success) {
-                    setToast({ message: 'Data pajak berhasil dihapus', type: 'success' })
+                    setToast({ message: t('finance.taxRates.toast.deleteSuccess'), type: 'success' })
                     fetchTaxRates()
                 } else {
-                    setToast({ message: data.error || 'Gagal menghapus data pajak', type: 'error' })
+                    setToast({ message: data.error || t('finance.taxRates.toast.deleteFailed'), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus data pajak', type: 'error' })
+                setToast({ message: t('finance.taxRates.toast.deleteFailed'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -151,13 +152,13 @@ export default function TaxRatesPage() {
             const data = await res.json()
             if (data.success) {
                 setToast({
-                    message: `Data pajak ${!taxRate.isActive ? 'diaktifkan' : 'dinonaktifkan'}`,
+                    message: !taxRate.isActive ? t('finance.taxRates.toast.activated') : t('finance.taxRates.toast.deactivated'),
                     type: 'success'
                 })
                 fetchTaxRates()
             }
         } catch {
-            setToast({ message: 'Gagal mengubah status', type: 'error' })
+            setToast({ message: t('finance.taxRates.toast.toggleFailed'), type: 'error' })
         }
     }
 
@@ -170,11 +171,11 @@ export default function TaxRatesPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Default pajak berhasil diubah', type: 'success' })
+                setToast({ message: t('finance.taxRates.toast.setDefaultSuccess'), type: 'success' })
                 fetchTaxRates()
             }
         } catch {
-            setToast({ message: 'Gagal mengubah default', type: 'error' })
+            setToast({ message: t('finance.taxRates.toast.setDefaultFailed'), type: 'error' })
         }
     }
 
@@ -224,13 +225,13 @@ export default function TaxRatesPage() {
         return (
             <div className="flex flex-col items-center justify-center p-12 text-center">
                 <Percent className="mb-4 h-12 w-12 text-red-400" />
-                <h3 className="mb-2 text-lg font-semibold text-gray-900">Gagal Memuat Data</h3>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900">{t('finance.taxRates.errorTitle')}</h3>
                 <p className="mb-4 text-sm text-gray-500">{error}</p>
                 <button
                     onClick={fetchTaxRates}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                    Coba Lagi
+                    {t('finance.taxRates.retry')}
                 </button>
             </div>
         )
@@ -251,7 +252,7 @@ export default function TaxRatesPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">{t('nav.taxRates') || 'Pajak'}</h1>
-                    <p className="mt-1 text-sm text-gray-500">Kelola tarif pajak untuk invoice dan transaksi</p>
+                    <p className="mt-1 text-sm text-gray-500">{t('finance.taxRates.subtitle')}</p>
                 </div>
                 {isAdmin && (
                     <button
@@ -259,7 +260,7 @@ export default function TaxRatesPage() {
                         className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                     >
                         <Plus className="h-4 w-4" />
-                        Tambah Pajak
+                        {t('finance.taxRates.addButton')}
                     </button>
                 )}
             </div>
@@ -267,19 +268,19 @@ export default function TaxRatesPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Pajak</p>
+                    <p className="text-sm text-gray-500">{t('finance.taxRates.stats.total')}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">{taxRates.length}</p>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Aktif</p>
+                    <p className="text-sm text-gray-500">{t('finance.taxRates.stats.active')}</p>
                     <p className="mt-1 text-2xl font-bold text-green-600">{totalActive}</p>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">PPN (VAT)</p>
+                    <p className="text-sm text-gray-500">{t('finance.taxRates.stats.vat')}</p>
                     <p className="mt-1 text-2xl font-bold text-blue-600">{totalVAT}</p>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">PPh (Income Tax)</p>
+                    <p className="text-sm text-gray-500">{t('finance.taxRates.stats.incomeTax')}</p>
                     <p className="mt-1 text-2xl font-bold text-green-600">{totalIncomeTax}</p>
                 </div>
             </div>
@@ -292,7 +293,7 @@ export default function TaxRatesPage() {
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Cari pajak..."
+                        placeholder={t('finance.taxRates.filter.search')}
                         className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
@@ -303,10 +304,10 @@ export default function TaxRatesPage() {
                         onChange={(e) => setTypeFilter(e.target.value)}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                     >
-                        <option value="all">Semua Tipe</option>
-                        <option value="VAT">PPN (VAT)</option>
-                        <option value="INCOME_TAX">PPh (Income Tax)</option>
-                        <option value="OTHER">Lainnya</option>
+                        <option value="all">{t('finance.taxRates.filter.allTypes')}</option>
+                        <option value="VAT">{t('finance.taxRates.types.VAT')}</option>
+                        <option value="INCOME_TAX">{t('finance.taxRates.types.INCOME_TAX')}</option>
+                        <option value="OTHER">{t('finance.taxRates.types.OTHER')}</option>
                     </select>
                 </div>
             </div>
@@ -316,11 +317,11 @@ export default function TaxRatesPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
                         <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                            {editingTaxRate ? 'Edit Data Pajak' : 'Tambah Data Pajak'}
+                            {editingTaxRate ? t('finance.taxRates.modal.edit') : t('finance.taxRates.modal.create')}
                         </h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Pajak *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.taxRates.modal.nameRequired')}</label>
                                 <input
                                     type="text"
                                     value={formData.name}
@@ -330,7 +331,7 @@ export default function TaxRatesPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Kode *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.taxRates.modal.code')} *</label>
                                 <input
                                     type="text"
                                     value={formData.code}
@@ -339,10 +340,10 @@ export default function TaxRatesPage() {
                                     placeholder="PPN"
                                     disabled={!!editingTaxRate}
                                 />
-                                <p className="mt-1 text-xs text-gray-500">Huruf besar, angka, underscore</p>
+                                <p className="mt-1 text-xs text-gray-500">{t('finance.taxRates.modal.codeHint')}</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tarif (%) *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.taxRates.modal.rateRequired')}</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -354,15 +355,15 @@ export default function TaxRatesPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipe</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.taxRates.modal.type')}</label>
                                 <select
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                 >
-                                    <option value="VAT">PPN (VAT)</option>
-                                    <option value="INCOME_TAX">PPh (Income Tax)</option>
-                                    <option value="OTHER">Lainnya</option>
+                                    <option value="VAT">{t('finance.taxRates.types.VAT')}</option>
+                                    <option value="INCOME_TAX">{t('finance.taxRates.types.INCOME_TAX')}</option>
+                                    <option value="OTHER">{t('finance.taxRates.types.OTHER')}</option>
                                 </select>
                             </div>
                             <div className="flex items-center gap-2">
@@ -373,7 +374,7 @@ export default function TaxRatesPage() {
                                     onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
                                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                 />
-                                <label htmlFor="isDefault" className="text-sm text-gray-700">Jadikan Default</label>
+                                <label htmlFor="isDefault" className="text-sm text-gray-700">{t('finance.taxRates.modal.isDefault')}</label>
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end gap-3">
@@ -381,14 +382,14 @@ export default function TaxRatesPage() {
                                 onClick={() => { setShowForm(false); resetForm() }}
                                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
-                                Batal
+                                {t('finance.taxRates.modal.cancel')}
                             </button>
                             <button
                                 onClick={editingTaxRate ? handleUpdate : handleCreate}
                                 disabled={!formData.name || !formData.code || formData.rate < 0}
                                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                             >
-                                {editingTaxRate ? 'Simpan' : 'Buat'}
+                                {editingTaxRate ? t('finance.taxRates.modal.save') : t('finance.taxRates.modal.createBtn')}
                             </button>
                         </div>
                     </div>
@@ -401,20 +402,20 @@ export default function TaxRatesPage() {
                     <table className="w-full text-left text-sm">
                         <thead className="border-b border-gray-200 bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 font-medium text-gray-600">Nama</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Kode</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Tarif</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Tipe</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-                                <th className="px-4 py-3 font-medium text-gray-600">Default</th>
-                                {isAdmin && <th className="px-4 py-3 font-medium text-gray-600">Aksi</th>}
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.name')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.code')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.rate')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.type')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.status')}</th>
+                                <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.default')}</th>
+                                {isAdmin && <th className="px-4 py-3 font-medium text-gray-600">{t('finance.taxRates.table.actions')}</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredTaxRates.length === 0 ? (
                                 <tr>
                                     <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-gray-500">
-                                        Tidak ada data pajak ditemukan
+                                        {t('finance.taxRates.emptyNoData')}
                                     </td>
                                 </tr>
                             ) : (
@@ -431,8 +432,8 @@ export default function TaxRatesPage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeConfig[tr.type]?.color || 'bg-gray-100 text-gray-700'}`}>
-                                                {typeConfig[tr.type]?.label || tr.type}
+                                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[tr.type] || 'bg-gray-100 text-gray-700'}`}>
+                                                {getTypeLabel(tr.type)}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
@@ -441,7 +442,7 @@ export default function TaxRatesPage() {
                                                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tr.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                                                     } ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}`}
                                             >
-                                                {tr.isActive ? 'Aktif' : 'Nonaktif'}
+                                                {tr.isActive ? t('finance.taxRates.status.active') : t('finance.taxRates.status.inactive')}
                                             </button>
                                         </td>
                                         <td className="px-4 py-3">
@@ -451,7 +452,7 @@ export default function TaxRatesPage() {
                                                     className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 cursor-pointer hover:opacity-80"
                                                 >
                                                     <Check className="h-3 w-3" />
-                                                    Default
+                                                    {t('finance.taxRates.status.default')}
                                                 </button>
                                             ) : (
                                                 isAdmin && (
@@ -459,7 +460,7 @@ export default function TaxRatesPage() {
                                                         onClick={() => handleSetDefault(tr)}
                                                         className="text-xs text-gray-400 hover:text-blue-600"
                                                     >
-                                                        Set Default
+                                                        {t('finance.taxRates.status.setDefault')}
                                                     </button>
                                                 )
                                             )}
@@ -470,14 +471,14 @@ export default function TaxRatesPage() {
                                                     <button
                                                         onClick={() => openEditForm(tr)}
                                                         className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                                                        title="Edit"
+                                                        title={t('finance.taxRates.actions.edit')}
                                                     >
                                                         <Edit className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(tr.id)}
                                                         className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                        title="Hapus"
+                                                        title={t('finance.taxRates.actions.delete')}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
@@ -496,7 +497,7 @@ export default function TaxRatesPage() {
             <div className="space-y-3 md:hidden">
                 {filteredTaxRates.length === 0 ? (
                     <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-500">
-                        Tidak ada data pajak ditemukan
+                        {t('finance.taxRates.emptyNoData')}
                     </div>
                 ) : (
                     filteredTaxRates.map((tr) => (
@@ -513,17 +514,17 @@ export default function TaxRatesPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeConfig[tr.type]?.color || 'bg-gray-100 text-gray-700'}`}>
-                                        {typeConfig[tr.type]?.label || tr.type}
+                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[tr.type] || 'bg-gray-100 text-gray-700'}`}>
+                                        {getTypeLabel(tr.type)}
                                     </span>
                                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tr.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                        {tr.isActive ? 'Aktif' : 'Nonaktif'}
+                                        {tr.isActive ? t('finance.taxRates.status.active') : t('finance.taxRates.status.inactive')}
                                     </span>
                                     {tr.isDefault && (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                                             <Check className="h-3 w-3" />
-                                            Default
+                                            {t('finance.taxRates.status.default')}
                                         </span>
                                     )}
                                 </div>
@@ -534,21 +535,21 @@ export default function TaxRatesPage() {
                                         onClick={() => handleToggleActive(tr)}
                                         className="text-xs text-gray-500 hover:text-blue-600"
                                     >
-                                        {tr.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                                        {tr.isActive ? t('finance.taxRates.actions.deactivate') : t('finance.taxRates.actions.activate')}
                                     </button>
                                     <span className="text-gray-300">|</span>
                                     <button
                                         onClick={() => openEditForm(tr)}
                                         className="text-xs text-gray-500 hover:text-blue-600"
                                     >
-                                        Edit
+                                        {t('finance.taxRates.actions.edit')}
                                     </button>
                                     <span className="text-gray-300">|</span>
                                     <button
                                         onClick={() => handleDelete(tr.id)}
                                         className="text-xs text-gray-500 hover:text-red-600"
                                     >
-                                        Hapus
+                                        {t('finance.taxRates.actions.delete')}
                                     </button>
                                 </div>
                             )}
@@ -566,7 +567,7 @@ export default function TaxRatesPage() {
                     setShowConfirmDialog(false)
                     setConfirmAction(null)
                 }}
-                title="Konfirmasi Hapus"
+                title={t('finance.taxRates.confirmTitle')}
                 message={confirmMessage}
             />
         </div>

@@ -12,6 +12,43 @@ interface Providers {
     google: boolean;
 }
 
+/**
+ * Unregister any existing Service Workers and clear all caches.
+ * This fixes issues where an old cached SW intercepts auth requests
+ * and drops Set-Cookie headers, preventing login.
+ *
+ * Returns a Promise that resolves when all SWs are unregistered.
+ * Must be awaited before performing signIn() to ensure the browser
+ * handles auth requests directly without SW interference.
+ */
+function unregisterOldServiceWorkers(): Promise<void> {
+    if (!('serviceWorker' in navigator)) {
+        return Promise.resolve()
+    }
+
+    return navigator.serviceWorker.getRegistrations()
+        .then(async (registrations) => {
+            // Unregister all Service Workers
+            for (const registration of registrations) {
+                console.log('[Auth] Unregistering old SW:', registration.scope)
+                registration.unregister()
+            }
+
+            // Also clear all caches to remove any stale cached responses
+            // (e.g., old cached auth responses with wrong headers)
+            if ('caches' in window) {
+                const cacheNames = await caches.keys()
+                await Promise.all(
+                    cacheNames.map((name) => caches.delete(name))
+                )
+                console.log('[Auth] Cleared all caches:', cacheNames.length, 'caches removed')
+            }
+        })
+        .catch(() => {
+            // Silently ignore — SW unregistration is best-effort
+        })
+}
+
 export default function LoginPage() {
     const searchParams = useSearchParams()
     const { t } = useTranslation()
@@ -23,6 +60,26 @@ export default function LoginPage() {
     const [rememberMe, setRememberMe] = useState(false)
     const [providers, setProviders] = useState<Providers>({ credentials: true, google: false })
     const isDemoLogin = searchParams?.get('email') === 'demo@qalcuity.com'
+    const [swReady, setSwReady] = useState(false)
+
+    // Unregister old Service Workers on login page load.
+    // Old cached SWs can intercept /api/auth/ requests and drop Set-Cookie headers,
+    // which breaks the entire login flow.
+    // AWAITS completion before allowing form submit to ensure no SW interference.
+    useEffect(() => {
+        unregisterOldServiceWorkers().then(() => setSwReady(true))
+    }, [])
+
+    // Detect auth errors from NextAuth redirect (?error=... in URL).
+    // When signIn() with redirect:true fails, NextAuth redirects to /login?error=...
+    useEffect(() => {
+        const authError = searchParams?.get('error')
+        if (authError) {
+            // All credential errors show the same message for security
+            // (don't reveal which field is wrong)
+            setError(t('auth.errorInvalidCredentials'))
+        }
+    }, [searchParams, t])
 
     // Fetch available auth providers from server
     // This replaces the static NEXT_PUBLIC_GOOGLE_CLIENT_ID check with a
@@ -42,24 +99,39 @@ export default function LoginPage() {
         setIsLoading(true)
         setError('')
 
+        // Determine safe callback URL — prevent redirect loop back to /login
+        const rawCallback = searchParams?.get('callbackUrl') || '/dashboard'
+        const safeCallbackUrl = rawCallback.includes('/login') ? '/dashboard' : rawCallback
+
         try {
-            const result = await signIn('credentials', {
+            // Wait for SW unregistration to complete before signIn.
+            // An active SW can intercept the POST /api/auth/callback/credentials request
+            // and drop the Set-Cookie header, breaking the entire login flow.
+            if (!swReady) {
+                await unregisterOldServiceWorkers()
+            }
+
+            // Use signIn() with DEFAULT redirect behavior (redirect: true).
+            // This lets the browser follow the 302 redirect natively, which ensures
+            // the Set-Cookie header from the server response is properly processed.
+            //
+            // FIX: Previously used redirect:false which uses fetch() with redirect:'manual'.
+            // With redirect:'manual', some browsers don't process Set-Cookie headers from
+            // 302 responses, causing the session cookie to never be stored. This resulted in
+            // a redirect loop: login → /dashboard → middleware (no cookie) → /login.
+            //
+            // On success: browser follows redirect to callbackUrl (e.g., /dashboard)
+            // On failure: NextAuth redirects to /login?error=... (handled by useEffect above)
+            await signIn('credentials', {
                 email,
                 password,
-                redirect: false,
+                callbackUrl: safeCallbackUrl,
             })
-
-            if (result?.error) {
-                setError(result.error)
-            } else if (result?.ok) {
-                // Use window.location for hard navigation to ensure session cookie is sent
-                window.location.href = '/dashboard'
-            } else {
-                setError('Login failed. Please try again.')
-            }
+            // Note: If signIn succeeds, the browser navigates away from this page.
+            // The code below only runs if signIn throws (network error, etc.)
         } catch (err) {
+            console.error('[Login] signIn threw error:', err)
             setError(t('common.error'))
-        } finally {
             setIsLoading(false)
         }
     }
@@ -189,7 +261,11 @@ export default function LoginPage() {
             {providers.google && (
                 <button
                     type="button"
-                    onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                    onClick={() => {
+                        const rawCallback = searchParams?.get('callbackUrl') || '/dashboard'
+                        const safeCallbackUrl = rawCallback.includes('/login') ? '/dashboard' : rawCallback
+                        signIn('google', { callbackUrl: safeCallbackUrl })
+                    }}
                     className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg font-medium hover:bg-gray-50 transition-all"
                 >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">

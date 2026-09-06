@@ -37,7 +37,7 @@ async function main() {
   // USERS (upsert berdasarkan email — aman untuk re-run)
   // ============================================
   // --- SUPERADMIN ---
-  const superadminPasswordHash = await bcrypt.hash("Wahyu123456789@", 10);
+  const superadminPasswordHash = await bcrypt.hash("Admin123", 10);
   const superadmin = await prisma.user.upsert({
     where: { email: "info@qalcuity.com" },
     update: {

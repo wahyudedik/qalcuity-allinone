@@ -20,6 +20,7 @@ import {
     Flame,
     CheckCircle,
 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 import { useKitchenOrders, type KitchenOrderStatus, type KitchenFilter } from '@/hooks/use-kitchen-orders';
 import { KitchenOrderCard } from '@/components/pos/kitchen-order-card';
 import { KitchenStatsBar } from '@/components/pos/kitchen-stats-bar';
@@ -27,21 +28,11 @@ import { KitchenStationFilter } from '@/components/pos/kitchen-station-filter';
 import { EmptyState } from '@/components/ui/empty-state';
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-const STATUS_TABS: { key: KitchenOrderStatus | 'ALL'; label: string; icon: typeof LayoutGrid }[] = [
-    { key: 'ALL', label: 'Semua', icon: LayoutGrid },
-    { key: 'PENDING', label: 'Baru', icon: Clock },
-    { key: 'PREPARING', label: 'Disiapkan', icon: Flame },
-    { key: 'READY', label: 'Siap', icon: CheckCircle },
-];
-
-// =============================================================================
 // Component
 // =============================================================================
 
 export default function KitchenDisplayPage() {
+    const { t } = useTranslation();
     const {
         orders,
         stations,
@@ -54,6 +45,14 @@ export default function KitchenDisplayPage() {
         refresh,
         lastUpdated,
     } = useKitchenOrders();
+
+    // STATUS_TABS must be inside component to use t()
+    const STATUS_TABS: { key: KitchenOrderStatus | 'ALL'; label: string; icon: typeof LayoutGrid }[] = [
+        { key: 'ALL', label: t('pos.kitchen.all') || 'Semua', icon: LayoutGrid },
+        { key: 'PENDING', label: t('pos.kitchen.new') || 'Baru', icon: Clock },
+        { key: 'PREPARING', label: t('pos.kitchen.preparing') || 'Disiapkan', icon: Flame },
+        { key: 'READY', label: t('pos.kitchen.ready') || 'Siap', icon: CheckCircle },
+    ];
 
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -70,18 +69,18 @@ export default function KitchenDisplayPage() {
         const success = await updateStatus(orderId, newStatus);
         if (success) {
             const statusLabels: Record<string, string> = {
-                PREPARING: 'sedang disiapkan',
-                READY: 'siap diambil',
-                SERVED: 'sudah diambil',
-                CANCELLED: 'dibatalkan',
+                PREPARING: t('pos.kitchen.statusPreparing') || 'sedang disiapkan',
+                READY: t('pos.kitchen.statusReady') || 'siap diambil',
+                SERVED: t('pos.kitchen.statusServed') || 'sudah diambil',
+                CANCELLED: t('pos.kitchen.statusCancelled') || 'dibatalkan',
             };
             setToast({
-                message: `Pesanan berhasil ${statusLabels[newStatus] || newStatus}`,
+                message: `${t('pos.kitchen.successStatus')?.replace('{status}', statusLabels[newStatus] || newStatus) || `Pesanan berhasil ${statusLabels[newStatus] || newStatus}`}`,
                 type: 'success',
             });
         } else {
             setToast({
-                message: 'Gagal mengubah status pesanan',
+                message: t('pos.kitchen.errorStatus') || 'Gagal mengubah status pesanan',
                 type: 'error',
             });
         }
@@ -109,19 +108,18 @@ export default function KitchenDisplayPage() {
     const lastUpdatedText = useMemo(() => {
         if (!lastUpdated) return '';
         const diff = Math.floor((Date.now() - lastUpdated.getTime()) / 1000);
-        if (diff < 5) return 'baru saja';
-        if (diff < 60) return `${diff}d lalu`;
-        return `${Math.floor(diff / 60)}m lalu`;
-    }, [lastUpdated]);
+        if (diff < 5) return t('pos.kitchen.justNow') || 'baru saja';
+        if (diff < 60) return `${diff}${t('pos.kitchen.secondsAgo') || 'd lalu'}`;
+        return `${Math.floor(diff / 60)}${t('pos.kitchen.minutesAgo') || 'm lalu'}`;
+    }, [lastUpdated, t]);
 
     return (
         <div className="space-y-4">
             {/* Toast notification */}
             {toast && (
                 <div
-                    className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
-                        toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-                    }`}
+                    className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+                        }`}
                 >
                     {toast.type === 'success' ? (
                         <Check className="h-4 w-4" />
@@ -140,10 +138,10 @@ export default function KitchenDisplayPage() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Kitchen Display
+                            {t('pos.kitchen.title') || 'Kitchen Display'}
                         </h1>
                         <p className="text-sm text-gray-500">
-                            Tampilan pesanan dapur secara real-time
+                            {t('pos.kitchen.description') || 'Tampilan pesanan dapur secara real-time'}
                         </p>
                     </div>
                 </div>
@@ -152,7 +150,7 @@ export default function KitchenDisplayPage() {
                     {/* Auto-refresh indicator */}
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                         <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                        <span>Auto-refresh</span>
+                        <span>{t('pos.kitchen.autoRefresh') || 'Auto-refresh'}</span>
                         {lastUpdatedText && (
                             <span className="text-gray-300">• {lastUpdatedText}</span>
                         )}
@@ -164,7 +162,7 @@ export default function KitchenDisplayPage() {
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <RefreshCw className="h-4 w-4" />
-                        Refresh
+                        {t('pos.kitchen.refresh') || 'Refresh'}
                     </button>
                 </div>
             </div>
@@ -184,21 +182,19 @@ export default function KitchenDisplayPage() {
                             <button
                                 key={tab.key}
                                 onClick={() => setFilter({ status: tab.key })}
-                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                                    isActive
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive
                                         ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <TabIcon className="h-4 w-4" />
                                 <span>{tab.label}</span>
                                 {count > 0 && (
                                     <span
-                                        className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                                            isActive
+                                        className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ${isActive
                                                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
                                                 : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                                        }`}
+                                            }`}
                                     >
                                         {count}
                                     </span>
@@ -256,13 +252,11 @@ export default function KitchenDisplayPage() {
             {!loading && orders.length === 0 && !error && (
                 <EmptyState
                     icon={ChefHat}
-                    title="Tidak ada pesanan"
+                    title={t('pos.kitchen.noOrders') || 'Tidak ada pesanan'}
                     description={
                         filter.status === 'ALL'
-                            ? 'Belum ada pesanan dapur saat ini. Pesanan baru akan muncul secara otomatis.'
-                            : `Tidak ada pesanan dengan status ${
-                                STATUS_TABS.find((t) => t.key === filter.status)?.label || filter.status
-                              }`
+                            ? (t('pos.kitchen.noOrdersDesc') || 'Belum ada pesanan dapur saat ini. Pesanan baru akan muncul secara otomatis.')
+                            : (t('pos.kitchen.noOrdersWithStatus')?.replace('{status}', STATUS_TABS.find((tab) => tab.key === filter.status)?.label || filter.status) || `Tidak ada pesanan dengan status ${STATUS_TABS.find((tab) => tab.key === filter.status)?.label || filter.status}`)
                     }
                 />
             )}

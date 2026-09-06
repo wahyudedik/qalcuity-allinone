@@ -52,6 +52,12 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     // ─── Audit ────────────────────────────────────────────────────────────────
     '/api/audit': { permission: 'audit.read', fallbackRole: 'ADMIN' },
 
+    // ─── POS Analytics ─────────────────────────────────────────────────────
+    '/api/pos/analytics/sales': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/products': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/hours': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/customers': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+
     // ─── POS Kitchen Display ─────────────────────────────────────────────────
     '/api/pos/kitchen/orders': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
     '/api/pos/kitchen/stations': { permission: 'pos.kitchen_station', fallbackRole: 'ADMIN' },
@@ -66,6 +72,16 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/projects': { permission: 'operations.project', fallbackRole: 'ADMIN' },
     '/api/tasks': { permission: 'operations.task', fallbackRole: 'ADMIN' },
     '/api/timesheet': { permission: 'operations.timesheet', fallbackRole: 'MEMBER' },
+
+    // ─── Field Service ─────────────────────────────────────────────────────
+    '/api/field/jobs': { permission: 'operations.field_job', fallbackRole: 'ADMIN' },
+    '/api/field/checklists': { permission: 'operations.field_checklist', fallbackRole: 'ADMIN' },
+
+    // ─── AI Features ───────────────────────────────────────────────────────
+    '/api/ai/query': { permission: 'ai.query', fallbackRole: 'MEMBER' },
+    '/api/ai/extract': { permission: 'ai.extract', fallbackRole: 'MEMBER' },
+    '/api/ai/anomalies': { permission: 'ai.anomaly', fallbackRole: 'ADMIN' },
+    '/api/ai/health': { permission: 'ai.read', fallbackRole: 'MEMBER' },
 };
 
 /**

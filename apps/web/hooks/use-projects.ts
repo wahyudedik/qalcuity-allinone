@@ -109,6 +109,107 @@ export interface TaskFilter {
 }
 
 // =============================================================================
+// Phase B Types: Gantt, Budget, Resource
+// =============================================================================
+
+export type BudgetCategory = 'LABOR' | 'MATERIAL' | 'EQUIPMENT' | 'TRAVEL' | 'SOFTWARE' | 'OTHER';
+
+export type ResourceRole = 'MANAGER' | 'MEMBER' | 'CONSULTANT';
+
+export interface BudgetLineItem {
+    id: string;
+    projectId: string;
+    category: BudgetCategory;
+    name: string;
+    description: string | null;
+    planned: number;
+    actual: number;
+    notes: string | null;
+}
+
+export interface BudgetSummary {
+    totalPlanned: number;
+    totalActual: number;
+    totalRemaining: number;
+    percentUsed: number;
+}
+
+export interface BudgetCategorySummary {
+    planned: number;
+    actual: number;
+    remaining: number;
+}
+
+export interface BudgetData {
+    data: BudgetLineItem[];
+    summary: BudgetSummary;
+    byCategory: Record<string, BudgetCategorySummary>;
+}
+
+export interface ResourceAllocationItem {
+    id: string;
+    projectId: string;
+    employeeId: string;
+    role: string;
+    allocationPct: number;
+    startDate: string;
+    endDate: string;
+    hourlyRate: number | null;
+    notes: string | null;
+}
+
+export interface ResourceAllocationSummary {
+    totalAllocations: number;
+    totalAllocationPct: number;
+    uniqueEmployees: number;
+}
+
+export interface EmployeeAllocation {
+    employeeId: string;
+    totalAllocation: number;
+    allocations: number;
+    roles: string[];
+}
+
+export interface ResourceData {
+    data: ResourceAllocationItem[];
+    summary: ResourceAllocationSummary;
+    byEmployee: EmployeeAllocation[];
+}
+
+export interface GanttTask {
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    assigneeId: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    dueDate: string | null;
+    progress: number;
+    dependsOnId: string | null;
+    estimatedHours: number | null;
+    actualHours: number;
+}
+
+export interface GanttData {
+    project: {
+        id: string;
+        name: string;
+        startDate: string | null;
+        endDate: string | null;
+        progress: number;
+    };
+    tasks: GanttTask[];
+    resources: ResourceAllocationItem[];
+    summary: {
+        totalTasks: number;
+        completedTasks: number;
+        autoProgress: number;
+    };
+}
+
+// =============================================================================
 // Hook
 // =============================================================================
 
@@ -499,6 +600,125 @@ export function useProjects() {
     }, []);
 
     // =========================================================================
+    // Phase B Actions: Gantt, Budget, Resource
+    // =========================================================================
+
+    const fetchGanttData = useCallback(async (projectId: string): Promise<GanttData | null> => {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/gantt`);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || 'Gagal memuat data Gantt');
+            }
+            return await response.json();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal memuat data Gantt');
+            return null;
+        }
+    }, []);
+
+    const fetchBudget = useCallback(async (projectId: string, category?: string): Promise<BudgetData | null> => {
+        try {
+            const url = category
+                ? `/api/projects/${projectId}/budget?category=${category}`
+                : `/api/projects/${projectId}/budget`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || 'Gagal memuat data anggaran');
+            }
+            return await response.json();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal memuat data anggaran');
+            return null;
+        }
+    }, []);
+
+    const createBudgetItem = useCallback(async (projectId: string, data: {
+        category: BudgetCategory;
+        name: string;
+        description?: string;
+        planned: number;
+        actual?: number;
+        notes?: string;
+    }): Promise<boolean> => {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/budget`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            return response.ok;
+        } catch {
+            setError('Gagal membuat item anggaran');
+            return false;
+        }
+    }, []);
+
+    const fetchResources = useCallback(async (projectId: string, params?: {
+        employeeId?: string;
+        active?: boolean;
+    }): Promise<ResourceData | null> => {
+        try {
+            const searchParams = new URLSearchParams();
+            if (params?.employeeId) searchParams.set('employeeId', params.employeeId);
+            if (params?.active !== undefined) searchParams.set('active', String(params.active));
+            const queryString = searchParams.toString();
+            const url = `/api/projects/${projectId}/resources${queryString ? `?${queryString}` : ''}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || 'Gagal memuat data resource');
+            }
+            return await response.json();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal memuat data resource');
+            return null;
+        }
+    }, []);
+
+    const createResourceAllocation = useCallback(async (projectId: string, data: {
+        employeeId: string;
+        role?: ResourceRole;
+        allocationPct: number;
+        startDate: string;
+        endDate: string;
+        hourlyRate?: number;
+        notes?: string;
+    }): Promise<boolean> => {
+        try {
+            const response = await fetch(`/api/projects/${projectId}/resources`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            return response.ok;
+        } catch {
+            setError('Gagal membuat alokasi resource');
+            return false;
+        }
+    }, []);
+
+    const updateTaskSchedule = useCallback(async (taskId: string, data: {
+        startDate?: string;
+        endDate?: string;
+        progress?: number;
+        dependsOnId?: string | null;
+    }): Promise<boolean> => {
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            return response.ok;
+        } catch {
+            setError('Gagal update jadwal task');
+            return false;
+        }
+    }, []);
+
+    // =========================================================================
     // Polling & Lifecycle
     // =========================================================================
 
@@ -555,5 +775,13 @@ export function useProjects() {
         fetchTimesheet,
         logTime,
         refresh,
+
+        // Phase B: Gantt, Budget, Resource
+        fetchGanttData,
+        fetchBudget,
+        createBudgetItem,
+        fetchResources,
+        createResourceAllocation,
+        updateTaskSchedule,
     };
 }
