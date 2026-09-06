@@ -6,8 +6,12 @@
  */
 
 export { restaurantIndustryPack } from './restaurant';
+export { retailIndustryPack } from './retail';
+export { manufacturingIndustryPack } from './manufacturing';
 
 import { restaurantIndustryPack } from './restaurant';
+import { retailIndustryPack } from './retail';
+import { manufacturingIndustryPack } from './manufacturing';
 import type { IndustryPack } from '../types';
 
 /**
@@ -16,6 +20,8 @@ import type { IndustryPack } from '../types';
  */
 export const INDUSTRY_PACKS: Record<string, IndustryPack> = {
     restaurant: restaurantIndustryPack,
+    retail: retailIndustryPack,
+    manufacturing: manufacturingIndustryPack,
 };
 
 /**

@@ -1,6 +1,43 @@
-> **Last Updated:** 5 September 2026 (Mega Sprint Complete)
-> **Version:** v9.0.0
-> **Status:** MEGA SPRINT COMPLETE — POS Phase 1-6 (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display + Table Management) + Operations Module MVP Phase A + AI Real Integration + @qalcuity/api Package + F&B Industry Pack + VPS Deployment via aaPanel Node.js Project Manager. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+> **Last Updated:** 6 September 2026 (Industry Packs: Retail + Manufacturing)
+> **Version:** v9.2.0
+> **Status:** INDUSTRY PACKS COMPLETE — Retail & Manufacturing packs added to `@qalcuity/industry-config`. 3 industry packs now available: Restaurant, Retail, Manufacturing. POS module fully complete. Production URL: `https://qalcuity.com`. Deployment path: `/www/wwwroot/qalcuity`.
+
+---
+
+## 🏭 Industry Packs: Retail + Manufacturing (6 September 2026)
+
+> **Focus:** Menambahkan 2 industry packs baru — Retail dan Manufacturing — ke `@qalcuity/industry-config`
+
+- ✅ **Retail Pack** — [`packages/industry-config/src/packs/retail.ts`](packages/industry-config/src/packs/retail.ts) — POS, Inventory, Loyalty, E-commerce modules
+  - Custom fields: SKU, barcode, size, color, brand, season (product), loyalty card, discount code, store location (transaction), membership tier, points, preferred category (customer)
+  - Workflows: Purchase Order (DRAFT→APPROVED→ORDERED→RECEIVED), Return/Exchange (REQUESTED→APPROVED→PROCESSED/DENIED), Stock Adjustment (DRAFT→APPROVED→COMPLETED)
+  - Dashboard: 5 widgets (sales by category, inventory turnover, top brands, customer retention, low stock)
+  - POS settings: In-Store order type, loyalty enabled, retail receipt template
+- ✅ **Manufacturing Pack** — [`packages/industry-config/src/packs/manufacturing.ts`](packages/industry-config/src/packs/manufacturing.ts) — Production, BOM, QC, Maintenance modules
+  - Custom fields: part number, material type, lead time, MOQ (product), lot number, expiry date, serial number, QC status (inventory), machine ID, production line, shift, quality score (task)
+  - Workflows: Production Order (PLANNED→IN_PROGRESS→QC→COMPLETED), BOM Approval (DRAFT→APPROVED/REJECTED), Maintenance Request (SUBMITTED→IN_PROGRESS→COMPLETED/DEFERRED)
+  - Dashboard: 5 widgets (production output, defect rate, machine utilization, OEE, low stock)
+- ✅ **Registry Updated** — [`packages/industry-config/src/packs/index.ts`](packages/industry-config/src/packs/index.ts) — 3 packs: restaurant, retail, manufacturing
+- ✅ **FEATURES.md Updated** — Section 14.1 (Retail) and 14.3 (Manufacturing) updated to `implemented`
+- ✅ **TypeScript Check:** PASS (0 errors)
+- ✅ **4 files** created/modified
+
+---
+
+## 📊 POS Phase 6: Advanced Analytics (6 September 2026)
+
+> **Focus:** Dashboard analitik untuk POS — revenue trends, top products, hourly heatmap, customer insights
+
+- ✅ **4 API Routes** — Sales analytics (daily/weekly/monthly), product analytics (top sellers, slow movers, category breakdown, profit margins), hourly heatmap (7×24 matrix), customer analytics (repeat rate, avg spend, top customers, loyalty stats)
+- ✅ **4 UI Components** — [`pos-sales-chart.tsx`](apps/web/components/pos/pos-sales-chart.tsx) (line/bar chart with period toggle), [`pos-top-products.tsx`](apps/web/components/pos/pos-top-products.tsx) (top 10 with bar visualization), [`pos-hourly-heatmap.tsx`](apps/web/components/pos/pos-hourly-heatmap.tsx) (7×24 color-coded grid), [`pos-customer-insights.tsx`](apps/web/components/pos/pos-customer-insights.tsx) (cards with loyalty breakdown)
+- ✅ **Analytics Page** — [`/dashboard/pos/analytics`](apps/web/app/dashboard/pos/analytics/page.tsx) combining all 4 charts with date range filter (7/30/90/365 days presets + custom)
+- ✅ **Loading State** — [`loading.tsx`](apps/web/app/dashboard/pos/analytics/loading.tsx) with skeleton placeholders
+- ✅ **POS Layout Updated** — Analytics tab added between Refunds and Reports
+- ✅ **Route Permissions** — `pos.analytics` permission for all 4 routes
+- ✅ **i18n** — Added `analytics` keys in Bahasa Indonesia + English
+- ✅ **Efficient Queries** — Prisma raw SQL with GROUP BY, SUM, COUNT, AVG for analytics (no fetch-all-then-filter)
+- ✅ **TypeScript Check:** PASS (0 errors)
+- ✅ **11 files** created/modified
 
 ---
 
@@ -471,11 +508,11 @@
 | **UI/UX (Responsive, i18n, Dark Mode)** | ✅ Production-ready | 99% |
 | **Reporting & Charts** | ✅ Working | 90% (Trial Balance, Balance Sheet, Income Statement added) |
 | **Analytics & Decision Intelligence** | ✅ Phase 1 MVP + Studio Architecture + Workspace UI | 75% |
-| **AI Features** | ⚠️ Basic Integration | 30% (OpenAI-compatible provider, chat API, query API) |
+| **AI Features** | ✅ Phase 2 Complete | 55% (OpenAI provider, chat, query, document extraction, anomaly detection) |
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
-| **Operations Module** | ✅ MVP Phase A Complete | 25% (Project CRUD + Task Management + Kanban + Time Logging + Timesheet) |
+| **Operations Module** | ✅ MVP Phase A-C Complete | 45% (Project CRUD + Task Management + Kanban + Time Logging + Timesheet + Gantt + Resources + Budget + Field Service) |
 | **POS Module** | ✅ Phase 1-6 Complete | 95% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display + Table Management) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Industry Packs** | 🔄 Partial | 10% (F&B/Restoran pack implemented, 8 packs planned) |
@@ -625,7 +662,24 @@
   - Billing page Midtrans payment button
   - Payment success redirect flow
 
-### AI Features (Basic)
+### AI Features (Phase 2: Document Extraction + Anomaly Detection — 5 September 2026)
+#### Document Extraction
+- [x] **Document Extraction Engine** — AI vision + regex fallback, 5 document types ([`apps/web/lib/ai/document-extraction.ts`](apps/web/lib/ai/document-extraction.ts))
+- [x] **Extraction API** — POST `/api/ai/extract` — base64 upload, RBAC (MEMBER+), rate limiting, audit ([`apps/web/app/api/ai/extract/route.ts`](apps/web/app/api/ai/extract/route.ts))
+- [x] **Document Extractor UI** — Drag-and-drop, type selector, confidence display, apply-to-form ([`apps/web/components/ai/document-extractor.tsx`](apps/web/components/ai/document-extractor.tsx))
+- [x] **Document Extraction Page** — `/dashboard/ai/documents` — extraction + history ([`apps/web/app/dashboard/ai/documents/page.tsx`](apps/web/app/dashboard/ai/documents/page.tsx))
+
+#### Anomaly Detection
+- [x] **Anomaly Detection Engine** — 12 rules + AI enrichment, severity levels ([`apps/web/lib/ai/anomaly-detection.ts`](apps/web/lib/ai/anomaly-detection.ts))
+- [x] **Anomaly Detection API** — GET+POST `/api/ai/anomalies` — scan, filter, cache ([`apps/web/app/api/ai/anomalies/route.ts`](apps/web/app/api/ai/anomalies/route.ts))
+- [x] **Anomaly List UI** — Expandable cards, severity badges, AI risk score ([`apps/web/components/ai/anomaly-list.tsx`](apps/web/components/ai/anomaly-list.tsx))
+- [x] **Anomaly Detection Page** — `/dashboard/ai/anomalies` — severity dashboard ([`apps/web/app/dashboard/ai/anomalies/page.tsx`](apps/web/app/dashboard/ai/anomalies/page.tsx))
+
+#### AI Infrastructure
+- [x] **AI Health Check** — `/api/ai/health` — provider status + latency ([`apps/web/app/api/ai/health/route.ts`](apps/web/app/api/ai/health/route.ts))
+- [x] **AI Layout** — Tab navigation for AI sections ([`apps/web/app/dashboard/ai/layout.tsx`](apps/web/app/dashboard/ai/layout.tsx))
+
+#### AI Features (Basic — Phase 1)
 - [x] AI Chat — Floating button component ([`components/ai/ai-chat.tsx`](apps/web/components/ai/ai-chat.tsx))
 - [x] AI Provider abstraction — OpenAI provider + Mock fallback ([`apps/web/lib/ai/provider.ts`](apps/web/lib/ai/provider.ts))
 - [x] AI Insights — Business insight cards on dashboard
@@ -1167,6 +1221,46 @@ _None currently._
 - **Zod Schemas** — 8 validation schemas added
 - **Sidebar** — Operations section navigation updated
 - **Commit:** `a0ee9ce` (25 files, 4654 insertions)
+- **TypeScript Check** — PASS (0 errors)
+
+### 5 September 2026 — Operations Module Phase B (Gantt, Resources, Budget)
+
+**Operations Module Phase B — Gantt Chart, Resource Allocation, Budget Tracking:**
+
+- **Database** — Task model extended (startDate, endDate, progress, dependsOnId) + 2 new models: `ProjectBudget`, `ResourceAllocation`
+- **Migration** — [`20260905210000_add_operations_phase_b`](packages/db/prisma/migrations/20260905210000_add_operations_phase_b/migration.sql)
+- **3 API Routes** — with RBAC, tenant isolation, Zod validation:
+  - [`apps/web/app/api/projects/[id]/gantt/route.ts`](apps/web/app/api/projects/[id]/gantt/route.ts) — GET (Gantt data with tasks, dependencies, resources)
+  - [`apps/web/app/api/projects/[id]/budget/route.ts`](apps/web/app/api/projects/[id]/budget/route.ts) — GET (budget with summary by category) + POST (create budget line item)
+  - [`apps/web/app/api/projects/[id]/resources/route.ts`](apps/web/app/api/projects/[id]/resources/route.ts) — GET (allocations with employee summary) + POST (create allocation with overlap detection)
+- **5 UI Components** — Gantt chart (timeline bars, dependencies, today marker), Resource heatmap (utilization grid), Budget tracker (planned vs actual), Task dependency editor (circular detection), Project timeline (milestones)
+- **2 UI Pages** — [`gantt/page.tsx`](apps/web/app/dashboard/projects/[id]/gantt/page.tsx), [`resources/page.tsx`](apps/web/app/dashboard/projects/[id]/resources/page.tsx)
+- **Project Detail Updated** — 6 tabs (added Gantt & Resources tabs with inline data loading)
+- **5 Zod Schemas** — `createProjectBudgetSchema`, `updateProjectBudgetSchema`, `createResourceAllocationSchema`, `updateResourceAllocationSchema`, `updateTaskScheduleSchema`
+- **Custom Hook Updated** — `use-projects.ts` with new types (GanttData, BudgetData, ResourceData) and 6 new actions
+- **i18n** — English + Indonesian keys for gantt, resources, budget, timeline
+- **TypeScript Check** — PASS (0 errors)
+
+### 5 September 2026 — Operations Module Phase C (Field Service)
+
+**Operations Module Phase C — Field Service (Job Scheduling + Mobile Checklist):**
+
+- **Database** — 4 new Prisma models: `FieldJob` (GPS, scheduling, customer info, status/priority), `FieldJobAssignment` (multi-technician with role), `FieldChecklist` (template with JSON items), `FieldChecklistResult` (answers, photos, signature)
+- **Migration** — [`20260905220000_add_operations_phase_c_field_service`](packages/db/prisma/migrations/20260905220000_add_operations_phase_c_field_service/migration.sql)
+- **6 API Routes** — with RBAC, tenant isolation, Zod validation, rate limiting:
+  - [`apps/web/app/api/field/jobs/route.ts`](apps/web/app/api/field/jobs/route.ts) — GET (list with filters: status, priority, date, employee, project, search, pagination) + POST (create)
+  - [`apps/web/app/api/field/jobs/[id]/route.ts`](apps/web/app/api/field/jobs/[id]/route.ts) — GET (detail with assignments, checklistResults, project) + PATCH (update with auto-complete timestamp) + DELETE
+  - [`apps/web/app/api/field/jobs/[id]/assignments/route.ts`](apps/web/app/api/field/jobs/[id]/assignments/route.ts) — GET (list) + POST (create with duplicate check)
+  - [`apps/web/app/api/field/checklists/route.ts`](apps/web/app/api/field/checklists/route.ts) — GET (list with category/active/search filters) + POST (create)
+  - [`apps/web/app/api/field/checklists/[id]/route.ts`](apps/web/app/api/field/checklists/[id]/route.ts) — GET (detail) + PATCH (update) + DELETE
+  - [`apps/web/app/api/field/jobs/[id]/checklists/route.ts`](apps/web/app/api/field/jobs/[id]/checklists/route.ts) — GET (results) + POST (submit checklist result)
+- **4 UI Components** — [`field-job-card.tsx`](apps/web/components/field/field-job-card.tsx) (job card with status/priority badges), [`field-job-map.tsx`](apps/web/components/field/field-job-map.tsx) (GPS location with maps link), [`field-checklist-form.tsx`](apps/web/components/field/field-checklist-form.tsx) (mobile-first form with checkbox/text/number/photo/signature), [`field-technician-schedule.tsx`](apps/web/components/field/field-technician-schedule.tsx) (day/week view with date navigation)
+- **3 UI Pages** — [`apps/web/app/dashboard/field/jobs/page.tsx`](apps/web/app/dashboard/field/jobs/page.tsx) (list with status tabs, search, pagination), [`apps/web/app/dashboard/field/jobs/[id]/page.tsx`](apps/web/app/dashboard/field/jobs/[id]/page.tsx) (detail with map, assignments, checklist results), [`apps/web/app/dashboard/field/checklists/page.tsx`](apps/web/app/dashboard/field/checklists/page.tsx) (template CRUD with dynamic item management)
+- **9 Loading/Error States** — loading.tsx + error.tsx for each page
+- **6 Zod Schemas** — `createFieldJobSchema`, `updateFieldJobSchema`, `createFieldJobAssignmentSchema`, `createFieldChecklistSchema`, `updateFieldChecklistSchema`, `submitFieldChecklistResultSchema`
+- **Route Permissions** — `operations.field_job` + `operations.field_checklist` with ADMIN fallback
+- **Sidebar Updated** — Field Service section with Wrench icon, 2 children (Field Jobs, Checklists)
+- **i18n** — English + Indonesian keys for nav, errors, field service
 - **TypeScript Check** — PASS (0 errors)
 
 ### 5 September 2026 — POS Table Management
