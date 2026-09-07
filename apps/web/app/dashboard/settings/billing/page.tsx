@@ -262,7 +262,7 @@ export default function BillingSettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     subscriptionId: subscription.id,
-                    amount: selectedPlan.priceMonthly,
+                    amount: Number(selectedPlan.priceMonthly),
                     bankName,
                     accountNumber,
                     accountName,

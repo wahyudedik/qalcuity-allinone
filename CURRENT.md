@@ -1,6 +1,43 @@
-> **Last Updated:** 7 September 2026 (Auth Issue RESOLVED — Login/Register fixed)
-> **Version:** v9.4.0
-> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Login/Register issue (blocking issue #1) telah RESOLVED. Root cause: `signIn()` dari `next-auth/react` mengirim `json: true` yang menyebabkan HTTP 200 JSON alih-alih HTTP 302 redirect + Set-Cookie. Fix: direct fetch approach dengan CSRF token + credentials POST tanpa `json:true`.
+> **Last Updated:** 7 September 2026 (Bug Fixes: CRM Deals 400 + Billing Payments 400)
+> **Version:** v9.4.1
+> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Dua bug API 400 telah diperbaiki: (1) CRM Deals POST 400 — field name/title mismatch saat konversi lead → deal, (2) Billing Payments POST 400 — Prisma Decimal string serialization issue.
+
+---
+
+## 🐛 Bug Fixes: CRM Deals 400 + Billing Payments 400 (7 September 2026)
+
+> **Severity:** 🟡 Medium — API 400 errors saat create deal dan create payment
+
+### Fix 1: CRM Deals POST 400 — Field Name Mismatch
+
+**Problem:** Konversi lead → deal mengirim field `name` dan `expectedCloseDate` yang tidak sesuai dengan `createDealSchema` (expected `title` dan `closeDate`). Extra fields `company` dan `contactName` juga menyebabkan validasi gagal.
+
+**Fix:**
+- Field `name` → `title` (sesuai `createDealSchema`)
+- Field `expectedCloseDate` → `closeDate` (sesuai schema)
+- Hapus extra fields `company` dan `contactName`
+
+**File:** [`apps/web/app/dashboard/crm/leads/[id]/page.tsx`](apps/web/app/dashboard/crm/leads/[id]/page.tsx)
+
+### Fix 2: Billing Payments POST 400 — Prisma Decimal String Serialization
+
+**Problem:** Field `amount` dikirim sebagai string dari Prisma Decimal, namun schema mengharapkan `z.number()`. Client-side `selectedPlan.priceMonthly` juga berupa string/Decimal dari Prisma.
+
+**Fix:**
+- `z.number()` → `z.coerce.number()` di payment schemas (handle Prisma Decimal string)
+- `selectedPlan.priceMonthly` → `Number(selectedPlan.priceMonthly)` di billing page
+
+**Files:**
+- [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts)
+- [`apps/web/app/dashboard/settings/billing/page.tsx`](apps/web/app/dashboard/settings/billing/page.tsx)
+
+### Files Modified
+
+| File | Change | Risk |
+|------|--------|------|
+| [`apps/web/app/dashboard/crm/leads/[id]/page.tsx`](apps/web/app/dashboard/crm/leads/[id]/page.tsx) | Fixed field names in lead → deal conversion | 🟢 Low |
+| [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) | `z.number()` → `z.coerce.number()` for Decimal compatibility | 🟢 Low |
+| [`apps/web/app/dashboard/settings/billing/page.tsx`](apps/web/app/dashboard/settings/billing/page.tsx) | `Number()` wrapper for priceMonthly | 🟢 Low |
 
 ---
 

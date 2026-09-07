@@ -613,7 +613,7 @@ export const updateTeamMemberSchema = z.object({
 
 export const createBillingPaymentSchema = z.object({
     subscriptionId: z.string().min(1, 'ID langganan wajib diisi'),
-    amount: z.number().min(1, 'Jumlah pembayaran harus lebih dari 0'),
+    amount: z.coerce.number().min(1, 'Jumlah pembayaran harus lebih dari 0'),
     bankName: z.string().min(1, 'Nama bank wajib diisi').max(100),
     accountNumber: z.string().min(1, 'Nomor rekening wajib diisi').max(50),
     accountName: z.string().min(1, 'Nama pemilik rekening wajib diisi').max(255),
