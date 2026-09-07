@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { FEATURE_GROUPS, FEATURE_LABELS } from '@/lib/entitlements-config'
 import {
     Check,
     CreditCard,
@@ -24,19 +25,27 @@ import {
     Lock,
 } from 'lucide-react'
 
-interface SubscriptionPlan {
+// ─── Plan types (matches new Plan + PlanFeature model) ───────────────────────
+
+interface PlanFeature {
+    id: string
+    featureKey: string
+    enabled: boolean
+    limit: number | null
+}
+
+interface Plan {
     id: string
     name: string
     slug: string
     description: string | null
-    price: number
-    billingPeriod: string
+    priceMonthly: number
+    priceYearly: number | null
     maxUsers: number
-    maxProducts: number
-    maxStorage: string | null
-    features: string[]
+    maxStorage: number | null
     isActive: boolean
     sortOrder: number
+    features: PlanFeature[]
 }
 
 interface Subscription {
@@ -46,7 +55,7 @@ interface Subscription {
     startDate: string
     endDate: string | null
     nextBillingDate: string | null
-    plan: SubscriptionPlan
+    plan: { name: string; price: number; maxUsers: number; slug: string; features: string[] }
 }
 
 interface BillingPayment {
@@ -106,66 +115,7 @@ interface UsageStats {
     [featureKey: string]: number
 }
 
-const FEATURE_GROUPS: Record<string, { label: string; features: string[] }> = {
-    finance: {
-        label: 'Finance',
-        features: ['finance.invoices', 'finance.payments', 'finance.purchase-orders', 'finance.journal-entries', 'finance.reports', 'finance.reconciliation'],
-    },
-    crm: {
-        label: 'CRM',
-        features: ['crm.contacts', 'crm.leads', 'crm.deals', 'crm.pipeline'],
-    },
-    inventory: {
-        label: 'Inventory',
-        features: ['inventory.products', 'inventory.stock', 'inventory.suppliers', 'inventory.categories'],
-    },
-    hr: {
-        label: 'HR',
-        features: ['hr.employees', 'hr.attendance', 'hr.leaves', 'hr.payroll'],
-    },
-    ai: {
-        label: 'AI Features',
-        features: ['ai.chat', 'ai.document-extraction', 'ai.predictions'],
-    },
-    integrations: {
-        label: 'Integrations',
-        features: ['integration.whatsapp', 'integration.email', 'integration.payment'],
-    },
-    platform: {
-        label: 'Platform',
-        features: ['platform.admin', 'platform.billing', 'platform.monitoring'],
-    },
-}
-
-const FEATURE_LABELS: Record<string, string> = {
-    'finance.invoices': 'Invoices',
-    'finance.payments': 'Payments',
-    'finance.purchase-orders': 'Purchase Orders',
-    'finance.journal-entries': 'Journal Entries',
-    'finance.reports': 'Finance Reports',
-    'finance.reconciliation': 'Reconciliation',
-    'crm.contacts': 'Contacts',
-    'crm.leads': 'Leads',
-    'crm.deals': 'Deals',
-    'crm.pipeline': 'Pipeline',
-    'inventory.products': 'Products',
-    'inventory.stock': 'Stock Management',
-    'inventory.suppliers': 'Suppliers',
-    'inventory.categories': 'Categories',
-    'hr.employees': 'Employees',
-    'hr.attendance': 'Attendance',
-    'hr.leaves': 'Leave Management',
-    'hr.payroll': 'Payroll',
-    'ai.chat': 'AI Chat',
-    'ai.document-extraction': 'Document Extraction',
-    'ai.predictions': 'Predictions',
-    'integration.whatsapp': 'WhatsApp Integration',
-    'integration.email': 'Email Integration',
-    'integration.payment': 'Payment Integration',
-    'platform.admin': 'Platform Admin',
-    'platform.billing': 'Billing Management',
-    'platform.monitoring': 'Monitoring',
-}
+// FEATURE_GROUPS and FEATURE_LABELS are imported from @/lib/entitlements-config
 
 const BANK_ACCOUNTS = [
     { bank: 'BRI', number: '2118 0100 8728 508' },
@@ -194,14 +144,14 @@ export default function BillingSettingsPage() {
     const STATUS_CONFIG = useMemo(() => getStatusConfig(t), [t])
 
     // State
-    const [plans, setPlans] = useState<SubscriptionPlan[]>([])
+    const [plans, setPlans] = useState<Plan[]>([])
     const [subscription, setSubscription] = useState<Subscription | null>(null)
     const [tenantSub, setTenantSub] = useState<TenantSubscription | null>(null)
     const [payments, setPayments] = useState<BillingPayment[]>([])
     const [entitlement, setEntitlement] = useState<EntitlementData | null>(null)
     const [usage, setUsage] = useState<UsageStats>({})
     const [loading, setLoading] = useState(true)
-    const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
+    const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
     const [showPaymentForm, setShowPaymentForm] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [uploading, setUploading] = useState(false)
@@ -312,7 +262,7 @@ export default function BillingSettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     subscriptionId: subscription.id,
-                    amount: selectedPlan.price,
+                    amount: selectedPlan.priceMonthly,
                     bankName,
                     accountNumber,
                     accountName,
@@ -351,7 +301,7 @@ export default function BillingSettingsPage() {
         setProofFileUrl('')
     }
 
-    const handleSelectPlan = (plan: SubscriptionPlan) => {
+    const handleSelectPlan = (plan: Plan) => {
         setSelectedPlan(plan)
         setShowPaymentForm(true)
         setMessage(null)
@@ -361,7 +311,8 @@ export default function BillingSettingsPage() {
         navigator.clipboard.writeText(text.replace(/\s/g, ''))
     }
 
-    const currentPlanSlug = tenantSub?.currentPlanSlug || subscription?.plan?.slug || 'growth'
+    // Prefer entitlement plan slug for current plan detection
+    const currentPlanSlug = entitlement?.plan?.slug || tenantSub?.currentPlanSlug || subscription?.plan?.slug || 'free'
     const subStatus = tenantSub?.subscriptionStatus || subscription?.status || 'ACTIVE'
 
     if (loading) {
@@ -399,15 +350,21 @@ export default function BillingSettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4 border-t border-gray-200">
                     <div>
                         <div className="text-sm text-gray-600">{t('settings.billing.currentPlan')}</div>
-                        <div className="text-2xl font-bold text-gray-900 mt-1">{subscription?.plan?.name || currentPlanSlug}</div>
+                        <div className="text-2xl font-bold text-gray-900 mt-1">
+                            {entitlement?.plan?.name || subscription?.plan?.name || currentPlanSlug}
+                        </div>
                     </div>
                     <div>
                         <div className="text-sm text-gray-600">{t('settings.monthlyBilling')}</div>
-                        <div className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(Number(subscription?.plan?.price || 0))}</div>
+                        <div className="text-2xl font-bold text-gray-900 mt-1">
+                            {formatCurrency(entitlement?.plan?.priceMonthly || subscription?.plan?.price || 0)}
+                        </div>
                     </div>
                     <div>
                         <div className="text-sm text-gray-600">{t('settings.billing.maxUsers')}</div>
-                        <div className="text-2xl font-bold text-gray-900 mt-1">{subscription?.plan?.maxUsers || 0} {t('settings.billing.usersLabel')}</div>
+                        <div className="text-2xl font-bold text-gray-900 mt-1">
+                            {entitlement?.plan?.maxUsers || subscription?.plan?.maxUsers || 0} {t('settings.billing.usersLabel')}
+                        </div>
                     </div>
                     <div>
                         <div className="text-sm text-gray-600">{t('settings.nextPayment')}</div>
@@ -479,7 +436,7 @@ export default function BillingSettingsPage() {
                         </div>
                     </div>
 
-                    {/* Feature Groups */}
+                    {/* Feature Groups — using FEATURE_GROUPS from entitlements-config */}
                     <div className="space-y-5">
                         {Object.entries(FEATURE_GROUPS).map(([groupKey, group]) => (
                             <div key={groupKey}>
@@ -506,7 +463,7 @@ export default function BillingSettingsPage() {
                                                         <Lock className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                                     )}
                                                     <span className={`text-sm ${isEnabled ? 'text-gray-900' : 'text-gray-500'}`}>
-                                                        {FEATURE_LABELS[featureKey] || featureKey}
+                                                        {FEATURE_LABELS[featureKey as keyof typeof FEATURE_LABELS] || featureKey}
                                                     </span>
                                                 </div>
                                                 <div className="text-right">
@@ -536,13 +493,13 @@ export default function BillingSettingsPage() {
                 </div>
             )}
 
-            {/* Section 3: Plan Selection */}
+            {/* Section 3: Plan Selection — using Plan model (Plan + PlanFeature) */}
             <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.availablePlans')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {plans.map((plan) => {
                         const isCurrentPlan = currentPlanSlug === plan.slug
-                        const isPopular = plan.slug === 'growth'
+                        const isPopular = plan.slug === 'pro'
 
                         return (
                             <div
@@ -568,21 +525,29 @@ export default function BillingSettingsPage() {
                                 <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                                 <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
                                 <div className="mt-3">
-                                    <span className="text-3xl font-bold text-gray-900">{formatCurrency(Number(plan.price))}</span>
+                                    <span className="text-3xl font-bold text-gray-900">{formatCurrency(plan.priceMonthly)}</span>
                                     <span className="text-gray-600">{t('settings.billing.perMonth')}</span>
                                 </div>
 
                                 <div className="mt-2 text-xs text-gray-500">
-                                    {t('settings.billing.maxLabel')} {plan.maxUsers} {t('settings.billing.usersLabel')} · {plan.maxProducts === -1 ? t('settings.billing.unlimited') : plan.maxProducts} {t('settings.billing.productsLabel')} · {plan.maxStorage || '-'}
+                                    {t('settings.billing.maxLabel')} {plan.maxUsers === -1 ? t('settings.billing.unlimited') : plan.maxUsers} {t('settings.billing.usersLabel')} · {plan.maxStorage ? `${plan.maxStorage} MB` : t('settings.billing.unlimited')} {t('settings.billing.storage')}
                                 </div>
 
+                                {/* Show enabled features from PlanFeature records */}
                                 <ul className="mt-6 space-y-3">
-                                    {plan.features.map((feature, idx) => (
-                                        <li key={idx} className="flex items-start gap-3">
-                                            <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-gray-700">{feature}</span>
-                                        </li>
-                                    ))}
+                                    {plan.features
+                                        .filter((f) => f.enabled)
+                                        .map((feature) => (
+                                            <li key={feature.id} className="flex items-start gap-3">
+                                                <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                                                <span className="text-sm text-gray-700">
+                                                    {FEATURE_LABELS[feature.featureKey as keyof typeof FEATURE_LABELS] || feature.featureKey}
+                                                    {feature.limit !== null && feature.limit > 0 && (
+                                                        <span className="text-gray-400 ml-1">(limit: {feature.limit})</span>
+                                                    )}
+                                                </span>
+                                            </li>
+                                        ))}
                                 </ul>
 
                                 <button
@@ -633,7 +598,7 @@ export default function BillingSettingsPage() {
                             {t('settings.billing.accountHolder')} <span className="font-medium text-gray-900">WAHYU DEDIK DWI ASTONO</span>
                         </div>
                         <div className="mt-2 text-lg font-bold text-blue-600">
-                            {t('settings.billing.nominal')} {formatCurrency(Number(selectedPlan.price))}
+                            {t('settings.billing.nominal')} {formatCurrency(selectedPlan.priceMonthly)}
                         </div>
                     </div>
 
@@ -802,11 +767,10 @@ export default function BillingSettingsPage() {
                                         <strong>{t('settings.billing.rejectionReason')}</strong> {payment.rejectReason}
                                         <button
                                             onClick={() => {
+                                                // Find the matching plan from the plans array for reupload
+                                                const currentPlan = plans.find((p) => p.slug === currentPlanSlug) || null
+                                                setSelectedPlan(currentPlan)
                                                 setShowPaymentForm(true)
-                                                setSelectedPlan(subscription?.plan ? {
-                                                    ...subscription.plan,
-                                                    features: Array.isArray(subscription.plan.features) ? subscription.plan.features : [],
-                                                } : null)
                                             }}
                                             className="ml-3 underline hover:text-red-800"
                                         >
