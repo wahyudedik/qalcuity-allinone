@@ -155,7 +155,10 @@ print_step "5/8 - Install dependencies"
 CHANGED_FILES=$(git diff --name-only "$COMMIT_BEFORE" "$COMMIT_AFTER" 2>/dev/null || echo "")
 
 if echo "$CHANGED_FILES" | grep -q "package.json\|pnpm-lock.yaml"; then
-    pnpm install --frozen-lockfile
+    if ! pnpm install --frozen-lockfile; then
+        print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa untuk regenerate lockfile"
+        pnpm install
+    fi
     print_success "Dependencies di-install ulang"
 else
     print_success "Tidak ada perubahan dependency, skip"
