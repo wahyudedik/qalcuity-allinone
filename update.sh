@@ -35,6 +35,14 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# --- Re-exec Guard ---
+# Re-exec mechanism: jika update.sh berubah setelah git pull,
+# script akan re-exec dirinya sendiri agar versi baru ter-load.
+# Gunakan UPDATE_REEXEC env var untuk mencegah infinite loop.
+if [ "$UPDATE_REEXEC" = "1" ]; then
+    echo -e "${GREEN}ℹ️  Re-exec successful — menjalankan versi baru update.sh${NC}"
+fi
+
 # --- Fungsi Logging ---
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -70,6 +78,11 @@ echo ""
 log "🚀 Memulai update Qalcuity..."
 log "📅 Waktu: $(date '+%Y-%m-%d %H:%M:%S WIB')"
 log "📂 Direktori: $APP_DIR"
+
+# --- Re-exec: Simpan hash script sebelum git pull ---
+# Digunakan di Step 4 untuk mendeteksi apakah update.sh berubah setelah pull.
+# Jika berubah, script akan re-exec dirinya sendiri dengan versi baru.
+SCRIPT_HASH_BEFORE=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
 
 # --- 1. Cek direktori ---
 print_step "1/8 - Cek direktori aplikasi"
@@ -139,6 +152,18 @@ fi
 
 git pull origin "$BRANCH"
 print_success "Code berhasil di-pull"
+
+# --- Re-exec: Cek apakah update.sh berubah setelah git pull ---
+# Jika script berubah, re-exec dengan versi baru agar Step 5-8 menggunakan kode terbaru.
+# Guard: UPDATE_REEXEC=1 mencegah infinite loop (hanya max 1 re-exec).
+if [ "$UPDATE_REEXEC" != "1" ]; then
+    CURRENT_SCRIPT_HASH=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
+    if [ "$SCRIPT_HASH_BEFORE" != "$CURRENT_SCRIPT_HASH" ]; then
+        echo -e "${YELLOW}⚠️  update.sh berubah setelah git pull. Re-exec dengan versi baru...${NC}"
+        export UPDATE_REEXEC=1
+        exec bash "$0" "$@"
+    fi
+fi
 
 # Restore stashed changes
 if [ "$STASHED" = true ] && git stash list | grep -q "auto-stash"; then
