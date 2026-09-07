@@ -117,6 +117,7 @@ interface KPICardProps {
 }
 
 function KPICard({ title, value, change, icon: Icon, format, prefix = '' }: KPICardProps) {
+    const { t } = useTranslation()
     const isPositive = change >= 0
     const formattedValue = format === 'currency'
         ? formatCurrency(value)
@@ -151,7 +152,7 @@ function KPICard({ title, value, change, icon: Icon, format, prefix = '' }: KPIC
                 >
                     {isPositive ? '+' : ''}{change.toFixed(1)}%
                 </span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">vs prev period</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{t('analytics.overview.vsPrevPeriod')}</span>
             </div>
         </div>
     )
@@ -276,11 +277,11 @@ export default function AnalyticsOverviewPage() {
                         onChange={(e) => setPeriod(e.target.value as Period)}
                         className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                     >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="yearly">Yearly</option>
+                        <option value="daily">{t('analytics.periods.daily')}</option>
+                        <option value="weekly">{t('analytics.periods.weekly')}</option>
+                        <option value="monthly">{t('analytics.periods.monthly')}</option>
+                        <option value="quarterly">{t('analytics.periods.quarterly')}</option>
+                        <option value="yearly">{t('analytics.periods.yearly')}</option>
                     </select>
                     <button
                         onClick={fetchData}
@@ -288,7 +289,7 @@ export default function AnalyticsOverviewPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Refresh</span>
+                        <span className="hidden sm:inline">{t('common.refresh')}</span>
                     </button>
                 </div>
             </div>
@@ -336,7 +337,7 @@ export default function AnalyticsOverviewPage() {
                             {t('analytics.charts.revenueTrend') || 'Revenue Trend'}
                         </h2>
                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                            {period.charAt(0).toUpperCase() + period.slice(1)} view
+                            {t('analytics.overview.periodView').replace('{period}', t(`analytics.periods.${period}`))}
                         </span>
                     </div>
                     <div className="mt-4">
@@ -352,7 +353,7 @@ export default function AnalyticsOverviewPage() {
                             <div className="flex h-[220px] items-center justify-center text-sm text-gray-400 dark:text-gray-500">
                                 <div className="text-center">
                                     <BarChart3 className="mx-auto h-8 w-8 opacity-50" />
-                                    <p className="mt-2">No trend data available</p>
+                                    <p className="mt-2">{t('analytics.overview.noTrendData')}</p>
                                 </div>
                             </div>
                         )}
@@ -371,25 +372,25 @@ export default function AnalyticsOverviewPage() {
                                     icon={Target}
                                     label={t('analytics.metrics.winRate') || 'Win Rate'}
                                     value={`${summary.winRate.toFixed(1)}%`}
-                                    sublabel={`${summary.totalDeals} deals`}
+                                    sublabel={t('analytics.overview.deals').replace('{count}', String(summary.totalDeals))}
                                 />
                                 <MetricRow
                                     icon={DollarSign}
                                     label={t('analytics.metrics.pipeline') || 'Pipeline Value'}
                                     value={formatCurrency(summary.pipelineValue)}
-                                    sublabel={`${summary.totalDeals} active deals`}
+                                    sublabel={t('analytics.overview.activeDeals').replace('{count}', String(summary.totalDeals))}
                                 />
                                 <MetricRow
                                     icon={Users}
                                     label={t('analytics.metrics.headcount') || 'Headcount'}
                                     value={formatNumber(summary.activeEmployees)}
-                                    sublabel={`${summary.attendanceRate.toFixed(1)}% attendance`}
+                                    sublabel={t('analytics.overview.attendance').replace('{rate}', summary.attendanceRate.toFixed(1))}
                                 />
                                 <MetricRow
                                     icon={Package}
                                     label={t('analytics.metrics.stockValue') || 'Stock Value'}
                                     value={formatCurrency(summary.totalProducts * 100000)}
-                                    sublabel={`${summary.lowStockCount} low stock`}
+                                    sublabel={t('analytics.overview.lowStock').replace('{count}', String(summary.lowStockCount))}
                                 />
                             </>
                         )}
@@ -399,7 +400,7 @@ export default function AnalyticsOverviewPage() {
                                 icon={Gauge}
                                 label={kpi.name}
                                 value={`${kpi.value.toFixed(1)}%`}
-                                sublabel={`Target: ${kpi.target.toFixed(1)}%`}
+                                sublabel={`${t('analytics.overview.targetPrefix')}${kpi.target.toFixed(1)}%`}
                             />
                         ))}
                     </div>
@@ -442,7 +443,7 @@ export default function AnalyticsOverviewPage() {
                                     </div>
                                     {alert.acknowledged && (
                                         <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                            Acknowledged
+                                            {t('analytics.alerts.acknowledged')}
                                         </span>
                                     )}
                                 </div>

@@ -60,7 +60,7 @@ export default function ContactsPage() {
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
-    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmTitle, setConfirmTitle] = useState(() => t('crm.contacts.confirmTitle'))
     const [confirmMessage, setConfirmMessage] = useState('')
 
     // Create modal state
@@ -110,8 +110,8 @@ export default function ContactsPage() {
     })
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus kontak ini?')
+        setConfirmTitle(t('crm.contacts.confirmTitle'))
+        setConfirmMessage(t('crm.contacts.confirmMessage'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/crm/contacts/${id}`, { method: 'DELETE' })
@@ -140,10 +140,10 @@ export default function ContactsPage() {
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {}
         if (!form.name.trim()) {
-            errors.name = 'Nama wajib diisi'
+            errors.name = t('crm.contacts.validationNameRequired')
         }
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-            errors.email = 'Format email tidak valid'
+            errors.email = t('crm.contacts.validationEmailInvalid')
         }
         setFormErrors(errors)
         return Object.keys(errors).length === 0
@@ -232,7 +232,7 @@ export default function ContactsPage() {
                         onClick={fetchContacts}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('crm.contacts.retry')}
                     </button>
                 </div>
             </div>
@@ -270,7 +270,7 @@ export default function ContactsPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total</p>
+                    <p className="text-sm text-gray-500">{t('crm.contacts.totalLabel')}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -315,7 +315,7 @@ export default function ContactsPage() {
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            {type === 'all' ? 'Semua' : typeLabels[type] || type}
+                            {type === 'all' ? t('crm.contacts.filterAll') : typeLabels[type] || type}
                         </button>
                     ))}
                 </div>
@@ -478,139 +478,139 @@ export default function ContactsPage() {
             )}
 
             {/* Create Contact Modal */}
-            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title="Tambah Kontak Baru" size="lg">
+            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title={t('crm.contacts.form.title')} size="lg">
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nama <span className="text-red-500">*</span>
+                            {t('crm.contacts.form.nameLabel')} <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             name="name"
                             value={form.name}
                             onChange={handleFormChange}
-                            placeholder="Nama kontak"
+                            placeholder={t('crm.contacts.form.namePlaceholder')}
                             className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                         />
                         {formErrors.name && <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>}
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.emailLabel')}</label>
                             <input
                                 type="email"
                                 name="email"
                                 value={form.email}
                                 onChange={handleFormChange}
-                                placeholder="email@contoh.com"
+                                placeholder={t('crm.contacts.form.emailPlaceholder')}
                                 className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
                             />
                             {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.phoneLabel')}</label>
                             <input
                                 type="text"
                                 name="phone"
                                 value={form.phone}
                                 onChange={handleFormChange}
-                                placeholder="08123456789"
+                                placeholder={t('crm.contacts.form.phonePlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Perusahaan</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.companyLabel')}</label>
                         <input
                             type="text"
                             name="company"
                             value={form.company}
                             onChange={handleFormChange}
-                            placeholder="PT Nama Perusahaan"
+                            placeholder={t('crm.contacts.form.companyPlaceholder')}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Kontak</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.typeLabel')}</label>
                         <select
                             name="type"
                             value={form.type}
                             onChange={handleFormChange}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         >
-                            <option value="CUSTOMER">Pelanggan</option>
-                            <option value="SUPPLIER">Pemasok</option>
-                            <option value="PARTNER">Mitra</option>
-                            <option value="LEAD">Prospek</option>
+                            <option value="CUSTOMER">{t('crm.contacts.form.typeCustomer')}</option>
+                            <option value="SUPPLIER">{t('crm.contacts.form.typeSupplier')}</option>
+                            <option value="PARTNER">{t('crm.contacts.form.typePartner')}</option>
+                            <option value="LEAD">{t('crm.contacts.form.typeLead')}</option>
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.addressLabel')}</label>
                         <textarea
                             name="address"
                             value={form.address}
                             onChange={handleFormChange}
                             rows={2}
-                            placeholder="Alamat lengkap"
+                            placeholder={t('crm.contacts.form.addressPlaceholder')}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Kota</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.cityLabel')}</label>
                             <input
                                 type="text"
                                 name="city"
                                 value={form.city}
                                 onChange={handleFormChange}
-                                placeholder="Jakarta"
+                                placeholder={t('crm.contacts.form.cityPlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Provinsi</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.provinceLabel')}</label>
                             <input
                                 type="text"
                                 name="province"
                                 value={form.province}
                                 onChange={handleFormChange}
-                                placeholder="DKI Jakarta"
+                                placeholder={t('crm.contacts.form.provincePlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Kode Pos</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.postalCodeLabel')}</label>
                             <input
                                 type="text"
                                 name="postalCode"
                                 value={form.postalCode}
                                 onChange={handleFormChange}
-                                placeholder="12345"
+                                placeholder={t('crm.contacts.form.postalCodePlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">NPWP</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.taxIdLabel')}</label>
                             <input
                                 type="text"
                                 name="taxId"
                                 value={form.taxId}
                                 onChange={handleFormChange}
-                                placeholder="00.000.000.0-000.000"
+                                placeholder={t('crm.contacts.form.taxIdPlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.contacts.form.notesLabel')}</label>
                         <textarea
                             name="notes"
                             value={form.notes}
                             onChange={handleFormChange}
                             rows={3}
-                            placeholder="Catatan tentang kontak ini..."
+                            placeholder={t('crm.contacts.form.notesPlaceholder')}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
@@ -619,14 +619,14 @@ export default function ContactsPage() {
                             onClick={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }}
                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                            Batal
+                            {t('crm.contacts.form.cancel')}
                         </button>
                         <button
                             onClick={handleCreateContact}
                             disabled={submitting}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submitting ? 'Menyimpan...' : 'Simpan Kontak'}
+                            {submitting ? t('crm.contacts.form.saving') : t('crm.contacts.form.save')}
                         </button>
                     </div>
                 </div>
@@ -658,8 +658,8 @@ export default function ContactsPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('crm.contacts.confirmText')}
+                cancelText={t('crm.contacts.cancelText')}
                 variant="danger"
             />
         </div>

@@ -17,7 +17,7 @@
 // Cache Versioning
 // =============================================================================
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `qalcuity-static-${CACHE_VERSION}`;
 const API_PRODUCTS_CACHE = `qalcuity-api-products-${CACHE_VERSION}`;
 const API_SESSIONS_CACHE = `qalcuity-api-sessions-${CACHE_VERSION}`;
@@ -480,6 +480,9 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
+    // [DIAG-LOG] Log every intercepted request for debugging
+    console.log('[SW-DIAG] Intercepted:', request.method, url.pathname, 'mode:', request.mode);
+
     // Skip non-GET requests for caching (but allow POST for navigation)
     if (request.method !== 'GET' && request.method !== 'POST') {
         return;
@@ -495,14 +498,20 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // CRITICAL: Skip auth API routes entirely — NEVER intercept authentication requests.
+    // CRITICAL: Skip ALL non-POS API routes — NEVER intercept authentication or non-POS requests.
     // Service Worker proxy can interfere with Set-Cookie header processing in some browsers,
     // causing session cookies to not be set after login. This breaks the entire auth flow:
     //   signIn() → POST /api/auth/callback/credentials → Set-Cookie dropped → no session
-    // By returning early (without event.respondWith), the browser handles auth requests directly.
-    // Affected routes: /api/auth/csrf, /api/auth/callback/*, /api/auth/session,
-    //   /api/auth/signin, /api/auth/signout, /api/auth/providers, etc.
+    // By returning early (without event.respondWith), the browser handles these requests directly.
+    // This also prevents caching of auth responses, CSRF tokens, and other sensitive data.
     if (url.pathname.startsWith('/api/auth/')) {
+        console.log('[SW-DIAG] BYPASS (auth):', url.pathname);
+        return;
+    }
+
+    // Skip ALL non-POS API routes — only POS APIs should be cached by SW
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/pos/')) {
+        console.log('[SW-DIAG] BYPASS (non-POS API):', url.pathname);
         return;
     }
 
@@ -545,26 +554,30 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Rule 6: Other API routes → Network-Only (don't cache non-POS APIs)
+    // Rule 6: All remaining /api/ routes → Network-Only (safety net — already bypassed above)
     if (url.pathname.startsWith('/api/')) {
-        event.respondWith(networkOnly(request));
+        console.log('[SW-DIAG] BYPASS (remaining API):', url.pathname);
         return;
     }
 
-    // Rule 7: HTML Pages (navigation) → Network-First with offline fallback
+    // Rule 7: HTML Pages (navigation) — ONLY cache POS pages for offline mode
+    // CRITICAL: Non-POS navigation (login, register, dashboard, etc.) MUST be handled
+    // directly by the browser to ensure Set-Cookie headers, CSRF tokens, and session
+    // management work correctly. Caching non-POS pages can cause stale auth states,
+    // redirect loops, and broken session cookies.
     if (request.mode === 'navigate') {
-        event.respondWith(networkFirstWithFallback(request));
+        if (url.pathname.startsWith('/dashboard/pos/')) {
+            event.respondWith(networkFirstWithFallback(request));
+        } else {
+            // Non-POS navigation — let browser handle directly
+            console.log('[SW-DIAG] BYPASS (navigation):', url.pathname);
+            return;
+        }
         return;
     }
 
-    // Default: Network-First for everything else
-    event.respondWith(
-        (async () => {
-            const response = await networkFirst(request, STATIC_CACHE, TTL.STATIC);
-            if (response) {
-                return response;
-            }
-            return fetch(request);
-        })()
-    );
+    // Default: Network-First for everything else (only POS-related resources)
+    // Non-POS resources are already handled above — this is a safety net
+    console.log('[SW-DIAG] BYPASS (default):', url.pathname);
+    return;
 });

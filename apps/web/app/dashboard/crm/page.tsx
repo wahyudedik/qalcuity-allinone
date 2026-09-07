@@ -169,7 +169,7 @@ export default function CrmPage() {
     const summaryCards = [
         { title: t('crm.overview.totalLeads'), value: totalLeads.toString(), change: `+${leads.filter((l) => { const d = new Date(l.createdAt); const now = new Date(); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() }).length}`, icon: Target, color: 'text-blue-600', href: '/dashboard/crm/leads' },
         { title: t('crm.overview.activeDeals'), value: activeDeals.length.toString(), change: `+${activeDeals.filter((d) => { const d2 = new Date(d.createdAt); const now = new Date(); return d2.getMonth() === now.getMonth() && d2.getFullYear() === now.getFullYear() }).length}`, icon: Handshake, color: 'text-green-600', href: '/dashboard/crm/deals' },
-        { title: t('crm.overview.pipelineValue'), value: formatCurrency(totalRevenue), change: `${wonDeals.length} won`, icon: DollarSign, color: 'text-purple-600', href: '/dashboard/crm/pipeline' },
+        { title: t('crm.overview.pipelineValue'), value: formatCurrency(totalRevenue), change: `${wonDeals.length} ${t('crm.overview.won')}`, icon: DollarSign, color: 'text-purple-600', href: '/dashboard/crm/pipeline' },
         { title: t('crm.overview.winRate'), value: `${winRate}%`, change: `${wonDeals.length}/${deals.length}`, icon: Trophy, color: 'text-yellow-600', href: '/dashboard/crm/deals' },
     ]
 
@@ -231,13 +231,13 @@ export default function CrmPage() {
         const date = new Date(dateStr)
         const diffMs = now.getTime() - date.getTime()
         const diffMin = Math.floor(diffMs / 60000)
-        if (diffMin < 60) return `${diffMin} menit lalu`
+        if (diffMin < 60) return `${diffMin} ${t('crm.overview.minutesAgo')}`
         const diffHour = Math.floor(diffMin / 60)
-        if (diffHour < 24) return `${diffHour} jam lalu`
+        if (diffHour < 24) return `${diffHour} ${t('crm.overview.hoursAgo')}`
         const diffDay = Math.floor(diffHour / 24)
-        if (diffDay === 1) return 'Kemarin'
-        if (diffDay < 7) return `${diffDay} hari lalu`
-        return date.toLocaleDateString('id-ID')
+        if (diffDay === 1) return t('crm.overview.yesterday')
+        if (diffDay < 7) return `${diffDay} ${t('crm.overview.daysAgo')}`
+        return date.toLocaleDateString(t('common.locale') || 'id-ID')
     }
 
     return (
@@ -295,7 +295,7 @@ export default function CrmPage() {
                         )) : (
                             <div className="px-4 py-8 text-center">
                                 <Handshake className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
-                                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('common.noData') || 'Belum ada deal aktif'}</p>
+                                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('crm.overview.noActiveDeals')}</p>
                             </div>
                         )}
                     </div>
@@ -322,7 +322,7 @@ export default function CrmPage() {
                         }) : (
                             <div className="px-4 py-8 text-center">
                                 <StickyNote className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
-                                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('common.noActivity') || 'Belum ada aktivitas'}</p>
+                                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('crm.overview.noActivitiesYet')}</p>
                             </div>
                         )}
                     </div>

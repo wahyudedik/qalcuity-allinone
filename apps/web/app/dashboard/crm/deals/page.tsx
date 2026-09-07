@@ -64,7 +64,7 @@ export default function DealsPage() {
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
-    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmTitle, setConfirmTitle] = useState('')
     const [confirmMessage, setConfirmMessage] = useState('')
 
     // Create modal state
@@ -110,20 +110,20 @@ export default function DealsPage() {
     })
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus deal ini?')
+        setConfirmTitle(t('crm.deals.confirmTitle'))
+        setConfirmMessage(t('crm.deals.confirmMessage'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/crm/deals/${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchDeals()
-                    setToast({ message: 'Deal berhasil dihapus', type: 'success' })
+                    setToast({ message: t('crm.deals.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: t('crm.deals.deleteFailed').replace('{error}', result.error), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus deal', type: 'error' })
+                setToast({ message: t('crm.deals.deleteError'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -147,10 +147,10 @@ export default function DealsPage() {
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {}
         if (!form.title.trim()) {
-            errors.title = 'Judul deal wajib diisi'
+            errors.title = t('crm.deals.validationTitleRequired')
         }
         if (form.value && isNaN(Number(form.value))) {
-            errors.value = 'Nilai harus berupa angka'
+            errors.value = t('crm.deals.validationValueNumber')
         }
         setFormErrors(errors)
         return Object.keys(errors).length === 0
@@ -180,12 +180,12 @@ export default function DealsPage() {
                 setShowCreateModal(false)
                 setForm(initialFormState)
                 fetchDeals()
-                setToast({ message: 'Deal berhasil dibuat', type: 'success' })
+                setToast({ message: t('crm.deals.createSuccess'), type: 'success' })
             } else {
-                setToast({ message: `Gagal membuat deal: ${result.error || 'Terjadi kesalahan'}`, type: 'error' })
+                setToast({ message: t('crm.deals.createFailed').replace('{error}', result.error || t('common.error')), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal membuat deal', type: 'error' })
+            setToast({ message: t('crm.deals.createError'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -301,8 +301,8 @@ export default function DealsPage() {
                 {filtered.length === 0 ? (
                     <EmptyState
                         icon={TrendingUp}
-                        title={t('crm.deals.empty') || 'Belum ada deal'}
-                        description="Buat deal pertama Anda untuk mulai melacak penjualan"
+                        title={t('crm.deals.empty')}
+                        description={t('crm.deals.emptyDescription')}
                     />
                 ) : (
                     filtered.map((deal) => (
@@ -338,13 +338,13 @@ export default function DealsPage() {
                             </div>
                             <div className="mt-3 flex gap-2">
                                 <Link href={`/dashboard/crm/deals/${deal.id}`} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                                    {t('common.view') || 'Lihat'}
+                                    {t('crm.deals.viewDetail')}
                                 </Link>
                                 <button
                                     onClick={() => handleDelete(deal.id)}
                                     className="text-sm text-red-600 hover:text-red-800 dark:text-red-400"
                                 >
-                                    {t('common.delete') || 'Hapus'}
+                                    {t('crm.deals.confirmText')}
                                 </button>
                             </div>
                         </div>
@@ -374,8 +374,8 @@ export default function DealsPage() {
                                     <td colSpan={8} className="px-4 py-12">
                                         <EmptyState
                                             icon={TrendingUp}
-                                            title={t('crm.deals.empty') || 'Belum ada deal'}
-                                            description="Buat deal pertama Anda untuk mulai melacak penjualan"
+                                            title={t('crm.deals.empty')}
+                                            description={t('crm.deals.emptyDescription')}
                                         />
                                     </td>
                                 </tr>
@@ -414,7 +414,7 @@ export default function DealsPage() {
                                                 <button
                                                     onClick={() => handleDelete(deal.id)}
                                                     className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                    title={t('crm.deals.confirmText')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -429,25 +429,25 @@ export default function DealsPage() {
             </div>
 
             {/* Create Deal Modal */}
-            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title="Tambah Deal Baru" size="lg">
+            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title={t('crm.deals.form.title')} size="lg">
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Judul Deal <span className="text-red-500">*</span>
+                            {t('crm.deals.form.titleLabel')} <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             name="title"
                             value={form.title}
                             onChange={handleFormChange}
-                            placeholder="Judul deal"
+                            placeholder={t('crm.deals.form.titlePlaceholder')}
                             className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.title ? 'border-red-500' : 'border-gray-300'}`}
                         />
                         {formErrors.title && <p className="mt-1 text-xs text-red-500">{formErrors.title}</p>}
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Deal (Rp)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.deals.form.valueLabel')}</label>
                             <input
                                 type="number"
                                 name="value"
@@ -460,25 +460,25 @@ export default function DealsPage() {
                             {formErrors.value && <p className="mt-1 text-xs text-red-500">{formErrors.value}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.deals.form.stageLabel')}</label>
                             <select
                                 name="stage"
                                 value={form.stage}
                                 onChange={handleFormChange}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                                <option value="DISCOVERY">Discovery</option>
-                                <option value="PROPOSAL">Proposal</option>
-                                <option value="NEGOTIATION">Negosiasi</option>
-                                <option value="CLOSING">Closing</option>
-                                <option value="CLOSED_WON">Deal Won</option>
-                                <option value="CLOSED_LOST">Deal Lost</option>
+                                <option value="DISCOVERY">{t('crm.deals.stages.DISCOVERY')}</option>
+                                <option value="PROPOSAL">{t('crm.deals.stages.PROPOSAL')}</option>
+                                <option value="NEGOTIATION">{t('crm.deals.stages.NEGOTIATION')}</option>
+                                <option value="CLOSING">{t('crm.deals.stages.CLOSING')}</option>
+                                <option value="CLOSED_WON">{t('crm.deals.stages.CLOSED_WON')}</option>
+                                <option value="CLOSED_LOST">{t('crm.deals.stages.CLOSED_LOST')}</option>
                             </select>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Target Closing</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.deals.form.closeDateLabel')}</label>
                             <input
                                 type="date"
                                 name="closeDate"
@@ -488,25 +488,25 @@ export default function DealsPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Contact ID (opsional)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.deals.form.contactIdLabel')}</label>
                             <input
                                 type="text"
                                 name="contactId"
                                 value={form.contactId}
                                 onChange={handleFormChange}
-                                placeholder="ID kontak terkait"
+                                placeholder={t('crm.deals.form.contactIdPlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.deals.form.notesLabel')}</label>
                         <textarea
                             name="notes"
                             value={form.notes}
                             onChange={handleFormChange}
                             rows={3}
-                            placeholder="Catatan tentang deal ini..."
+                            placeholder={t('crm.deals.form.notesPlaceholder')}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
@@ -515,14 +515,14 @@ export default function DealsPage() {
                             onClick={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }}
                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                            Batal
+                            {t('crm.deals.form.cancel')}
                         </button>
                         <button
                             onClick={handleCreateDeal}
                             disabled={submitting}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submitting ? 'Menyimpan...' : 'Simpan Deal'}
+                            {submitting ? t('crm.deals.form.saving') : t('crm.deals.form.save')}
                         </button>
                     </div>
                 </div>
@@ -546,8 +546,8 @@ export default function DealsPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('crm.deals.confirmText')}
+                cancelText={t('crm.deals.cancelText')}
                 variant="danger"
             />
         </div>

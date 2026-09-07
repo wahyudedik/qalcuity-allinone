@@ -58,31 +58,7 @@ interface ScheduledResponse {
    HELPERS
    ============================================ */
 
-function getStatusConfig(isActive: boolean, lastRunStatus: string | null): { color: string; bg: string; icon: typeof CheckCircle2; label: string } {
-    if (!isActive) {
-        return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-700', icon: Pause, label: 'Paused' }
-    }
-    switch (lastRunStatus) {
-        case 'SUCCESS':
-            return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle2, label: 'Active' }
-        case 'FAILED':
-            return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', icon: XCircle, label: 'Error' }
-        case 'TIMEOUT':
-            return { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: AlertTriangle, label: 'Timeout' }
-        default:
-            return { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: CheckCircle2, label: 'Active' }
-    }
-}
-
-function getFrequencyLabel(frequency: string): string {
-    switch (frequency) {
-        case 'daily': return 'Daily'
-        case 'weekly': return 'Weekly'
-        case 'monthly': return 'Monthly'
-        case 'quarterly': return 'Quarterly'
-        default: return frequency
-    }
-}
+/* getStatusConfig and getFrequencyLabel are defined inside the component to use t() */
 
 function getFrequencyColor(frequency: string): string {
     switch (frequency) {
@@ -125,6 +101,32 @@ function timeAgo(dateStr: string | null): string {
 
 export default function ScheduledPage() {
     const { t } = useTranslation()
+
+    function getStatusConfig(isActive: boolean, lastRunStatus: string | null): { color: string; bg: string; icon: typeof CheckCircle2; label: string } {
+        if (!isActive) {
+            return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-700', icon: Pause, label: t('analytics.scheduled.statuses.paused') }
+        }
+        switch (lastRunStatus) {
+            case 'SUCCESS':
+                return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle2, label: t('analytics.scheduled.statuses.active') }
+            case 'FAILED':
+                return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', icon: XCircle, label: t('analytics.scheduled.statuses.error') }
+            case 'TIMEOUT':
+                return { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: AlertTriangle, label: t('analytics.scheduled.statuses.timeout') }
+            default:
+                return { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: CheckCircle2, label: t('analytics.scheduled.statuses.active') }
+        }
+    }
+
+    function getFrequencyLabel(frequency: string): string {
+        switch (frequency) {
+            case 'daily': return t('analytics.scheduled.frequencies.daily')
+            case 'weekly': return t('analytics.scheduled.frequencies.weekly')
+            case 'monthly': return t('analytics.scheduled.frequencies.monthly')
+            case 'quarterly': return t('analytics.scheduled.frequencies.quarterly')
+            default: return frequency
+        }
+    }
     const [scheduled, setScheduled] = useState<ScheduledQueryItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -203,8 +205,8 @@ export default function ScheduledPage() {
     const stats = [
         { label: t('analytics.scheduled.active'), value: activeCount, icon: CheckCircle2, color: 'text-green-600 dark:text-green-400' },
         { label: t('analytics.scheduled.paused'), value: pausedCount, icon: Pause, color: 'text-gray-600 dark:text-gray-400' },
-        { label: 'Total Runs', value: totalRuns, icon: Repeat, color: 'text-blue-600 dark:text-blue-400' },
-        { label: 'Errors', value: errorCount, icon: AlertTriangle, color: 'text-red-600 dark:text-red-400' },
+        { label: t('analytics.scheduled.stats.totalRuns'), value: totalRuns, icon: Repeat, color: 'text-blue-600 dark:text-blue-400' },
+        { label: t('analytics.scheduled.stats.errors'), value: errorCount, icon: AlertTriangle, color: 'text-red-600 dark:text-red-400' },
     ]
 
     const frequencyFilters = ['all', 'daily', 'weekly', 'monthly', 'quarterly'] as const
@@ -352,7 +354,7 @@ export default function ScheduledPage() {
                                                 </div>
                                                 {item.outputFormat && (
                                                     <div>
-                                                        <span className="text-gray-400 dark:text-gray-500">Format: </span>
+                                                        <span className="text-gray-400 dark:text-gray-500">{t('analytics.scheduled.format')} </span>
                                                         <span className="text-gray-700 dark:text-gray-300">{item.outputFormat}</span>
                                                     </div>
                                                 )}
@@ -368,7 +370,7 @@ export default function ScheduledPage() {
                                                 ? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20'
                                                 : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                                                 }`}
-                                            title={item.isActive ? 'Pause' : 'Resume'}
+                                            title={item.isActive ? t('analytics.scheduled.pause') : t('analytics.scheduled.resume')}
                                         >
                                             {item.isActive ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
                                         </button>
@@ -386,7 +388,7 @@ export default function ScheduledPage() {
                                                         className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                                                     >
                                                         <Play className="h-4 w-4" />
-                                                        Run Now
+                                                        {t('analytics.scheduled.runNow')}
                                                     </button>
                                                     <button
                                                         onClick={() => deleteScheduled(item.id)}
@@ -423,7 +425,7 @@ export default function ScheduledPage() {
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Nama</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('analytics.scheduled.form.name')}</label>
                                 <input
                                     type="text"
                                     value={createForm.name}
@@ -433,7 +435,7 @@ export default function ScheduledPage() {
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Deskripsi</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('analytics.scheduled.form.description')}</label>
                                 <input
                                     type="text"
                                     value={createForm.description}
@@ -444,20 +446,20 @@ export default function ScheduledPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Frekuensi</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('analytics.scheduled.form.frequency')}</label>
                                     <select
                                         value={createForm.frequency}
                                         onChange={(e) => setCreateForm({ ...createForm, frequency: e.target.value })}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                     >
-                                        <option value="daily">Daily</option>
-                                        <option value="weekly">Weekly</option>
-                                        <option value="monthly">Monthly</option>
-                                        <option value="quarterly">Quarterly</option>
+                                        <option value="daily">{t('analytics.scheduled.frequencies.daily')}</option>
+                                        <option value="weekly">{t('analytics.scheduled.frequencies.weekly')}</option>
+                                        <option value="monthly">{t('analytics.scheduled.frequencies.monthly')}</option>
+                                        <option value="quarterly">{t('analytics.scheduled.frequencies.quarterly')}</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Waktu</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('analytics.scheduled.form.time')}</label>
                                     <input
                                         type="time"
                                         value={createForm.timeOfDay}
@@ -467,16 +469,16 @@ export default function ScheduledPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Format Output</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('analytics.scheduled.form.outputFormat')}</label>
                                 <select
                                     value={createForm.outputFormat}
                                     onChange={(e) => setCreateForm({ ...createForm, outputFormat: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 >
-                                    <option value="pdf">PDF</option>
-                                    <option value="csv">CSV</option>
-                                    <option value="xlsx">Excel (XLSX)</option>
-                                    <option value="json">JSON</option>
+                                    <option value="pdf">{t('analytics.scheduled.form.outputFormats.pdf')}</option>
+                                    <option value="csv">{t('analytics.scheduled.form.outputFormats.csv')}</option>
+                                    <option value="xlsx">{t('analytics.scheduled.form.outputFormats.excel')}</option>
+                                    <option value="json">{t('analytics.scheduled.form.outputFormats.json')}</option>
                                 </select>
                             </div>
                         </div>
@@ -485,7 +487,7 @@ export default function ScheduledPage() {
                                 onClick={() => setShowCreateModal(false)}
                                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
                             >
-                                Batal
+                                {t('analytics.scheduled.form.cancel')}
                             </button>
                             <button
                                 onClick={async () => {
@@ -514,7 +516,7 @@ export default function ScheduledPage() {
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                             >
                                 <CheckCircle2 className="h-4 w-4" />
-                                Buat Scheduled Report
+                                {t('analytics.scheduled.form.create')}
                             </button>
                         </div>
                     </div>

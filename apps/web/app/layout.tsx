@@ -22,8 +22,8 @@ export default function RootLayout({
     children: ReactNode;
 }) {
     return (
-        <html lang="id">
-            <body>
+        <html lang="id" suppressHydrationWarning>
+            <body suppressHydrationWarning>
                 <SessionProvider>
                     <I18nProvider>
                         <ToastProvider>{children}</ToastProvider>

@@ -516,6 +516,173 @@ const generalConfig: IndustryConfig = {
     ],
 };
 
+// ─── Agriculture ─────────────────────────────────────────────────────────────
+
+const agricultureConfig: IndustryConfig = {
+    id: 'agriculture',
+    industry: 'agriculture',
+    name: 'Agriculture',
+    description: 'Konfigurasi untuk industri pertanian, perkebunan, peternakan, dan perikanan.',
+    modules: {
+        finance: true,
+        crm: false,
+        hr: true,
+        inventory: true,
+        billing: true,
+        analytics: true,
+    },
+    customFields: {
+        product: [
+            { name: 'crop_type', label: 'Jenis Tanaman', type: 'select', required: true, options: ['Padi', 'Jagung', 'Kedelai', 'Karet', 'Kelapa Sawit', 'Tebu', 'Kopi', 'Teh', 'Lainnya'] },
+            { name: 'organic_certified', label: 'Sertifikasi Organik', type: 'boolean', required: false, defaultValue: false },
+            { name: 'grade', label: 'Grade', type: 'select', required: false, options: ['Premium', 'Grade A', 'Grade B', 'Grade C'] },
+        ],
+        invoice: [
+            { name: 'harvest_season', label: 'Musim Panen', type: 'text', required: false },
+        ],
+        contact: [
+            { name: 'supplier_type', label: 'Jenis Supplier', type: 'select', required: false, options: ['Petani', 'Distributor', 'Pengumpul', 'Eksportir'] },
+            { name: 'region', label: 'Wilayah', type: 'text', required: false },
+        ],
+    },
+    dashboardWidgets: [
+        { id: 'agri_active_crops', type: 'stat', title: 'Tanaman Aktif', module: 'inventory', metric: 'active_crops', size: 'md' },
+        { id: 'agri_harvest_forecast', type: 'chart', title: 'Proyeksi Panen', module: 'finance', metric: 'harvest_forecast', size: 'lg' },
+        { id: 'agri_land_utilization', type: 'stat', title: 'Utilisasi Lahan', module: 'inventory', metric: 'land_utilization', size: 'md' },
+        { id: 'agri_supply_demand', type: 'chart', title: 'Pasokan vs Permintaan', module: 'inventory', metric: 'supply_demand', size: 'md' },
+    ],
+    reports: [
+        { id: 'agri_harvest_report', name: 'Laporan Panen', module: 'inventory', metrics: ['harvest_yield', 'crop_quality', 'land_productivity'], groupBy: 'month' },
+        { id: 'agri_financial_report', name: 'Laporan Keuangan Pertanian', module: 'finance', metrics: ['revenue', 'expense', 'profit'], groupBy: 'month' },
+    ],
+    documentTemplates: {
+        invoice: { name: 'Invoice Pertanian', fields: ['invoice_number', 'date', 'customer', 'items', 'quantity', 'unit', 'subtotal', 'tax', 'total'], layout: 'standard' },
+    },
+    approvalRules: [
+        {
+            entity: 'purchase_order', action: 'create', levels: [
+                { level: 1, role: 'MEMBER', required: true },
+                { level: 2, role: 'ADMIN', required: false },
+            ]
+        },
+    ],
+};
+
+// ─── Logistics ───────────────────────────────────────────────────────────────
+
+const logisticsConfig: IndustryConfig = {
+    id: 'logistics',
+    industry: 'logistics',
+    name: 'Logistics',
+    description: 'Konfigurasi untuk industri pengiriman, kurir, warehouse, dan freight forwarding.',
+    modules: {
+        finance: true,
+        crm: false,
+        hr: true,
+        inventory: true,
+        billing: true,
+        analytics: true,
+    },
+    customFields: {
+        product: [
+            { name: 'tracking_number', label: 'Nomor Tracking', type: 'text', required: true },
+            { name: 'shipment_type', label: 'Jenis Pengiriman', type: 'select', required: true, options: ['Reguler', 'Express', 'Same Day', 'Economy', 'Cargo'] },
+            { name: 'weight_kg', label: 'Berat (kg)', type: 'number', required: false },
+        ],
+        invoice: [
+            { name: 'service_type', label: 'Jenis Layanan', type: 'select', required: true, options: ['Pengiriman', 'Warehousing', 'Fulfillment', 'Customs Clearance'] },
+            { name: 'origin', label: 'Kota Asal', type: 'text', required: true },
+            { name: 'destination', label: 'Kota Tujuan', type: 'text', required: true },
+        ],
+        contact: [
+            { name: 'contact_type', label: 'Jenis Kontak', type: 'select', required: true, options: ['Pengirim', 'Penerima', 'Dropshipper', 'Supplier'] },
+            { name: 'service_area', label: 'Area Layanan', type: 'text', required: false },
+        ],
+    },
+    dashboardWidgets: [
+        { id: 'log_active_shipments', type: 'stat', title: 'Pengiriman Aktif', module: 'inventory', metric: 'active_shipments', size: 'md' },
+        { id: 'log_fleet_status', type: 'chart', title: 'Status Armada', module: 'inventory', metric: 'fleet_status', size: 'md' },
+        { id: 'log_warehouse_util', type: 'stat', title: 'Utilisasi Gudang', module: 'inventory', metric: 'warehouse_utilization', size: 'md' },
+        { id: 'log_delivery_perf', type: 'chart', title: 'Performa Pengiriman', module: 'finance', metric: 'delivery_performance', size: 'lg' },
+    ],
+    reports: [
+        { id: 'log_shipment_report', name: 'Laporan Pengiriman', module: 'inventory', metrics: ['shipment_count', 'on_time_rate', 'transit_time'], groupBy: 'date' },
+        { id: 'log_financial_report', name: 'Laporan Keuangan Logistik', module: 'finance', metrics: ['revenue', 'expense', 'profit'], groupBy: 'month' },
+    ],
+    documentTemplates: {
+        invoice: { name: 'Invoice Logistik', fields: ['invoice_number', 'date', 'customer', 'service_type', 'origin', 'destination', 'weight', 'total'], layout: 'standard' },
+        receipt: { name: 'Tanda Terima Pengiriman', fields: ['tracking_number', 'sender', 'receiver', 'items', 'date', 'signature'], layout: 'standard' },
+    },
+    approvalRules: [
+        {
+            entity: 'purchase_order', action: 'create', levels: [
+                { level: 1, role: 'MEMBER', required: true },
+                { level: 2, role: 'ADMIN', required: false },
+            ]
+        },
+    ],
+};
+
+// ─── Hospitality ─────────────────────────────────────────────────────────────
+
+const hospitalityConfig: IndustryConfig = {
+    id: 'hospitality',
+    industry: 'hospitality',
+    name: 'Hospitality',
+    description: 'Konfigurasi untuk industri hotel, villa, resort, dan event organizer.',
+    modules: {
+        finance: true,
+        crm: true,
+        hr: true,
+        inventory: true,
+        billing: true,
+        analytics: true,
+    },
+    customFields: {
+        product: [
+            { name: 'room_type', label: 'Jenis Kamar', type: 'select', required: false, options: ['Standard', 'Superior', 'Deluxe', 'Suite', 'Villa', 'Family'] },
+            { name: 'meal_plan', label: 'Paket Makan', type: 'select', required: false, options: ['Room Only', 'BB', 'Half Board', 'Full Board', 'All Inclusive'] },
+        ],
+        invoice: [
+            { name: 'stay_type', label: 'Jenis Menginap', type: 'select', required: true, options: ['Nightly', 'Weekly', 'Monthly', 'Hourly', 'Event'] },
+            { name: 'service_type', label: 'Jenis Layanan', type: 'select', required: false, options: ['Room', 'F&B', 'SPA', 'Laundry', 'Minibar', 'Transport', 'Event'] },
+        ],
+        contact: [
+            { name: 'guest_type', label: 'Jenis Tamu', type: 'select', required: false, options: ['Individual', 'Corporate', 'Group', 'VIP', 'Loyalty Member'] },
+            { name: 'nationality', label: 'Kebangsaan', type: 'text', required: false },
+            { name: 'loyalty_tier', label: 'Tier Loyalitas', type: 'select', required: false, options: ['Member', 'Silver', 'Gold', 'Platinum', 'Diamond'] },
+        ],
+    },
+    dashboardWidgets: [
+        { id: 'hosp_occupancy', type: 'stat', title: 'Tingkat Okupansi', module: 'inventory', metric: 'occupancy_rate', size: 'md' },
+        { id: 'hosp_checkin', type: 'stat', title: 'Check-in Hari Ini', module: 'finance', metric: 'today_checkin', size: 'sm' },
+        { id: 'hosp_checkout', type: 'stat', title: 'Check-out Hari Ini', module: 'finance', metric: 'today_checkout', size: 'sm' },
+        { id: 'hosp_revenue', type: 'chart', title: 'Revenue per Kamar', module: 'finance', metric: 'revenue_per_room', size: 'lg' },
+        { id: 'hosp_guest_sat', type: 'chart', title: 'Kepuasan Tamu', module: 'crm', metric: 'guest_satisfaction', size: 'md' },
+    ],
+    reports: [
+        { id: 'hosp_occupancy_report', name: 'Laporan Okupansi', module: 'inventory', metrics: ['occupancy_rate', 'adr', 'revpar'], groupBy: 'date' },
+        { id: 'hosp_revenue_report', name: 'Laporan Revenue', module: 'finance', metrics: ['room_revenue', 'fb_revenue', 'total_revenue'], groupBy: 'month' },
+    ],
+    documentTemplates: {
+        invoice: { name: 'Invoice Hotel', fields: ['invoice_number', 'date', 'guest_name', 'room_number', 'check_in', 'check_out', 'services', 'total'], layout: 'detailed' },
+        receipt: { name: 'Folio Hotel', fields: ['folio_number', 'guest_name', 'room_number', 'items', 'total', 'payment_method'], layout: 'standard' },
+    },
+    approvalRules: [
+        {
+            entity: 'purchase_order', action: 'create', levels: [
+                { level: 1, role: 'MEMBER', required: true },
+                { level: 2, role: 'ADMIN', required: false },
+            ]
+        },
+        {
+            entity: 'discount', action: 'approve', levels: [
+                { level: 1, role: 'ADMIN', required: true },
+            ]
+        },
+    ],
+};
+
 // ─── Export All Defaults ─────────────────────────────────────────────────────
 
 /**
@@ -530,6 +697,9 @@ export const DEFAULT_INDUSTRY_CONFIGS: Record<IndustryType, IndustryConfig> = {
     healthcare: healthcareConfig,
     education: educationConfig,
     food_beverage: foodBeverageConfig,
+    agriculture: agricultureConfig,
+    logistics: logisticsConfig,
+    hospitality: hospitalityConfig,
     general: generalConfig,
 };
 
@@ -544,5 +714,8 @@ export const SUPPORTED_INDUSTRIES: IndustryType[] = [
     'healthcare',
     'education',
     'food_beverage',
+    'agriculture',
+    'logistics',
+    'hospitality',
     'general',
 ];

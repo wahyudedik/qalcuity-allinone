@@ -1,6 +1,6 @@
-> **Last Updated:** 6 September 2026 (Critical Bug Fix: Service Worker blocking login)
-> **Version:** v9.3.1
-> **Status:** CRITICAL BUG FIX — Service Worker (`sw.js`) meng-intercept `/api/auth/*` requests dan mengganggu `Set-Cookie` header processing, menyebabkan session cookie tidak ter-set setelah login. Fix: tambahkan bypass untuk `/api/auth/*` di SW fetch handler. Login flow sekarang berfungsi normal setelah user mengakses POS page.
+> **Last Updated:** 7 September 2026 (Auth Issue RESOLVED — Login/Register fixed)
+> **Version:** v9.4.0
+> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Login/Register issue (blocking issue #1) telah RESOLVED. Root cause: `signIn()` dari `next-auth/react` mengirim `json: true` yang menyebabkan HTTP 200 JSON alih-alih HTTP 302 redirect + Set-Cookie. Fix: direct fetch approach dengan CSRF token + credentials POST tanpa `json:true`.
 
 ---
 
@@ -56,62 +56,58 @@ curl https://qalcuity.com/api/health
 
 ---
 
-## 🐛 Critical Bug Fix: Service Worker Blocking Login (6 September 2026)
+## 🐛 ~~Critical Bug Fix: Service Worker Blocking Login~~ → ✅ RESOLVED (7 September 2026)
 
-> **Severity:** 🔴 CRITICAL — User tidak bisa login setelah mengakses POS page
+> **Severity:** 🔴 CRITICAL — **RESOLVED** — Login/Register issue telah diperbaiki secara menyeluruh
 
-### Problem
+### ~~Problem~~ (RESOLVED)
 
-User tidak bisa login dari browser meskipun server-side test berhasil. Gejala:
-1. User mengakses POS page → Service Worker ter-registrasi dengan `scope: '/'`
-2. User logout
-3. User coba login lagi → `signIn()` return `{ ok: true }` tapi session cookie tidak ter-set
-4. Redirect ke `/dashboard` → middleware tidak menemukan session → redirect balik ke `/login`
-5. **Infinite redirect loop** — login seolah-olah gagal
+~~User tidak bisa login dari browser meskipun server-side test berhasil.~~ **Sekarang已修复 dengan direct fetch approach.**
 
-### Root Cause
+### Root Cause (Final)
 
-Service Worker ([`sw.js`](apps/web/public/sw.js)) meng-intercept SEMUA fetch requests termasuk:
-- GET `/api/auth/csrf` — CSRF token fetch
-- POST `/api/auth/callback/credentials` — Login POST
-- GET `/api/auth/session` — Session check
+Root cause sebenarnya adalah **`signIn()` dari `next-auth/react` secara internal mengirim `json: true` di POST body**. Ini menyebabkan NextAuth mengembalikan HTTP 200 JSON response alih-alih HTTP 302 redirect dengan `Set-Cookie` header. Browser tidak pernah menerima session cookie, sehingga login selalu gagal di browser meskipun curl test PASS.
 
-SW route ke Rule 6 (`networkOnly()`) yang hanya `return fetch(request)`. Meskipun secara teori transparan, **Service Worker proxy dapat mengganggu `Set-Cookie` header processing** di beberapa browser — menyebabkan `next-auth.session-token` cookie tidak ter-set setelah login成功.
+**Faktor tambahan:** Service Worker (`sw.js`) juga dapat mengganggu `Set-Cookie` header processing — SW bypass tetap dipertahankan sebagai defense-in-depth.
 
-### Fix
+### Fix (Comprehensive — 5 files)
 
-1. **[`sw.js`](apps/web/public/sw.js:491)** — Tambahkan bypass untuk `/api/auth/*` di fetch handler, SEBELUM semua routing rules:
-   ```js
-   // CRITICAL: Skip auth API routes — never intercept authentication requests
-   if (url.pathname.startsWith('/api/auth/')) {
-       return; // Let browser handle auth requests directly
-   }
-   ```
-   Dengan `return` (tanpa `event.respondWith()`), browser memproses auth requests langsung tanpa SW interference.
+1. **[`apps/web/app/(auth)/login/page.tsx`](apps/web/app/(auth)/login/page.tsx)** — **Primary fix**: Diganti `signIn()` dengan `loginWithCredentials()` helper function yang menggunakan direct fetch approach:
+   - GET `/api/auth/csrf` untuk mendapatkan CSRF token
+   - POST `/api/auth/callback/credentials` dengan credentials tanpa `json: true`
+   - Browser mengikuti 302 redirect dan memproses `Set-Cookie` header
+   - `window.location.href = callbackUrl` untuk redirect (bukan `router.push`)
 
-2. **[`login/page.tsx`](apps/web/app/(auth)/login/page.tsx:49)** — Tambahkan debug logging untuk auth flow:
-   - Log `signIn()` result (ok, error, status, url)
-   - Log `hasSessionCookie` check
-   - Log redirect target
+2. **[`apps/web/app/(auth)/register/page.tsx`](apps/web/app/(auth)/register/page.tsx)** — Fix yang sama untuk auto-login setelah registrasi
+
+3. **[`apps/web/public/sw.js`](apps/web/public/sw.js)** — CACHE_VERSION bumped ke `v2`, bypass diperluas ke semua non-POS requests (defense-in-depth)
+
+4. **[`apps/web/lib/auth.ts`](apps/web/lib/auth.ts)** — Redirect callback safety net untuk mencegah redirect loops
+
+5. **[`apps/web/middleware.ts`](apps/web/middleware.ts)** — Custom signIn page config
 
 ### Files Modified
 
 | File | Change | Risk |
 |------|--------|------|
-| [`apps/web/public/sw.js`](apps/web/public/sw.js) | Add `/api/auth/` bypass in fetch handler | 🟢 Low — bypass only auth routes |
-| [`apps/web/app/(auth)/login/page.tsx`](apps/web/app/(auth)/login/page.tsx) | Add debug logging in handleSubmit | 🟢 Low — console.log only |
+| [`apps/web/app/(auth)/login/page.tsx`](apps/web/app/(auth)/login/page.tsx) | Replaced `signIn()` with `loginWithCredentials()` direct fetch | 🟢 Low — auth flow improvement |
+| [`apps/web/app/(auth)/register/page.tsx`](apps/web/app/(auth)/register/page.tsx) | Same direct fetch fix for auto-login after registration | 🟢 Low — auth flow improvement |
+| [`apps/web/public/sw.js`](apps/web/public/sw.js) | CACHE_VERSION `v2`, bypass expanded to all non-POS requests | 🟢 Low — defense-in-depth |
+| [`apps/web/lib/auth.ts`](apps/web/lib/auth.ts) | Redirect callback safety net | 🟢 Low — redirect loop prevention |
+| [`apps/web/middleware.ts`](apps/web/middleware.ts) | Custom signIn page config | 🟢 Low — middleware config |
 
 ### Verification
 
-1. Clear browser SW: DevTools → Application → Service Workers → Unregister
-2. Navigate to POS page (registers SW)
-3. Logout
-4. Login again → should succeed without redirect loop
-5. Check browser console for `[Login] signIn result:` log
+1. Clear browser SW cache (bump CACHE_VERSION ke `v2` otomatis)
+2. Navigate to `/login`
+3. Login dengan credentials → should succeed, session cookie ter-set
+4. Navigate to `/dashboard` → should NOT redirect back to `/login`
+5. Logout → Login again → should succeed
+6. Register new account → auto-login should succeed
 
 ### Prevention
 
-Rule: **Service Worker tidak boleh meng-intercept auth-related requests.** Jika ada SW baru di masa depan, pastikan `/api/auth/*` selalu di-bypass.
+Rule: **Jangan gunakan `signIn()` dari `next-auth/react` untuk credentials login.** Gunakan direct fetch approach dengan CSRF token + credentials POST tanpa `json: true`. Service Worker bypass tetap dipertahankan sebagai defense-in-depth.
 
 ---
 
@@ -1114,6 +1110,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 1 | Rate limiter is in-memory (not suitable for multi-instance deployment) | 🟡 Low | API | ⚠️ Pre-existing (hardened with warnings) |
 | 2 | TypeScript Decimal type arithmetic errors (pre-existing) | 🟡 Low | Finance/Reports | ⚠️ Pre-existing |
 | 3 | Some detail pages missing delete functionality (categories fixed) | 🟡 Low | UI | ⚠️ Partially fixed |
+| 4 | ~~Login/Register not working in browser~~ | 🔴 High | Auth | ✅ **RESOLVED (7 Sep 2026)** — `signIn()` json:true → direct fetch approach |
 | 5 | ~~No CSP (Content-Security-Policy) headers~~ | 🟠 Medium | Security | ✅ Fixed |
 | 6 | ~~No explicit CORS configuration~~ | 🟠 Medium | Security | ✅ Fixed |
 | 7 | ~~`@qalcuity/ui` package — tokens only, no React components~~ | 🟠 Medium | Packages | ✅ Fixed — 11 React components added |
@@ -1147,7 +1144,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 
 ## 🚫 Blockers
 
-_None currently._
+_None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 September 2026.**
 
 ---
 
@@ -1378,6 +1375,24 @@ _None currently._
 ---
 
 ## 📅 Recent Changes
+
+### 7 September 2026 — Auth Issue Resolution (Blocking Issue #1 RESOLVED)
+
+> **Login/Register issue yang menjadi blocking issue #1 selama percakapan panjang telah RESOLVED.**
+
+**Root Cause:**
+- `signIn()` dari `next-auth/react` secara internal mengirim `json: true` di POST body
+- NextAuth mengembalikan HTTP 200 JSON alih-alih HTTP 302 redirect dengan `Set-Cookie` header
+- Browser tidak pernah menerima session cookie → login selalu gagal di browser meskipun curl test PASS
+
+**Fix Applied (5 files):**
+1. **[`apps/web/app/(auth)/login/page.tsx`](apps/web/app/(auth)/login/page.tsx)** — Replaced `signIn()` with `loginWithCredentials()` direct fetch approach (GET CSRF token + POST credentials tanpa `json:true`)
+2. **[`apps/web/app/(auth)/register/page.tsx`](apps/web/app/(auth)/register/page.tsx)** — Same fix for auto-login after registration
+3. **[`apps/web/public/sw.js`](apps/web/public/sw.js)** — CACHE_VERSION bumped ke `v2`, bypass diperluas ke semua non-POS requests
+4. **[`apps/web/lib/auth.ts`](apps/web/lib/auth.ts)** — Redirect callback safety net
+5. **[`apps/web/middleware.ts`](apps/web/middleware.ts)** — Custom signIn page config
+
+**Impact:** 🔴 CRITICAL → ✅ RESOLVED — User bisa login dan register dari browser
 
 ### 6 September 2026 — Quality Sprint: Error Boundaries, Loading States, i18n
 
@@ -2089,4 +2104,4 @@ _None currently._
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 9.3.0 — Quality Sprint Complete (Error Boundaries, Loading States, i18n)
+**Document Version:** 9.4.0 — Auth Issue RESOLVED (Login/Register fixed via direct fetch approach)

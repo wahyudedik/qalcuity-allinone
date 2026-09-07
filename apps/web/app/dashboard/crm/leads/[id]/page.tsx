@@ -25,13 +25,6 @@ interface LeadDetail {
     activities: Array<{ date: string; type: string; description: string }>
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    new: { label: 'Baru', color: 'bg-blue-100 text-blue-800' },
-    contacted: { label: 'Dihubungi', color: 'bg-yellow-100 text-yellow-800' },
-    qualified: { label: 'Kualifikasi', color: 'bg-green-100 text-green-800' },
-    unqualified: { label: 'Tidak Kualifikasi', color: 'bg-red-100 text-red-800' },
-}
-
 const activityTypeConfig: Record<string, { icon: typeof Phone; color: string }> = {
     call: { icon: Phone, color: 'text-blue-600' },
     email: { icon: Mail, color: 'text-purple-600' },
@@ -54,6 +47,13 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showEmailCompose, setShowEmailCompose] = useState(false)
     const [activeTab, setActiveTab] = useState<'details' | 'activities'>('details')
+
+    const statusConfig: Record<string, { label: string; color: string }> = {
+        new: { label: t('crm.leadDetail.statusNew'), color: 'bg-blue-100 text-blue-800' },
+        contacted: { label: t('crm.leadDetail.statusContacted'), color: 'bg-yellow-100 text-yellow-800' },
+        qualified: { label: t('crm.leadDetail.statusQualified'), color: 'bg-green-100 text-green-800' },
+        unqualified: { label: t('crm.leadDetail.statusUnqualified'), color: 'bg-red-100 text-red-800' },
+    }
 
     useEffect(() => {
         const fetchLead = async () => {
@@ -178,10 +178,10 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
                 onConfirm={confirmDelete}
-                title="Konfirmasi Hapus"
-                message={t('crm.leadDetail.confirmDelete')}
-                confirmText="Hapus"
-                cancelText="Batal"
+                title={t('crm.leadDetail.confirmTitle')}
+                message={t('crm.leadDetail.confirmMessage')}
+                confirmText={t('crm.leadDetail.confirmText')}
+                cancelText={t('crm.leadDetail.cancelText')}
                 variant="danger"
             />
 
@@ -219,7 +219,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
                                 <Mail className="h-4 w-4" />
-                                Kirim Email
+                                {t('crm.leadDetail.sendEmail')}
                             </button>
                         )}
                         {canMutate && (
@@ -254,7 +254,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                                 : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            Detail
+                            {t('crm.leadDetail.tabDetails')}
                         </button>
                         <button
                             onClick={() => setActiveTab('activities')}
@@ -264,7 +264,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                                 }`}
                         >
                             <MessageSquare className="inline h-4 w-4 mr-1" />
-                            Aktivitas
+                            {t('crm.leadDetail.tabActivities')}
                         </button>
                     </div>
 

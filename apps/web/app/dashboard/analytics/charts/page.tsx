@@ -367,7 +367,7 @@ export default function ChartsPage() {
                                     </div>
                                     <div className="mt-3 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                                         <span>{t('common.updatedAt')} {timeAgo(chart.updatedAt)}</span>
-                                        <span>{chart.viewCount} views</span>
+                                        <span>{chart.viewCount} {t('analytics.charts.views')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -385,7 +385,7 @@ export default function ChartsPage() {
                         </h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Chart</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.charts.form.name')}</label>
                                 <input
                                     type="text"
                                     value={createForm.name}
@@ -395,43 +395,43 @@ export default function ChartsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deskripsi</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.charts.form.description')}</label>
                                 <input
                                     type="text"
                                     value={createForm.description}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Deskripsi singkat (opsional)"
+                                    placeholder={t('analytics.charts.form.descPlaceholder')}
                                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:bg-gray-700 dark:text-gray-100"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipe Chart</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.charts.form.chartType')}</label>
                                 <select
                                     value={createForm.chartType}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, chartType: e.target.value }))}
                                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 dark:text-gray-100"
                                 >
-                                    <option value="bar">Bar Chart</option>
-                                    <option value="line">Line Chart</option>
-                                    <option value="pie">Pie Chart</option>
-                                    <option value="donut">Donut Chart</option>
-                                    <option value="area">Area Chart</option>
-                                    <option value="scatter">Scatter Plot</option>
-                                    <option value="heatmap">Heatmap</option>
-                                    <option value="kpi_card">KPI Card</option>
-                                    <option value="table">Table</option>
+                                    <option value="bar">{t('analytics.charts.types.bar')}</option>
+                                    <option value="line">{t('analytics.charts.types.line')}</option>
+                                    <option value="pie">{t('analytics.charts.types.pie')}</option>
+                                    <option value="donut">{t('analytics.charts.types.donut')}</option>
+                                    <option value="area">{t('analytics.charts.types.area')}</option>
+                                    <option value="scatter">{t('analytics.charts.types.scatter')}</option>
+                                    <option value="heatmap">{t('analytics.charts.types.heatmap')}</option>
+                                    <option value="kpi_card">{t('analytics.charts.types.kpi_card')}</option>
+                                    <option value="table">{t('analytics.charts.types.table')}</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visibilitas</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.charts.form.visibility')}</label>
                                 <select
                                     value={createForm.visibility}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, visibility: e.target.value }))}
                                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 dark:text-gray-100"
                                 >
-                                    <option value="PRIVATE">Private</option>
-                                    <option value="TEAM">Team</option>
-                                    <option value="ORGANIZATION">Organization</option>
+                                    <option value="PRIVATE">{t('analytics.charts.form.visibilityOptions.PRIVATE')}</option>
+                                    <option value="TEAM">{t('analytics.charts.form.visibilityOptions.TEAM')}</option>
+                                    <option value="ORGANIZATION">{t('analytics.charts.form.visibilityOptions.ORGANIZATION')}</option>
                                 </select>
                             </div>
                         </div>

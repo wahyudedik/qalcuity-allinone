@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface DealData {
     id: string
@@ -19,17 +20,18 @@ interface DealData {
     notes: string
 }
 
-const stageOptions = [
-    { value: 'DISCOVERY', label: 'Discovery' },
-    { value: 'PROPOSAL', label: 'Proposal' },
-    { value: 'NEGOTIATION', label: 'Negotiation' },
-    { value: 'CLOSING', label: 'Closing' },
-    { value: 'CLOSED_WON', label: 'Closed Won' },
-    { value: 'CLOSED_LOST', label: 'Closed Lost' },
-]
-
 export default function DealEditPage({ params }: { params: { id: string } }) {
+    const { t } = useTranslation()
     const router = useRouter()
+
+    const stageOptions = [
+        { value: 'DISCOVERY', label: t('crm.deals.stages.DISCOVERY') },
+        { value: 'PROPOSAL', label: t('crm.deals.stages.PROPOSAL') },
+        { value: 'NEGOTIATION', label: t('crm.deals.stages.NEGOTIATION') },
+        { value: 'CLOSING', label: t('crm.deals.stages.CLOSING') },
+        { value: 'CLOSED_WON', label: t('crm.deals.stages.CLOSED_WON') },
+        { value: 'CLOSED_LOST', label: t('crm.deals.stages.CLOSED_LOST') },
+    ]
     const [deal, setDeal] = useState<DealData | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -65,10 +67,10 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
                         contactId: d.contactId || '',
                     })
                 } else {
-                    setError('Deal tidak ditemukan')
+                    setError(t('crm.dealsEdit.errorNotFound'))
                 }
             } catch {
-                setError('Gagal memuat data deal')
+                setError(t('crm.dealsEdit.errorLoad'))
             } finally {
                 setLoading(false)
             }
@@ -86,7 +88,7 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!formData.title.trim()) {
-            setToast({ message: 'Judul deal wajib diisi', type: 'error' })
+            setToast({ message: t('crm.dealsEdit.validationTitleRequired'), type: 'error' })
             return
         }
 
@@ -107,15 +109,15 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Deal berhasil diperbarui', type: 'success' })
+                setToast({ message: t('crm.dealsEdit.toastSuccess'), type: 'success' })
                 setTimeout(() => {
                     router.push(`/dashboard/crm/deals/${params.id}`)
                 }, 1000)
             } else {
-                setToast({ message: data.error || 'Gagal memperbarui deal', type: 'error' })
+                setToast({ message: data.error || t('crm.dealsEdit.toastFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal memperbarui deal', type: 'error' })
+            setToast({ message: t('crm.dealsEdit.toastFailed'), type: 'error' })
         } finally {
             setSaving(false)
         }
@@ -135,9 +137,9 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
     if (error || !deal) {
         return (
             <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-gray-500">{error || 'Deal tidak ditemukan'}</p>
+                <p className="text-gray-500">{error || t('crm.dealsEdit.errorNotFound')}</p>
                 <Link href="/dashboard/crm/deals" className="mt-4 text-blue-600 hover:underline">
-                    Kembali ke Deals
+                    {t('crm.dealsEdit.backToDeals')}
                 </Link>
             </div>
         )
@@ -155,13 +157,13 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
             {/* Back Button */}
             <Link href={`/dashboard/crm/deals/${params.id}`} className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4" />
-                Kembali ke Detail Deal
+                {t('crm.dealsEdit.backToDetail')}
             </Link>
 
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Edit Deal</h1>
-                <p className="text-gray-500">Perbarui informasi deal</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('crm.dealsEdit.title')}</h1>
+                <p className="text-gray-500">{t('crm.dealsEdit.subtitle')}</p>
             </div>
 
             {/* Form */}
@@ -169,21 +171,21 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
                 <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
                     {/* Title */}
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Judul Deal *</label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">{t('crm.dealsEdit.form.titleLabel')} *</label>
                         <input
                             type="text"
                             required
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Contoh: Penjualan Software ke PT ABC"
+                            placeholder={t('crm.dealsEdit.form.titlePlaceholder')}
                         />
                     </div>
 
                     {/* Value & Stage */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">Nilai Deal (Rp)</label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">{t('crm.dealsEdit.form.valueLabel')}</label>
                             <input
                                 type="number"
                                 min="0"
@@ -194,7 +196,7 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
                             />
                         </div>
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">Stage</label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">{t('crm.dealsEdit.form.stageLabel')}</label>
                             <select
                                 value={formData.stage}
                                 onChange={(e) => setFormData({ ...formData, stage: e.target.value })}
@@ -210,7 +212,7 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
                     {/* Probability & Close Date */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">Probabilitas (%)</label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">{t('crm.dealsEdit.form.probabilityLabel')}</label>
                             <input
                                 type="number"
                                 min="0"
@@ -221,7 +223,7 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
                             />
                         </div>
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal Close Estimasi</label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">{t('crm.dealsEdit.form.closeDateLabel')}</label>
                             <input
                                 type="date"
                                 value={formData.closeDate}
@@ -233,13 +235,13 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
 
                     {/* Notes */}
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Catatan</label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">{t('crm.dealsEdit.form.notesLabel')}</label>
                         <textarea
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                             rows={4}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Catatan tambahan tentang deal ini..."
+                            placeholder={t('crm.dealsEdit.form.notesPlaceholder')}
                         />
                     </div>
                 </div>
@@ -252,13 +254,13 @@ export default function DealEditPage({ params }: { params: { id: string } }) {
                         className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                        {saving ? t('crm.dealsEdit.saving') : t('crm.dealsEdit.save')}
                     </button>
                     <Link
                         href={`/dashboard/crm/deals/${params.id}`}
                         className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                        Batal
+                        {t('crm.dealsEdit.cancel')}
                     </Link>
                 </div>
             </form>

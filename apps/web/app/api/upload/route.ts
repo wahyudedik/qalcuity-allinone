@@ -68,10 +68,11 @@ export async function POST(request: Request) {
             );
         }
 
-        // 4. Determine upload directory
-        const uploadDir = process.env.UPLOAD_DIR
+        // 4. Determine upload directory — tenant-isolated path
+        const baseUploadDir = process.env.UPLOAD_DIR
             ? join(process.cwd(), process.env.UPLOAD_DIR)
             : join(process.cwd(), 'public', 'uploads');
+        const uploadDir = join(baseUploadDir, tenantId);
         await mkdir(uploadDir, { recursive: true });
 
         // 5. Generate unique filename
@@ -84,8 +85,8 @@ export async function POST(request: Request) {
         const bytes = await file.arrayBuffer();
         await writeFile(filePath, Buffer.from(bytes));
 
-        // 7. Return file URL
-        const fileUrl = `/uploads/${fileName}`;
+        // 7. Return file URL (tenant-isolated path)
+        const fileUrl = `/uploads/${tenantId}/${fileName}`;
 
         return NextResponse.json({
             success: true,

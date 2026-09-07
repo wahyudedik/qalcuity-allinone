@@ -193,19 +193,19 @@ export default function HistoryPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Total Queries</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.history.stats.totalQueries')}</span>
                     <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{totalQueries}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Success</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.history.stats.success')}</span>
                     <p className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">{successCount}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Failed</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.history.stats.failed')}</span>
                     <p className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{failedCount}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Avg Duration</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.history.stats.avgDuration')}</span>
                     <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">{formatDuration(avgDuration)}</p>
                 </div>
             </div>
@@ -219,8 +219,8 @@ export default function HistoryPage() {
                             key={status}
                             onClick={() => { setStatusFilter(status); setPage(1) }}
                             className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${statusFilter === status
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                         >
                             {status === 'all' ? t('analytics.common.all') : (t(`analytics.history.status.${status}`) || status)}
@@ -234,8 +234,8 @@ export default function HistoryPage() {
                             key={type}
                             onClick={() => { setTypeFilter(type); setPage(1) }}
                             className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${typeFilter === type
-                                    ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900'
-                                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700'
+                                ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900'
+                                : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700'
                                 }`}
                         >
                             {type === 'all' ? t('analytics.common.all') : (t(`analytics.history.types.${type}`) || type)}
@@ -295,11 +295,11 @@ export default function HistoryPage() {
                                 <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/50">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('analytics.common.status')}</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Type</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Dataset</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('analytics.history.table.type')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('analytics.history.table.dataset')}</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('analytics.history.executionTime')}</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('analytics.history.rowsReturned')}</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Cache</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('analytics.history.table.cache')}</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('common.date')}</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t('common.actions')}</th>
                                     </tr>
@@ -333,7 +333,7 @@ export default function HistoryPage() {
                                                 <td className="px-4 py-3">
                                                     {item.fromCache && (
                                                         <span className="inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                            Cache
+                                                            {t('analytics.history.fromCache')}
                                                         </span>
                                                     )}
                                                 </td>
@@ -345,7 +345,7 @@ export default function HistoryPage() {
                                                         <button
                                                             onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                                                             className="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                                            title="View SQL"
+                                                            title={t('analytics.history.viewSql')}
                                                         >
                                                             <Code className="h-4 w-4" />
                                                         </button>
@@ -389,7 +389,7 @@ export default function HistoryPage() {
                                     </div>
                                     <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                                         <div>
-                                            <span className="text-gray-500 dark:text-gray-400 text-xs">Dataset</span>
+                                            <span className="text-gray-500 dark:text-gray-400 text-xs">{t('analytics.history.table.dataset')}</span>
                                             <p className="text-gray-900 dark:text-gray-100">{item.datasetName || '-'}</p>
                                         </div>
                                         <div>
@@ -455,7 +455,7 @@ export default function HistoryPage() {
                     {pagination && pagination.totalPages > 1 && (
                         <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+                                {t('analytics.history.pagination.showing').replace('{from}', String(((pagination.page - 1) * pagination.limit) + 1)).replace('{to}', String(Math.min(pagination.page * pagination.limit, pagination.total))).replace('{total}', String(pagination.total))}
                             </p>
                             <div className="flex items-center gap-2">
                                 <button

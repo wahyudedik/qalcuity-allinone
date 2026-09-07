@@ -16,7 +16,7 @@ import {
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
-import { registerServiceWorker } from '@/lib/pos-offline/service-worker'
+import { registerServiceWorker, updateServiceWorker } from '@/lib/pos-offline/service-worker'
 
 interface TabItem {
     href: string
@@ -43,8 +43,12 @@ export default function POSLayout({ children }: { children: React.ReactNode }) {
     const { t } = useTranslation()
 
     // Register Service Worker once for all POS pages (client-side only)
+    // Also force update check to ensure latest SW version is active
     useEffect(() => {
-        void registerServiceWorker()
+        void registerServiceWorker().then(() => {
+            // Force SW update check — ensures latest version with auth bypass is active
+            void updateServiceWorker()
+        })
     }, [])
 
     return (

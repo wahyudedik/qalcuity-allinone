@@ -179,6 +179,7 @@ export async function PUT(request: Request) {
             entityId: tenantId,
             oldValues: currentTenant as unknown as Record<string, unknown>,
             newValues: updateData,
+            request,
         })
 
         return NextResponse.json({

@@ -170,6 +170,7 @@ export async function POST(request: Request) {
 
         // Build select for dimensions + measures
         const select: Record<string, boolean> = {}
+        const invalidMeasures: string[] = []
         for (const dim of dimensions) {
             select[dim] = true
         }
@@ -177,7 +178,31 @@ export async function POST(request: Request) {
             const measureDef = datasetDef.measures.find((m: MeasureDefinition) => m.id === measureId)
             if (measureDef) {
                 select[measureDef.sourceField] = true
+            } else {
+                invalidMeasures.push(measureId)
             }
+        }
+
+        // Validate: at least one dimension or valid measure required
+        if (Object.keys(select).length === 0) {
+            const validMeasureIds = datasetDef.measures.map((m: MeasureDefinition) => m.id)
+            const errorParts: string[] = []
+            if (!dimensions || dimensions.length === 0) {
+                errorParts.push('no dimensions provided')
+            }
+            if (invalidMeasures.length > 0) {
+                errorParts.push(`invalid measure IDs: [${invalidMeasures.join(', ')}]. Valid IDs: [${validMeasureIds.join(', ')}]`)
+            }
+            if (measures.length === 0 && (!dimensions || dimensions.length === 0)) {
+                return NextResponse.json(
+                    { success: false, error: 'At least one dimension or measure must be provided' },
+                    { status: 400 }
+                )
+            }
+            return NextResponse.json(
+                { success: false, error: `Cannot build query: ${errorParts.join('; ')}` },
+                { status: 400 }
+            )
         }
 
         // Build orderBy

@@ -20,6 +20,9 @@ export type IndustryType =
     | 'healthcare'
     | 'education'
     | 'food_beverage'
+    | 'agriculture'
+    | 'logistics'
+    | 'hospitality'
     | 'general';
 
 // ─── Industry Config ────────────────────────────────────────────────────────

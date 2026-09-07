@@ -71,13 +71,15 @@ export async function GET(request: Request) {
         // Post-process: filter lowStock in memory (Prisma can't compare fields)
         const data = lowStock === 'true' ? allData.filter((p) => p.isLowStock) : allData;
 
+        const filteredTotal = lowStock === 'true' ? data.length : total;
+
         return NextResponse.json({
             success: true,
             data,
-            total: lowStock === 'true' ? data.length : total,
+            total: filteredTotal,
             page,
             limit,
-            totalPages: Math.ceil(total / limit),
+            totalPages: Math.ceil(filteredTotal / limit),
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
@@ -226,7 +228,14 @@ export async function DELETE(request: Request) {
             );
         }
 
-        await prisma.product.delete({ where: { id } });
+        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
+        const deleteResult = await prisma.product.deleteMany({ where: { id, tenantId } });
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Product not found or access denied' },
+                { status: 404 }
+            );
+        }
 
         // Log audit delete
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Product', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
