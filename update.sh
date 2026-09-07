@@ -277,35 +277,55 @@ print_success "Cache .next dibersihkan"
 pnpm build
 print_success "Build berhasil"
 
-# --- 8. Signal aaPanel to Restart ---
-print_step "8/8 - Signaling aaPanel to restart..."
+# --- 8. Restart Application ---
+print_step "8/8 - Restarting application..."
 
-# Kill any process still lingering on the port before restart
+# Kill any process on the port
+echo -e "${YELLOW}Killing existing process on port $APP_PORT...${NC}"
 fuser -k $APP_PORT/tcp 2>/dev/null || true
-log "Killed existing process on port $APP_PORT (pre-restart)"
-sleep 2
+sleep 3
 
-# Signal aaPanel to restart the project
-# aaPanel watches for changes and auto-restarts via PM2/start.sh
-echo -e "${GREEN}✅ Build selesai. aaPanel akan auto-restart project.${NC}"
-echo -e "${YELLOW}ℹ️  Jika app belum restart otomatis, klik 'Restart' di aaPanel dashboard.${NC}"
+# Verify port is free
+if fuser $APP_PORT/tcp &>/dev/null; then
+    echo -e "${RED}⚠️  Port $APP_PORT masih terpakai. Force kill...${NC}"
+    fuser -k -9 $APP_PORT/tcp 2>/dev/null || true
+    sleep 2
+fi
 
-# Health check dengan retry
-MAX_RETRIES=5
-RETRY_COUNT=0
-HTTP_STATUS="000"
+echo -e "${GREEN}✅ Port $APP_PORT freed.${NC}"
 
-while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$HTTP_STATUS" != "200" ]; do
-    RETRY_COUNT=$((RETRY_COUNT + 1))
+# Start the app (same as start.sh)
+echo -e "${YELLOW}Starting Qalcuity on port $APP_PORT...${NC}"
+cd "$APP_DIR/apps/web"
+export PRISMA_QUERY_ENGINE_TYPE=library
+
+# Start in background
+nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
+APP_PID=$!
+echo -e "${GREEN}✅ App started with PID: $APP_PID${NC}"
+
+# Wait for app to be ready
+echo -e "${YELLOW}Waiting for app to start...${NC}"
+sleep 8
+
+# Health check
+echo -e "${YELLOW}Running health check...${NC}"
+HEALTH_OK=false
+for i in {1..5}; do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" = "200" ]; then
+        HEALTH_OK=true
+        break
+    fi
+    echo -e "  Attempt $i/5: HTTP $HTTP_CODE — waiting..."
     sleep 3
-    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$APP_PORT/api/health 2>/dev/null || echo "000")
-    echo "  Health check attempt $RETRY_COUNT/$MAX_RETRIES: HTTP $HTTP_STATUS"
 done
 
-if [ "$HTTP_STATUS" = "200" ]; then
-    print_success "Health check passed (HTTP $HTTP_STATUS) — Service running!"
+if [ "$HEALTH_OK" = "true" ]; then
+    echo -e "${GREEN}✅ Health check PASSED (HTTP 200)${NC}"
 else
-    print_error "Health check FAILED after $MAX_RETRIES attempts!"
+    echo -e "${RED}❌ Health check FAILED — app might need manual start in aaPanel${NC}"
+    echo -e "${YELLOW}ℹ️  Buka aaPanel → Node.js Project → klik 'Start'${NC}"
 fi
 
 # ============================================================
