@@ -276,6 +276,13 @@ export function useProjects() {
     }, [filter]);
 
     const fetchProjectDetail = useCallback(async (id: string) => {
+        // Guard: jangan fetch jika id adalah "new" (bukan project ID yang valid)
+        if (!id || id === 'new') {
+            setCurrentProject(null);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
