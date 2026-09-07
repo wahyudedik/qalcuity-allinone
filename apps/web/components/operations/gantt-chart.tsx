@@ -274,7 +274,7 @@ interface GanttChartProps {
 export function GanttChart({ data, loading }: GanttChartProps) {
     // Calculate timeline bounds
     const { projectStart, totalDays, dayWidth } = useMemo(() => {
-        if (!data || data.tasks.length === 0) {
+        if (!data || !data.tasks || data.tasks.length === 0) {
             const now = new Date();
             const start = new Date(now);
             start.setDate(start.getDate() - 7);
@@ -287,8 +287,8 @@ export function GanttChart({ data, loading }: GanttChartProps) {
             allDates.push(getTaskEnd(t));
         });
 
-        if (data.project.startDate) allDates.push(new Date(data.project.startDate));
-        if (data.project.endDate) allDates.push(new Date(data.project.endDate));
+        if (data.project?.startDate) allDates.push(new Date(data.project.startDate));
+        if (data.project?.endDate) allDates.push(new Date(data.project.endDate));
 
         const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
         const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
@@ -311,7 +311,7 @@ export function GanttChart({ data, loading }: GanttChartProps) {
         );
     }
 
-    if (!data || data.tasks.length === 0) {
+    if (!data || !data.tasks || data.tasks.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
                 <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
@@ -325,9 +325,9 @@ export function GanttChart({ data, loading }: GanttChartProps) {
         <div className="space-y-4">
             {/* Summary bar */}
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                <span>{data.summary.totalTasks} task</span>
-                <span>{data.summary.completedTasks} selesai</span>
-                <span className="font-medium text-blue-600 dark:text-blue-400">Progres: {data.summary.autoProgress}%</span>
+                <span>{data.summary?.totalTasks ?? 0} task</span>
+                <span>{data.summary?.completedTasks ?? 0} selesai</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400">Progres: {data.summary?.autoProgress ?? 0}%</span>
             </div>
 
             {/* Desktop view */}
