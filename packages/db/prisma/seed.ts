@@ -1130,85 +1130,28 @@ async function main() {
   console.log("✅ Additional Payroll Records: handled");
 
   // ============================================
-  // SUBSCRIPTION PLANS (upsert berdasarkan slug)
-  // ============================================
-  const plans = await Promise.all([
-    prisma.subscriptionPlan.upsert({
-      where: { slug: 'starter' },
-      update: {},
-      create: {
-        name: 'Starter',
-        slug: 'starter',
-        description: 'Cocok untuk usaha kecil yang baru memulai',
-        price: 299000,
-        billingPeriod: 'monthly',
-        maxUsers: 3,
-        maxProducts: 50,
-        maxStorage: '1GB',
-        features: JSON.stringify(['Invoice & Quotation', 'Basic CRM', 'Inventory (50 produk)', '3 user', 'Email support']),
-        isActive: true,
-        sortOrder: 1,
-      },
-    }),
-    prisma.subscriptionPlan.upsert({
-      where: { slug: 'growth' },
-      update: {},
-      create: {
-        name: 'Growth',
-        slug: 'growth',
-        description: 'Untuk bisnis yang berkembang',
-        price: 799000,
-        billingPeriod: 'monthly',
-        maxUsers: 10,
-        maxProducts: 500,
-        maxStorage: '5GB',
-        features: JSON.stringify(['Semua fitur Starter', 'HR & Payroll', 'Advanced CRM & Pipeline', '500 produk', '10 user', 'Priority support', 'AI Features']),
-        isActive: true,
-        sortOrder: 2,
-      },
-    }),
-    prisma.subscriptionPlan.upsert({
-      where: { slug: 'business' },
-      update: {},
-      create: {
-        name: 'Business',
-        slug: 'business',
-        description: 'Untuk bisnis berskala besar',
-        price: 1999000,
-        billingPeriod: 'monthly',
-        maxUsers: 50,
-        maxProducts: -1,
-        maxStorage: '50GB',
-        features: JSON.stringify(['Semua fitur Growth', 'Multi-branch', 'Unlimited produk', '50 user', 'Dedicated support', 'API access', 'Custom reports', 'Bank reconciliation']),
-        isActive: true,
-        sortOrder: 3,
-      },
-    }),
-  ]);
-  console.log("✅ Subscription Plans:", plans.length);
-
-  // ============================================
-  // TENANT SUBSCRIPTION (update tenant + create default subscription)
+  // TENANT SUBSCRIPTION (legacy — kept for backward compatibility)
   // ============================================
   await prisma.tenant.update({
     where: { id: tenant.id },
     data: {
       subscriptionStatus: 'ACTIVE',
-      currentPlanSlug: 'growth',
+      currentPlanSlug: 'pro',
       trialEndsAt: null,
     },
   });
 
-  const growthPlan = plans.find((p) => p.slug === 'growth');
+  // Find a SubscriptionPlan to link the legacy subscription to (if one exists)
+  const legacyPlan = await prisma.subscriptionPlan.findFirst({ where: { slug: 'growth' } });
   let sub: Awaited<ReturnType<typeof prisma.tenantSubscription.upsert>> | null = null;
-  if (growthPlan) {
+  if (legacyPlan) {
     sub = await prisma.tenantSubscription.upsert({
       where: { id: 'default-subscription' },
       update: {},
       create: {
         id: 'default-subscription',
         tenantId: tenant.id,
-        planId: growthPlan.id,
+        planId: legacyPlan.id,
         status: 'ACTIVE',
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-12-31'),
@@ -1217,7 +1160,7 @@ async function main() {
       },
     });
   }
-  console.log("✅ Tenant Subscription: handled");
+  console.log("✅ Tenant Subscription (legacy): handled");
 
   // ============================================
   // BILLING PAYMENTS (4 records)
