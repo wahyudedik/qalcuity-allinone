@@ -131,62 +131,82 @@ COMMIT_BEFORE=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 git fetch origin "$BRANCH"
 COMMIT_AFTER=$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo "unknown")
 
-if [ "$COMMIT_BEFORE" = "$COMMIT_AFTER" ]; then
+HAS_UPDATE=false
+
+if [ "$COMMIT_BEFORE" != "$COMMIT_AFTER" ]; then
+    HAS_UPDATE=true
+    echo -e "${YELLOW}📥 Update ditemukan!${NC}"
+    echo -e "   Sebelum: ${COMMIT_BEFORE:0:7}"
+    echo -e "   Sesudah: ${COMMIT_AFTER:0:7}"
+
+    # Pull update — stash local changes dulu jika ada
+    STASHED=false
+    if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+        echo -e "${YELLOW}📋 Local changes terdeteksi, stashing sebelum pull...${NC}"
+        git stash push -m "auto-stash before update $(date +%Y%m%d_%H%M%S)" && STASHED=true
+    fi
+
+    git pull origin "$BRANCH"
+    print_success "Code berhasil di-pull"
+
+    # --- Re-exec: Cek apakah update.sh berubah setelah git pull ---
+    # Jika script berubah, re-exec dengan versi baru agar Step 5-8 menggunakan kode terbaru.
+    # Guard: UPDATE_REEXEC=1 mencegah infinite loop (hanya max 1 re-exec).
+    if [ "$UPDATE_REEXEC" != "1" ]; then
+        CURRENT_SCRIPT_HASH=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
+        if [ "$SCRIPT_HASH_BEFORE" != "$CURRENT_SCRIPT_HASH" ]; then
+            echo -e "${YELLOW}⚠️  update.sh berubah setelah git pull. Re-exec dengan versi baru...${NC}"
+            export UPDATE_REEXEC=1
+            exec bash "$0" "$@"
+        fi
+    fi
+
+    # Restore stashed changes
+    if [ "$STASHED" = true ] && git stash list | grep -q "auto-stash"; then
+        echo -e "${YELLOW}📋 Restoring stashed changes...${NC}"
+        if ! git stash pop; then
+            print_warning "Stash conflict — dropping stash (remote version kept)"
+            git stash drop
+        fi
+    fi
+else
     echo ""
     echo -e "${GREEN}ℹ️  Tidak ada update baru. Aplikasi sudah versi terbaru.${NC}"
     echo -e "${GREEN}   Commit: ${COMMIT_BEFORE:0:7}${NC}"
     echo ""
-    exit 0
 fi
 
-echo -e "${YELLOW}📥 Update ditemukan!${NC}"
-echo -e "   Sebelum: ${COMMIT_BEFORE:0:7}"
-echo -e "   Sesudah: ${COMMIT_AFTER:0:7}"
-
-# Pull update — stash local changes dulu jika ada
-STASHED=false
-if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
-    echo -e "${YELLOW}📋 Local changes terdeteksi, stashing sebelum pull...${NC}"
-    git stash push -m "auto-stash before update $(date +%Y%m%d_%H%M%S)" && STASHED=true
-fi
-
-git pull origin "$BRANCH"
-print_success "Code berhasil di-pull"
-
-# --- Re-exec: Cek apakah update.sh berubah setelah git pull ---
-# Jika script berubah, re-exec dengan versi baru agar Step 5-8 menggunakan kode terbaru.
-# Guard: UPDATE_REEXEC=1 mencegah infinite loop (hanya max 1 re-exec).
-if [ "$UPDATE_REEXEC" != "1" ]; then
-    CURRENT_SCRIPT_HASH=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
-    if [ "$SCRIPT_HASH_BEFORE" != "$CURRENT_SCRIPT_HASH" ]; then
-        echo -e "${YELLOW}⚠️  update.sh berubah setelah git pull. Re-exec dengan versi baru...${NC}"
-        export UPDATE_REEXEC=1
-        exec bash "$0" "$@"
-    fi
-fi
-
-# Restore stashed changes
-if [ "$STASHED" = true ] && git stash list | grep -q "auto-stash"; then
-    echo -e "${YELLOW}📋 Restoring stashed changes...${NC}"
-    if ! git stash pop; then
-        print_warning "Stash conflict — dropping stash (remote version kept)"
-        git stash drop
-    fi
-fi
-
-# --- 5. Install dependency baru (jika ada perubahan) ---
+# --- 5. Install dependencies ---
 print_step "5/8 - Install dependencies"
 
-CHANGED_FILES=$(git diff --name-only "$COMMIT_BEFORE" "$COMMIT_AFTER" 2>/dev/null || echo "")
+# Kill any orphan process on port 3000 from previous failed updates
+# Pastikan port bersih sebelum proses build & restart
+if command -v fuser &> /dev/null; then
+    fuser -k $APP_PORT/tcp 2>/dev/null || true
+    log "Killed orphan process on port $APP_PORT (pre-build cleanup)"
+    sleep 1
+fi
 
-if echo "$CHANGED_FILES" | grep -q "package.json\|pnpm-lock.yaml"; then
-    if ! pnpm install --frozen-lockfile; then
-        print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa untuk regenerate lockfile"
+if [ "$HAS_UPDATE" = "true" ]; then
+    # Cek apakah ada perubahan dependency
+    CHANGED_FILES=$(git diff --name-only "$COMMIT_BEFORE" "$COMMIT_AFTER" 2>/dev/null || echo "")
+
+    if echo "$CHANGED_FILES" | grep -q "package.json\|pnpm-lock.yaml"; then
+        if ! pnpm install --frozen-lockfile; then
+            print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa untuk regenerate lockfile"
+            pnpm install
+        fi
+        print_success "Dependencies di-install ulang"
+    else
+        print_success "Tidak ada perubahan dependency, skip"
+    fi
+else
+    # Tidak ada update baru — tetap pastikan dependencies ter-install dengan benar
+    if ! pnpm install --frozen-lockfile 2>/dev/null; then
+        print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa"
         pnpm install
     fi
-    print_success "Dependencies di-install ulang"
-else
-    print_success "Tidak ada perubahan dependency, skip"
+    print_success "Dependencies verified (no update — consistency check)"
 fi
 
 # --- 6. Prisma generate + migrate (SELALU sebelum build) ---
@@ -260,12 +280,10 @@ print_success "Build berhasil"
 # --- 8. Signal aaPanel to Restart ---
 print_step "8/8 - Signaling aaPanel to restart..."
 
-# Kill any process still lingering on the port
-if command -v fuser &> /dev/null; then
-    fuser -k $APP_PORT/tcp 2>/dev/null || true
-    log "Killed existing process on port $APP_PORT"
-    sleep 2
-fi
+# Kill any process still lingering on the port before restart
+fuser -k $APP_PORT/tcp 2>/dev/null || true
+log "Killed existing process on port $APP_PORT (pre-restart)"
+sleep 2
 
 # Signal aaPanel to restart the project
 # aaPanel watches for changes and auto-restarts via PM2/start.sh
