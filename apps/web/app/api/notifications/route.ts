@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
+import { updateNotificationSchema, formatZodError } from '@/lib/validation-schemas'
 
 /**
  * GET /api/notifications
@@ -81,14 +82,22 @@ export async function PUT(request: Request) {
         }
         const { tenantId, userId } = auth
         const body = await request.json()
-        const { ids, markAll } = body as { ids?: string[]; markAll?: boolean }
+        const validation = updateNotificationSchema.safeParse(body)
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            )
+        }
+
+        const { ids, markAll } = validation.data
 
         if (markAll) {
             await prisma.inAppNotification.updateMany({
                 where: { tenantId, userId, isRead: false },
                 data: { isRead: true },
             })
-        } else if (ids && Array.isArray(ids) && ids.length > 0) {
+        } else if (ids && ids.length > 0) {
             await prisma.inAppNotification.updateMany({
                 where: {
                     tenantId,

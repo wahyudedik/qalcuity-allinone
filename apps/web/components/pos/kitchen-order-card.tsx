@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import type { KitchenOrder, KitchenOrderStatus } from '@/hooks/use-kitchen-orders';
 import { KitchenOrderTimer } from './kitchen-order-timer';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -119,8 +121,10 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string; bgColor: s
  * - Cancel with confirmation
  */
 export function KitchenOrderCard({ order, onStatusChange }: KitchenOrderCardProps) {
+    const { t } = useTranslation();
     const [cancelling, setCancelling] = useState(false);
     const [updating, setUpdating] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
     const config = STATUS_CONFIG[order.status];
     const StatusIcon = config.icon;
@@ -279,11 +283,7 @@ export function KitchenOrderCard({ order, onStatusChange }: KitchenOrderCardProp
                 {/* Cancel button for PENDING/PREPARING */}
                 {(order.status === 'PENDING' || order.status === 'PREPARING') && (
                     <button
-                        onClick={() => {
-                            if (window.confirm('Batalkan pesanan ini?')) {
-                                handleCancel();
-                            }
-                        }}
+                        onClick={() => setShowCancelConfirm(true)}
                         disabled={cancelling}
                         className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
                     >
@@ -292,6 +292,19 @@ export function KitchenOrderCard({ order, onStatusChange }: KitchenOrderCardProp
                     </button>
                 )}
             </div>
+
+            {/* Cancel Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showCancelConfirm}
+                onClose={() => setShowCancelConfirm(false)}
+                onConfirm={async () => {
+                    setShowCancelConfirm(false);
+                    await handleCancel();
+                }}
+                title={t('pos.kitchen.cancelTitle') || 'Batalkan Pesanan'}
+                message={t('pos.kitchen.cancelConfirm') || 'Apakah Anda yakin ingin membatalkan pesanan ini?'}
+                variant="danger"
+            />
         </div>
     );
 }

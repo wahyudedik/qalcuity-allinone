@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 
 // ─── GET /api/platform/plans ──────────────────────────────────────────────────
 // Returns all subscription plans with features and tenant counts.
 // Only accessible by SUPERADMIN role.
-export async function GET() {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const role = (session.user as { role?: string }).role;
-    if (role !== "SUPERADMIN") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+export async function GET(request: Request) {
+    // 1. Auth + RBAC check — SUPERADMIN only
+    const auth = await requirePermissionForRoute(request);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
         const plans = await prisma.plan.findMany({

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
@@ -15,17 +14,9 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    // 2. Auth check
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. RBAC check — SUPERADMIN only
-    const role = (session.user as { role?: string }).role;
-    if (role !== "SUPERADMIN") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // 2. Auth + RBAC check — SUPERADMIN only
+    const auth = await requirePermissionForRoute(request);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
         const { searchParams } = new URL(request.url);

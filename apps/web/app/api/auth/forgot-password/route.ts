@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         });
 
         // Build reset URL
-        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
         const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
         // Send email

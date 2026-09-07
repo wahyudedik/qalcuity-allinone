@@ -32,6 +32,7 @@ import { useTranslation } from '@/lib/i18n';
 import { usePosTables, type PosTableData } from '@/hooks/use-pos-tables';
 import { TableCard } from '@/components/pos/table-card';
 import { ReservationForm } from '@/components/pos/reservation-form';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 // =============================================================================
 // Status Config
@@ -90,6 +91,8 @@ export default function TablesPage() {
         notes: '',
     });
     const [creating, setCreating] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     // Filter tables by search query
     const filteredTables = useMemo(() => {
@@ -141,10 +144,17 @@ export default function TablesPage() {
     };
 
     // Handle delete
-    const handleDelete = async (id: string) => {
-        if (window.confirm(t('pos.tables.confirmDelete') || 'Apakah Anda yakin ingin menghapus meja ini?')) {
-            await deleteTable(id);
+    const handleDelete = (id: string) => {
+        setDeleteTargetId(id);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteTargetId) {
+            await deleteTable(deleteTargetId);
         }
+        setShowDeleteConfirm(false);
+        setDeleteTargetId(null);
     };
 
     // Handle reservation submit
@@ -525,6 +535,16 @@ export default function TablesPage() {
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => { setShowDeleteConfirm(false); setDeleteTargetId(null); }}
+                onConfirm={confirmDelete}
+                title={t('pos.tables.deleteTitle') || 'Hapus Meja'}
+                message={t('pos.tables.confirmDelete') || 'Apakah Anda yakin ingin menghapus meja ini?'}
+                variant="danger"
+            />
         </div>
     );
 }

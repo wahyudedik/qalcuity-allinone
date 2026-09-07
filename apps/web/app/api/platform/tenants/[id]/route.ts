@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 
 // ─── GET /api/platform/tenants/[id] ───────────────────────────────────────────
@@ -10,17 +9,9 @@ export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    // 1. Auth check
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. RBAC check — SUPERADMIN only
-    const role = (session.user as { role?: string }).role;
-    if (role !== "SUPERADMIN") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // 1. Auth + RBAC check — SUPERADMIN only
+    const auth = await requirePermissionForRoute(request);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
         const { id } = params;
@@ -129,17 +120,9 @@ export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    // 1. Auth check
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. RBAC check — SUPERADMIN only
-    const role = (session.user as { role?: string }).role;
-    if (role !== "SUPERADMIN") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // 1. Auth + RBAC check — SUPERADMIN only
+    const auth = await requirePermissionForRoute(request);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
         const { id } = params;
@@ -227,17 +210,9 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    // 1. Auth check
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. RBAC check — SUPERADMIN only
-    const role = (session.user as { role?: string }).role;
-    if (role !== "SUPERADMIN") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // 1. Auth + RBAC check — SUPERADMIN only
+    const auth = await requirePermissionForRoute(request);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
         const { id } = params;
