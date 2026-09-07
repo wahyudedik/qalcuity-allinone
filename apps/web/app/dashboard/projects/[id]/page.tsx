@@ -778,8 +778,15 @@ export default function ProjectDetailPage() {
 
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
+    // Guard: redirect "new" ke halaman create project
     useEffect(() => {
-        if (projectId) {
+        if (projectId === 'new') {
+            router.replace('/dashboard/projects/new');
+        }
+    }, [projectId, router]);
+
+    useEffect(() => {
+        if (projectId && projectId !== 'new') {
             void fetchProjectDetail(projectId);
         }
     }, [projectId, fetchProjectDetail]);
