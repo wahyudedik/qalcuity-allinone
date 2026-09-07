@@ -213,7 +213,14 @@ export async function DELETE(
             );
         }
 
-        await prisma.invoice.delete({ where: { id } });
+        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
+        const deleteResult = await prisma.invoice.deleteMany({ where: { id, tenantId } });
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Invoice not found or access denied' },
+                { status: 404 }
+            );
+        }
 
         // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });

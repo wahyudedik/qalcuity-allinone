@@ -46,6 +46,15 @@ export type {
 } from './types';
 export { DEFAULT_INDUSTRY_CONFIGS, SUPPORTED_INDUSTRIES } from './defaults';
 export { restaurantIndustryPack } from './packs/restaurant';
+export { retailIndustryPack } from './packs/retail';
+export { manufacturingIndustryPack } from './packs/manufacturing';
+export { healthcareIndustryPack } from './packs/healthcare';
+export { constructionIndustryPack } from './packs/construction';
+export { professionalServicesIndustryPack } from './packs/professional-services';
+export { educationIndustryPack } from './packs/education';
+export { agricultureIndustryPack } from './packs/agriculture';
+export { logisticsIndustryPack } from './packs/logistics';
+export { hospitalityIndustryPack } from './packs/hospitality';
 export { INDUSTRY_PACKS, AVAILABLE_PACK_IDS } from './packs';
 
 // ─── Convenience Functions ───────────────────────────────────────────────────

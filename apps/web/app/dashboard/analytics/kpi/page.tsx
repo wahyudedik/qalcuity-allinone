@@ -69,21 +69,7 @@ interface MetricOption {
 const CATEGORIES = ['all', 'finance', 'sales', 'inventory', 'hr', 'crm', 'cross_module'] as const
 type CategoryFilter = typeof CATEGORIES[number]
 
-const METRIC_OPTIONS: MetricOption[] = [
-    { id: 'revenue', name: 'Revenue', category: 'finance', format: 'currency' },
-    { id: 'total_expenses', name: 'Total Expenses', category: 'finance', format: 'currency' },
-    { id: 'gross_profit', name: 'Gross Profit', category: 'finance', format: 'currency' },
-    { id: 'net_income', name: 'Net Income', category: 'finance', format: 'currency' },
-    { id: 'cash_flow', name: 'Net Cash Flow', category: 'finance', format: 'currency' },
-    { id: 'total_deals', name: 'Total Deals', category: 'sales', format: 'count' },
-    { id: 'win_rate', name: 'Win Rate', category: 'sales', format: 'percentage' },
-    { id: 'pipeline_value', name: 'Pipeline Value', category: 'sales', format: 'currency' },
-    { id: 'total_stock_value', name: 'Total Stock Value', category: 'inventory', format: 'currency' },
-    { id: 'stock_turnover', name: 'Stock Turnover', category: 'inventory', format: 'number' },
-    { id: 'employee_count', name: 'Employee Count', category: 'hr', format: 'count' },
-    { id: 'attendance_rate', name: 'Attendance Rate', category: 'hr', format: 'percentage' },
-    { id: 'lead_conversion_rate', name: 'Lead Conversion Rate', category: 'crm', format: 'percentage' },
-]
+/* METRIC_OPTIONS is defined inside the component to use t() */
 
 const PERIODS = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] as const
 
@@ -91,20 +77,7 @@ const PERIODS = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] as const
    HELPERS
    ============================================ */
 
-function getStatusConfig(status: string): { color: string; bg: string; label: string } {
-    switch (status) {
-        case 'above_target':
-            return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', label: 'Above Target' }
-        case 'on_target':
-            return { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', label: 'On Target' }
-        case 'below_target':
-            return { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30', label: 'Below Target' }
-        case 'critical':
-            return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', label: 'Critical' }
-        default:
-            return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-700', label: 'Unknown' }
-    }
-}
+/* getStatusConfig is defined inside the component to use t() */
 
 function getStatusDot(status: string): string {
     switch (status) {
@@ -164,6 +137,37 @@ const DEFAULT_FORM: CreateKPIForm = {
 
 export default function KPIPage() {
     const { t } = useTranslation()
+
+    const METRIC_OPTIONS: MetricOption[] = [
+        { id: 'revenue', name: t('analytics.kpi.metrics.revenue'), category: 'finance', format: 'currency' },
+        { id: 'total_expenses', name: t('analytics.kpi.metrics.totalExpenses'), category: 'finance', format: 'currency' },
+        { id: 'gross_profit', name: t('analytics.kpi.metrics.grossProfit'), category: 'finance', format: 'currency' },
+        { id: 'net_income', name: t('analytics.kpi.metrics.netIncome'), category: 'finance', format: 'currency' },
+        { id: 'cash_flow', name: t('analytics.kpi.metrics.netCashFlow'), category: 'finance', format: 'currency' },
+        { id: 'total_deals', name: t('analytics.kpi.metrics.totalDeals'), category: 'sales', format: 'count' },
+        { id: 'win_rate', name: t('analytics.kpi.metrics.winRate'), category: 'sales', format: 'percentage' },
+        { id: 'pipeline_value', name: t('analytics.kpi.metrics.pipelineValue'), category: 'sales', format: 'currency' },
+        { id: 'total_stock_value', name: t('analytics.kpi.metrics.totalStockValue'), category: 'inventory', format: 'currency' },
+        { id: 'stock_turnover', name: t('analytics.kpi.metrics.stockTurnover'), category: 'inventory', format: 'number' },
+        { id: 'employee_count', name: t('analytics.kpi.metrics.employeeCount'), category: 'hr', format: 'count' },
+        { id: 'attendance_rate', name: t('analytics.kpi.metrics.attendanceRate'), category: 'hr', format: 'percentage' },
+        { id: 'lead_conversion_rate', name: t('analytics.kpi.metrics.leadConversionRate'), category: 'crm', format: 'percentage' },
+    ]
+
+    function getStatusConfig(status: string): { color: string; bg: string; label: string } {
+        switch (status) {
+            case 'above_target':
+                return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', label: t('analytics.kpi.statuses.above_target') }
+            case 'on_target':
+                return { color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', label: t('analytics.kpi.statuses.on_target') }
+            case 'below_target':
+                return { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30', label: t('analytics.kpi.statuses.below_target') }
+            case 'critical':
+                return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', label: t('analytics.kpi.statuses.critical') }
+            default:
+                return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-700', label: t('analytics.kpi.statuses.unknown') }
+        }
+    }
     const [kpis, setKPIs] = useState<KPItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -222,7 +226,7 @@ export default function KPIPage() {
 
     /* ---------- Delete KPI ---------- */
     const deleteKPI = async (id: string) => {
-        if (!confirm('Delete this KPI?')) return
+        if (!confirm(t('analytics.kpi.deleteConfirm'))) return
         try {
             const res = await fetch(`/api/analytics/kpi/${id}`, { method: 'DELETE' })
             if (!res.ok) throw new Error('Failed to delete')
@@ -277,13 +281,12 @@ export default function KPIPage() {
                     <button
                         key={cat}
                         onClick={() => setCategoryFilter(cat)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                            categoryFilter === cat
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${categoryFilter === cat
                                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
-                        }`}
+                            }`}
                     >
-                        {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        {cat === 'all' ? t('analytics.kpi.filterAll') : t(`analytics.kpi.categories.${cat}`)}
                     </button>
                 ))}
             </div>
@@ -361,35 +364,34 @@ export default function KPIPage() {
                                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{kpi.description}</p>
                                         )}
                                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                                            Target: {kpi.targetType === 'gte' ? '≥' : '≤'} {formatNumber(kpi.target)}% | Current: {eval_ ? `${eval_.value.toFixed(1)}%` : '—'}
+                                            {t('analytics.kpi.targetLabel')} {kpi.targetType === 'gte' ? '≥' : '≤'} {formatNumber(kpi.target)}% | {t('analytics.kpi.currentLabel')} {eval_ ? `${eval_.value.toFixed(1)}%` : '—'}
                                         </p>
 
                                         {/* Progress Bar */}
                                         <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                             <div
-                                                className={`h-full rounded-full transition-all duration-500 ${
-                                                    progress >= 100
+                                                className={`h-full rounded-full transition-all duration-500 ${progress >= 100
                                                         ? 'bg-green-500'
                                                         : progress >= 75
                                                             ? 'bg-blue-500'
                                                             : progress >= 50
                                                                 ? 'bg-orange-500'
                                                                 : 'bg-red-500'
-                                                }`}
+                                                    }`}
                                                 style={{ width: `${progressWidth}%` }}
                                             />
                                         </div>
                                         <div className="mt-1 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                                            <span>{progress.toFixed(0)}% of target</span>
+                                            <span>{progress.toFixed(0)}% {t('analytics.kpi.ofTarget')}</span>
                                             {eval_ && (
-                                                <span>Last evaluated: {timeAgo(eval_.evaluatedAt)}</span>
+                                                <span>{t('analytics.kpi.lastEvaluated')} {timeAgo(eval_.evaluatedAt)}</span>
                                             )}
                                         </div>
 
                                         {/* Meta */}
                                         <div className="mt-2 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-                                            <span>Period: {kpi.period}</span>
-                                            <span>Category: {kpi.category}</span>
+                                            <span>{t('analytics.kpi.periodLabel')} {kpi.period}</span>
+                                            <span>{t('analytics.kpi.categoryLabel')} {kpi.category}</span>
                                             {eval_?.changePercent !== null && eval_?.changePercent !== undefined && (
                                                 <span className={eval_.changePercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                                                     {eval_.changePercent >= 0 ? (
@@ -408,7 +410,7 @@ export default function KPIPage() {
                                         <button
                                             onClick={() => evaluateKPI(kpi.id)}
                                             disabled={evaluating === kpi.id}
-                                            title="Re-evaluate"
+                                            title={t('analytics.kpi.reEvaluate')}
                                             className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-blue-600 dark:hover:bg-gray-700 dark:hover:text-blue-400 disabled:opacity-50"
                                         >
                                             {evaluating === kpi.id ? (
@@ -418,14 +420,14 @@ export default function KPIPage() {
                                             )}
                                         </button>
                                         <button
-                                            title="Edit"
+                                            title={t('analytics.common.edit')}
                                             className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
                                         >
                                             <Edit3 className="h-4 w-4" />
                                         </button>
                                         <button
                                             onClick={() => deleteKPI(kpi.id)}
-                                            title="Delete"
+                                            title={t('analytics.common.delete')}
                                             className="rounded-lg p-2 text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -447,7 +449,7 @@ export default function KPIPage() {
                         </h3>
                         <div className="mt-4 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.name')} *</label>
                                 <input
                                     type="text"
                                     value={form.name}
@@ -457,7 +459,7 @@ export default function KPIPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.description')}</label>
                                 <input
                                     type="text"
                                     value={form.description}
@@ -468,19 +470,19 @@ export default function KPIPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.category')} *</label>
                                     <select
                                         value={form.category}
                                         onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                                     >
                                         {CATEGORIES.filter(c => c !== 'all').map(cat => (
-                                            <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                                            <option key={cat} value={cat}>{t(`analytics.kpi.categories.${cat}`)}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metric *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.metric')} *</label>
                                     <select
                                         value={form.metricId}
                                         onChange={(e) => setForm(f => ({ ...f, metricId: e.target.value }))}
@@ -494,7 +496,7 @@ export default function KPIPage() {
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.target')} *</label>
                                     <input
                                         type="number"
                                         value={form.target}
@@ -503,25 +505,25 @@ export default function KPIPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Direction</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.direction')}</label>
                                     <select
                                         value={form.targetType}
                                         onChange={(e) => setForm(f => ({ ...f, targetType: e.target.value }))}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                                     >
-                                        <option value="gte">≥ Greater than</option>
-                                        <option value="lte">≤ Less than</option>
+                                        <option value="gte">{t('analytics.kpi.directions.gte')}</option>
+                                        <option value="lte">{t('analytics.kpi.directions.lte')}</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('analytics.kpi.form.period')}</label>
                                     <select
                                         value={form.period}
                                         onChange={(e) => setForm(f => ({ ...f, period: e.target.value }))}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                                     >
                                         {PERIODS.map(p => (
-                                            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                                            <option key={p} value={p}>{t(`analytics.kpi.periods.${p}`)}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -532,7 +534,7 @@ export default function KPIPage() {
                                 onClick={() => { setShowCreateModal(false); setForm(DEFAULT_FORM) }}
                                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
                             >
-                                Cancel
+                                {t('analytics.common.cancel')}
                             </button>
                             <button
                                 onClick={createKPI}
@@ -540,7 +542,7 @@ export default function KPIPage() {
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                             >
                                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                Create
+                                {t('analytics.common.create')}
                             </button>
                         </div>
                     </div>

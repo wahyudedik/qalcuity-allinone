@@ -64,18 +64,10 @@ function getReportTypeIcon(type: string): typeof FileText {
     }
 }
 
-function getReportTypeLabel(type: string): string {
-    switch (type) {
-        case 'chart': return 'Chart'
-        case 'pivot': return 'Pivot'
-        case 'query': return 'Query'
-        case 'dashboard': return 'Dashboard'
-        default: return 'Report'
-    }
-}
+// getReportTypeLabel moved inside ReportCard component to use t()
 
 function timeAgo(dateStr: string | null): string {
-    if (!dateStr) return 'Never'
+    if (!dateStr) return 'never'
     const now = new Date()
     const date = new Date(dateStr)
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
@@ -159,7 +151,7 @@ export default function AnalyticsReportsPage() {
 
     /* ---------- Delete ---------- */
     const deleteReport = async (id: string) => {
-        if (!confirm('Delete this report?')) return
+        if (!confirm(t('analytics.reports.deleteConfirm'))) return
         try {
             const res = await fetch(`/api/analytics/reports/${id}`, { method: 'DELETE' })
             if (!res.ok) throw new Error('Failed to delete')
@@ -193,14 +185,14 @@ export default function AnalyticsReportsPage() {
             if (navigator.share) {
                 await navigator.share({
                     title: report.name,
-                    text: `Lihat laporan: ${report.name}`,
+                    text: `${t('analytics.reports.shareText')}${report.name}`,
                     url: `${window.location.origin}/dashboard/analytics/reports?shared=${report.id}`,
                 })
             } else {
                 await navigator.clipboard.writeText(
                     `${window.location.origin}/dashboard/analytics/reports?shared=${report.id}`
                 )
-                setToast({ message: 'Link laporan berhasil disalin ke clipboard!', type: 'success' })
+                setToast({ message: t('analytics.reports.shareSuccess'), type: 'success' })
             }
         } catch {
             // User cancelled share
@@ -221,7 +213,7 @@ export default function AnalyticsReportsPage() {
     /* ---------- Groups for folder view ---------- */
     const folderGroups = activeTab === 'folders'
         ? filteredReports.reduce<Record<string, SavedReport[]>>((acc, r) => {
-            const folder = r.folder || 'Uncategorized'
+            const folder = r.folder || t('analytics.reports.unategorized')
             if (!acc[folder]) acc[folder] = []
             acc[folder].push(r)
             return acc
@@ -337,7 +329,7 @@ export default function AnalyticsReportsPage() {
                     {Object.entries(folderGroups).length === 0 && (
                         <div className="flex flex-col items-center justify-center py-12">
                             <Folder className="h-10 w-10 text-gray-300 dark:text-gray-600" />
-                            <p className="mt-2 text-sm text-gray-400">No reports in folders</p>
+                            <p className="mt-2 text-sm text-gray-400">{t('analytics.reports.noReportsInFolders')}</p>
                         </div>
                     )}
                     {Object.entries(folderGroups).map(([folder, items]) => (
@@ -397,8 +389,19 @@ interface ReportCardProps {
 }
 
 function ReportCard({ report, onToggleStar, onDelete, onRun, onEdit, onShare, actionMenuId, setActionMenuId }: ReportCardProps) {
+    const { t } = useTranslation()
     const TypeIcon = getReportTypeIcon(report.type)
     const isOpen = actionMenuId === report.id
+
+    function getReportTypeLabel(type: string): string {
+        switch (type) {
+            case 'chart': return t('analytics.reports.types.chart')
+            case 'pivot': return t('analytics.reports.types.pivot')
+            case 'query': return t('analytics.reports.types.query')
+            case 'dashboard': return t('analytics.reports.types.dashboard')
+            default: return t('analytics.reports.types.report')
+        }
+    }
 
     return (
         <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -424,7 +427,7 @@ function ReportCard({ report, onToggleStar, onDelete, onRun, onEdit, onShare, ac
                     </span>
                     <span className="inline-flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Last run: {timeAgo(report.lastRunAt)}
+                        {t('analytics.reports.lastRun')}: {timeAgo(report.lastRunAt)}
                     </span>
                 </div>
                 {report.tags.length > 0 && (
@@ -449,7 +452,7 @@ function ReportCard({ report, onToggleStar, onDelete, onRun, onEdit, onShare, ac
                     className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-blue-900/20"
                 >
                     <Play className="h-3 w-3" />
-                    Run
+                    {t('analytics.reports.run')}
                 </button>
                 <button
                     onClick={() => onToggleStar(report.id, report.isStarred)}
@@ -473,21 +476,21 @@ function ReportCard({ report, onToggleStar, onDelete, onRun, onEdit, onShare, ac
                                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                                 >
                                     <Edit3 className="h-3.5 w-3.5" />
-                                    Edit
+                                    {t('analytics.reports.edit')}
                                 </button>
                                 <button
                                     onClick={() => { onShare(report); setActionMenuId(null) }}
                                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                                 >
                                     <Share2 className="h-3.5 w-3.5" />
-                                    Share
+                                    {t('analytics.reports.share')}
                                 </button>
                                 <button
                                     onClick={() => { onDelete(report.id); setActionMenuId(null) }}
                                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                                 >
                                     <X className="h-3.5 w-3.5" />
-                                    Delete
+                                    {t('analytics.common.delete')}
                                 </button>
                             </div>
                         </>

@@ -194,10 +194,10 @@ export default function DashboardsPage() {
     const activeCount = dashboards.filter(d => d.isActive).length
 
     const stats = [
-        { label: 'Total Dashboards', value: dashboards.length, icon: LayoutGrid, color: 'text-blue-600 dark:text-blue-400' },
-        { label: 'Active', value: activeCount, icon: LayoutDashboard, color: 'text-green-600 dark:text-green-400' },
-        { label: 'Templates', value: templateCount, icon: Star, color: 'text-purple-600 dark:text-purple-400' },
-        { label: 'Total Widgets', value: totalWidgets, icon: LayoutGrid, color: 'text-orange-600 dark:text-orange-400' },
+        { label: t('analytics.dashboards.stats.total'), value: dashboards.length, icon: LayoutGrid, color: 'text-blue-600 dark:text-blue-400' },
+        { label: t('analytics.dashboards.stats.active'), value: activeCount, icon: LayoutDashboard, color: 'text-green-600 dark:text-green-400' },
+        { label: t('analytics.dashboards.stats.templates'), value: templateCount, icon: Star, color: 'text-purple-600 dark:text-purple-400' },
+        { label: t('analytics.dashboards.stats.widgets'), value: totalWidgets, icon: LayoutGrid, color: 'text-orange-600 dark:text-orange-400' },
     ]
 
     return (
@@ -396,20 +396,20 @@ export default function DashboardsPage() {
                             {t('analytics.dashboards.create')}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Buat dashboard baru untuk visualisasi data
+                            {t('analytics.dashboards.form.subtitle')}
                         </p>
 
                         <div className="mt-5 space-y-4">
                             {/* Name */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Nama Dashboard <span className="text-red-500">*</span>
+                                    {t('analytics.dashboards.form.name')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={createForm.name}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
-                                    placeholder="Masukkan nama dashboard"
+                                    placeholder={t('analytics.dashboards.form.namePlaceholder')}
                                     className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 />
                             </div>
@@ -417,12 +417,12 @@ export default function DashboardsPage() {
                             {/* Description */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Deskripsi
+                                    {t('analytics.dashboards.form.description')}
                                 </label>
                                 <textarea
                                     value={createForm.description}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Deskripsi singkat dashboard (opsional)"
+                                    placeholder={t('analytics.dashboards.form.descPlaceholder')}
                                     rows={2}
                                     className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 />
@@ -431,33 +431,33 @@ export default function DashboardsPage() {
                             {/* Visibility */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Visibilitas
+                                    {t('analytics.dashboards.form.visibility')}
                                 </label>
                                 <select
                                     value={createForm.visibility}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, visibility: e.target.value }))}
                                     className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 >
-                                    <option value="PRIVATE">Private — Hanya saya</option>
-                                    <option value="TEAM">Team — Tim saya</option>
-                                    <option value="DEPARTMENT">Department — Seluruh departemen</option>
-                                    <option value="ORGANIZATION">Organization — Semua orang</option>
+                                    <option value="PRIVATE">{t('analytics.dashboards.form.visibilityOptions.private')}</option>
+                                    <option value="TEAM">{t('analytics.dashboards.form.visibilityOptions.team')}</option>
+                                    <option value="DEPARTMENT">{t('analytics.dashboards.form.visibilityOptions.department')}</option>
+                                    <option value="ORGANIZATION">{t('analytics.dashboards.form.visibilityOptions.organization')}</option>
                                 </select>
                             </div>
 
                             {/* Theme */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Tema
+                                    {t('analytics.dashboards.form.theme')}
                                 </label>
                                 <select
                                     value={createForm.theme}
                                     onChange={(e) => setCreateForm(prev => ({ ...prev, theme: e.target.value }))}
                                     className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 >
-                                    <option value="AUTO">Auto (ikuti sistem)</option>
-                                    <option value="LIGHT">Light</option>
-                                    <option value="DARK">Dark</option>
+                                    <option value="AUTO">{t('analytics.dashboards.form.themeOptions.auto')}</option>
+                                    <option value="LIGHT">{t('analytics.dashboards.form.themeOptions.light')}</option>
+                                    <option value="DARK">{t('analytics.dashboards.form.themeOptions.dark')}</option>
                                 </select>
                             </div>
                         </div>
@@ -468,7 +468,7 @@ export default function DashboardsPage() {
                                 onClick={() => setShowCreateModal(false)}
                                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                             >
-                                Batal
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={createDashboard}
@@ -476,7 +476,7 @@ export default function DashboardsPage() {
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                                {saving ? 'Membuat...' : 'Buat Dashboard'}
+                                {saving ? t('analytics.dashboards.form.creating') : t('analytics.dashboards.create')}
                             </button>
                         </div>
                     </div>

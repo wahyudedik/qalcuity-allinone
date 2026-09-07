@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
-            return NextResponse.json({ success: true, data: { revenue: { current: 0, previous: 0, change: 0, currency: 'IDR' }, orders: { current: 0, previous: 0, change: 0 }, customers: { current: 0, previous: 0, change: 0 }, products: { current: 0, previous: 0, change: 0 }, recentActivities: [], alerts: [] } });
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
 
         // Rate limiting: 20 requests per minute per IP for dashboard stats

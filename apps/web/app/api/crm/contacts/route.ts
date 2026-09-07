@@ -249,7 +249,14 @@ export async function DELETE(request: Request) {
             );
         }
 
-        await prisma.contact.delete({ where: { id } });
+        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
+        const deleteResult = await prisma.contact.deleteMany({ where: { id, tenantId: authTenantId } });
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Contact not found or access denied' },
+                { status: 404 }
+            );
+        }
 
         void logAudit({ userId, tenantId: authTenantId, action: 'DELETE', entity: 'Contact', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 

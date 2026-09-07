@@ -165,7 +165,14 @@ export async function DELETE(
             );
         }
 
-        await prisma.employee.delete({ where: { id } });
+        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
+        const deleteResult = await prisma.employee.deleteMany({ where: { id, tenantId } });
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Karyawan tidak ditemukan atau akses ditolak' },
+                { status: 404 }
+            );
+        }
 
         // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Employee', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });

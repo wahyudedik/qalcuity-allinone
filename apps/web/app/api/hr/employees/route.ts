@@ -122,9 +122,11 @@ export async function POST(request: Request) {
             );
         }
 
-        // Generate employee ID
-        const count = await prisma.employee.count({ where: { tenantId } });
-        const employeeId = `EMP-${String(count + 1).padStart(3, '0')}`;
+        // Generate employee ID using timestamp-based approach to avoid race condition
+        // EMP-YYYYMMDD-XXXX where XXXX is random suffix
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const employeeId = `EMP-${dateStr}-${randomSuffix}`;
 
         const employee = await prisma.employee.create({
             data: {
@@ -244,7 +246,14 @@ export async function DELETE(request: Request) {
             );
         }
 
-        await prisma.employee.delete({ where: { id } });
+        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
+        const deleteResult = await prisma.employee.deleteMany({ where: { id, tenantId } });
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Karyawan tidak ditemukan atau akses ditolak' },
+                { status: 404 }
+            );
+        }
 
         // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Employee', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });

@@ -159,16 +159,7 @@ const ALL_DATASETS: DatasetDef[] = [
     },
 ]
 
-const OPERATORS: { value: string; label: string }[] = [
-    { value: 'eq', label: 'Equals' },
-    { value: 'neq', label: 'Not Equals' },
-    { value: 'gt', label: 'Greater Than' },
-    { value: 'gte', label: 'Greater or Equal' },
-    { value: 'lt', label: 'Less Than' },
-    { value: 'lte', label: 'Less or Equal' },
-    { value: 'contains', label: 'Contains' },
-    { value: 'in', label: 'In' },
-]
+/* Operators are defined inside the component to use t() */
 
 const PAGE_SIZE = 20
 
@@ -178,6 +169,17 @@ const PAGE_SIZE = 20
 
 export default function DataExplorerPage() {
     const { t } = useTranslation()
+
+    const OPERATORS: { value: string; label: string }[] = [
+        { value: 'eq', label: t('analytics.explorer.filterOperators.equals') },
+        { value: 'neq', label: t('analytics.explorer.filterOperators.not_equals') },
+        { value: 'gt', label: t('analytics.explorer.filterOperators.greater_than') },
+        { value: 'gte', label: t('analytics.explorer.filterOperators.greater_or_equal') },
+        { value: 'lt', label: t('analytics.explorer.filterOperators.less_than') },
+        { value: 'lte', label: t('analytics.explorer.filterOperators.less_or_equal') },
+        { value: 'contains', label: t('analytics.explorer.filterOperators.contains') },
+        { value: 'in', label: t('analytics.explorer.filterOperators.in') },
+    ]
 
     // Config state
     const [selectedDataset, setSelectedDataset] = useState('invoices')
@@ -415,14 +417,14 @@ export default function DataExplorerPage() {
 
                     {/* Date Range */}
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Date Range:</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('analytics.explorer.dateRange')}</span>
                         <input
                             type="date"
                             value={dateFrom}
                             onChange={(e) => setDateFrom(e.target.value)}
                             className="rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                         />
-                        <span className="text-xs text-gray-400">to</span>
+                        <span className="text-xs text-gray-400">{t('analytics.explorer.to')}</span>
                         <input
                             type="date"
                             value={dateTo}
@@ -542,7 +544,7 @@ export default function DataExplorerPage() {
                                     }`}
                             >
                                 <Table className="h-3.5 w-3.5" />
-                                Table
+                                {t('analytics.explorer.viewTable')}
                             </button>
                             <button
                                 onClick={() => setViewMode('chart')}
@@ -552,7 +554,7 @@ export default function DataExplorerPage() {
                                     }`}
                             >
                                 <BarChart3 className="h-3.5 w-3.5" />
-                                Chart
+                                {t('analytics.explorer.viewChart')}
                             </button>
                         </div>
                     </div>
@@ -592,7 +594,7 @@ export default function DataExplorerPage() {
                                                 colSpan={result.columns.length}
                                                 className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500"
                                             >
-                                                No data found
+                                                {t('analytics.explorer.noData')}
                                             </td>
                                         </tr>
                                     )}
@@ -605,7 +607,7 @@ export default function DataExplorerPage() {
                     {viewMode === 'chart' && (
                         <div className="p-6">
                             <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                                Chart visualization — select at least one dimension and one measure to generate a chart.
+                                {t('analytics.explorer.chartHint')}
                             </p>
                         </div>
                     )}
@@ -619,17 +621,17 @@ export default function DataExplorerPage() {
                                 className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
                             >
                                 <ChevronLeft className="h-4 w-4" />
-                                Prev
+                                {t('analytics.explorer.pagination.prev')}
                             </button>
                             <span className="text-sm text-gray-500 dark:text-gray-400">
-                                Page {page} of {totalPages}
+                                {t('analytics.explorer.pagination.pageInfo').replace('{current}', String(page)).replace('{total}', String(totalPages))}
                             </span>
                             <button
                                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                 disabled={page === totalPages}
                                 className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
                             >
-                                Next
+                                {t('analytics.explorer.pagination.next')}
                                 <ChevronRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -660,7 +662,7 @@ export default function DataExplorerPage() {
                         <div className="mt-4 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Name
+                                    {t('analytics.common.name')}
                                 </label>
                                 <input
                                     type="text"
@@ -688,7 +690,7 @@ export default function DataExplorerPage() {
                                 onClick={() => setShowSaveModal(false)}
                                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
                             >
-                                Cancel
+                                {t('analytics.common.cancel')}
                             </button>
                             <button
                                 onClick={saveReport}
@@ -696,7 +698,7 @@ export default function DataExplorerPage() {
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                             >
                                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                Save
+                                {t('analytics.common.save')}
                             </button>
                         </div>
                     </div>

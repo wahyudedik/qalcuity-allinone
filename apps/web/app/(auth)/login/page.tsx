@@ -7,6 +7,65 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslation } from '@/lib/i18n'
 import { FlaskConical, Eye, EyeOff } from 'lucide-react'
 
+/**
+ * Direct fetch login — bypasses next-auth/react signIn() which sends
+ * `json: true` in the POST body. That causes NextAuth to return HTTP 200
+ * JSON instead of HTTP 302 redirect with Set-Cookie, so the session
+ * cookie is never stored and login always fails in the browser.
+ *
+ * This function instead:
+ * 1. Fetches a fresh CSRF token from /api/auth/csrf
+ * 2. POSTs to /api/auth/callback/credentials WITHOUT json:true
+ * 3. Uses redirect:'follow' + credentials:'include' so the browser
+ *    follows the 302 redirect and processes the Set-Cookie header
+ * 4. Returns the final URL after redirect chain completes
+ */
+async function loginWithCredentials(
+    email: string,
+    password: string,
+    callbackUrl: string
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+    try {
+        // Step 1: Get fresh CSRF token
+        const csrfRes = await fetch('/api/auth/csrf', {
+            credentials: 'include',
+        })
+        if (!csrfRes.ok) {
+            return { ok: false, error: 'Failed to get CSRF token' }
+        }
+        const { csrfToken } = await csrfRes.json()
+
+        // Step 2: POST credentials WITHOUT json:true
+        // This causes the server to return 302 redirect with Set-Cookie
+        const res = await fetch('/api/auth/callback/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                email,
+                password,
+                csrfToken,
+                callbackUrl,
+                // Intentionally OMITTING `json: true` — this is the fix.
+                // signIn() from next-auth/react sends json:true which causes
+                // the server to return 200 JSON without Set-Cookie.
+            }),
+            redirect: 'follow',   // Follow 302 → processes Set-Cookie
+            credentials: 'include', // Include/send cookies
+        })
+
+        if (!res.ok) {
+            return { ok: false, error: `HTTP ${res.status}` }
+        }
+
+        // Step 3: After redirect chain, navigate to callback URL
+        // The session cookie has been set by the 302 redirect response
+        return { ok: true, url: callbackUrl }
+    } catch (err) {
+        console.error('[Auth] loginWithCredentials error:', err)
+        return { ok: false, error: String(err) }
+    }
+}
+
 interface Providers {
     credentials: boolean;
     google: boolean;
@@ -21,31 +80,43 @@ interface Providers {
  * Must be awaited before performing signIn() to ensure the browser
  * handles auth requests directly without SW interference.
  */
-function unregisterOldServiceWorkers(): Promise<void> {
+function unregisterOldServiceWorkers(): Promise<boolean> {
     if (!('serviceWorker' in navigator)) {
-        return Promise.resolve()
+        return Promise.resolve(true)
     }
 
     return navigator.serviceWorker.getRegistrations()
         .then(async (registrations) => {
-            // Unregister all Service Workers
-            for (const registration of registrations) {
-                console.log('[Auth] Unregistering old SW:', registration.scope)
-                registration.unregister()
+            if (registrations.length === 0) {
+                console.log('[Auth] No Service Workers registered')
+                return true
             }
 
-            // Also clear all caches to remove any stale cached responses
-            // (e.g., old cached auth responses with wrong headers)
+            // Unregister ALL Service Workers and AWAIT each unregistration
+            for (const registration of registrations) {
+                console.log('[Auth] Unregistering SW:', registration.scope)
+                const success = await registration.unregister()
+                console.log('[Auth] SW unregister result:', success)
+            }
+
+            // Also clear ALL caches to remove any stale cached responses
+            // (e.g., old cached auth responses with wrong/dropped Set-Cookie headers)
             if ('caches' in window) {
                 const cacheNames = await caches.keys()
                 await Promise.all(
-                    cacheNames.map((name) => caches.delete(name))
+                    cacheNames.map((name) => {
+                        console.log('[Auth] Clearing cache:', name)
+                        return caches.delete(name)
+                    })
                 )
-                console.log('[Auth] Cleared all caches:', cacheNames.length, 'caches removed')
+                console.log('[Auth] Cleared', cacheNames.length, 'caches')
             }
+
+            return true
         })
-        .catch(() => {
-            // Silently ignore — SW unregistration is best-effort
+        .catch((err) => {
+            console.warn('[Auth] SW unregistration error (best-effort):', err)
+            return false
         })
 }
 
@@ -61,13 +132,23 @@ export default function LoginPage() {
     const [providers, setProviders] = useState<Providers>({ credentials: true, google: false })
     const isDemoLogin = searchParams?.get('email') === 'demo@qalcuity.com'
     const [swReady, setSwReady] = useState(false)
+    const [swCleared, setSwCleared] = useState(false)
 
     // Unregister old Service Workers on login page load.
     // Old cached SWs can intercept /api/auth/ requests and drop Set-Cookie headers,
     // which breaks the entire login flow.
     // AWAITS completion before allowing form submit to ensure no SW interference.
     useEffect(() => {
-        unregisterOldServiceWorkers().then(() => setSwReady(true))
+        console.log('[Auth] Login page loaded — unregistering old SWs...')
+        unregisterOldServiceWorkers().then((success) => {
+            console.log('[Auth] SW cleanup complete, success:', success)
+            setSwReady(true)
+            // Force page reload after a short delay to ensure SW is truly gone
+            // (unregister() doesn't stop the current page's SW immediately)
+            if (success) {
+                setTimeout(() => setSwCleared(true), 500)
+            }
+        })
     }, [])
 
     // Detect auth errors from NextAuth redirect (?error=... in URL).
@@ -104,33 +185,54 @@ export default function LoginPage() {
         const safeCallbackUrl = rawCallback.includes('/login') ? '/dashboard' : rawCallback
 
         try {
-            // Wait for SW unregistration to complete before signIn.
+            // Wait for SW unregistration to complete before login.
             // An active SW can intercept the POST /api/auth/callback/credentials request
             // and drop the Set-Cookie header, breaking the entire login flow.
             if (!swReady) {
                 await unregisterOldServiceWorkers()
             }
 
-            // Use signIn() with DEFAULT redirect behavior (redirect: true).
-            // This lets the browser follow the 302 redirect natively, which ensures
-            // the Set-Cookie header from the server response is properly processed.
+            // DIAGNOSTIC: Check if any SW is still active
+            const swStillActive = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller
+            console.log('[Auth] SW still active before login:', swStillActive)
+
+            if (swStillActive) {
+                console.warn('[Auth] WARNING: SW is still active! Auth may fail.')
+                // Try to send SKIP_WAITING to force old SW to stop
+                const reg = await navigator.serviceWorker.getRegistration('/')
+                if (reg?.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+                    console.log('[Auth] Sent SKIP_WAITING to waiting SW')
+                }
+            }
+
+            // FIX: Use direct fetch instead of signIn() from next-auth/react.
             //
-            // FIX: Previously used redirect:false which uses fetch() with redirect:'manual'.
-            // With redirect:'manual', some browsers don't process Set-Cookie headers from
-            // 302 responses, causing the session cookie to never be stored. This resulted in
-            // a redirect loop: login → /dashboard → middleware (no cookie) → /login.
+            // ROOT CAUSE: signIn() internally sends `json: true` in the POST body to
+            // /api/auth/callback/credentials. This causes NextAuth to return HTTP 200
+            // with a JSON body (containing the redirect URL) instead of HTTP 302 redirect
+            // with a Set-Cookie header. As a result, the session cookie is never stored
+            // by the browser, and the user is redirected back to /login by middleware.
             //
-            // On success: browser follows redirect to callbackUrl (e.g., /dashboard)
-            // On failure: NextAuth redirects to /login?error=... (handled by useEffect above)
-            await signIn('credentials', {
-                email,
-                password,
-                callbackUrl: safeCallbackUrl,
-            })
-            // Note: If signIn succeeds, the browser navigates away from this page.
-            // The code below only runs if signIn throws (network error, etc.)
+            // The loginWithCredentials() function below:
+            // 1. Fetches a fresh CSRF token from /api/auth/csrf
+            // 2. POSTs to /api/auth/callback/credentials WITHOUT json:true
+            // 3. Uses redirect:'follow' + credentials:'include' so the browser
+            //    follows the 302 redirect and processes the Set-Cookie header
+            // 4. Navigates to the callback URL after the cookie is set
+            const result = await loginWithCredentials(email, password, safeCallbackUrl)
+
+            if (result.ok) {
+                // Session cookie is now set — navigate to callback URL
+                window.location.href = result.url || safeCallbackUrl
+            } else {
+                // Login failed — show generic error (don't reveal which field is wrong)
+                console.error('[Login] loginWithCredentials failed:', result.error)
+                setError(t('auth.errorInvalidCredentials'))
+                setIsLoading(false)
+            }
         } catch (err) {
-            console.error('[Login] signIn threw error:', err)
+            console.error('[Login] login threw error:', err)
             setError(t('common.error'))
             setIsLoading(false)
         }

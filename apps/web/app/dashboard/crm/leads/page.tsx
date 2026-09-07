@@ -31,13 +31,6 @@ const statusStyles: Record<string, string> = {
     unqualified: 'bg-gray-100 text-gray-500',
 }
 
-const statusLabels: Record<string, string> = {
-    new: 'Baru',
-    contacted: 'Dihubungi',
-    qualified: 'Kualifikasi',
-    unqualified: 'Tidak Layak',
-}
-
 const sourceColors: Record<string, string> = {
     Website: 'bg-blue-50 text-blue-700',
     Referral: 'bg-green-50 text-green-700',
@@ -70,8 +63,15 @@ export default function LeadsPage() {
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
-    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmTitle, setConfirmTitle] = useState('')
     const [confirmMessage, setConfirmMessage] = useState('')
+
+    const statusLabels: Record<string, string> = {
+        new: t('crm.leads.statusNew'),
+        contacted: t('crm.leads.statusContacted'),
+        qualified: t('crm.leads.statusQualified'),
+        unqualified: t('crm.leads.statusUnqualified'),
+    }
 
     // Create modal state
     const [showCreateModal, setShowCreateModal] = useState(false)
@@ -102,10 +102,10 @@ export default function LeadsPage() {
             if (data.success) {
                 setLeads(data.data)
             } else {
-                setError('Gagal memuat data leads')
+                setError(t('crm.leads.fetchFailed'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('crm.leads.fetchError'))
         } finally {
             setLoading(false)
         }
@@ -120,20 +120,20 @@ export default function LeadsPage() {
     })
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus lead ini?')
+        setConfirmTitle(t('crm.leads.confirmTitle'))
+        setConfirmMessage(t('crm.leads.confirmMessage'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/crm/leads/${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchLeads()
-                    setToast({ message: 'Lead berhasil dihapus', type: 'success' })
+                    setToast({ message: t('crm.leads.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: t('crm.leads.deleteFailed').replace('{error}', result.error), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus lead', type: 'error' })
+                setToast({ message: t('crm.leads.deleteError'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -150,13 +150,13 @@ export default function LeadsPage() {
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {}
         if (!form.name.trim()) {
-            errors.name = 'Nama wajib diisi'
+            errors.name = t('crm.leads.validationNameRequired')
         }
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-            errors.email = 'Format email tidak valid'
+            errors.email = t('crm.leads.validationEmailInvalid')
         }
         if (form.value && isNaN(Number(form.value))) {
-            errors.value = 'Nilai harus berupa angka'
+            errors.value = t('crm.leads.validationValueNumber')
         }
         setFormErrors(errors)
         return Object.keys(errors).length === 0
@@ -187,12 +187,12 @@ export default function LeadsPage() {
                 setShowCreateModal(false)
                 setForm(initialFormState)
                 fetchLeads()
-                setToast({ message: 'Lead berhasil dibuat', type: 'success' })
+                setToast({ message: t('crm.leads.createSuccess'), type: 'success' })
             } else {
-                setToast({ message: `Gagal membuat lead: ${result.error || 'Terjadi kesalahan'}`, type: 'error' })
+                setToast({ message: t('crm.leads.createFailed').replace('{error}', result.error || t('crm.leads.fetchError')), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal membuat lead', type: 'error' })
+            setToast({ message: t('crm.leads.createError'), type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -235,7 +235,7 @@ export default function LeadsPage() {
                         onClick={fetchLeads}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('crm.leads.retry')}
                     </button>
                 </div>
             </div>
@@ -273,23 +273,23 @@ export default function LeadsPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Leads</p>
+                    <p className="text-sm text-gray-500">{t('crm.leads.totalLeads')}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Baru</p>
+                    <p className="text-sm text-gray-500">{statusLabels.new}</p>
                     <p className="mt-1 text-2xl font-bold text-blue-600">{stats.new}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Dihubungi</p>
+                    <p className="text-sm text-gray-500">{statusLabels.contacted}</p>
                     <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.contacted}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Kualifikasi</p>
+                    <p className="text-sm text-gray-500">{statusLabels.qualified}</p>
                     <p className="mt-1 text-2xl font-bold text-green-600">{stats.qualified}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Nilai</p>
+                    <p className="text-sm text-gray-500">{t('crm.leads.totalValue')}</p>
                     <p className="mt-1 text-2xl font-bold text-purple-600">{formatCurrency(stats.totalValue)}</p>
                 </div>
             </div>
@@ -318,7 +318,7 @@ export default function LeadsPage() {
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            {status === 'all' ? 'Semua' : statusLabels[status] || status}
+                            {status === 'all' ? t('crm.leads.filterAll') : statusLabels[status] || status}
                         </button>
                     ))}
                 </div>
@@ -329,8 +329,8 @@ export default function LeadsPage() {
                 {filtered.length === 0 ? (
                     <EmptyState
                         icon={UserPlus}
-                        title={t('crm.leads.empty') || 'Belum ada lead'}
-                        description="Tambah lead pertama Anda untuk mulai melacak prospek penjualan"
+                        title={t('crm.leads.empty')}
+                        description={t('crm.leads.emptyDescription')}
                     />
                 ) : (
                     filtered.map((lead) => (
@@ -368,13 +368,13 @@ export default function LeadsPage() {
                             </div>
                             <div className="mt-3 flex gap-2">
                                 <Link href={`/dashboard/crm/leads/${lead.id}`} className="text-sm text-blue-600 hover:text-blue-800">
-                                    {t('common.view') || 'Lihat'}
+                                    {t('crm.leads.viewDetail')}
                                 </Link>
                                 <button
                                     onClick={() => handleDelete(lead.id)}
                                     className="text-sm text-red-600 hover:text-red-800"
                                 >
-                                    {t('common.delete') || 'Hapus'}
+                                    {t('crm.leads.confirmText')}
                                 </button>
                             </div>
                         </div>
@@ -404,8 +404,8 @@ export default function LeadsPage() {
                                     <td colSpan={8} className="px-4 py-12">
                                         <EmptyState
                                             icon={UserPlus}
-                                            title={t('crm.leads.empty') || 'Belum ada lead'}
-                                            description="Tambah lead pertama Anda untuk mulai melacak prospek penjualan"
+                                            title={t('crm.leads.empty')}
+                                            description={t('crm.leads.emptyDescription')}
                                         />
                                     </td>
                                 </tr>
@@ -436,7 +436,7 @@ export default function LeadsPage() {
                                                 <button
                                                     onClick={() => handleDelete(lead.id)}
                                                     className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                    title={t('crm.leads.confirmText')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -451,95 +451,95 @@ export default function LeadsPage() {
             </div>
 
             {/* Create Lead Modal */}
-            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title="Tambah Lead Baru" size="lg">
+            <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }} title={t('crm.leads.form.title')} size="lg">
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nama <span className="text-red-500">*</span>
+                            {t('crm.leads.form.nameLabel')} <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             name="name"
                             value={form.name}
                             onChange={handleFormChange}
-                            placeholder="Nama lead"
+                            placeholder={t('crm.leads.form.namePlaceholder')}
                             className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                         />
                         {formErrors.name && <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>}
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.emailLabel')}</label>
                             <input
                                 type="email"
                                 name="email"
                                 value={form.email}
                                 onChange={handleFormChange}
-                                placeholder="email@contoh.com"
+                                placeholder={t('crm.leads.form.emailPlaceholder')}
                                 className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
                             />
                             {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.phoneLabel')}</label>
                             <input
                                 type="text"
                                 name="phone"
                                 value={form.phone}
                                 onChange={handleFormChange}
-                                placeholder="08123456789"
+                                placeholder={t('crm.leads.form.phonePlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Perusahaan</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.companyLabel')}</label>
                             <input
                                 type="text"
                                 name="company"
                                 value={form.company}
                                 onChange={handleFormChange}
-                                placeholder="PT Maju Bersama"
+                                placeholder={t('crm.leads.form.companyPlaceholder')}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.sourceLabel')}</label>
                             <select
                                 name="source"
                                 value={form.source}
                                 onChange={handleFormChange}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                                <option value="">Pilih sumber</option>
+                                <option value="">{t('crm.leads.form.sourcePlaceholder')}</option>
                                 <option value="Website">Website</option>
                                 <option value="Referral">Referral</option>
                                 <option value="LinkedIn">LinkedIn</option>
                                 <option value="Google Ads">Google Ads</option>
                                 <option value="Facebook Ads">Facebook Ads</option>
                                 <option value="Event">Event</option>
-                                <option value="Lainnya">Lainnya</option>
+                                <option value="Lainnya">{t('crm.leads.form.sourceOther')}</option>
                             </select>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.statusLabel')}</label>
                             <select
                                 name="status"
                                 value={form.status}
                                 onChange={handleFormChange}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                                <option value="NEW">Baru</option>
-                                <option value="CONTACTED">Dihubungi</option>
-                                <option value="QUALIFIED">Kualifikasi</option>
-                                <option value="UNQUALIFIED">Tidak Layak</option>
+                                <option value="NEW">{t('crm.leads.statusNew')}</option>
+                                <option value="CONTACTED">{t('crm.leads.statusContacted')}</option>
+                                <option value="QUALIFIED">{t('crm.leads.statusQualified')}</option>
+                                <option value="UNQUALIFIED">{t('crm.leads.statusUnqualified')}</option>
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nilai (Rp)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.valueLabel')}</label>
                             <input
                                 type="number"
                                 name="value"
@@ -553,13 +553,13 @@ export default function LeadsPage() {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('crm.leads.form.notesLabel')}</label>
                         <textarea
                             name="notes"
                             value={form.notes}
                             onChange={handleFormChange}
                             rows={3}
-                            placeholder="Catatan tentang lead ini..."
+                            placeholder={t('crm.leads.form.notesPlaceholder')}
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
@@ -568,14 +568,14 @@ export default function LeadsPage() {
                             onClick={() => { setShowCreateModal(false); setForm(initialFormState); setFormErrors({}) }}
                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                            Batal
+                            {t('crm.leads.form.cancel')}
                         </button>
                         <button
                             onClick={handleCreateLead}
                             disabled={submitting}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submitting ? 'Menyimpan...' : 'Simpan Lead'}
+                            {submitting ? t('crm.leads.form.saving') : t('crm.leads.form.save')}
                         </button>
                     </div>
                 </div>
@@ -607,8 +607,8 @@ export default function LeadsPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('crm.leads.confirmText')}
+                cancelText={t('crm.leads.cancelText')}
                 variant="danger"
             />
         </div>

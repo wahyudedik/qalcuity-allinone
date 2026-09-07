@@ -2021,11 +2021,11 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
     const { t } = useTranslation()
 
     const accountTypeLabels: Record<string, string> = {
-        ASSET: 'Aset',
-        LIABILITY: 'Kewajiban',
-        EQUITY: 'Ekuitas',
-        REVENUE: 'Pendapatan',
-        EXPENSE: 'Beban',
+        ASSET: t('reports.trialBalance.accountTypes.ASSET'),
+        LIABILITY: t('reports.trialBalance.accountTypes.LIABILITY'),
+        EQUITY: t('reports.trialBalance.accountTypes.EQUITY'),
+        REVENUE: t('reports.trialBalance.accountTypes.REVENUE'),
+        EXPENSE: t('reports.trialBalance.accountTypes.EXPENSE'),
     }
 
     const accountTypeColors: Record<string, string> = {
@@ -2040,10 +2040,10 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
         <div className="space-y-6">
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard label="Total Debit" value={formatCurrency(data.totalDebit)} icon={<ArrowUpRight className="h-5 w-5" />} color="blue" />
-                <KPICard label="Total Kredit" value={formatCurrency(data.totalCredit)} icon={<ArrowDownRight className="h-5 w-5" />} color="red" />
-                <KPICard label="Selisih" value={formatCurrency(Math.abs(data.totalDebit - data.totalCredit))} icon={<DollarSign className="h-5 w-5" />} color={data.isBalanced ? 'green' : 'red'} />
-                <KPICard label="Status" value={data.isBalanced ? 'Seimbang ✓' : 'Tidak Seimbang ✗'} icon={<ClipboardList className="h-5 w-5" />} color={data.isBalanced ? 'green' : 'red'} />
+                <KPICard label={t('reports.trialBalance.totalDebit')} value={formatCurrency(data.totalDebit)} icon={<ArrowUpRight className="h-5 w-5" />} color="blue" />
+                <KPICard label={t('reports.trialBalance.totalCredit')} value={formatCurrency(data.totalCredit)} icon={<ArrowDownRight className="h-5 w-5" />} color="red" />
+                <KPICard label={t('reports.trialBalance.difference')} value={formatCurrency(Math.abs(data.totalDebit - data.totalCredit))} icon={<DollarSign className="h-5 w-5" />} color={data.isBalanced ? 'green' : 'red'} />
+                <KPICard label={t('reports.trialBalance.status')} value={data.isBalanced ? t('reports.trialBalance.balanced') : t('reports.trialBalance.unbalanced')} icon={<ClipboardList className="h-5 w-5" />} color={data.isBalanced ? 'green' : 'red'} />
             </div>
 
             {/* Balance indicator */}
@@ -2052,7 +2052,7 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
                     <div className="flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 text-red-500" />
                         <span className="text-sm text-red-700 dark:text-red-400 font-medium">
-                            Trial Balance tidak seimbang! Selisih: {formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
+                            {t('reports.trialBalance.unbalancedWarning').replace('{difference}', formatCurrency(Math.abs(data.totalDebit - data.totalCredit)))}
                         </span>
                     </div>
                 </div>
@@ -2076,15 +2076,15 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
                                 </div>
                                 <div className="grid grid-cols-3 gap-2 text-xs">
                                     <div>
-                                        <span className="text-gray-500 dark:text-gray-400">Debit: </span>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.trialBalance.debit')}: </span>
                                         <span className="text-gray-700 dark:text-gray-300 font-medium">{acc.totalDebit > 0 ? formatCurrency(acc.totalDebit) : '-'}</span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-500 dark:text-gray-400">Kredit: </span>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.trialBalance.credit')}: </span>
                                         <span className="text-gray-700 dark:text-gray-300 font-medium">{acc.totalCredit > 0 ? formatCurrency(acc.totalCredit) : '-'}</span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-500 dark:text-gray-400">Saldo: </span>
+                                        <span className="text-gray-500 dark:text-gray-400">{t('reports.trialBalance.balance')}: </span>
                                         <span className={`font-bold ${acc.balanceType === 'debit' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
                                             {formatCurrency(acc.balance)}
                                         </span>
@@ -2096,15 +2096,15 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
                         <div className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                             <div className="grid grid-cols-3 gap-2 text-sm font-semibold">
                                 <div>
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs">Total Debit: </span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">{t('reports.trialBalance.totalDebit')}: </span>
                                     <span className="text-blue-600 dark:text-blue-400">{formatCurrency(data.totalDebit)}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs">Total Kredit: </span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">{t('reports.trialBalance.totalCredit')}: </span>
                                     <span className="text-red-600 dark:text-red-400">{formatCurrency(data.totalCredit)}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs">Selisih: </span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">{t('reports.trialBalance.difference')}: </span>
                                     <span className={data.isBalanced ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                                         {formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
                                     </span>
@@ -2118,12 +2118,12 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Kode Akun</th>
-                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Nama Akun</th>
-                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Tipe</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Debit</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Kredit</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Saldo</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.trialBalance.accountCode')}</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.trialBalance.accountName')}</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.trialBalance.type')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.trialBalance.debit')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.trialBalance.credit')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.trialBalance.balance')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2152,12 +2152,12 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
                             </tbody>
                             <tfoot>
                                 <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600">
-                                    <td colSpan={3} className="py-3 px-4 text-gray-900 dark:text-gray-100">Total</td>
+                                    <td colSpan={3} className="py-3 px-4 text-gray-900 dark:text-gray-100">{t('reports.trialBalance.total')}</td>
                                     <td className="py-3 px-4 text-right text-blue-600 dark:text-blue-400">{formatCurrency(data.totalDebit)}</td>
                                     <td className="py-3 px-4 text-right text-red-600 dark:text-red-400">{formatCurrency(data.totalCredit)}</td>
                                     <td className="py-3 px-4 text-right">
                                         <span className={data.isBalanced ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                                            {data.isBalanced ? 'Seimbang ✓' : formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
+                                            {data.isBalanced ? t('reports.trialBalance.balanced') : formatCurrency(Math.abs(data.totalDebit - data.totalCredit))}
                                         </span>
                                     </td>
                                 </tr>
@@ -2166,7 +2166,7 @@ function TrialBalanceReport({ data }: { data: TrialBalanceData }) {
                     </div>
                 </>
             ) : (
-                <EmptyState message="Tidak ada data akun untuk periode ini" />
+                <EmptyState message={t('reports.trialBalance.noData')} />
             )}
         </div>
     )
@@ -2207,9 +2207,9 @@ function BalanceSheetReport({ data }: { data: BalanceSheetData }) {
         <div className="space-y-6">
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <KPICard label="Total Aset" value={formatCurrency(data.assets.total)} icon={<DollarSign className="h-5 w-5" />} color="blue" />
-                <KPICard label="Total Kewajiban" value={formatCurrency(data.liabilities.total)} icon={<ArrowDownRight className="h-5 w-5" />} color="red" />
-                <KPICard label="Total Ekuitas" value={formatCurrency(data.equity.total)} icon={<ArrowUpRight className="h-5 w-5" />} color="green" />
+                <KPICard label={t('reports.balanceSheet.totalAssets')} value={formatCurrency(data.assets.total)} icon={<DollarSign className="h-5 w-5" />} color="blue" />
+                <KPICard label={t('reports.balanceSheet.totalLiabilities')} value={formatCurrency(data.liabilities.total)} icon={<ArrowDownRight className="h-5 w-5" />} color="red" />
+                <KPICard label={t('reports.balanceSheet.totalEquity')} value={formatCurrency(data.equity.total)} icon={<ArrowUpRight className="h-5 w-5" />} color="green" />
             </div>
 
             {/* Balance indicator */}
@@ -2218,7 +2218,7 @@ function BalanceSheetReport({ data }: { data: BalanceSheetData }) {
                     <div className="flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 text-red-500" />
                         <span className="text-sm text-red-700 dark:text-red-400 font-medium">
-                            Neraca tidak seimbang! Aset: {formatCurrency(data.assets.total)} ≠ Kewajiban + Ekuitas: {formatCurrency(data.totalLiabilitiesAndEquity)}
+                            {t('reports.balanceSheet.unbalancedWarning').replace('{assets}', formatCurrency(data.assets.total)).replace('{total}', formatCurrency(data.totalLiabilitiesAndEquity))}
                         </span>
                     </div>
                 </div>
@@ -2230,12 +2230,12 @@ function BalanceSheetReport({ data }: { data: BalanceSheetData }) {
                 <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                         <Building2 className="h-5 w-5 text-blue-500" />
-                        Aset (Assets)
+                        {t('reports.balanceSheet.assets')}
                     </h3>
                     {renderSection(data.assets.current, 'text-blue-600 dark:text-blue-400')}
                     {renderSection(data.assets.nonCurrent, 'text-blue-600 dark:text-blue-400')}
                     <div className="flex items-center justify-between py-3 px-3 mt-2 border-t-2 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <span className="text-sm font-bold text-blue-700 dark:text-blue-300">Total Aset</span>
+                        <span className="text-sm font-bold text-blue-700 dark:text-blue-300">{t('reports.balanceSheet.totalAssets')}</span>
                         <span className="text-base font-bold text-blue-700 dark:text-blue-300">{formatCurrency(data.assets.total)}</span>
                     </div>
                 </div>
@@ -2244,13 +2244,13 @@ function BalanceSheetReport({ data }: { data: BalanceSheetData }) {
                 <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                         <Building2 className="h-5 w-5 text-red-500" />
-                        Kewajiban & Ekuitas
+                        {t('reports.balanceSheet.liabilitiesEquity')}
                     </h3>
                     {renderSection(data.liabilities.current, 'text-red-600 dark:text-red-400')}
                     {renderSection(data.liabilities.longTerm, 'text-red-600 dark:text-red-400')}
                     {renderSection(data.equity, 'text-purple-600 dark:text-purple-400')}
                     <div className="flex items-center justify-between py-3 px-3 mt-2 border-t-2 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                        <span className="text-sm font-bold text-red-700 dark:text-red-300">Total Kewajiban + Ekuitas</span>
+                        <span className="text-sm font-bold text-red-700 dark:text-red-300">{t('reports.balanceSheet.totalLiabilitiesEquity')}</span>
                         <span className="text-base font-bold text-red-700 dark:text-red-300">{formatCurrency(data.totalLiabilitiesAndEquity)}</span>
                     </div>
                 </div>
@@ -2270,10 +2270,10 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
         <div className="space-y-6">
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard label="Pendapatan" value={formatCurrency(data.revenue.total)} icon={<ArrowUpRight className="h-5 w-5" />} color="green" />
-                <KPICard label="HPP" value={formatCurrency(data.cogs.total)} icon={<ArrowDownRight className="h-5 w-5" />} color="orange" />
-                <KPICard label="Laba Kotor" value={formatCurrency(data.grossProfit)} icon={<DollarSign className="h-5 w-5" />} color={data.grossProfit >= 0 ? 'blue' : 'red'} />
-                <KPICard label="Laba Bersih" value={formatCurrency(data.netIncome)} icon={<DollarSign className="h-5 w-5" />} color={data.netIncome >= 0 ? 'green' : 'red'} />
+                <KPICard label={t('reports.incomeStatement.revenue')} value={formatCurrency(data.revenue.total)} icon={<ArrowUpRight className="h-5 w-5" />} color="green" />
+                <KPICard label={t('reports.incomeStatement.cogs')} value={formatCurrency(data.cogs.total)} icon={<ArrowDownRight className="h-5 w-5" />} color="orange" />
+                <KPICard label={t('reports.incomeStatement.grossProfit')} value={formatCurrency(data.grossProfit)} icon={<DollarSign className="h-5 w-5" />} color={data.grossProfit >= 0 ? 'blue' : 'red'} />
+                <KPICard label={t('reports.incomeStatement.netIncome')} value={formatCurrency(data.netIncome)} icon={<DollarSign className="h-5 w-5" />} color={data.netIncome >= 0 ? 'green' : 'red'} />
             </div>
 
             {/* Main Income Statement */}
@@ -2281,7 +2281,7 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
                 <div className="space-y-4">
                     {/* Revenue */}
                     <div>
-                        <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">Pendapatan Usaha (Revenue)</h4>
+                        <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">{t('reports.incomeStatement.revenueSection')}</h4>
                         {data.revenue.accounts.length > 0 ? (
                             <div className="space-y-1 ml-4">
                                 {data.revenue.accounts.map((acc) => (
@@ -2295,17 +2295,17 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">Tidak ada data</p>
+                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">{t('reports.incomeStatement.noData')}</p>
                         )}
                         <div className="flex items-center justify-between py-2 px-4 mt-1 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                            <span className="text-sm font-semibold text-green-700 dark:text-green-300">Total Pendapatan</span>
+                            <span className="text-sm font-semibold text-green-700 dark:text-green-300">{t('reports.incomeStatement.revenue')}</span>
                             <span className="text-sm font-bold text-green-700 dark:text-green-300">{formatCurrency(data.revenue.total)}</span>
                         </div>
                     </div>
 
                     {/* COGS */}
                     <div>
-                        <h4 className="text-sm font-semibold text-orange-600 dark:text-orange-400 mb-2">Harga Pokok Penjualan (COGS)</h4>
+                        <h4 className="text-sm font-semibold text-orange-600 dark:text-orange-400 mb-2">{t('reports.incomeStatement.cogsSection')}</h4>
                         {data.cogs.accounts.length > 0 ? (
                             <div className="space-y-1 ml-4">
                                 {data.cogs.accounts.map((acc) => (
@@ -2319,17 +2319,17 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">Tidak ada data</p>
+                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">{t('reports.incomeStatement.noData')}</p>
                         )}
                         <div className="flex items-center justify-between py-2 px-4 mt-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                            <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">Total HPP</span>
+                            <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">{t('reports.incomeStatement.cogs')}</span>
                             <span className="text-sm font-bold text-orange-700 dark:text-orange-300">{formatCurrency(data.cogs.total)}</span>
                         </div>
                     </div>
 
                     {/* Gross Profit */}
                     <div className="flex items-center justify-between py-3 px-4 border-t-2 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Laba Kotor (Gross Profit)</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{t('reports.incomeStatement.grossProfitLabel')}</span>
                         <span className={`text-base font-bold ${data.grossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                             {formatCurrency(data.grossProfit)}
                         </span>
@@ -2337,7 +2337,7 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
 
                     {/* Operating Expenses */}
                     <div>
-                        <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Biaya Operasional</h4>
+                        <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">{t('reports.incomeStatement.operatingExpenses')}</h4>
                         {data.operatingExpenses.accounts.length > 0 ? (
                             <div className="space-y-1 ml-4">
                                 {data.operatingExpenses.accounts.map((acc) => (
@@ -2351,17 +2351,17 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">Tidak ada data</p>
+                            <p className="text-sm text-gray-400 dark:text-gray-500 ml-4">{t('reports.incomeStatement.noData')}</p>
                         )}
                         <div className="flex items-center justify-between py-2 px-4 mt-1 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                            <span className="text-sm font-semibold text-red-700 dark:text-red-300">Total Biaya Operasional</span>
+                            <span className="text-sm font-semibold text-red-700 dark:text-red-300">{t('reports.incomeStatement.totalOperatingExpenses')}</span>
                             <span className="text-sm font-bold text-red-700 dark:text-red-300">{formatCurrency(data.operatingExpenses.total)}</span>
                         </div>
                     </div>
 
                     {/* Operating Income */}
                     <div className="flex items-center justify-between py-3 px-4 border-t-2 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Laba Operasional (Operating Income)</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{t('reports.incomeStatement.operatingIncome')}</span>
                         <span className={`text-base font-bold ${data.operatingIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                             {formatCurrency(data.operatingIncome)}
                         </span>
@@ -2373,7 +2373,7 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
                             <div className="grid grid-cols-2 gap-4">
                                 {data.nonOperatingIncome.total !== 0 && (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">Pendapatan Non-Operasional</h4>
+                                        <h4 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">{t('reports.incomeStatement.nonOperatingIncome')}</h4>
                                         {data.nonOperatingIncome.accounts.map((acc) => (
                                             <div key={acc.accountId} className="flex items-center justify-between py-1 ml-4">
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">{acc.accountName}</span>
@@ -2384,7 +2384,7 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
                                 )}
                                 {data.nonOperatingExpenses.total !== 0 && (
                                     <div>
-                                        <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Beban Non-Operasional</h4>
+                                        <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">{t('reports.incomeStatement.nonOperatingExpenses')}</h4>
                                         {data.nonOperatingExpenses.accounts.map((acc) => (
                                             <div key={acc.accountId} className="flex items-center justify-between py-1 ml-4">
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">{acc.accountName}</span>
@@ -2399,7 +2399,7 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
 
                     {/* Net Income */}
                     <div className="flex items-center justify-between py-4 px-4 border-t-2 border-gray-300 dark:border-gray-500 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                        <span className="text-base font-bold text-gray-900 dark:text-gray-100">Laba Bersih (Net Income)</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-gray-100">{t('reports.incomeStatement.netIncomeLabel')}</span>
                         <span className={`text-xl font-bold ${data.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                             {formatCurrency(data.netIncome)}
                         </span>
@@ -2410,17 +2410,17 @@ function IncomeStatementReport({ data }: { data: IncomeStatementData }) {
             {/* Period Breakdown */}
             {data.byPeriod.length > 1 && (
                 <div className="p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">Breakdown Periode</h3>
+                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">{t('reports.incomeStatement.periodBreakdown')}</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Periode</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Pendapatan</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">HPP</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Laba Kotor</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Biaya Ops</th>
-                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Laba Bersih</th>
+                                    <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.incomeStatement.period')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.incomeStatement.revenue')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.incomeStatement.hpp')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.incomeStatement.grossProfit')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.incomeStatement.opsExpenses')}</th>
+                                    <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">{t('reports.incomeStatement.netIncome')}</th>
                                 </tr>
                             </thead>
                             <tbody>

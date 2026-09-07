@@ -12,6 +12,65 @@ interface Providers {
 }
 
 /**
+ * Direct fetch login — bypasses next-auth/react signIn() which sends
+ * `json: true` in the POST body. That causes NextAuth to return HTTP 200
+ * JSON instead of HTTP 302 redirect with Set-Cookie, so the session
+ * cookie is never stored and login always fails in the browser.
+ *
+ * This function instead:
+ * 1. Fetches a fresh CSRF token from /api/auth/csrf
+ * 2. POSTs to /api/auth/callback/credentials WITHOUT json:true
+ * 3. Uses redirect:'follow' + credentials:'include' so the browser
+ *    follows the 302 redirect and processes the Set-Cookie header
+ * 4. Returns the final URL after redirect chain completes
+ */
+async function loginWithCredentials(
+    email: string,
+    password: string,
+    callbackUrl: string
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+    try {
+        // Step 1: Get fresh CSRF token
+        const csrfRes = await fetch('/api/auth/csrf', {
+            credentials: 'include',
+        })
+        if (!csrfRes.ok) {
+            return { ok: false, error: 'Failed to get CSRF token' }
+        }
+        const { csrfToken } = await csrfRes.json()
+
+        // Step 2: POST credentials WITHOUT json:true
+        // This causes the server to return 302 redirect with Set-Cookie
+        const res = await fetch('/api/auth/callback/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                email,
+                password,
+                csrfToken,
+                callbackUrl,
+                // Intentionally OMITTING `json: true` — this is the fix.
+                // signIn() from next-auth/react sends json:true which causes
+                // the server to return 200 JSON without Set-Cookie.
+            }),
+            redirect: 'follow',   // Follow 302 → processes Set-Cookie
+            credentials: 'include', // Include/send cookies
+        })
+
+        if (!res.ok) {
+            return { ok: false, error: `HTTP ${res.status}` }
+        }
+
+        // Step 3: After redirect chain, navigate to callback URL
+        // The session cookie has been set by the 302 redirect response
+        return { ok: true, url: callbackUrl }
+    } catch (err) {
+        console.error('[Auth] loginWithCredentials error:', err)
+        return { ok: false, error: String(err) }
+    }
+}
+
+/**
  * Unregister any existing Service Workers and clear all caches.
  * This fixes issues where an old cached SW intercepts auth requests
  * and drops Set-Cookie headers, preventing login after registration.
@@ -20,28 +79,40 @@ interface Providers {
  * Must be awaited before performing signIn() to ensure the browser
  * handles auth requests directly without SW interference.
  */
-function unregisterOldServiceWorkers(): Promise<void> {
+function unregisterOldServiceWorkers(): Promise<boolean> {
     if (!('serviceWorker' in navigator)) {
-        return Promise.resolve()
+        return Promise.resolve(true)
     }
 
     return navigator.serviceWorker.getRegistrations()
         .then(async (registrations) => {
+            if (registrations.length === 0) {
+                console.log('[Auth] No Service Workers registered')
+                return true
+            }
+
             for (const registration of registrations) {
-                console.log('[Auth] Unregistering old SW:', registration.scope)
-                registration.unregister()
+                console.log('[Auth] Unregistering SW:', registration.scope)
+                const success = await registration.unregister()
+                console.log('[Auth] SW unregister result:', success)
             }
 
             if ('caches' in window) {
                 const cacheNames = await caches.keys()
                 await Promise.all(
-                    cacheNames.map((name) => caches.delete(name))
+                    cacheNames.map((name) => {
+                        console.log('[Auth] Clearing cache:', name)
+                        return caches.delete(name)
+                    })
                 )
-                console.log('[Auth] Cleared all caches:', cacheNames.length, 'caches removed')
+                console.log('[Auth] Cleared', cacheNames.length, 'caches')
             }
+
+            return true
         })
-        .catch(() => {
-            // Silently ignore — SW unregistration is best-effort
+        .catch((err) => {
+            console.warn('[Auth] SW unregistration error (best-effort):', err)
+            return false
         })
 }
 
@@ -65,7 +136,11 @@ export default function RegisterPage() {
     // Old cached SWs can intercept /api/auth/ requests and drop Set-Cookie headers,
     // which breaks the auto-login flow after registration.
     useEffect(() => {
-        unregisterOldServiceWorkers().then(() => setSwReady(true))
+        console.log('[Auth] Register page loaded — unregistering old SWs...')
+        unregisterOldServiceWorkers().then((success) => {
+            console.log('[Auth] SW cleanup complete, success:', success)
+            setSwReady(true)
+        })
     }, [])
 
     // Fetch available auth providers from server
@@ -123,25 +198,48 @@ export default function RegisterPage() {
                 return
             }
 
-            // Wait for SW unregistration to complete before signIn.
+            // Wait for SW unregistration to complete before auto-login.
             // An active SW can intercept the POST /api/auth/callback/credentials request
             // and drop the Set-Cookie header, breaking the entire login flow.
             if (!swReady) {
                 await unregisterOldServiceWorkers()
             }
 
+            // DIAGNOSTIC: Check if any SW is still active
+            const swStillActive = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller
+            console.log('[Auth] SW still active before auto-login:', swStillActive)
+
+            if (swStillActive) {
+                console.warn('[Auth] WARNING: SW is still active! Auth may fail.')
+                const reg = await navigator.serviceWorker.getRegistration('/')
+                if (reg?.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+                    console.log('[Auth] Sent SKIP_WAITING to waiting SW')
+                }
+            }
+
             // Auto login setelah register
-            // FIX: Use signIn() with default redirect (redirect:true) to ensure
-            // the browser processes Set-Cookie headers from the 302 response.
-            // Previously used redirect:false which uses fetch() with redirect:'manual',
-            // preventing the browser from storing the session cookie.
-            await signIn('credentials', {
-                email: formData.email,
-                password: formData.password,
-                callbackUrl: '/dashboard?onboard=true',
-            })
-            // Note: If signIn succeeds, the browser navigates to /dashboard?onboard=true
-            // If signIn fails, NextAuth redirects to /login?error=...
+            // FIX: Use direct fetch instead of signIn() from next-auth/react.
+            // signIn() internally sends `json: true` which causes NextAuth to return
+            // HTTP 200 JSON without Set-Cookie. The session cookie is never stored,
+            // and the user is redirected back to /login by middleware.
+            const callbackUrl = '/dashboard?onboard=true'
+            const result = await loginWithCredentials(
+                formData.email,
+                formData.password,
+                callbackUrl
+            )
+
+            if (result.ok) {
+                // Session cookie is now set — navigate to dashboard
+                window.location.href = result.url || callbackUrl
+            } else {
+                // Auto-login failed after registration
+                console.error('[Register] Auto-login failed:', result.error)
+                // Registration succeeded but login failed — redirect to login page
+                // so user can manually login
+                window.location.href = '/login?email=' + encodeURIComponent(formData.email)
+            }
         } catch (err) {
             setError(t('common.error'))
         } finally {

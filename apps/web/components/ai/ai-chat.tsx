@@ -20,7 +20,7 @@ export function AIChat() {
             id: '1',
             role: 'assistant',
             content: t('ai.welcomeMessage') || 'Halo! Saya adalah AI Assistant Qalcuity. Saya bisa membantu Anda dengan:\n\n• Menampilkan data penjualan\n• Membuat invoice\n• Menganalisis profit & loss\n• Memberikan insight bisnis\n\nAda yang bisa saya bantu?',
-            timestamp: new Date(),
+            timestamp: new Date('2024-01-01T00:00:00.000Z'),
         },
     ]);
     const [input, setInput] = useState('');

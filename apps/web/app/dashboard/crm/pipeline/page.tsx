@@ -24,17 +24,17 @@ type Stage = {
     deals: Deal[]
 }
 
-const stageConfig = [
-    { id: 'DISCOVERY', name: 'Discovery', color: 'bg-blue-500', bgColor: 'bg-blue-50' },
-    { id: 'PROPOSAL', name: 'Proposal', color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
-    { id: 'NEGOTIATION', name: 'Negosiasi', color: 'bg-orange-500', bgColor: 'bg-orange-50' },
-    { id: 'CLOSING', name: 'Closing', color: 'bg-purple-500', bgColor: 'bg-purple-50' },
-    { id: 'CLOSED_WON', name: 'Won', color: 'bg-green-500', bgColor: 'bg-green-50' },
-    { id: 'CLOSED_LOST', name: 'Lost', color: 'bg-red-500', bgColor: 'bg-red-50' },
-]
-
 export default function PipelinePage() {
     const { t } = useTranslation()
+
+    const stageConfig = [
+        { id: 'DISCOVERY', name: t('crm.deals.stages.DISCOVERY'), color: 'bg-blue-500', bgColor: 'bg-blue-50' },
+        { id: 'PROPOSAL', name: t('crm.deals.stages.PROPOSAL'), color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
+        { id: 'NEGOTIATION', name: t('crm.deals.stages.NEGOTIATION'), color: 'bg-orange-500', bgColor: 'bg-orange-50' },
+        { id: 'CLOSING', name: t('crm.deals.stages.CLOSING'), color: 'bg-purple-500', bgColor: 'bg-purple-50' },
+        { id: 'CLOSED_WON', name: t('crm.deals.stages.CLOSED_WON'), color: 'bg-green-500', bgColor: 'bg-green-50' },
+        { id: 'CLOSED_LOST', name: t('crm.deals.stages.CLOSED_LOST'), color: 'bg-red-500', bgColor: 'bg-red-50' },
+    ]
     const [deals, setDeals] = useState<Deal[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -230,7 +230,7 @@ export default function PipelinePage() {
                                             <span className="ml-1 font-medium text-green-600">{formatCurrency(Number(deal.value) * deal.probability / 100)}</span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500 dark:text-gray-400">Owner:</span>
+                                            <span className="text-gray-500 dark:text-gray-400">{t('crm.pipeline.table.owner')}:</span>
                                             <span className="ml-1">{deal.assignedTo || '-'}</span>
                                         </div>
                                     </div>

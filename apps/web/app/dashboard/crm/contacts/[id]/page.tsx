@@ -161,7 +161,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                             <Mail className="h-4 w-4" />
-                            Kirim Email
+                            {t('crm.contactDetail.sendEmail')}
                         </button>
                     )}
                     {canMutate && (
@@ -201,7 +201,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                                 : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            Detail
+                            {t('crm.contactDetail.tabDetails')}
                         </button>
                         <button
                             onClick={() => setActiveTab('activities')}
@@ -211,7 +211,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                                 }`}
                         >
                             <MessageSquare className="inline h-4 w-4 mr-1" />
-                            Aktivitas
+                            {t('crm.contactDetail.tabActivities')}
                         </button>
                     </div>
 
@@ -314,7 +314,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                     onConfirm={confirmDelete}
                     title={t('crm.contactDetail.confirmDelete') || 'Hapus Kontak'}
                     message={t('crm.contactDetail.confirmDelete') || 'Apakah Anda yakin ingin menghapus kontak ini?'}
-                    confirmText="Hapus"
+                    confirmText={t('crm.contactDetail.confirmText')}
                     variant="danger"
                 />
             </div>
