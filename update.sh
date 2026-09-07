@@ -3,7 +3,7 @@
 # Qalcuity All-in-One — VPS Update Script
 # ============================================================================
 # Deployment: aaPanel Node.js Project Manager
-# Process Manager: aaPanel (NOT PM2)
+# Process Manager: aaPanel + PM2 (fallback)
 # App Port: 3000
 # App URL: https://qalcuity.com
 # ============================================================================
@@ -232,7 +232,7 @@ print_success "Cache .next dibersihkan"
 pnpm build
 print_success "Build berhasil"
 
-# --- 8. Restart Application (aaPanel) ---
+# --- 8. Restart Application ---
 print_step "8/8 - Restarting Application..."
 
 # Kill existing process on port
@@ -242,14 +242,31 @@ if command -v fuser &> /dev/null; then
     sleep 3
 fi
 
-# aaPanel auto-restart: touch the project config to trigger restart
-# OR: aaPanel monitors the directory, so just ensure build is fresh
-print_success "Build complete. aaPanel will auto-restart the application."
-
-# Alternative: If aaPanel doesn't auto-restart, try these:
-# - Go to aaPanel → Website → Node.js Project → click Restart
-# - OR: pm2 restart qalcuity-web (if PM2 is also installed as backup)
-sleep 5
+# Restart via PM2 (aaPanel uses PM2 internally)
+if command -v pm2 &> /dev/null; then
+    echo -e "${YELLOW}   Restarting via PM2...${NC}"
+    if pm2 restart all 2>/dev/null; then
+        print_success "PM2: All processes restarted"
+    elif pm2 start ecosystem.config.js 2>/dev/null; then
+        print_success "PM2: Started from ecosystem.config.js"
+    else
+        echo -e "${YELLOW}   PM2 restart failed, trying direct start...${NC}"
+        cd "$APP_DIR/apps/web"
+        export PRISMA_QUERY_ENGINE_TYPE=library
+        nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
+        cd "$APP_DIR"
+        print_success "Started application directly via nohup"
+    fi
+    sleep 5
+else
+    echo -e "${YELLOW}   PM2 not found, starting directly...${NC}"
+    cd "$APP_DIR/apps/web"
+    export PRISMA_QUERY_ENGINE_TYPE=library
+    nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
+    cd "$APP_DIR"
+    print_success "Started application directly via nohup"
+    sleep 5
+fi
 
 # Health check dengan retry
 MAX_RETRIES=5
