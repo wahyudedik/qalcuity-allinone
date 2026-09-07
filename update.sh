@@ -166,41 +166,60 @@ fi
 
 # --- 6. Prisma generate + migrate (SELALU sebelum build) ---
 print_step "6/8 - Prisma generate & migrate"
+echo -e "${YELLOW}----------------------------------------${NC}"
 
-# Prisma generate SELALU dijalankan — memastikan Prisma Client up-to-date
-# (baik schema berubah maupun tidak, termasuk fresh deploy / corrupted client)
 cd "$APP_DIR/packages/db"
-npx prisma generate
-cd "$APP_DIR"
-print_success "Prisma Client di-generate"
 
-# Prisma migrate deploy jika schema ATAU migration files berubah
-# Migration files baru bisa ada tanpa perubahan schema.prisma (ALTER TABLE, CREATE TABLE via SQL)
-NEEDS_MIGRATE=false
-if echo "$CHANGED_FILES" | grep -q "schema.prisma"; then
-    NEEDS_MIGRATE=true
-fi
-if echo "$CHANGED_FILES" | grep -q "packages/db/prisma/migrations/"; then
-    NEEDS_MIGRATE=true
-fi
-
-if [ "$NEEDS_MIGRATE" = true ]; then
-    cd "$APP_DIR/packages/db"
-    echo "  Running prisma migrate deploy..."
-    npx prisma migrate deploy
-    MIGRATE_EXIT=$?
+# Generate Prisma Client
+if npx prisma generate; then
+    echo -e "${GREEN}✅ Prisma Client di-generate${NC}"
+else
+    echo -e "${RED}❌ Prisma generate gagal${NC}"
     cd "$APP_DIR"
-    if [ $MIGRATE_EXIT -eq 0 ]; then
-        print_success "Prisma migrations di-deploy ke database"
+    exit 1
+fi
+
+# Deploy migrations dengan retry untuk failed migrations (handle P3009)
+echo "  Running prisma migrate deploy..."
+MIGRATE_EXIT=0
+MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1) || MIGRATE_EXIT=$?
+
+if [ $MIGRATE_EXIT -ne 0 ]; then
+    # Check if it's a P3009 error (failed migrations blocking new ones)
+    if echo "$MIGRATE_OUTPUT" | grep -q "P3009"; then
+        echo -e "${YELLOW}⚠️ Ditemukan migration yang gagal sebelumnya, mencoba resolve...${NC}"
+        echo "$MIGRATE_OUTPUT" | head -5
+
+        # Extract failed migration names and resolve them
+        # P3009 message format: "The `migration_name` migration ..."
+        FAILED_MIGRATIONS=$(echo "$MIGRATE_OUTPUT" | grep -oP 'The `\K[^`]+(?=` migration)' || true)
+
+        for MIGRATION in $FAILED_MIGRATIONS; do
+            echo -e "${YELLOW}   Resolving: $MIGRATION${NC}"
+            npx prisma migrate resolve --rolled-back "$MIGRATION" 2>&1 || true
+        done
+
+        # Retry migration
+        echo -e "${YELLOW}   Retrying migration deploy...${NC}"
+        RETRY_EXIT=0
+        RETRY_OUTPUT=$(npx prisma migrate deploy 2>&1) || RETRY_EXIT=$?
+        if [ $RETRY_EXIT -eq 0 ]; then
+            echo -e "${GREEN}✅ Migration berhasil setelah resolve${NC}"
+        else
+            echo -e "${RED}❌ Migration masih gagal setelah resolve:${NC}"
+            echo "$RETRY_OUTPUT" | head -10
+            echo -e "${RED}   Cek manual: cd packages/db && npx prisma migrate status${NC}"
+        fi
     else
-        print_warning "Prisma migrate deploy returned exit code $MIGRATE_EXIT"
-        echo "  ⚠️  Mungkin ada migration yang sudah apply atau conflict."
-        echo "  Cek log database untuk detail."
-        # Don't exit — allow build to continue (migration might already be applied)
+        echo -e "${YELLOW}⚠️ Prisma migrate deploy error (bukan P3009):${NC}"
+        echo "$MIGRATE_OUTPUT" | head -10
+        echo -e "${YELLOW}ℹ️ Melanjutkan — mungkin migration sudah apply atau conflict${NC}"
     fi
 else
-    print_success "Schema & migrations tidak berubah, skip migrate"
+    echo -e "${GREEN}✅ Migrations berhasil di-deploy ke database${NC}"
 fi
+
+cd "$APP_DIR"
 
 # --- 7. Build aplikasi ---
 print_step "7/8 - Build aplikasi"
