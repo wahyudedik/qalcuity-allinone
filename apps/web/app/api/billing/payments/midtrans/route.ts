@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         const orderId = `QAL-${tenantId.substring(0, 8)}-${timestamp}`;
 
         // Tentukan callback URL
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
         const callbackUrl = `${appUrl}/dashboard/billing?payment=success&orderId=${orderId}`;
 
         // Hitung total amount (price × 1 bulan)

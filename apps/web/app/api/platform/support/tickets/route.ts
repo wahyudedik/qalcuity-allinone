@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 
@@ -9,13 +8,12 @@ import { handleApiError } from "@/lib/api-error";
 // SUPERADMIN sees all tickets; other roles see only their tenant's tickets.
 export async function GET(request: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        // 1. Auth + RBAC check — SUPERADMIN only
+        const auth = await requirePermissionForRoute(request);
+        if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-        const role = (session.user as { role?: string }).role;
-        const tenantId = (session.user as { tenantId?: string }).tenantId;
+        const role = auth.role;
+        const tenantId = auth.tenantId;
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get("status") || "";
@@ -117,18 +115,13 @@ export async function GET(request: Request) {
 // Create a new support ticket (stored as AuditLog entry).
 export async function POST(request: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        // 1. Auth + RBAC check — SUPERADMIN only
+        const auth = await requirePermissionForRoute(request);
+        if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-        const role = (session.user as { role?: string }).role;
-        const userId = (session.user as { id?: string }).id;
-        const tenantId = (session.user as { tenantId?: string }).tenantId;
-
-        if (!userId || !tenantId) {
-            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
-        }
+        const role = auth.role;
+        const userId = auth.userId;
+        const tenantId = auth.tenantId;
 
         const body = await request.json();
         const { subject, message, priority, category } = body;
@@ -151,7 +144,7 @@ export async function POST(request: Request) {
                     message,
                     priority: priority || "medium",
                     category: category || "General",
-                    createdBy: session.user?.name || "User",
+                    createdBy: "Platform Admin",
                 }),
                 ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
                 userAgent: request.headers.get("user-agent") || "unknown",

@@ -136,7 +136,7 @@ export async function notifyApprover(
         const companyName = tenant?.name || 'Qalcuity';
         const approverName = approver.name || 'Approver';
         const requesterName = requester?.name || 'Unknown';
-        const dashboardUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000') + '/dashboard/settings/workflow';
+        const dashboardUrl = (process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000')) + '/dashboard/settings/workflow';
 
         const amountRow = entityInfo.amount !== null
             ? tableRow('Total', formatAmount(entityInfo.amount), true)
@@ -239,7 +239,7 @@ export async function notifyRequester(
         const companyName = tenant?.name || 'Qalcuity';
         const levelName = level?.name || ('Level ' + request.currentLevel);
         const requesterName = requester.name || 'User';
-        const dashboardUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000') + '/dashboard/settings/workflow';
+        const dashboardUrl = (process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000')) + '/dashboard/settings/workflow';
 
         // Status config
         const statusConfig: Record<string, { color: string; label: string; icon: string }> = {

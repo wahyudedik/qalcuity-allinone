@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useProjects, type TimesheetData, type TimeLogEntry } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useToast } from '@/components/ui/toast';
 
 // =============================================================================
 // Constants
@@ -176,8 +177,8 @@ function TimesheetGrid({
                                     <th
                                         key={i}
                                         className={`px-3 py-3 text-center text-xs font-semibold min-w-[80px] ${isWeekend
-                                                ? 'text-gray-400 bg-gray-100 dark:text-gray-500 dark:bg-gray-700'
-                                                : 'text-gray-600 dark:text-gray-400'
+                                            ? 'text-gray-400 bg-gray-100 dark:text-gray-500 dark:bg-gray-700'
+                                            : 'text-gray-600 dark:text-gray-400'
                                             }`}
                                     >
                                         <div>{viewMode === 'weekly' ? DAY_NAMES[i] : day.getDate()}</div>
@@ -264,6 +265,7 @@ function TimesheetGrid({
 
 export default function TimesheetPage() {
     const { timesheet, loading, error, fetchTimesheet } = useProjects();
+    const { addToast } = useToast();
     const [viewMode, setViewMode] = useState<ViewMode>('weekly');
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -348,7 +350,7 @@ export default function TimesheetPage() {
                     </div>
                 </div>
                 <button
-                    onClick={() => alert('Export fitur akan segera hadir')}
+                    onClick={() => addToast('Fitur export akan segera hadir', 'info')}
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                 >
                     <Download className="h-4 w-4" />
@@ -365,8 +367,8 @@ export default function TimesheetPage() {
                             key={mode}
                             onClick={() => setViewMode(mode)}
                             className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${viewMode === mode
-                                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                                 }`}
                         >
                             {mode === 'weekly' ? 'Mingguan' : 'Bulanan'}

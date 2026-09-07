@@ -87,31 +87,26 @@ function unregisterOldServiceWorkers(): Promise<boolean> {
     return navigator.serviceWorker.getRegistrations()
         .then(async (registrations) => {
             if (registrations.length === 0) {
-                console.log('[Auth] No Service Workers registered')
                 return true
             }
 
             for (const registration of registrations) {
-                console.log('[Auth] Unregistering SW:', registration.scope)
                 const success = await registration.unregister()
-                console.log('[Auth] SW unregister result:', success)
+                void success
             }
 
             if ('caches' in window) {
                 const cacheNames = await caches.keys()
                 await Promise.all(
                     cacheNames.map((name) => {
-                        console.log('[Auth] Clearing cache:', name)
                         return caches.delete(name)
                     })
                 )
-                console.log('[Auth] Cleared', cacheNames.length, 'caches')
             }
 
             return true
         })
-        .catch((err) => {
-            console.warn('[Auth] SW unregistration error (best-effort):', err)
+        .catch(() => {
             return false
         })
 }
@@ -136,9 +131,7 @@ export default function RegisterPage() {
     // Old cached SWs can intercept /api/auth/ requests and drop Set-Cookie headers,
     // which breaks the auto-login flow after registration.
     useEffect(() => {
-        console.log('[Auth] Register page loaded — unregistering old SWs...')
         unregisterOldServiceWorkers().then((success) => {
-            console.log('[Auth] SW cleanup complete, success:', success)
             setSwReady(true)
         })
     }, [])
@@ -205,16 +198,13 @@ export default function RegisterPage() {
                 await unregisterOldServiceWorkers()
             }
 
-            // DIAGNOSTIC: Check if any SW is still active
+            // Check if any SW is still active
             const swStillActive = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller
-            console.log('[Auth] SW still active before auto-login:', swStillActive)
 
             if (swStillActive) {
-                console.warn('[Auth] WARNING: SW is still active! Auth may fail.')
                 const reg = await navigator.serviceWorker.getRegistration('/')
                 if (reg?.waiting) {
                     reg.waiting.postMessage({ type: 'SKIP_WAITING' })
-                    console.log('[Auth] Sent SKIP_WAITING to waiting SW')
                 }
             }
 

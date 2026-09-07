@@ -56,13 +56,18 @@ export async function GET(request: Request) {
         }
 
         // Fallback: return status berdasarkan env vars (backward compatibility)
+        const isProduction = process.env.NODE_ENV === 'production';
+        const aiProvider = process.env.AI_PROVIDER || 'mock';
         const envIntegrations = {
             whatsapp: !!process.env.WHATSAPP_API_KEY,
             email: !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS,
             midtrans: !!process.env.MIDTRANS_SERVER_KEY,
             xendit: !!process.env.XENDIT_SECRET_KEY,
-            ai: !!process.env.AI_API_KEY && process.env.AI_PROVIDER !== 'mock',
+            ai: !!process.env.AI_API_KEY && (isProduction ? aiProvider !== 'mock' : true),
             payment: !!process.env.MIDTRANS_SERVER_KEY || !!process.env.XENDIT_SECRET_KEY,
+            _warnings: isProduction && aiProvider === 'mock'
+                ? ['AI provider is set to mock in production. Configure a real AI provider.']
+                : [],
         }
 
         return NextResponse.json({

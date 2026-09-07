@@ -71,6 +71,14 @@ export async function POST(request: Request) {
     // Determine provider from request or env
     const providerName = validatedData.provider || process.env.PAYMENT_PROVIDER || 'mock';
 
+    // Guard: reject mock provider in production
+    if (process.env.NODE_ENV === 'production' && providerName === 'mock') {
+      return NextResponse.json(
+        { success: false, error: 'Payment provider not configured. Please configure a real payment provider in production.' },
+        { status: 500 }
+      );
+    }
+
     // Create order ID
     const orderId = `ORD-${invoice.invoiceNumber}-${Date.now()}`;
 
@@ -94,7 +102,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/finance/invoices/${invoice.id}`,
+      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000')}/dashboard/finance/invoices/${invoice.id}`,
     });
 
     if (!gatewayResult.success) {

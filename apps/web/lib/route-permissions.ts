@@ -82,6 +82,16 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/ai/extract': { permission: 'ai.extract', fallbackRole: 'MEMBER' },
     '/api/ai/anomalies': { permission: 'ai.anomaly', fallbackRole: 'ADMIN' },
     '/api/ai/health': { permission: 'ai.read', fallbackRole: 'MEMBER' },
+
+    // ─── Platform Admin ──────────────────────────────────────────────────
+    '/api/platform/tenants': { permission: 'platform.tenant', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/stats': { permission: 'platform.stats', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/monitoring': { permission: 'platform.monitoring', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/settings': { permission: 'platform.settings', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/plans': { permission: 'platform.plan', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/billing': { permission: 'platform.billing', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/support': { permission: 'platform.support', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/security': { permission: 'platform.security', fallbackRole: 'SUPERADMIN' },
 };
 
 /**

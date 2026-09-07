@@ -4729,7 +4729,9 @@
             "statusCancelled": "dibatalkan",
             "justNow": "baru saja",
             "secondsAgo": "d lalu",
-            "minutesAgo": "m lalu"
+            "minutesAgo": "m lalu",
+            "cancelTitle": "Batalkan Pesanan",
+            "cancelConfirm": "Apakah Anda yakin ingin membatalkan pesanan ini?"
         }
     },
     "operations": {

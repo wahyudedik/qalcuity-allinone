@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 6, 2026 (Quality Sprint: Error Boundaries, Loading States, i18n Migration)
+**Last Updated:** September 7, 2026 (Quality Sprint v9.5.0: CRITICAL/HIGH/MEDIUM fixes + 14 error boundaries)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 14.1 — Quality Sprint Complete (63 error boundaries, 94 loading states, 1100+ i18n keys)
+**Document Version:** 14.2 — Quality Sprint v9.5.0 Complete (77 error boundaries, permission engine 9 routes, mock guard production)
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.

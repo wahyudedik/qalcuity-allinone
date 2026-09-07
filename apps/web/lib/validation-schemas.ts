@@ -1423,3 +1423,14 @@ export const aiAnomalyQuerySchema = z.object({
     limit: z.number().int().min(1).max(100).optional(),
     offset: z.number().int().min(0).optional(),
 });
+
+// ============================================
+// Notification Schemas
+// ============================================
+
+export const updateNotificationSchema = z.object({
+    ids: z.array(z.string().uuid('ID notifikasi tidak valid')).optional(),
+    markAll: z.boolean().optional(),
+}).refine((data) => data.ids || data.markAll, {
+    message: 'Harus menyediakan array ids atau markAll=true',
+});

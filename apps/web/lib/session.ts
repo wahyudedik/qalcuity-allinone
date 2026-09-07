@@ -184,8 +184,7 @@ export async function requirePermissionForRoute(req: Request): Promise<Permissio
         pathname === '/api/health' ||
         pathname === '/api/search' ||
         pathname === '/api/demo/load' ||
-        pathname === '/api/dashboard/stats' ||
-        pathname.startsWith('/api/platform')
+        pathname === '/api/dashboard/stats'
     ) {
         return {
             userId: session.user.id,

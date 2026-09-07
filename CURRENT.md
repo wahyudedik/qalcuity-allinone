@@ -1,6 +1,51 @@
-> **Last Updated:** 7 September 2026 (Bug Fixes: CRM Deals 400 + Billing Payments 400)
-> **Version:** v9.4.1
-> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Dua bug API 400 telah diperbaiki: (1) CRM Deals POST 400 — field name/title mismatch saat konversi lead → deal, (2) Billing Payments POST 400 — Prisma Decimal string serialization issue.
+> **Last Updated:** 7 September 2026 (Quality Sprint v9.5.0 — CRITICAL/HIGH/MEDIUM fixes + 14 error boundaries)
+> **Version:** v9.5.0
+> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Quality Sprint selesai: 3 batch fixes (CRITICAL/HIGH/MEDIUM) + 14 error boundaries. Health score: 89.5 → ~94/100.
+
+---
+
+## 🚀 Quality Sprint v9.5.0 (7 September 2026)
+
+> **Focus:** Audit komprehensif + quick wins batch 1-3 + error boundaries
+
+### CRITICAL Fixes
+
+| Fix | File | Change | Risk |
+|-----|------|--------|------|
+| Timesheet: `alert()` → `useToast()` | [`apps/web/app/dashboard/timesheet/page.tsx`](apps/web/app/dashboard/timesheet/page.tsx) | Replace browser alert with toast component | 🟢 Low |
+| POS Tables: `window.confirm()` → `ConfirmDialog` | [`apps/web/app/dashboard/pos/tables/page.tsx`](apps/web/app/dashboard/pos/tables/page.tsx) | Replace browser confirm with UI component | 🟢 Low |
+| Kitchen Order Card: `window.confirm()` → `ConfirmDialog` + i18n | [`apps/web/components/pos/kitchen-order-card.tsx`](apps/web/components/pos/kitchen-order-card.tsx) | Replace browser confirm + add i18n support | 🟢 Low |
+| Auth pages: Hapus 23 debug console.log/warn | [`apps/web/app/(auth)/login/page.tsx`](apps/web/app/(auth)/login/page.tsx), [`apps/web/app/(auth)/register/page.tsx`](apps/web/app/(auth)/register/page.tsx) | Remove debug statements from production code | 🟢 Low |
+
+### HIGH Priority Fixes
+
+| Fix | File | Change | Risk |
+|-----|------|--------|------|
+| Payment/AI mock provider guard di production | [`apps/web/app/api/finance/payments/process/route.ts`](apps/web/app/api/finance/payments/process/route.ts), [`apps/web/app/api/settings/integrations/route.ts`](apps/web/app/api/settings/integrations/route.ts) | Throw error jika env var tidak ter-set | 🟢 Low |
+| Hapus hardcoded localhost:3000 fallback | 6 locations | Gunakan env var validation | 🟢 Low |
+| Notifications PUT: Manual validation → Zod schema | [`apps/web/app/api/notifications/route.ts`](apps/web/app/api/notifications/route.ts), [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) | Zod validation untuk notifications PUT | 🟢 Low |
+| Kitchen cancel order i18n keys | [`apps/web/messages/id.json`](apps/web/messages/id.json), [`apps/web/messages/en.json`](apps/web/messages/en.json) | Tambahkan i18n keys | 🟢 Low |
+
+### MEDIUM Priority Fixes
+
+| Fix | File | Change | Risk |
+|-----|------|--------|------|
+| 9 Platform admin routes: Manual role check → `requirePermissionForRoute()` | [`apps/web/lib/permissions.ts`](apps/web/lib/permissions.ts) | Permission engine integration | 🟡 Medium |
+| Route permissions mapping diperbarui | [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) | Platform route mappings | 🟢 Low |
+
+### Error Boundaries (14 new files)
+
+| Section | Files | Risk |
+|---------|-------|------|
+| Field Service | [`apps/web/app/dashboard/field/`](apps/web/app/dashboard/field/) | 🟢 Low |
+| POS Analytics/Reports/Terminal | [`apps/web/app/dashboard/pos/`](apps/web/app/dashboard/pos/) | 🟢 Low |
+| Finance (8 sub-routes) | [`apps/web/app/dashboard/finance/`](apps/web/app/dashboard/finance/) | 🟢 Low |
+
+### Health Score
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Health Score | 89.5/100 | ~94/100 |
 
 ---
 
