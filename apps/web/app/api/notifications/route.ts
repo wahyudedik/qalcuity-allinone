@@ -30,6 +30,15 @@ export async function GET(request: Request) {
         const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
         const offset = parseInt(searchParams.get('offset') || '0')
 
+        // Defensive check: pastikan Prisma client memiliki model InAppNotification
+        if (!prisma.inAppNotification) {
+            console.error('[Notifications API] Prisma model InAppNotification not available. Run: cd packages/db && npx prisma generate')
+            return NextResponse.json(
+                { success: false, error: 'Notifications service temporarily unavailable. Please contact administrator.' },
+                { status: 503 }
+            )
+        }
+
         const where: Record<string, unknown> = {
             tenantId,
             userId,
@@ -61,6 +70,7 @@ export async function GET(request: Request) {
             total,
         })
     } catch (error) {
+        console.error('[Notifications API] GET error:', error)
         const message = error instanceof Error ? error.message : 'Internal server error'
         return NextResponse.json({ success: false, error: message }, { status: 500 })
     }
