@@ -257,41 +257,20 @@ print_success "Cache .next dibersihkan"
 pnpm build
 print_success "Build berhasil"
 
-# --- 8. Restart Application ---
-print_step "8/8 - Restarting Application..."
+# --- 8. Signal aaPanel to Restart ---
+print_step "8/8 - Signaling aaPanel to restart..."
 
-# Kill existing process on port
+# Kill any process still lingering on the port
 if command -v fuser &> /dev/null; then
     fuser -k $APP_PORT/tcp 2>/dev/null || true
     log "Killed existing process on port $APP_PORT"
-    sleep 3
+    sleep 2
 fi
 
-# Restart via PM2 (aaPanel uses PM2 internally)
-if command -v pm2 &> /dev/null; then
-    echo -e "${YELLOW}   Restarting via PM2...${NC}"
-    if pm2 restart all 2>/dev/null; then
-        print_success "PM2: All processes restarted"
-    elif pm2 start ecosystem.config.js 2>/dev/null; then
-        print_success "PM2: Started from ecosystem.config.js"
-    else
-        echo -e "${YELLOW}   PM2 restart failed, trying direct start...${NC}"
-        cd "$APP_DIR/apps/web"
-        export PRISMA_QUERY_ENGINE_TYPE=library
-        nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
-        cd "$APP_DIR"
-        print_success "Started application directly via nohup"
-    fi
-    sleep 5
-else
-    echo -e "${YELLOW}   PM2 not found, starting directly...${NC}"
-    cd "$APP_DIR/apps/web"
-    export PRISMA_QUERY_ENGINE_TYPE=library
-    nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
-    cd "$APP_DIR"
-    print_success "Started application directly via nohup"
-    sleep 5
-fi
+# Signal aaPanel to restart the project
+# aaPanel watches for changes and auto-restarts via PM2/start.sh
+echo -e "${GREEN}✅ Build selesai. aaPanel akan auto-restart project.${NC}"
+echo -e "${YELLOW}ℹ️  Jika app belum restart otomatis, klik 'Restart' di aaPanel dashboard.${NC}"
 
 # Health check dengan retry
 MAX_RETRIES=5
