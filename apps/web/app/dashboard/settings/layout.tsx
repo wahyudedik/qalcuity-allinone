@@ -46,57 +46,57 @@ export default function SettingsLayout({
         {
             name: t('settings.profile') || 'Profil',
             href: '/dashboard/settings',
-            description: 'Informasi akun dan profil Anda',
+            description: t('settings.profileDesc') || 'Informasi akun dan profil Anda',
         },
         {
             name: t('settings.company') || 'Perusahaan',
             href: '/dashboard/settings/company',
-            description: 'Informasi perusahaan',
+            description: t('settings.companyDesc') || 'Informasi perusahaan',
         },
         {
             name: t('settings.team') || 'Tim',
             href: '/dashboard/settings/team',
-            description: 'Kelola anggota tim',
+            description: t('settings.teamDesc') || 'Kelola anggota tim',
         },
         {
-            name: t('settings.roles') || 'Roles & Permission',
+            name: t('settings.roles.title') || 'Roles & Permission',
             href: '/dashboard/settings/roles',
-            description: 'Kelola role dan permission',
+            description: t('settings.rolesDesc') || 'Kelola role dan permission',
         },
         {
-            name: t('settings.industry') || 'Industri',
+            name: t('settings.industry.title') || 'Industri',
             href: '/dashboard/settings/industry',
-            description: 'Konfigurasi industri',
+            description: t('settings.industryDesc') || 'Konfigurasi industri',
         },
         {
-            name: t('settings.customFields') || 'Custom Fields',
+            name: t('settings.customFields.title') || 'Custom Fields',
             href: '/dashboard/settings/custom-fields',
-            description: 'Field kustom per entitas',
+            description: t('settings.customFieldsDesc') || 'Field kustom per entitas',
         },
         {
-            name: t('settings.workflow') || 'Workflow',
+            name: t('settings.workflow.title') || 'Workflow',
             href: '/dashboard/settings/workflow',
-            description: 'Alur kerja transaksi',
+            description: t('settings.workflowDesc') || 'Alur kerja transaksi',
         },
         {
-            name: t('settings.billing') || 'Billing',
+            name: t('settings.billing.title') || 'Billing',
             href: '/dashboard/settings/billing',
-            description: 'Pembayaran dan langganan',
+            description: t('settings.billingDesc') || 'Pembayaran dan langganan',
         },
         {
-            name: t('settings.integrations') || 'Integrasi',
+            name: t('settings.integrations.title') || 'Integrasi',
             href: '/dashboard/settings/integrations',
-            description: 'Hubungkan layanan pihak ketiga',
+            description: t('settings.integrationsDesc') || 'Hubungkan layanan pihak ketiga',
         },
         {
             name: t('settings.notifications') || 'Notifikasi',
             href: '/dashboard/settings/notifications',
-            description: 'Pengaturan notifikasi',
+            description: t('settings.notificationsDesc') || 'Pengaturan notifikasi',
         },
         {
             name: t('settings.security') || 'Keamanan',
             href: '/dashboard/settings/security',
-            description: 'Password dan keamanan akun',
+            description: t('settings.securityDesc') || 'Password dan keamanan akun',
         },
     ]
 
@@ -104,7 +104,7 @@ export default function SettingsLayout({
         <div className="p-6">
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">{t('common.settings') || 'Pengaturan'}</h1>
-                <p className="text-gray-600 mt-1">Kelola akun dan pengaturan aplikasi Anda</p>
+                <p className="text-gray-600 mt-1">{t('settings.headerSubtitle') || 'Kelola akun dan pengaturan aplikasi Anda'}</p>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-6">

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -90,6 +91,11 @@ export async function GET(request: Request) {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
+        // Graceful fallback: PosKitchenOrder table not yet available (migration pending)
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+            console.warn('[Kitchen Orders API] PosKitchenOrder table not found — returning empty fallback');
+            return NextResponse.json({ success: true, data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
+        }
         return handleApiError(error);
     }
 }

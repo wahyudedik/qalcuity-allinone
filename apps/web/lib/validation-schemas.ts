@@ -542,6 +542,7 @@ export const midtransWebhookSchema = z.object({
 export const updateProfileSchema = z.object({
     name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter').optional(),
     email: z.string().email('Format email tidak valid').max(255).optional(),
+    avatar: z.string().max(2048, 'URL avatar maksimal 2048 karakter').optional(),
 });
 
 export const changePasswordSchema = z.object({
