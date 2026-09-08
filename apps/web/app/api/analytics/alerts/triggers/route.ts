@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 import type { Prisma } from '@prisma/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -73,7 +74,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedTriggers })
     } catch (error) {
-        console.error('[Alert Triggers List Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }

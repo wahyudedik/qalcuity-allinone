@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 
 // ============================================
 // TYPES
@@ -452,7 +453,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: response })
     } catch (error) {
-        console.error('[Analytics Dashboard Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[Analytics Dashboard Error]', error)
+        return handleApiError(error)
     }
 }

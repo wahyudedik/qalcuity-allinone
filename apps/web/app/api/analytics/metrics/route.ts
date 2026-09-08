@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { METRIC_DEFINITIONS } from '@qalcuity/analytics'
+import { handleApiError } from '@/lib/api-error'
 
 // ============================================
 // API HANDLER
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[Metrics List Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }

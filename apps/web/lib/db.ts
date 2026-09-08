@@ -1,8 +1,17 @@
 import { PrismaClient } from "@prisma/client";
-import { validateEnv } from "./env-validation";
 
-// Validate environment variables at startup
-validateEnv();
+// Server-only: validate environment variables at startup.
+// We guard this at the module level so that even if this module is
+// transitively pulled into a client bundle (e.g., via anomaly-detection.ts),
+// the validation code is completely tree-shaken away.
+if (typeof window === 'undefined') {
+    // Dynamic import to ensure validateEnv is only loaded server-side.
+    // This prevents the entire env-validation module from being bundled
+    // into client code, which would cause "Missing required env vars"
+    // errors in the browser console.
+    const { validateEnv } = require("./env-validation");
+    validateEnv();
+}
 
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;

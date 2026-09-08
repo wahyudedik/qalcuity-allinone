@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { updateNotificationSchema, formatZodError } from '@/lib/validation-schemas'
+import { handleApiError } from '@/lib/api-error'
 
 /**
  * GET /api/notifications
@@ -71,8 +72,7 @@ export async function GET(request: Request) {
         })
     } catch (error) {
         console.error('[Notifications API] GET error:', error)
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -133,8 +133,8 @@ export async function PUT(request: Request) {
             unreadCount,
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        console.error('[Notifications API] PUT error:', error)
+        return handleApiError(error)
     }
 }
 
@@ -160,7 +160,7 @@ export async function DELETE(request: Request) {
             deleted: result.count,
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        console.error('[Notifications API] DELETE error:', error)
+        return handleApiError(error)
     }
 }

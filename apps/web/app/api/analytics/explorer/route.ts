@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db'
 import { getDatasetById } from '@qalcuity/analytics'
 import type { DatasetDefinition, DimensionDefinition, MeasureDefinition } from '@qalcuity/analytics'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError } from '@/lib/api-error'
 
 // ============================================
 // TYPES
@@ -302,7 +303,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[Analytics Explorer Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[Analytics Explorer Error]', error)
+        return handleApiError(error)
     }
 }

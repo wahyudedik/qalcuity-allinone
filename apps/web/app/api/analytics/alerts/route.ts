@@ -8,6 +8,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import type { Prisma } from '@prisma/client'
+import { handleApiError } from '@/lib/api-error'
 
 // ============================================
 // TYPES
@@ -81,8 +82,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedRules })
     } catch (error) {
-        console.error('[Alert Rules List Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[Alert Rules List Error]', error)
+        return handleApiError(error)
     }
 }
 
@@ -166,7 +167,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[Alert Rule Create Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[Alert Rule Create Error]', error)
+        return handleApiError(error)
     }
 }

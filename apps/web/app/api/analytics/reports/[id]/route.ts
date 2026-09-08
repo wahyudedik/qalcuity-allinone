@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 import type { Prisma } from '@prisma/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -105,8 +106,8 @@ export async function GET(
             },
         })
     } catch (error) {
-        console.error('[Report Detail Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -195,8 +196,8 @@ export async function PUT(
             },
         })
     } catch (error) {
-        console.error('[Report Update Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -246,7 +247,7 @@ export async function DELETE(
             data: { message: 'Report deleted successfully' },
         })
     } catch (error) {
-        console.error('[Report Delete Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }

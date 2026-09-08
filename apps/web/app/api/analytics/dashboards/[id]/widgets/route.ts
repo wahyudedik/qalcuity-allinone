@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ============================================
@@ -94,8 +95,8 @@ export async function GET(
 
         return NextResponse.json({ success: true, data: enrichedWidgets })
     } catch (error) {
-        console.error('[Dashboard Widgets List Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -221,7 +222,7 @@ export async function POST(
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[Dashboard Widgets Create Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
