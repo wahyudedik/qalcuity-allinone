@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { getBaseUrl } from "@/lib/utils";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
         });
 
         // Build reset URL
-        const baseUrl = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+        const baseUrl = getBaseUrl();
         const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
         // Send email

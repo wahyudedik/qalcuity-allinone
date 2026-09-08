@@ -106,3 +106,22 @@ export function roundMoney(value: number | string | unknown): number {
     return Math.round(num * 100) / 100;
 }
 
+/**
+ * Get the base URL for server-side usage (API routes, email templates, etc.).
+ * Uses NEXTAUTH_URL env var, falls back to localhost in development only.
+ * In production without NEXTAUTH_URL, returns empty string (caller should ensure env is set).
+ */
+export function getBaseUrl(): string {
+    if (typeof window !== 'undefined') return ''; // client-side: relative URLs
+    return process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+}
+
+/**
+ * Get the public base URL for client-facing URLs (payment callbacks, reset links, etc.).
+ * Uses NEXT_PUBLIC_APP_URL env var, falls back to getBaseUrl().
+ */
+export function getPublicBaseUrl(): string {
+    if (typeof window !== 'undefined') return ''; // client-side: relative URLs
+    return process.env.NEXT_PUBLIC_APP_URL || getBaseUrl();
+}
+

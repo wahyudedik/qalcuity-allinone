@@ -245,7 +245,7 @@ docs/UI_UX.md     ← Aturan UI/UX
 
 ## 5. Current Architecture Summary
 
-> **Arsitektur aktual per 1 September 2026.**
+> **Arsitektur aktual per 8 September 2026.**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -256,7 +256,7 @@ docs/UI_UX.md     ← Aturan UI/UX
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                    API LAYER                             │
-│  Next.js Route Handlers (51+ routes, 35+ files)         │
+│  Next.js Route Handlers (120+ routes, 80+ files)         │
 │  + Middleware RBAC + Zod Validation + Audit Logging      │
 └──────────────────────────┬──────────────────────────────┘
                            │
@@ -268,7 +268,7 @@ docs/UI_UX.md     ← Aturan UI/UX
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                  DATA LAYER                              │
-│  Prisma 5.15 → PostgreSQL (34 models, 57+ indexes)     │
+│  Prisma 5.15 → PostgreSQL (75+ models, 65+ indexes)     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -294,37 +294,39 @@ docs/UI_UX.md     ← Aturan UI/UX
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (45+ models) |
+| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (75+ models) |
 | `@qalcuity/types` | ✅ Active | Shared TypeScript types |
 | `@qalcuity/utils` | ✅ Active | Utility functions |
 | `@qalcuity/config` | ✅ Active | App constants + env config |
 | `@qalcuity/validation` | ✅ Active | Zod schemas (14+ schemas) |
 | `@qalcuity/i18n` | ✅ Active | i18n utilities |
 | `@qalcuity/ui` | ✅ Active | 11 React components + theme system |
-| `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with ~90 API routes |
-| `@qalcuity/workflow` | ✅ Active | Workflow engine (state machine) — integrated with 5 entities |
+| `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with ~120 API routes |
+| `@qalcuity/workflow` | ✅ Active | Workflow engine (state machine) — integrated with 8 entities |
 | `@qalcuity/industry-config` | ✅ Active | Industry configuration engine |
 | `@qalcuity/redis` | ✅ Active | Redis client + rate limiter (production-ready) |
 
-### Codebase Stats (Audit: 1 September 2026 — Updated)
+### Codebase Stats (Audit: 8 September 2026 — Updated)
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files (apps/web) | ~120+ |
-| TypeScript files (packages) | ~40+ |
-| API route files | 40+ |
-| API routes | 70+ |
-| Pages | 35+ |
-| Prisma models | 45+ |
-| Database indexes | 57+ |
-| Zod schemas | 16+ |
-| i18n keys | 433+ |
-| Loading states | 28+ |
+| TypeScript files (apps/web) | ~180+ |
+| TypeScript files (packages) | ~45+ |
+| API route files | 80+ |
+| API routes | 120+ |
+| API route files | 54+ |
+| RBAC route entries | 54 |
+| Pages | 60+ |
+| Prisma models | 75+ |
+| Database indexes | 65+ |
+| Zod schemas | 18+ |
+| i18n keys | 500+ |
+| Loading states | 40+ |
 | E2E tests | 63 (63 PASS) |
-| Shared packages | 12 |
+| Shared packages | 12 (all active) |
 | Foundation engine packages | 3 |
 | UI components | 11 |
-| Validation schemas (apps/web) | 14+ |
+| Validation schemas (apps/web) | 16+ |
 | Rate limit configs | 3 |
 
 ---
@@ -946,6 +948,6 @@ Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap a
 
 ---
 
-**Last Updated:** September 1, 2026 (Improvement Sprint Complete)
+**Last Updated:** September 8, 2026 (Post-Audit Documentation Sync)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.0 — Improvement Sprint Complete (Batches 7A-7E)
+**Document Version:** 6.1 — Post-Audit Documentation Sync

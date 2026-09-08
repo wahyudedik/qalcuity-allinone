@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity Development Roadmap
 
-> **Last Updated:** 4 September 2026 (Batch M — Documentation Update)
-> **Current Version:** v7.0.0
-> **Status:** Core Modules Production-Ready + Foundation Engines + POS Phase 2-3 + Security Hardening (~78% production-ready, ~15% partial, ~7% planned)
+> **Last Updated:** 8 September 2026 (Post-Audit Documentation Sync)
+> **Current Version:** v7.1.0
+> **Status:** Core Modules Production-Ready + Foundation Engines + POS Phase 5 + Security Hardening (~85% production-ready, ~10% partial, ~5% planned)
 
 ---
 
@@ -55,8 +55,8 @@
 - [x] Chart of Accounts (Prisma-backed)
 - [x] Bank Reconciliation (Prisma-backed)
 - [x] General Ledger + Journal Entry — Implemented (Batch 7C: CRUD, double-entry validation, Zod schema, UI page)
-- [ ] Trial Balance — PLANNED
-- [ ] Financial Statements (Balance Sheet, Income Statement) — PLANNED
+- [x] Trial Balance — Implemented (Sprint 4, 2 September 2026)
+- [x] Financial Statements (Balance Sheet, Income Statement) — Implemented (Sprint 4, 2 September 2026)
 
 ### Phase 3: CRM Module ✅ COMPLETED
 
@@ -218,7 +218,7 @@
 - [ ] Implement Policy versioning — rules berlaku sejak tanggal tertentu
 - [ ] Implement Policy configuration UI — per-company rule management
 - [ ] Implement Workflow Engine — transaction lifecycle (DRAFT → LOCKED) [ADR-016]
-- [ ] Implement Approval Engine — multi-level chains + amount threshold approvals [ADR-015]
+- [x] Implement Approval Engine — multi-level chains + amount threshold approvals [ADR-015] (Implemented Sprint 1, FASE 4C)
 - [ ] Implement Amount Threshold configuration — tiered approval per department/type
 - [ ] Implement Escalation Engine — deadline-based (PIC → Supervisor → Manager → Director)
 - [ ] Implement Locking Engine — hierarchical (Transaction → Day → Month → Quarter → Year) [ADR-016]
@@ -257,7 +257,7 @@
 
 #### 10E: Period Management (Closing)
 
-- [ ] Implement Period Closing Wizard — step-by-step closing [ADR-022]
+- [x] Implement Period Closing Wizard — step-by-step closing [ADR-022] (Implemented Sprint 1, FASE 4B)
 - [ ] Implement Pre-checks — validate unposted, pending, unreconciled transactions
 - [ ] Implement Exception resolution — resolve atau exception approval sebelum closing
 - [ ] Implement Period lock — auto-lock setelah closing approval
@@ -376,15 +376,15 @@
 - [ ] System tray integration
 - [ ] File system access
 
-### Phase 17: Advanced Finance 📋 PLANNED
+### Phase 17: Advanced Finance 🔄 PARTIALLY COMPLETED
 
 > Modul keuangan lanjutan — General Ledger, Tax Engine.
 
-- [ ] General Ledger
-- [ ] Journal Entry
-- [ ] Trial Balance
-- [ ] Balance Sheet
-- [ ] Income Statement
+- [x] General Ledger — Implemented (Batch 7C + Sprint 4)
+- [x] Journal Entry — Implemented (Batch 7C)
+- [x] Trial Balance — Implemented (Sprint 4, 2 September 2026)
+- [x] Balance Sheet — Implemented (Sprint 4, 2 September 2026)
+- [x] Income Statement — Implemented (Sprint 4, 2 September 2026)
 - [ ] Tax Engine (Coretax, e-Faktur, PPh21, PPN)
 
 ### Phase 18: Enterprise Features 📋 PLANNED
@@ -815,5 +815,5 @@
 
 ---
 
-**Last Updated:** September 4, 2026
+**Last Updated:** September 8, 2026 (Post-Audit Documentation Sync)
 **Maintainer:** Qalcuity Product Team

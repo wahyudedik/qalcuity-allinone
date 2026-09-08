@@ -15,6 +15,13 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/accounts': { permission: 'finance.account', fallbackRole: 'ADMIN' },
     '/api/finance/reconciliation': { permission: 'finance.reconciliation', fallbackRole: 'ADMIN' },
     '/api/finance/journal-entries': { permission: 'finance.journal_entry', fallbackRole: 'ADMIN' },
+    '/api/finance/tax-rates': { permission: 'finance.tax_rate', fallbackRole: 'ADMIN' },
+    '/api/finance/periods': { permission: 'finance.period', fallbackRole: 'ADMIN' },
+
+    // ─── Finance Reports ──────────────────────────────────────────────────────
+    '/api/finance/reports/balance-sheet': { permission: 'finance.report', fallbackRole: 'ADMIN' },
+    '/api/finance/reports/income-statement': { permission: 'finance.report', fallbackRole: 'ADMIN' },
+    '/api/finance/reports/trial-balance': { permission: 'finance.report', fallbackRole: 'ADMIN' },
 
     // ─── CRM ──────────────────────────────────────────────────────────────────
     '/api/crm/contacts': { permission: 'crm.contact', fallbackRole: 'ADMIN' },
@@ -42,6 +49,17 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/settings/industry': { permission: 'settings.industry', fallbackRole: 'ADMIN' },
     '/api/settings/custom-fields': { permission: 'settings.custom_fields', fallbackRole: 'ADMIN' },
     '/api/settings/profile': { permission: 'settings.profile', fallbackRole: 'MEMBER' },
+
+    // ─── Billing ──────────────────────────────────────────────────────────────
+    '/api/billing/admin': { permission: 'billing.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/billing/entitlement': { permission: 'billing.entitlement', fallbackRole: 'ADMIN' },
+    '/api/billing/feature-check': { permission: 'billing.feature_check', fallbackRole: 'MEMBER' },
+    '/api/billing/payments': { permission: 'billing.payment', fallbackRole: 'ADMIN' },
+    '/api/billing/plan': { permission: 'billing.plan', fallbackRole: 'ADMIN' },
+    '/api/billing/plans': { permission: 'billing.plan', fallbackRole: 'MEMBER' },
+    '/api/billing/subscription': { permission: 'billing.subscription', fallbackRole: 'ADMIN' },
+    '/api/billing/usage': { permission: 'billing.usage', fallbackRole: 'ADMIN' },
+    '/api/billing/webhook': { permission: 'billing.webhook', fallbackRole: 'ADMIN' },
 
     // ─── Analytics ────────────────────────────────────────────────────────────
     '/api/analytics': { permission: 'analytics.read', fallbackRole: 'ADMIN' },
