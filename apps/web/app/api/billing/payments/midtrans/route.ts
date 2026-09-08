@@ -13,6 +13,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { createMidtransPaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { getPublicBaseUrl } from '@/lib/utils';
 import { z } from 'zod';
 
 export async function POST(request: Request) {
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
         const orderId = `QAL-${tenantId.substring(0, 8)}-${timestamp}`;
 
         // Tentukan callback URL
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+        const appUrl = getPublicBaseUrl();
         const callbackUrl = `${appUrl}/dashboard/billing?payment=success&orderId=${orderId}`;
 
         // Hitung total amount (price × 1 bulan)

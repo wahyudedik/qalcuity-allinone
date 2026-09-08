@@ -212,13 +212,13 @@ export default function AuditPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{t('audit.title')}</h1>
-                    <p className="text-gray-600 mt-1">{t('audit.subtitle')}</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('audit.title')}</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">{t('audit.subtitle')}</p>
                 </div>
                 <button
                     onClick={exportCSV}
                     disabled={logs.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Download className="w-4 h-4" />
                     Export CSV
@@ -227,26 +227,26 @@ export default function AuditPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">{t('audit.totalActivity')}</div>
-                    <div className="text-2xl font-bold text-gray-900 mt-1">{total}</div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{t('audit.totalActivity')}</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{total}</div>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">{t('audit.creation')}</div>
-                    <div className="text-2xl font-bold text-green-600 mt-1">{createCount}</div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{t('audit.creation')}</div>
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{createCount}</div>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">{t('audit.updateAction')}</div>
-                    <div className="text-2xl font-bold text-blue-600 mt-1">{updateCount}</div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{t('audit.updateAction')}</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{updateCount}</div>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600">{t('audit.deletion')}</div>
-                    <div className="text-2xl font-bold text-red-600 mt-1">{deleteCount}</div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{t('audit.deletion')}</div>
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{deleteCount}</div>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex flex-col gap-4">
                     {/* Row 1: Search + Module + Action */}
                     <div className="flex flex-col md:flex-row gap-4">
@@ -257,13 +257,13 @@ export default function AuditPage() {
                                 placeholder={t('audit.searchPlaceholder')}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
                             />
                         </div>
                         <select
                             value={selectedModule}
                             onChange={(e) => setSelectedModule(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
                             {modules.map(m => (
                                 <option key={m} value={m}>{moduleLabels[m] || m}</option>
@@ -272,7 +272,7 @@ export default function AuditPage() {
                         <select
                             value={selectedAction}
                             onChange={(e) => setSelectedAction(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
                             {actions.map(a => (
                                 <option key={a} value={a}>{actionLabels[a] || a}</option>
@@ -288,7 +288,7 @@ export default function AuditPage() {
                                 value={dateFrom}
                                 onChange={(e) => setDateFrom(e.target.value)}
                                 placeholder="Dari tanggal"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
                             <span className="text-gray-400 text-sm">—</span>
                             <input
@@ -296,13 +296,13 @@ export default function AuditPage() {
                                 value={dateTo}
                                 onChange={(e) => setDateTo(e.target.value)}
                                 placeholder="Sampai tanggal"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
                         </div>
                         {hasActiveFilters && (
                             <button
                                 onClick={clearFilters}
-                                className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                             >
                                 <X className="w-4 h-4" />
                                 Reset Filter
@@ -314,16 +314,16 @@ export default function AuditPage() {
 
             {/* Loading State */}
             {loading && (
-                <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
                     <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-gray-500 mt-4">{t('audit.loading')}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mt-4">{t('audit.loading')}</p>
                 </div>
             )}
 
             {/* Error State */}
             {error && !loading && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                    <p className="text-red-600">{error}</p>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+                    <p className="text-red-600 dark:text-red-400">{error}</p>
                     <button
                         onClick={fetchLogs}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -335,186 +335,306 @@ export default function AuditPage() {
 
             {/* Audit Log List */}
             {!loading && !error && (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {logs.length === 0 ? (
-                        <div className="p-12 text-center text-gray-500">
-                            <Eye className="w-6 h-6 mx-auto text-gray-400" />
+                        <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+                            <Eye className="w-6 h-6 mx-auto text-gray-400 dark:text-gray-500" />
                             <p className="mt-2">{t('audit.empty')}</p>
                             <p className="text-sm mt-1">{t('audit.emptyDescription')}</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-100">
-                            {logs.map((log) => {
-                                const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', label: log.action }
-                                const isExpanded = expandedId === log.id
-                                const details = parseDetails(log.details)
-                                const oldVals = parseDetails(log.oldValues)
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block divide-y divide-gray-100 dark:divide-gray-700">
+                                {logs.map((log) => {
+                                    const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', label: log.action }
+                                    const isExpanded = expandedId === log.id
+                                    const details = parseDetails(log.details)
+                                    const oldVals = parseDetails(log.oldValues)
 
-                                return (
-                                    <div key={log.id}>
-                                        <div
-                                            className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                                            onClick={() => setExpandedId(isExpanded ? null : log.id)}
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                {/* Expand/Collapse Icon */}
-                                                <button className="mt-1 flex-shrink-0 text-gray-400 hover:text-gray-600">
-                                                    {isExpanded ? (
-                                                        <ChevronDown className="w-4 h-4" />
-                                                    ) : (
-                                                        <ChevronRight className="w-4 h-4" />
-                                                    )}
-                                                </button>
+                                    return (
+                                        <div key={log.id}>
+                                            <div
+                                                className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                                onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                                            >
+                                                <div className="flex items-start gap-4">
+                                                    {/* Expand/Collapse Icon */}
+                                                    <button className="mt-1 flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                                        {isExpanded ? (
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        ) : (
+                                                            <ChevronRight className="w-4 h-4" />
+                                                        )}
+                                                    </button>
 
-                                                {/* Avatar */}
-                                                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
-                                                    {log.userInitials}
-                                                </div>
-
-                                                {/* Content */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-medium text-gray-900">{log.userName}</span>
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
-                                                            {colorConfig.label}
-                                                        </span>
-                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                                            {moduleLabels[log.entity] || log.entity}
-                                                        </span>
+                                                    {/* Avatar */}
+                                                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 flex-shrink-0">
+                                                        {log.userInitials}
                                                     </div>
-                                                    <p className="text-sm text-gray-700 mt-1">{log.description}</p>
-                                                    {log.details && !isExpanded && (
-                                                        <p className="text-xs text-gray-500 mt-1 truncate max-w-md">{log.details}</p>
-                                                    )}
-                                                </div>
 
-                                                {/* Timestamp */}
-                                                <div className="text-right flex-shrink-0">
-                                                    <div className="text-sm text-gray-500">{formatTimestamp(log.timestamp)}</div>
-                                                    {log.ipAddress && log.ipAddress !== '-' && (
-                                                        <div className="text-xs text-gray-400 mt-0.5">IP: {log.ipAddress}</div>
-                                                    )}
+                                                    {/* Content */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-medium text-gray-900 dark:text-white">{log.userName}</span>
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
+                                                                {colorConfig.label}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                                                                {moduleLabels[log.entity] || log.entity}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{log.description}</p>
+                                                        {log.details && !isExpanded && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate max-w-md">{log.details}</p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Timestamp */}
+                                                    <div className="text-right flex-shrink-0">
+                                                        <div className="text-sm text-gray-500 dark:text-gray-400">{formatTimestamp(log.timestamp)}</div>
+                                                        {log.ipAddress && log.ipAddress !== '-' && (
+                                                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">IP: {log.ipAddress}</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        {/* Expanded Detail View */}
-                                        {isExpanded && (
-                                            <div className="px-6 pb-4 pt-2 bg-gray-50 border-t border-gray-100">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-10">
-                                                    {/* Left: Metadata */}
-                                                    <div className="space-y-2">
-                                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Detail Aktivitas</h4>
-                                                        <div className="bg-white rounded-lg border border-gray-200 p-3 space-y-2 text-sm">
+                                            {/* Expanded Detail View */}
+                                            {isExpanded && (
+                                                <div className="px-6 pb-4 pt-2 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-10">
+                                                        {/* Left: Metadata */}
+                                                        <div className="space-y-2">
+                                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detail Aktivitas</h4>
+                                                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-500 dark:text-gray-400">Waktu</span>
+                                                                    <span className="text-gray-900 dark:text-white font-medium">{formatTimestampFull(log.timestamp)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-500 dark:text-gray-400">User</span>
+                                                                    <span className="text-gray-900 dark:text-white">{log.userName}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-500 dark:text-gray-400">Aksi</span>
+                                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
+                                                                        {log.action}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-500 dark:text-gray-400">Modul</span>
+                                                                    <span className="text-gray-900 dark:text-white">{log.entity}</span>
+                                                                </div>
+                                                                {log.entityId && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-gray-500 dark:text-gray-400">Entity ID</span>
+                                                                        <span className="text-gray-900 dark:text-white font-mono text-xs">{log.entityId}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-500 dark:text-gray-400">IP Address</span>
+                                                                    <span className="text-gray-900 dark:text-white font-mono text-xs">{log.ipAddress}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Right: Changes */}
+                                                        <div className="space-y-2">
+                                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Perubahan Data</h4>
+                                                            {details ? (
+                                                                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3">
+                                                                    {log.action === 'UPDATE' && oldVals ? (
+                                                                        <div className="space-y-2">
+                                                                            {Object.keys(details).map(key => (
+                                                                                <div key={key} className="text-sm">
+                                                                                    <div className="font-medium text-gray-700 dark:text-gray-300 capitalize">{key}</div>
+                                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                                        <span className="text-red-600 dark:text-red-400 line-through text-xs bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded">
+                                                                                            {String(oldVals[key] ?? '-')}
+                                                                                        </span>
+                                                                                        <span className="text-gray-400">→</span>
+                                                                                        <span className="text-green-600 dark:text-green-400 text-xs bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
+                                                                                            {String(details[key] ?? '-')}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+                                                                            {JSON.stringify(details, null, 2)}
+                                                                        </pre>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-sm text-gray-500 dark:text-gray-400 italic">
+                                                                    Tidak ada detail perubahan tersedia
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                                {logs.map((log) => {
+                                    const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', label: log.action }
+                                    const isExpanded = expandedId === log.id
+                                    const details = parseDetails(log.details)
+                                    const oldVals = parseDetails(log.oldValues)
+
+                                    return (
+                                        <div key={log.id}>
+                                            <div
+                                                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                                onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300 flex-shrink-0">
+                                                            {log.userInitials}
+                                                        </div>
+                                                        <span className="font-medium text-sm text-gray-900 dark:text-white">{log.userName}</span>
+                                                    </div>
+                                                    <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                                        {isExpanded ? (
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        ) : (
+                                                            <ChevronRight className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
+                                                        {colorConfig.label}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                                                        {moduleLabels[log.entity] || log.entity}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatTimestamp(log.timestamp)}</span>
+                                                </div>
+                                                <p className="text-sm text-gray-700 dark:text-gray-300">{log.description}</p>
+                                                {log.ipAddress && log.ipAddress !== '-' && (
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">IP: {log.ipAddress}</p>
+                                                )}
+                                            </div>
+
+                                            {/* Expanded Detail View (Mobile) */}
+                                            {isExpanded && (
+                                                <div className="px-4 pb-4 pt-2 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700">
+                                                    <div className="space-y-3">
+                                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detail Aktivitas</h4>
+                                                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2 text-sm">
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500">Waktu</span>
-                                                                <span className="text-gray-900 font-medium">{formatTimestampFull(log.timestamp)}</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">Waktu</span>
+                                                                <span className="text-gray-900 dark:text-white font-medium text-right">{formatTimestampFull(log.timestamp)}</span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500">User</span>
-                                                                <span className="text-gray-900">{log.userName}</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">User</span>
+                                                                <span className="text-gray-900 dark:text-white">{log.userName}</span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500">Aksi</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">Aksi</span>
                                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
                                                                     {log.action}
                                                                 </span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500">Modul</span>
-                                                                <span className="text-gray-900">{log.entity}</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">Modul</span>
+                                                                <span className="text-gray-900 dark:text-white">{log.entity}</span>
                                                             </div>
                                                             {log.entityId && (
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-500">Entity ID</span>
-                                                                    <span className="text-gray-900 font-mono text-xs">{log.entityId}</span>
+                                                                    <span className="text-gray-500 dark:text-gray-400">Entity ID</span>
+                                                                    <span className="text-gray-900 dark:text-white font-mono text-xs">{log.entityId}</span>
                                                                 </div>
                                                             )}
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500">IP Address</span>
-                                                                <span className="text-gray-900 font-mono text-xs">{log.ipAddress}</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">IP Address</span>
+                                                                <span className="text-gray-900 dark:text-white font-mono text-xs">{log.ipAddress}</span>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    {/* Right: Changes */}
-                                                    <div className="space-y-2">
-                                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perubahan Data</h4>
-                                                        {details ? (
-                                                            <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                                                {log.action === 'UPDATE' && oldVals ? (
-                                                                    <div className="space-y-2">
-                                                                        {Object.keys(details).map(key => (
-                                                                            <div key={key} className="text-sm">
-                                                                                <div className="font-medium text-gray-700 capitalize">{key}</div>
-                                                                                <div className="flex items-center gap-2 mt-0.5">
-                                                                                    <span className="text-red-600 line-through text-xs bg-red-50 px-1.5 py-0.5 rounded">
-                                                                                        {String(oldVals[key] ?? '-')}
-                                                                                    </span>
-                                                                                    <span className="text-gray-400">→</span>
-                                                                                    <span className="text-green-600 text-xs bg-green-50 px-1.5 py-0.5 rounded">
-                                                                                        {String(details[key] ?? '-')}
-                                                                                    </span>
+                                                        {details && (
+                                                            <>
+                                                                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Perubahan Data</h4>
+                                                                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3">
+                                                                    {log.action === 'UPDATE' && oldVals ? (
+                                                                        <div className="space-y-2">
+                                                                            {Object.keys(details).map(key => (
+                                                                                <div key={key} className="text-sm">
+                                                                                    <div className="font-medium text-gray-700 dark:text-gray-300 capitalize">{key}</div>
+                                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                                        <span className="text-red-600 dark:text-red-400 line-through text-xs bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded">
+                                                                                            {String(oldVals[key] ?? '-')}
+                                                                                        </span>
+                                                                                        <span className="text-gray-400">→</span>
+                                                                                        <span className="text-green-600 dark:text-green-400 text-xs bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
+                                                                                            {String(details[key] ?? '-')}
+                                                                                        </span>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : (
-                                                                    <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">
-                                                                        {JSON.stringify(details, null, 2)}
-                                                                    </pre>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="bg-white rounded-lg border border-gray-200 p-3 text-sm text-gray-500 italic">
-                                                                Tidak ada detail perubahan tersedia
-                                                            </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+                                                                            {JSON.stringify(details, null, 2)}
+                                                                        </pre>
+                                                                    )}
+                                                                </div>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </>
                     )}
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                            <div className="text-sm text-gray-500">
+                        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
                                 {t('audit.pagination').replace('{page}', String(page)).replace('{totalPages}', String(totalPages)).replace('{count}', String(total))}
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setPage(1)}
                                     disabled={page === 1}
-                                    className="px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                                 >
                                     {'«'}
                                 </button>
                                 <button
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
-                                    className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                                 >
                                     {t('audit.previous')}
                                 </button>
-                                <span className="px-3 py-1.5 text-sm text-gray-700 font-medium bg-gray-50 rounded">
+                                <span className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 font-medium bg-gray-50 dark:bg-gray-700 rounded">
                                     {page} / {totalPages}
                                 </span>
                                 <button
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={page === totalPages}
-                                    className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                                 >
                                     {t('audit.next')}
                                 </button>
                                 <button
                                     onClick={() => setPage(totalPages)}
                                     disabled={page === totalPages}
-                                    className="px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                                 >
                                     {'»'}
                                 </button>

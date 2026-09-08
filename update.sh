@@ -181,10 +181,32 @@ print_step "5/8 - Install dependencies"
 
 # Kill any orphan process on port 3000 from previous failed updates
 # Pastikan port bersih sebelum proses build & restart
+# Menggunakan 3 fallback methods: fuser → lsof → ss
+ORPHAN_KILLED=false
 if command -v fuser &> /dev/null; then
-    fuser -k $APP_PORT/tcp 2>/dev/null || true
-    log "Killed orphan process on port $APP_PORT (pre-build cleanup)"
-    sleep 1
+    ORPHAN_PID=$(fuser $APP_PORT/tcp 2>/dev/null | tr -d ' ')
+    if [ -n "$ORPHAN_PID" ]; then
+        fuser -k $APP_PORT/tcp 2>/dev/null || true
+        log "Killed orphan process on port $APP_PORT (PID: $ORPHAN_PID, pre-build cleanup)"
+        ORPHAN_KILLED=true
+    fi
+elif command -v lsof &> /dev/null; then
+    ORPHAN_PID=$(lsof -t -i:$APP_PORT 2>/dev/null | head -1)
+    if [ -n "$ORPHAN_PID" ]; then
+        kill $ORPHAN_PID 2>/dev/null || true
+        log "Killed orphan process on port $APP_PORT (PID: $ORPHAN_PID, pre-build cleanup via lsof)"
+        ORPHAN_KILLED=true
+    fi
+elif command -v ss &> /dev/null; then
+    ORPHAN_PID=$(ss -tlnp "sport = :$APP_PORT" 2>/dev/null | grep -oP 'pid=\K\d+' | head -1)
+    if [ -n "$ORPHAN_PID" ]; then
+        kill -9 $ORPHAN_PID 2>/dev/null || true
+        log "Killed orphan process on port $APP_PORT (PID: $ORPHAN_PID, pre-build cleanup via ss)"
+        ORPHAN_KILLED=true
+    fi
+fi
+if [ "$ORPHAN_KILLED" = true ]; then
+    sleep 2
 fi
 
 if [ "$HAS_UPDATE" = "true" ]; then
@@ -280,21 +302,95 @@ print_success "Build berhasil"
 # --- 8. Restart Application ---
 print_step "8/8 - Restarting application..."
 
-# Kill any process on the port
+# --- 8a. Kill proses lama dengan robust method ---
+# Menggunakan 3 fallback methods: fuser → lsof → ss
 echo -e "${YELLOW}Killing existing process on port $APP_PORT...${NC}"
-fuser -k $APP_PORT/tcp 2>/dev/null || true
-sleep 3
+KILLED_OK=false
 
-# Verify port is free
-if fuser $APP_PORT/tcp &>/dev/null; then
-    echo -e "${RED}⚠️  Port $APP_PORT masih terpakai. Force kill...${NC}"
-    fuser -k -9 $APP_PORT/tcp 2>/dev/null || true
-    sleep 2
+# Method 1: fuser
+if command -v fuser &> /dev/null; then
+    RESTART_PID=$(fuser $APP_PORT/tcp 2>/dev/null | tr -d ' ')
+    if [ -n "$RESTART_PID" ]; then
+        log "Found process on port $APP_PORT (PID: $RESTART_PID). Sending SIGTERM..."
+        fuser -k $APP_PORT/tcp 2>/dev/null || true
+        sleep 3
+
+        # Force kill jika masih hidup
+        if fuser $APP_PORT/tcp &>/dev/null; then
+            echo -e "${RED}⚠️  Port $APP_PORT masih terpakai. Force kill (SIGKILL)...${NC}"
+            log "Port $APP_PORT still in use. Force killing with SIGKILL..."
+            fuser -k -9 $APP_PORT/tcp 2>/dev/null || true
+            sleep 3
+        fi
+        KILLED_OK=true
+    fi
+
+# Method 2: lsof (fallback)
+elif command -v lsof &> /dev/null; then
+    RESTART_PID=$(lsof -t -i:$APP_PORT 2>/dev/null | head -1)
+    if [ -n "$RESTART_PID" ]; then
+        log "Found process on port $APP_PORT (PID: $RESTART_PID). Killing via lsof..."
+        kill $RESTART_PID 2>/dev/null || true
+        sleep 3
+
+        if kill -0 $RESTART_PID 2>/dev/null; then
+            echo -e "${RED}⚠️  Process still alive. Force killing (SIGKILL)...${NC}"
+            kill -9 $RESTART_PID 2>/dev/null || true
+            sleep 3
+        fi
+        KILLED_OK=true
+    fi
+
+# Method 3: ss + kill (fallback terakhir)
+elif command -v ss &> /dev/null; then
+    RESTART_PID=$(ss -tlnp "sport = :$APP_PORT" 2>/dev/null | grep -oP 'pid=\K\d+' | head -1)
+    if [ -n "$RESTART_PID" ]; then
+        log "Found process on port $APP_PORT (PID: $RESTART_PID). Killing via ss..."
+        kill -9 $RESTART_PID 2>/dev/null || true
+        sleep 3
+        KILLED_OK=true
+    fi
+else
+    echo -e "${YELLOW}⚠️  Neither fuser, lsof, nor ss available. Skipping port cleanup.${NC}"
 fi
 
-echo -e "${GREEN}✅ Port $APP_PORT freed.${NC}"
+if [ "$KILLED_OK" = true ]; then
+    log "Process on port $APP_PORT cleaned up"
+fi
 
-# Start the app (same as start.sh)
+# --- 8b. Verifikasi port benar-benar bebas ---
+PORT_FREE=false
+for i in {1..3}; do
+    if command -v fuser &> /dev/null; then
+        if ! fuser $APP_PORT/tcp &>/dev/null; then
+            PORT_FREE=true
+            break
+        fi
+    elif command -v lsof &> /dev/null; then
+        if ! lsof -i:$APP_PORT &>/dev/null; then
+            PORT_FREE=true
+            break
+        fi
+    else
+        # Tidak bisa verifikasi, asumsikan bebas
+        PORT_FREE=true
+        break
+    fi
+    echo -e "${YELLOW}  Port $APP_PORT still in use, waiting... ($i/3)${NC}"
+    sleep 2
+done
+
+if [ "$PORT_FREE" = true ]; then
+    echo -e "${GREEN}✅ Port $APP_PORT freed.${NC}"
+else
+    echo -e "${RED}⚠️  Port $APP_PORT might still be in use. Attempting to start anyway...${NC}"
+    log "WARNING: Port $APP_PORT verification failed, starting anyway"
+fi
+
+# --- 8c. Start aplikasi ---
+# CATATAN: update.sh start dengan nohup (background) karena script ini dijalankan
+# dari terminal/cron, bukan dari aaPanel. aaPanel menggunakan start.sh untuk restart.
+# Pastikan tidak ada race condition: kill selesai SEBELUM start.
 echo -e "${YELLOW}Starting Qalcuity on port $APP_PORT...${NC}"
 cd "$APP_DIR/apps/web"
 export PRISMA_QUERY_ENGINE_TYPE=library
@@ -306,7 +402,7 @@ echo -e "${GREEN}✅ App started with PID: $APP_PID${NC}"
 
 # Wait for app to be ready
 echo -e "${YELLOW}Waiting for app to start...${NC}"
-sleep 8
+sleep 10
 
 # Health check
 echo -e "${YELLOW}Running health check...${NC}"
@@ -326,6 +422,7 @@ if [ "$HEALTH_OK" = "true" ]; then
 else
     echo -e "${RED}❌ Health check FAILED — app might need manual start in aaPanel${NC}"
     echo -e "${YELLOW}ℹ️  Buka aaPanel → Node.js Project → klik 'Start'${NC}"
+    echo -e "${YELLOW}ℹ️  Atau jalankan: bash $APP_DIR/apps/web/start.sh${NC}"
 fi
 
 # ============================================================

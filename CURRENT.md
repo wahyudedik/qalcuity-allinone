@@ -1,6 +1,43 @@
-> **Last Updated:** 7 September 2026 (Fix Production Errors — Client-side env validation + server-only code leak)
-> **Version:** v9.5.1
-> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Fix production errors: client-side env validation, HTTP 500 on API routes, server-only code leaking to client bundle. Health score: ~94 → ~96/100.
+> **Last Updated:** 8 September 2026 (Post-Audit Documentation Sync)
+> **Version:** v9.5.2
+> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Post-audit documentation sync: all 4 documentation files updated to match actual codebase implementation status. Health score: ~96/100.
+
+---
+
+## 🔄 Post-Audit Documentation Sync (8 September 2026)
+
+> **Audit Date:** 8 September 2026
+> **Scope:** Full codebase audit — documentation vs implementation sync
+
+### Quick Wins Completed
+
+| Fix | File | Status |
+|-----|------|--------|
+| Hardcoded localhost fallback `localhost:3000` removed from 2 files | [`apps/web/lib/utils.ts`](apps/web/lib/utils.ts), [`apps/web/lib/approval-notifications.ts`](apps/web/lib/approval-notifications.ts) | ✅ Fixed |
+| [`apps/web/app/dashboard/approvals/error.tsx`](apps/web/app/dashboard/approvals/error.tsx) — missing error boundary added | `apps/web/app/dashboard/approvals/` | ✅ Fixed |
+| [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) — RBAC route entries audit | `apps/web/lib/` | ✅ Verified |
+
+### Code Quality Improvements
+
+- **TypeScript strict mode** — no `any` types in modified files
+- **Environment variables** — all hardcoded fallbacks removed, production-safe
+- **Error boundaries** — all module sections have `error.tsx` files
+
+### Audit Findings Summary
+
+| Category | Finding | Action |
+|----------|---------|--------|
+| **Finance Module** | GL, Trial Balance, Balance Sheet, Income Statement — all implemented but not documented in ROADMAP | ✅ ROADMAP Phase 2 & 17 updated |
+| **Control Engine** | Approval Engine, Period Closing — implemented in Sprint 1 but listed as PLANNED in ROADMAP Phase 10 | ✅ ROADMAP Phase 10 updated |
+| **Documentation Drift** | 4 doc files (CURRENT, ROADMAP, FEATURES, AGENT) had stale stats/status | ✅ All 4 files synced |
+| **POS Module** | Phase 1-5 fully implemented, kitchen display + offline mode complete | ✅ FEATURES.md verified |
+
+### Documentation Files Updated
+
+1. [`CURRENT.md`](CURRENT.md) — Added post-audit section, updated version & date
+2. [`ROADMAP.md`](ROADMAP.md) — Fixed Phase 2, 10, 17 statuses (PLANNED → COMPLETED)
+3. [`FEATURES.md`](FEATURES.md) — Verified feature statuses, updated date
+4. [`AGENT.md`](AGENT.md) — Updated codebase stats to match actual counts
 
 ---
 

@@ -202,7 +202,7 @@ export default function NotificationsSettingsPage() {
         <button
             type="button"
             onClick={onToggle}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-gray-200'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
                 }`}
         >
             <span
@@ -216,14 +216,14 @@ export default function NotificationsSettingsPage() {
         return (
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-900">{t('settings.notificationsTitle') || 'Pengaturan Notifikasi'}</h2>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('settings.notificationsTitle') || 'Pengaturan Notifikasi'}</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {t('settings.notificationsSubtitle') || 'Pilih notifikasi mana yang ingin Anda terima'}
                     </p>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-12 flex flex-col items-center justify-center">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 flex flex-col items-center justify-center">
                     <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-                    <p className="text-sm text-gray-500">{t('settings.loadingNotifications')}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.loadingNotifications')}</p>
                 </div>
             </div>
         )
@@ -232,65 +232,65 @@ export default function NotificationsSettingsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-lg font-semibold text-gray-900">{t('settings.notificationsTitle') || 'Pengaturan Notifikasi'}</h2>
-                <p className="text-sm text-gray-600 mt-1">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('settings.notificationsTitle') || 'Pengaturan Notifikasi'}</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {t('settings.notificationsSubtitle') || 'Pilih notifikasi mana yang ingin Anda terima'}
                 </p>
             </div>
 
             {/* Error Banner */}
             {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-                    <p className="text-sm text-red-700 flex-1">{error}</p>
-                    <button onClick={() => setError(null)} className="text-sm text-red-600 hover:text-red-800 font-medium"><X className="w-4 h-4" /></button>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
+                    <p className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"><X className="w-4 h-4" /></button>
                 </div>
             )}
 
             {/* Email Notifications */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Mail className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">{t('settings.emailNotifications') || 'Email'}</h3>
-                        <p className="text-sm text-gray-500">{t('settings.emailDesc') || 'Notifikasi via email'}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{t('settings.emailNotifications') || 'Email'}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.emailDesc') || 'Notifikasi via email'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.newInvoice') || 'Invoice Baru'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.invoiceDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.newInvoice') || 'Invoice Baru'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.invoiceDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailInvoice} onToggle={() => toggleSetting('emailInvoice')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.paymentDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.paymentDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailPayment} onToggle={() => toggleSetting('emailPayment')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.overdueInvoiceDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.overdueInvoiceDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailOverdue} onToggle={() => toggleSetting('emailOverdue')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.weeklyReport')}</div>
-                            <div className="text-xs text-gray-500">{t('settings.weeklyReportDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.weeklyReport')}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.weeklyReportDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailWeeklyReport} onToggle={() => toggleSetting('emailWeeklyReport')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.emailMarketing')}</div>
-                            <div className="text-xs text-gray-500">{t('settings.emailMarketingDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.emailMarketing')}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.emailMarketingDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.emailMarketing} onToggle={() => toggleSetting('emailMarketing')} />
                     </div>
@@ -298,18 +298,18 @@ export default function NotificationsSettingsPage() {
             </div>
 
             {/* Email SMTP Configuration */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div
-                    className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     onClick={() => setShowEmailConfig(!showEmailConfig)}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Mail className="w-5 h-5 text-green-600" />
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <Mail className="w-5 h-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <h3 className="font-medium text-gray-900">{t('settings.smtpConfiguration')}</h3>
-                            <p className="text-sm text-gray-500">{t('settings.smtpConfigDesc')}</p>
+                            <h3 className="font-medium text-gray-900 dark:text-white">{t('settings.smtpConfiguration')}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.smtpConfigDesc')}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -317,60 +317,60 @@ export default function NotificationsSettingsPage() {
                             <CheckCircle className="h-4 w-4" />
                             {t('settings.configured')}
                         </span>
-                        <Settings className={`h-5 w-5 text-gray-400 transition-transform ${showEmailConfig ? 'rotate-90' : ''}`} />
+                        <Settings className={`h-5 w-5 text-gray-400 dark:text-gray-500 transition-transform ${showEmailConfig ? 'rotate-90' : ''}`} />
                     </div>
                 </div>
 
                 {showEmailConfig && (
-                    <div className="px-6 pb-6 space-y-4 border-t border-gray-200 pt-5">
+                    <div className="px-6 pb-6 space-y-4 border-t border-gray-200 dark:border-gray-700 pt-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">SMTP Host</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">SMTP Host</label>
                                 <input
                                     type="text"
                                     value={emailConfig.smtpHost}
                                     onChange={(e) => handleEmailConfigChange('smtpHost', e.target.value)}
                                     placeholder="smtp.gmail.com"
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">SMTP Port</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">SMTP Port</label>
                                 <input
                                     type="number"
                                     value={emailConfig.smtpPort}
                                     onChange={(e) => handleEmailConfigChange('smtpPort', e.target.value)}
                                     placeholder="587"
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
                             <input
                                 type="email"
                                 value={emailConfig.smtpEmail}
                                 onChange={(e) => handleEmailConfigChange('smtpEmail', e.target.value)}
                                 placeholder="noreply@company.com"
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Password / App Password</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password / App Password</label>
                             <div className="relative">
                                 <input
                                     type={showSmtpPassword ? 'text' : 'password'}
                                     value={emailConfig.smtpPassword}
                                     onChange={(e) => handleEmailConfigChange('smtpPassword', e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowSmtpPassword(!showSmtpPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                 >
                                     {showSmtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
@@ -383,16 +383,16 @@ export default function NotificationsSettingsPage() {
                                 id="useTLS"
                                 checked={emailConfig.useTLS}
                                 onChange={(e) => handleEmailConfigChange('useTLS', e.target.checked)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                             />
-                            <label htmlFor="useTLS" className="text-sm text-gray-700">{t('settings.useTls')}</label>
+                            <label htmlFor="useTLS" className="text-sm text-gray-700 dark:text-gray-300">{t('settings.useTls')}</label>
                         </div>
 
-                        <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
+                        <div className="flex items-center gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                             <button
                                 onClick={handleTestSmtp}
                                 disabled={testingEmail}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                             >
                                 {testingEmail ? (
                                     <>
@@ -438,43 +438,43 @@ export default function NotificationsSettingsPage() {
             </div>
 
             {/* Push Notifications */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <Bell className="w-5 h-5 text-purple-600" />
+                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                        <Bell className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">{t('settings.pushNotifications') || 'Push Notification'}</h3>
-                        <p className="text-sm text-gray-500">{t('settings.pushDesc') || 'Notifikasi langsung di browser'}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{t('settings.pushNotifications') || 'Push Notification'}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.pushDesc') || 'Notifikasi langsung di browser'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.newInvoice') || 'Invoice Baru'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.pushInvoiceDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.newInvoice') || 'Invoice Baru'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.pushInvoiceDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushInvoice} onToggle={() => toggleSetting('pushInvoice')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.pushPaymentDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.pushPaymentDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushPayment} onToggle={() => toggleSetting('pushPayment')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.pushOverdueDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.pushOverdueDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushOverdue} onToggle={() => toggleSetting('pushOverdue')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.mentionedInComment')}</div>
-                            <div className="text-xs text-gray-500">{t('settings.mentionedDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.mentionedInComment')}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.mentionedDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.pushMention} onToggle={() => toggleSetting('pushMention')} />
                     </div>
@@ -482,36 +482,36 @@ export default function NotificationsSettingsPage() {
             </div>
 
             {/* WhatsApp Notifications */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <MessageCircle className="w-5 h-5 text-green-600" />
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">WhatsApp</h3>
-                        <p className="text-sm text-gray-500">{t('settings.whatsappDesc') || 'Notifikasi via WhatsApp Business API'}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">WhatsApp</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.whatsappDesc') || 'Notifikasi via WhatsApp Business API'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.newInvoice') || 'Invoice Baru'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.whatsappInvoiceDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.newInvoice') || 'Invoice Baru'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.whatsappInvoiceDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.whatsappInvoice} onToggle={() => toggleSetting('whatsappInvoice')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.whatsappPaymentDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.whatsappPaymentDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.whatsappPayment} onToggle={() => toggleSetting('whatsappPayment')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Reminder Overdue'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.whatsappOverdueDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.overdueInvoice') || 'Reminder Overdue'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.whatsappOverdueDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.whatsappOverdue} onToggle={() => toggleSetting('whatsappOverdue')} />
                     </div>
@@ -519,29 +519,29 @@ export default function NotificationsSettingsPage() {
             </div>
 
             {/* SMS Notifications */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-orange-600" />
+                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                     </div>
                     <div>
-                        <h3 className="font-medium text-gray-900">{t('settings.smsNotifications') || 'SMS'}</h3>
-                        <p className="text-sm text-gray-500">{t('settings.smsDesc') || 'Notifikasi via SMS (memerlukan integrasi)'}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{t('settings.smsNotifications') || 'SMS'}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.smsDesc') || 'Notifikasi via SMS (memerlukan integrasi)'}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.smsOverdueDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.overdueInvoice') || 'Invoice Overdue'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.smsOverdueDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.smsOverdue} onToggle={() => toggleSetting('smsOverdue')} />
                     </div>
                     <div className="flex items-center justify-between py-2">
                         <div>
-                            <div className="text-sm font-medium text-gray-900">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
-                            <div className="text-xs text-gray-500">{t('settings.smsPaymentDesc')}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('settings.paymentReceived') || 'Pembayaran Diterima'}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t('settings.smsPaymentDesc')}</div>
                         </div>
                         <ToggleSwitch enabled={settings.smsPayment} onToggle={() => toggleSetting('smsPayment')} />
                     </div>

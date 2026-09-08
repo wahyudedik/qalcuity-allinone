@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { processPaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { getPublicBaseUrl } from '@/lib/utils';
 
 // ============================================================
 // Payment Gateway Process API
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000')}/dashboard/finance/invoices/${invoice.id}`,
+      callbackUrl: `${getPublicBaseUrl()}/dashboard/finance/invoices/${invoice.id}`,
     });
 
     if (!gatewayResult.success) {
