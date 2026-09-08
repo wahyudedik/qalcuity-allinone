@@ -8,6 +8,7 @@ import { formatZodError } from './validation-schemas';
  * - ZodError → 400 with field-level validation errors
  * - Prisma P2002 (unique constraint) → 409 Conflict
  * - Prisma P2003 (foreign key not found) → 400 with "Related record not found"
+ * - Prisma P2021 (table not found) → 503 Service Unavailable (migration pending)
  * - Prisma P2025 (record not found) → 404 Not Found
  * - Other errors → 500 Internal Server Error
  */
@@ -36,6 +37,14 @@ export function handleApiError(error: unknown): NextResponse {
                     { success: false, error: 'Data terkait tidak ditemukan. Pastikan referensi yang dimasukkan valid.' },
                     { status: 400 }
                 );
+            case 'P2021': {
+                const tableName = (error.meta?.table as string) || 'unknown';
+                console.error(`[API Error] Prisma P2021: Table "${tableName}" does not exist. Run: cd packages/db && npx prisma migrate deploy`);
+                return NextResponse.json(
+                    { success: false, error: `Layanan tidak tersedia secara temporer. Silakan hubungi administrator. (Table: ${tableName})` },
+                    { status: 503 }
+                );
+            }
             case 'P2025':
                 return NextResponse.json(
                     { success: false, error: 'Data tidak ditemukan' },

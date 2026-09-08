@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ============================================
@@ -94,8 +95,8 @@ export async function GET(
             },
         })
     } catch (error) {
-        console.error('[Alert Rule Detail Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -193,8 +194,8 @@ export async function PUT(
             },
         })
     } catch (error) {
-        console.error('[Alert Rule Update Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -247,7 +248,7 @@ export async function DELETE(
             data: { message: 'Alert rule deleted successfully' },
         })
     } catch (error) {
-        console.error('[Alert Rule Delete Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }

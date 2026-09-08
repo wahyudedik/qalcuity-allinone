@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ============================================
@@ -68,7 +69,7 @@ export async function POST(
             },
         })
     } catch (error) {
-        console.error('[Alert Trigger Acknowledge Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }

@@ -54,7 +54,7 @@ const securityHeaders = [
 const nextConfig = {
     poweredByHeader: false, // ← Security: sembunyikan X-Powered-By header
     reactStrictMode: true, // ← Best practice untuk production
-    transpilePackages: ["@qalcuity/ui", "@qalcuity/db"],
+    transpilePackages: ["@qalcuity/ui"],
     typescript: {
         // Skip TypeScript checking during `next build` to avoid failures on VPS
         // caused by environment differences (Node.js version, Prisma client version, etc.).

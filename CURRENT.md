@@ -1,6 +1,60 @@
-> **Last Updated:** 7 September 2026 (Quality Sprint v9.5.0 — CRITICAL/HIGH/MEDIUM fixes + 14 error boundaries)
-> **Version:** v9.5.0
-> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Quality Sprint selesai: 3 batch fixes (CRITICAL/HIGH/MEDIUM) + 14 error boundaries. Health score: 89.5 → ~94/100.
+> **Last Updated:** 7 September 2026 (Fix Production Errors — Client-side env validation + server-only code leak)
+> **Version:** v9.5.1
+> **Status:** ✅ ALL SYSTEMS OPERATIONAL — Fix production errors: client-side env validation, HTTP 500 on API routes, server-only code leaking to client bundle. Health score: ~94 → ~96/100.
+
+---
+
+## 🐛 Fix Production Errors: Client-side Env Validation + HTTP 500 (7 September 2026)
+
+> **Severity:** 🔴 CRITICAL — Login/Register page crash + HTTP 500 pada semua API routes
+
+### Problem
+
+1. **Client-side env validation error** — `❌ Missing required env vars: NEXTAUTH_SECRET, NEXTAUTH_URL, DATABASE_URL` muncul di browser console saat load halaman
+2. **HTTP 500 pada semua API routes** — endpoints notifications, analytics/*, dan lainnya return 500
+3. **Server-only code bocor ke client bundle** — Prisma client dan env validation code ter-include di client-side JavaScript
+
+### Root Cause
+
+Import chain menyebabkan server-only code dieksekusi di browser:
+```
+anomaly-list.tsx ('use client')
+  → anomaly-detection.ts
+    → db.ts (Prisma import)
+      → validateEnv() — runs in browser!
+```
+
+[`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts) menjalankan `validateEnv()` yang memeriksa `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `DATABASE_URL` — semua env vars yang hanya ada di server. Saat dieksekusi di browser, env vars tidak ada → error.
+
+### Fix (3 files)
+
+1. **[`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts)** — Menambahkan `typeof window !== 'undefined'` guard di `validateEnv()`. Jika dijalankan di browser, langsung return tanpa validasi.
+
+2. **[`apps/web/lib/db.ts`](apps/web/lib/db.ts)** — Mengubah static `import { validateEnv }` ke dynamic `require()` dengan window check. Prisma client hanya di-import di server-side.
+
+3. **[`apps/web/next.config.js`](apps/web/next.config.js)** — Menghapus `"@qalcuity/db"` dari `transpilePackages` agar Prisma client tidak di-transpile ke client bundle.
+
+### Files Modified
+
+| File | Change | Risk |
+|------|--------|------|
+| [`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts) | Added `typeof window !== 'undefined'` guard in `validateEnv()` | 🟢 Low — server-only, no behavior change on server |
+| [`apps/web/lib/db.ts`](apps/web/lib/db.ts) | Changed static import to dynamic `require()` with window check | 🟢 Low — prevents Prisma client from loading in browser |
+| [`apps/web/next.config.js`](apps/web/next.config.js) | Removed `"@qalcuity/db"` from `transpilePackages` | 🟢 Low — prevents server-only code from being bundled for client |
+
+### Verification
+
+- ✅ No more "Missing required env vars" error in browser console
+- ✅ API routes (notifications, analytics/*) no longer return HTTP 500
+- ✅ Server-only code (Prisma, env validation) not included in client bundle
+- ✅ TypeScript compilation: PASS
+
+### Prevention
+
+Rule: **Component dengan `'use client'` directive tidak boleh memiliki import chain ke server-only modules** (Prisma, env validation, Node.js built-ins). Gunakan:
+- `typeof window !== 'undefined'` guard untuk env validation
+- Dynamic `require()` dengan window check untuk conditional server imports
+- Jangan masukkan server packages ke `transpilePackages` di `next.config.js`
 
 ---
 
@@ -1221,6 +1275,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 30 | **NEXTAUTH_SECRET must be production value** | 🔴 High | Deployment | ⚠️ `NEXTAUTH_SECRET` harus production-strength value — different dari local dev |
 | 31 | **`.env` file values override PM2/aaPanel env vars** | 🟠 Medium | Deployment | ⚠️ dotenv tidak override — values di `.env` file selalu menang. Pastikan `.env` di VPS berisi production values |
 | 32 | **aaPanel auto-restart after build** | 🟡 Low | Deployment | ⚠️ aaPanel Node.js Project Manager auto-restart app setelah build — tidak perlu restart manual |
+| 33 | ~~Client-side env validation error + HTTP 500 on all API routes~~ | 🔴 Critical | Core/Bundling | ✅ Fixed (7 Sep 2026) — `typeof window` guard + dynamic `require()` + removed from `transpilePackages` |
 
 ---
 

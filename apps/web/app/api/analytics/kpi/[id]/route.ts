@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // ============================================
@@ -97,8 +98,8 @@ export async function GET(
             },
         })
     } catch (error) {
-        console.error('[KPI Detail Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -198,8 +199,8 @@ export async function PUT(
             },
         })
     } catch (error) {
-        console.error('[KPI Update Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }
 
@@ -252,7 +253,7 @@ export async function DELETE(
             data: { message: 'KPI deleted successfully' },
         })
     } catch (error) {
-        console.error('[KPI Delete Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[ERROR]', error)
+        return handleApiError(error)
     }
 }

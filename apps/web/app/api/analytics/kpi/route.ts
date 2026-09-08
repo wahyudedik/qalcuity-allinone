@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError } from '@/lib/api-error'
 
 // ============================================
 // TYPES
@@ -100,8 +101,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedKPIs })
     } catch (error) {
-        console.error('[KPI List Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[KPI List Error]', error)
+        return handleApiError(error)
     }
 }
 
@@ -189,7 +190,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[KPI Create Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        console.error('[KPI Create Error]', error)
+        return handleApiError(error)
     }
 }
