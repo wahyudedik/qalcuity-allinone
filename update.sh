@@ -231,6 +231,32 @@ else
     print_success "Dependencies verified (no update — consistency check)"
 fi
 
+# --- 5b. Fix node_modules binary permissions ---
+# Root cause: pnpm install dijalankan sebagai root → binary files dimiliki root tanpa +x untuk others
+# App berjalan sebagai user www (aaPanel) → butuh execute permission pada semua binaries
+# Error yang di-fix: EACCES pada prisma schema-engine dan turbo binary
+print_step "5b/8 - Fix node_modules binary permissions"
+
+# Fix semua native addon binaries (.node files) — termasuk prisma query-engine
+find node_modules/.pnpm -name "*.node" -type f -exec chmod +x {} \; 2>/dev/null || true
+
+# Fix semua files di direktori bin/ — termasuk prisma schema-engine, turbo, dll
+find node_modules/.pnpm -path "*/bin/*" -type f -exec chmod +x {} \; 2>/dev/null || true
+
+# Fix semua symlinks di node_modules/.bin/ — bin links dari pnpm
+find node_modules/.bin -type l -exec chmod +x {} \; 2>/dev/null || true
+
+# Specific fix: Prisma engines (schema-engine, query-engine)
+find node_modules/.pnpm -path "*@prisma/engines*" -type f -exec chmod +x {} \; 2>/dev/null || true
+
+# Specific fix: Turbo binary
+find node_modules/.pnpm -path "*@turbo/linux-64*" -type f -exec chmod +x {} \; 2>/dev/null || true
+
+# Fix directory permissions agar bisa di-traverse oleh user www
+find node_modules/.pnpm -type d -name "bin" -exec chmod 755 {} \; 2>/dev/null || true
+
+print_success "Binary permissions diperbaiki (prisma engines, turbo, .node addons, .bin symlinks)"
+
 # --- 6. Prisma generate + migrate (SELALU sebelum build) ---
 print_step "6/8 - Prisma generate & migrate"
 echo -e "${YELLOW}----------------------------------------${NC}"
