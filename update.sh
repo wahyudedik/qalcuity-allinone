@@ -413,22 +413,36 @@ else
     log "WARNING: Port $APP_PORT verification failed, starting anyway"
 fi
 
-# --- 8c. Start aplikasi ---
-# CATATAN: update.sh start dengan nohup (background) karena script ini dijalankan
-# dari terminal/cron, bukan dari aaPanel. aaPanel menggunakan start.sh untuk restart.
-# Pastikan tidak ada race condition: kill selesai SEBELUM start.
-echo -e "${YELLOW}Starting Qalcuity on port $APP_PORT...${NC}"
-cd "$APP_DIR/apps/web"
+# --- 8c. Restart via start.sh (aaPanel-compatible) ---
+# PENTING: JANGAN jalankan `next start` langsung dari update.sh!
+# aaPanel Node.js Project Manager menggunakan start.sh sebagai entry point.
+# Menjalankan `next start` dari update.sh menyebabkan RACE CONDITION:
+#   1. update.sh start app → PID X di port 3000
+#   2. aaPanel detect file changes → restart via start.sh
+#   3. start.sh kill PID X → start baru → EADDRINUSE (sementara kill proses)
+#   4. aaPanel status = "Stopped", app down
+#
+# Solusi: Setelah build selesai, panggil start.sh secara langsung.
+# start.sh sudah punya built-in kill logic → tidak ada race condition.
+# aaPanel juga akan melihat start.sh sudah menjalankan app → tidak restart ulang.
+echo -e "${YELLOW}Restarting via start.sh (aaPanel entry point)...${NC}"
+
+# Final kill sebelum start.sh (belt-and-suspenders)
+if command -v fuser &> /dev/null; then
+    fuser -k $APP_PORT/tcp 2>/dev/null || true
+    sleep 2
+fi
+
+# Jalankan start.sh — ini entry point yang sama dengan yang dipakai aaPanel
 export PRISMA_QUERY_ENGINE_TYPE=library
-
-# Start in background
-nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
-APP_PID=$!
-echo -e "${GREEN}✅ App started with PID: $APP_PID${NC}"
-
-# Wait for app to be ready
-echo -e "${YELLOW}Waiting for app to start...${NC}"
-sleep 10
+if [ -x "$APP_DIR/apps/web/start.sh" ]; then
+    bash "$APP_DIR/apps/web/start.sh"
+else
+    echo -e "${RED}⚠️  start.sh tidak ditemukan! Fallback: start manual...${NC}"
+    cd "$APP_DIR/apps/web"
+    nohup npx next start -p $APP_PORT > /dev/null 2>&1 &
+    sleep 10
+fi
 
 # Health check
 echo -e "${YELLOW}Running health check...${NC}"
