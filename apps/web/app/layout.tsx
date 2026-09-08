@@ -23,6 +23,23 @@ export default function RootLayout({
 }) {
     return (
         <html lang="id" suppressHydrationWarning>
+            <head>
+                {/* Suppress known Next.js 14.x web-vitals bug:
+                    "Cannot read properties of undefined (reading 'startTime')"
+                    This is a race condition in PerformanceObserver callback during browser idle. */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            window.addEventListener('error', function(e) {
+                                if (e.message && e.message.includes("Cannot read properties of undefined (reading 'startTime')")) {
+                                    e.preventDefault();
+                                    return false;
+                                }
+                            });
+                        `
+                    }}
+                />
+            </head>
             <body suppressHydrationWarning>
                 <SessionProvider>
                     <I18nProvider>

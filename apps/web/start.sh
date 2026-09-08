@@ -97,6 +97,12 @@ fi
 # ============================================================
 # STEP 2: Start Next.js
 # ============================================================
+# PENTING: JANGAN gunakan `exec` di sini!
+# aaPanel Node.js Project Manager membutuhkan shell process tetap hidup
+# untuk PID tracking. `exec` menggantikan shell process dengan npx,
+# menyebabkan aaPanel kehilangan PID → status "Stopped".
+# Tanpa `exec`, shell process tetap hidup sebagai parent process.
+# ============================================================
 cd "$APP_DIR"
 echo "$LOG_PREFIX 🚀 Starting Next.js on port $APP_PORT..."
-exec npx next start -p $APP_PORT
+npx next start -p $APP_PORT
