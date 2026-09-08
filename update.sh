@@ -413,122 +413,150 @@ else
     log "WARNING: Port $APP_PORT verification failed, starting anyway"
 fi
 
-# --- 8c. Restart via start.sh (aaPanel-compatible) ---
-# PENTING: JANGAN jalankan `next start` langsung dari update.sh!
-# aaPanel Node.js Project Manager menggunakan start.sh sebagai entry point.
-# Menjalankan `next start` dari update.sh menyebabkan RACE CONDITION:
+# --- 8c. Restart via aaPanel (race-condition-free) ---
+# STRATEGI: JANGAN start app dari update.sh!
+# aaPanel Node.js Project Manager akan auto-detect perubahan file dan restart sendiri.
+# Menjalankan app dari update.sh menyebabkan RACE CONDITION:
 #   1. update.sh start app → PID X di port 3000
 #   2. aaPanel detect file changes → restart via start.sh
 #   3. start.sh kill PID X → start baru → EADDRINUSE (sementara kill proses)
 #   4. aaPanel status = "Stopped", app down
 #
-# Solusi: Setelah build selesai, jalankan start.sh via nohup agar:
-#   - App process survive setelah update.sh exit (aaPanel bisa track PID)
-#   - Tidak ada race condition dengan aaPanel restart
-#   - aaPanel melihat process aktif → status "Running"
-echo -e "${YELLOW}Restarting via start.sh (aaPanel entry point)...${NC}"
+# Solusi: Biarkan aaPanel yang manage app lifecycle:
+#   1. update.sh SELESAI (build + migrate done)
+#   2. aaPanel detect changes → jalankan start.sh
+#   3. start.sh kill process lama → start baru → no conflict
+#   4. aaPanel status = "Running"
+#
+# Fallback: Jika aaPanel tidak restart dalam 30 detik, start manual via start.sh
+echo -e "${YELLOW}Waiting for aaPanel to restart application...${NC}"
+log "Build complete. Waiting for aaPanel auto-restart..."
 
-# Final kill sebelum start.sh (belt-and-suspenders)
+# Pastikan port bersih (final cleanup)
 if command -v fuser &> /dev/null; then
     fuser -k $APP_PORT/tcp 2>/dev/null || true
     sleep 2
 fi
 
-# Jalankan start.sh via nohup (background, survive update.sh exit)
-# Tanpa nohup, process akan mati saat update.sh exit → aaPanel "Stopped"
-export PRISMA_QUERY_ENGINE_TYPE=library
-if [ -x "$APP_DIR/apps/web/start.sh" ]; then
-    cd "$APP_DIR/apps/web"
-    nohup bash "$APP_DIR/apps/web/start.sh" > /tmp/qalcuity-app.log 2>&1 &
-    APP_PID=$!
-    disown $APP_PID 2>/dev/null || true
-    log "start.sh launched in background (PID: $APP_PID)"
-else
-    echo -e "${RED}⚠️  start.sh tidak ditemukan! Fallback: start manual...${NC}"
-    cd "$APP_DIR/apps/web"
-    nohup npx next start -p $APP_PORT > /tmp/qalcuity-app.log 2>&1 &
-    APP_PID=$!
-    disown $APP_PID 2>/dev/null || true
-    log "Next.js started manually in background (PID: $APP_PID)"
-fi
-
-# --- Health Check (dengan timing yang robust untuk VPS) ---
-# Delay awal: 10 detik untuk memberikan waktu app fully start
-# Retry: 10 attempts × 3 detik interval = max 40 detik total wait
-# TCP check sebagai fallback jika HTTP check gagal (app bind ke port belum selesai)
-echo -e "${YELLOW}Waiting for application to start (10s initial delay)...${NC}"
-sleep 10
-
-echo -e "${YELLOW}Running health check...${NC}"
-HEALTH_OK=false
-HEALTH_ATTEMPTS=10
-for i in $(seq 1 $HEALTH_ATTEMPTS); do
-    # Check 1: HTTP health endpoint
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
+# Tunggu aaPanel restart (timeout 30 detik)
+AAPANEL_RESTARTED=false
+AAPANEL_WAIT=30
+for i in $(seq 1 $AAPANEL_WAIT); do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 --max-time 5 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
     if [ "$HTTP_CODE" = "200" ]; then
-        HEALTH_OK=true
-        echo -e "  Attempt $i/$HEALTH_ATTEMPTS: HTTP $HTTP_CODE ✓"
+        AAPANEL_RESTARTED=true
+        echo -e "  [$i/${AAPANEL_WAIT}s] aaPanel restart detected (HTTP 200) ✓"
+        log "aaPanel auto-restart detected after ${i}s"
         break
     fi
-
-    # Check 2: TCP port check (fallback — app mungkin bind port tapi health endpoint belum ready)
+    # Check TCP port as intermediate indicator
     if command -v fuser &> /dev/null; then
-        TCP_OK=false
-        if fuser $APP_PORT/tcp &>/dev/null; then
-            TCP_OK=true
-        fi
-    elif command -v ss &> /dev/null; then
-        TCP_OK=false
-        if ss -tlnp "sport = :$APP_PORT" &>/dev/null; then
-            TCP_OK=true
-        fi
-    else
-        TCP_OK=false
-    fi
-
-    if [ "$TCP_OK" = true ] && [ "$HTTP_CODE" != "000" ]; then
-        # Port terbuka + ada response (bukan connection refused) → app sedang warm up
-        echo -e "  Attempt $i/$HEALTH_ATTEMPTS: HTTP $HTTP_CODE (port open, warming up)..."
-        sleep 2
-        # Quick re-check after short delay
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
-        if [ "$HTTP_CODE" = "200" ]; then
-            HEALTH_OK=true
-            echo -e "  Attempt $i/$HEALTH_ATTEMPTS: HTTP $HTTP_CODE ✓ (warm-up complete)"
-            break
+        if fuser $APP_PORT/tcp &>/dev/null && [ "$i" -gt 5 ]; then
+            echo -e "  [$i/${AAPANEL_WAIT}s] Port $APP_PORT is binding (app starting)..."
         fi
     fi
-
-    echo -e "  Attempt $i/$HEALTH_ATTEMPTS: HTTP $HTTP_CODE — waiting..."
-    sleep 3
+    sleep 1
 done
 
-if [ "$HEALTH_OK" = "true" ]; then
-    echo -e "${GREEN}✅ Health check PASSED (HTTP 200)${NC}"
-    log "Health check PASSED"
+if [ "$AAPANEL_RESTARTED" = true ]; then
+    echo -e "${GREEN}✅ aaPanel restarted application successfully${NC}"
+    log "aaPanel auto-restart confirmed — app running on port $APP_PORT"
 else
-    # Health check gagal — tapi JANGAN exit/abort!
-    # App mungkin butuh waktu lebih lama di resource-limited VPS
-    # Atau health endpoint mungkin belum terdaftar
-    # Cek apakah process masih hidup dulu
-    APP_ALIVE=false
-    if [ -n "$APP_PID" ] && kill -0 $APP_PID 2>/dev/null; then
-        APP_ALIVE=true
-    elif command -v fuser &> /dev/null; then
+    # aaPanel belum restart dalam 30 detik
+    # Kemungkinan: aaPanel tidak auto-detect, atau lebih lambat dari expected
+    echo -e "${YELLOW}⚠️  aaPanel auto-restart not detected within ${AAPANEL_WAIT}s${NC}"
+    log "aaPanel auto-restart not detected within ${AAPANEL_WAIT}s — checking port status"
+
+    # Cek apakah ada process di port 3000 (mungkin aaPanel sudah mulai restart)
+    PORT_IN_USE=false
+    if command -v fuser &> /dev/null; then
         if fuser $APP_PORT/tcp &>/dev/null; then
-            APP_ALIVE=true
+            PORT_IN_USE=true
+        fi
+    elif command -v lsof &> /dev/null; then
+        if lsof -i:$APP_PORT &>/dev/null; then
+            PORT_IN_USE=true
         fi
     fi
 
-    if [ "$APP_ALIVE" = true ]; then
-        echo -e "${YELLOW}⚠️  Health check timeout, but app process is running on port $APP_PORT${NC}"
-        echo -e "${GREEN}✅ Application is UP (health endpoint may need more time)${NC}"
-        log "Health check timeout but app process alive on port $APP_PORT — OK"
+    if [ "$PORT_IN_USE" = true ]; then
+        echo -e "${YELLOW}  Port $APP_PORT is in use — aaPanel may be restarting now${NC}"
+        echo -e "${YELLOW}  Waiting additional 20s for aaPanel to complete...${NC}"
+        sleep 20
+
+        # Final check
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
+        if [ "$HTTP_CODE" = "200" ]; then
+            echo -e "${GREEN}✅ Application is running on port $APP_PORT${NC}"
+            log "Application confirmed running after extended wait"
+        else
+            echo -e "${YELLOW}⚠️  Port $APP_PORT in use but health check inconclusive${NC}"
+            echo -e "${YELLOW}ℹ️  Application may still be starting up — check aaPanel dashboard${NC}"
+            log "Port $APP_PORT in use but health check inconclusive"
+        fi
     else
-        echo -e "${RED}❌ Health check FAILED — app process not found${NC}"
-        echo -e "${YELLOW}ℹ️  Buka aaPanel → Node.js Project → klik 'Start'${NC}"
-        echo -e "${YELLOW}ℹ️  Atau jalankan: bash $APP_DIR/apps/web/start.sh${NC}"
-        log "Health check FAILED — app process not found on port $APP_PORT"
+        # Port kosong — aaPanel belum start sama sekali
+        # Fallback: start manual via start.sh
+        echo -e "${YELLOW}Fallback: Starting application manually via start.sh...${NC}"
+        log "aaPanel did not restart. Starting manually via start.sh as fallback..."
+
+        # Ensure start.sh exists and is executable
+        START_SH="$APP_DIR/apps/web/start.sh"
+        if [ ! -f "$START_SH" ]; then
+            echo -e "${RED}⚠️  start.sh tidak ditemukan di $START_SH!${NC}"
+            log "ERROR: start.sh not found at $START_SH"
+        else
+            chmod +x "$START_SH" 2>/dev/null || true
+            export PRISMA_QUERY_ENGINE_TYPE=library
+            cd "$APP_DIR/apps/web"
+            nohup bash "$START_SH" > /tmp/qalcuity-app.log 2>&1 &
+            APP_PID=$!
+            disown $APP_PID 2>/dev/null || true
+            log "start.sh launched as fallback (PID: $APP_PID)"
+
+            # Wait for app to start
+            echo -e "${YELLOW}Waiting for application to start (10s initial delay)...${NC}"
+            sleep 10
+
+            # Health check
+            HEALTH_OK=false
+            for j in $(seq 1 10); do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
+                if [ "$HTTP_CODE" = "200" ]; then
+                    HEALTH_OK=true
+                    echo -e "  Attempt $j/10: HTTP $HTTP_CODE ✓"
+                    break
+                fi
+                echo -e "  Attempt $j/10: HTTP $HTTP_CODE — waiting..."
+                sleep 3
+            done
+
+            if [ "$HEALTH_OK" = true ]; then
+                echo -e "${GREEN}✅ Health check PASSED (HTTP 200)${NC}"
+                log "Fallback start successful — health check PASSED"
+            else
+                # Check if process is alive
+                APP_ALIVE=false
+                if [ -n "$APP_PID" ] && kill -0 $APP_PID 2>/dev/null; then
+                    APP_ALIVE=true
+                elif command -v fuser &> /dev/null; then
+                    if fuser $APP_PORT/tcp &>/dev/null; then
+                        APP_ALIVE=true
+                    fi
+                fi
+
+                if [ "$APP_ALIVE" = true ]; then
+                    echo -e "${YELLOW}⚠️  Health check timeout, but app process is running on port $APP_PORT${NC}"
+                    echo -e "${GREEN}✅ Application is UP (health endpoint may need more time)${NC}"
+                    log "Fallback start: health timeout but app alive on port $APP_PORT"
+                else
+                    echo -e "${RED}❌ Application failed to start${NC}"
+                    echo -e "${YELLOW}ℹ️  Buka aaPanel → Node.js Project → klik 'Start'${NC}"
+                    echo -e "${YELLOW}ℹ️  Atau jalankan: bash $APP_DIR/apps/web/start.sh${NC}"
+                    log "Fallback start FAILED — app process not found on port $APP_PORT"
+                fi
+            fi
+        fi
     fi
 fi
 
