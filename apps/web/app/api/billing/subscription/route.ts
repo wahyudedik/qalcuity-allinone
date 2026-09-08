@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:subscription:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
 
         if (!tenant) {
             return NextResponse.json(
-                { success: false, error: 'Tenant tidak ditemukan' },
+                { success: false, error: MSG.TENANT_NOT_FOUND, code: 'TENANT_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -66,10 +68,6 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('Error fetching subscription:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data langganan' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

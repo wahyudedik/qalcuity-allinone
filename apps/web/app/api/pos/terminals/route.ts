@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createPosTerminalSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:terminals:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:terminals:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
         // Only ADMIN+ can create terminals
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membuat terminal' },
+                { success: false, error: MSG.TERMINAL_ADMIN_ONLY_CREATE },
                 { status: 403 }
             );
         }

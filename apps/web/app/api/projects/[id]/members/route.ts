@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { addProjectMemberSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -22,7 +23,7 @@ export async function GET(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         const members = await prisma.projectMember.findMany({
@@ -46,7 +47,7 @@ export async function POST(
         const rateLimitResult = checkRateLimit(`api:projects:members:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -72,7 +73,7 @@ export async function POST(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         // Check for duplicate membership
@@ -87,7 +88,7 @@ export async function POST(
 
         if (existingMember) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan ini sudah menjadi anggota proyek' },
+                { success: false, error: MSG.PROJECT_MEMBER_ALREADY_EXISTS },
                 { status: 409 }
             );
         }

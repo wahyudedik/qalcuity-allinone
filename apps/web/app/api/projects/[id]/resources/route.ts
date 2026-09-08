@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createResourceAllocationSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 // =============================================================================
 // GET /api/projects/[id]/resources — List resource allocations
@@ -25,7 +26,7 @@ export async function GET(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         const { searchParams } = new URL(request.url);
@@ -130,7 +131,7 @@ export async function POST(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         const { employeeId, role, allocationPct, startDate, endDate, hourlyRate, notes } = validation.data;
@@ -140,7 +141,7 @@ export async function POST(
         const end = new Date(endDate);
         if (end < start) {
             return NextResponse.json(
-                { success: false, error: 'Tanggal selesai harus setelah tanggal mulai' },
+                { success: false, error: MSG.PROJECT_RESOURCE_END_BEFORE_START },
                 { status: 400 }
             );
         }
@@ -159,7 +160,7 @@ export async function POST(
 
         if (overlapping) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan ini sudah memiliki alokasi yang tumpang tindih pada periode tersebut' },
+                { success: false, error: MSG.PROJECT_RESOURCE_OVERLAP },
                 { status: 409 }
             );
         }

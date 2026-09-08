@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updatePayrollSchema, formatZodError } from '@/lib/validation-schemas';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -85,7 +86,7 @@ export async function PUT(
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payroll record tidak ditemukan' },
+                { success: false, error: MSG.PAYROLL_RECORD_NOT_FOUND, code: 'PAYROLL_RECORD_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -105,7 +106,7 @@ export async function PUT(
                     const isValid = canTransitionSafe('PAYROLL', currentStatus, newStatus, tenantId);
                     if (!isValid) {
                         return NextResponse.json(
-                            { success: false, error: `Transisi status tidak valid: ${currentStatus} → ${newStatus}` },
+                            { success: false, error: `${MSG.INVALID_STATUS_TRANSITION}: ${currentStatus} → ${newStatus}`, code: 'INVALID_STATUS_TRANSITION' },
                             { status: 400 }
                         );
                     }
@@ -121,9 +122,9 @@ export async function PUT(
                         notes: validatedData.notes || null,
                     });
                 } catch (workflowError: unknown) {
-                    // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan status
+                    // Backward compatibility: if workflow engine fails, still allow status change
                     const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                    console.warn(`[Workflow] Payroll workflow validation gagal, mengizinkan transisi: ${msg}`);
+                    console.warn(`[Workflow] Payroll workflow validation failed, allowing transition: ${msg}`);
                 }
             }
             data.status = newStatus;

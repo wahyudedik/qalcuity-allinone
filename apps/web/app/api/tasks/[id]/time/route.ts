@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createTimeLogSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -21,7 +22,7 @@ export async function GET(
         });
 
         if (!task) {
-            return NextResponse.json({ success: false, error: 'Task tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
         }
 
         const timeLogs = await prisma.timeLog.findMany({
@@ -70,7 +71,7 @@ export async function POST(
         });
 
         if (!task) {
-            return NextResponse.json({ success: false, error: 'Task tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
         }
 
         const { date, hours, description } = validation.data;

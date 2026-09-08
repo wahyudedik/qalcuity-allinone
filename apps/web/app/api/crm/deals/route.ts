@@ -7,6 +7,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { createDealSchema, updateDealSchema, formatZodError } from '@/lib/validation-schemas';
 import { WorkflowEngine } from '@qalcuity/workflow';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:deals:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:deals:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: `Stage "${dealStage}" tidak valid. Stage yang tersedia: ${validStages.join(', ')}`,
+                    error: MSG.DEAL_STAGE_INVALID,
                 },
                 { status: 400 }
             );
@@ -182,7 +183,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID wajib diisi' },
+                { success: false, error: MSG.ID_REQUIRED },
                 { status: 400 }
             );
         }
@@ -203,7 +204,7 @@ export async function PUT(request: Request) {
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Deal tidak ditemukan' },
+                { success: false, error: MSG.DEAL_NOT_FOUND },
                 { status: 404 }
             );
         }

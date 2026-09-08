@@ -205,7 +205,79 @@
         "lowStockCount": "produk low stock",
         "allStocksSafe": "Semua stok produk aman",
         "needRestock": "perlu restock.",
-        "noRestockNeeded": "Tidak ada produk yang perlu restock saat ini."
+        "noRestockNeeded": "Tidak ada produk yang perlu restock saat ini.",
+        "tasks": {
+            "title": "Task Saya",
+            "subtitle": "Semua task dari semua proyek",
+            "emptyTitle": "Tidak ada task",
+            "emptyDescAll": "Anda belum memiliki task dari proyek manapun.",
+            "emptyDescFiltered": "Tidak ada task yang cocok dengan filter",
+            "status": {
+                "TODO": "To Do",
+                "IN_PROGRESS": "Dikerjakan",
+                "IN_REVIEW": "Review",
+                "DONE": "Selesai",
+                "CANCELLED": "Dibatalkan"
+            },
+            "priority": {
+                "LOW": "Rendah",
+                "MEDIUM": "Sedang",
+                "HIGH": "Tinggi",
+                "URGENT": "Mendesak"
+            },
+            "filter": {
+                "ALL": "Semua",
+                "TODAY": "Jatuh Tempo Hari Ini",
+                "OVERDUE": "Terlambat",
+                "COMPLETED": "Selesai"
+            },
+            "groupBy": {
+                "none": "Tanpa Pengelompokan",
+                "project": "Kelompok: Proyek",
+                "status": "Kelompok: Status",
+                "priority": "Kelompok: Prioritas"
+            },
+            "sortBy": {
+                "dueDate": "Urutkan: Jatuh Tempo",
+                "priority": "Urutkan: Prioritas",
+                "created": "Urutkan: Dibuat"
+            },
+            "allTasks": "Semua Task",
+            "all": "Semua",
+            "overdue": "Terlambat"
+        },
+        "projects": {
+            "status": {
+                "PLANNING": "Perencanaan",
+                "ACTIVE": "Aktif",
+                "ON_HOLD": "Ditangguhkan",
+                "COMPLETED": "Selesai",
+                "CANCELLED": "Dibatalkan"
+            },
+            "tabs": {
+                "overview": "Ringkasan",
+                "tasks": "Task",
+                "members": "Anggota",
+                "budget": "Anggaran",
+                "gantt": "Gantt",
+                "resources": "Resource"
+            },
+            "roles": {
+                "MANAGER": "Manajer",
+                "MEMBER": "Anggota",
+                "VIEWER": "Pengamat"
+            },
+            "board": {
+                "title": "Task Board",
+                "moveTo": "Pindah ke",
+                "emptyColumn": "Tidak ada task",
+                "noTasks": "Tidak ada task",
+                "taskMoved": "Task dipindah ke",
+                "moveFailed": "Gagal memperbarui status task",
+                "addFailed": "Gagal menambahkan task",
+                "taskAdded": "Task berhasil ditambahkan"
+            }
+        }
     },
     "finance": {
         "invoices": {

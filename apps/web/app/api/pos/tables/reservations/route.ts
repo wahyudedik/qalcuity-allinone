@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createReservationSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:tables:reservations:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:tables:reservations:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membuat reservasi' },
+                { success: false, error: MSG.RESERVATION_ADMIN_ONLY_CREATE },
                 { status: 403 }
             );
         }
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
             });
             if (!table) {
                 return NextResponse.json(
-                    { success: false, error: 'Meja tidak ditemukan' },
+                    { success: false, error: MSG.TABLE_NOT_FOUND },
                     { status: 404 }
                 );
             }
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
             // Check table capacity
             if (table.capacity < validatedData.partySize) {
                 return NextResponse.json(
-                    { success: false, error: `Kapasitas meja (${table.capacity}) kurang dari jumlah tamu (${validatedData.partySize})` },
+                    { success: false, error: MSG.TABLE_CAPACITY_EXCEEDED },
                     { status: 400 }
                 );
             }
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
                 );
                 if (existingEnd > reservationStart) {
                     return NextResponse.json(
-                        { success: false, error: 'Meja sudah memiliki reservasi pada waktu tersebut' },
+                        { success: false, error: MSG.TABLE_HAS_RESERVATION },
                         { status: 400 }
                     );
                 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -16,7 +17,7 @@ export async function GET(
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -27,7 +28,7 @@ export async function GET(
 
         const job = await prisma.fieldJob.findFirst({ where: { id, tenantId } });
         if (!job) {
-            return NextResponse.json({ success: false, error: 'Pekerjaan tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
         }
 
         const assignments = await prisma.fieldJobAssignment.findMany({
@@ -61,7 +62,7 @@ export async function POST(
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -81,7 +82,7 @@ export async function POST(
 
         const job = await prisma.fieldJob.findFirst({ where: { id, tenantId } });
         if (!job) {
-            return NextResponse.json({ success: false, error: 'Pekerjaan tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
         }
 
         const { employeeId, role, notes } = validation.data;

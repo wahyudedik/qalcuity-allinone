@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { redeemLoyaltyPointsSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function POST(request: Request) {
     try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:loyalty:redeem:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
 
         if (!member) {
             return NextResponse.json(
-                { success: false, error: 'Member tidak ditemukan' },
+                { success: false, error: MSG.MEMBER_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
         if (!reward) {
             return NextResponse.json(
-                { success: false, error: 'Reward tidak ditemukan atau sudah tidak aktif' },
+                { success: false, error: MSG.REWARD_INACTIVE },
                 { status: 404 }
             );
         }
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
         // Check stock
         if (reward.stock === 0) {
             return NextResponse.json(
-                { success: false, error: 'Reward sudah habis' },
+                { success: false, error: MSG.REWARD_OUT_OF_STOCK },
                 { status: 400 }
             );
         }
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: `Poin tidak mencukupi. Dibutuhkan ${reward.pointsCost} poin, tersedia ${member.points} poin`,
+                    error: MSG.LOYALTY_POINTS_INSUFFICIENT,
                 },
                 { status: 400 }
             );

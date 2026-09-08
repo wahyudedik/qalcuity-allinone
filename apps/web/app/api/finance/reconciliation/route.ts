@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
             });
             if (!bankTx) {
                 return NextResponse.json(
-                    { success: false, message: 'Transaksi bank tidak ditemukan' },
+                    { success: false, message: 'Bank transaction not found', code: 'NOT_FOUND' },
                     { status: 404 }
                 );
             }
@@ -192,7 +193,7 @@ export async function POST(request: Request) {
                 where: { id: validated.bankTransactionId },
                 data: {
                     status: 'discrepancy',
-                    discrepancyNote: body.note || 'Ditandai sebagai selisih',
+                    discrepancyNote: body.note || 'Marked as discrepancy',
                 },
             });
 
@@ -210,7 +211,7 @@ export async function POST(request: Request) {
 
             return NextResponse.json({
                 success: true,
-                message: 'Transaksi ditandai sebagai selisih',
+                message: 'Transaction marked as discrepancy',
                 data: updated,
             });
         }
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
         // Handle pencocokan transaksi
         if (!bankTransactionId || !bookTransactionId) {
             return NextResponse.json(
-                { success: false, message: 'bankTransactionId dan bookTransactionId harus diisi' },
+                { success: false, message: 'bankTransactionId and bookTransactionId are required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -235,7 +236,7 @@ export async function POST(request: Request) {
         });
         if (!bankTx) {
             return NextResponse.json(
-                { success: false, message: 'Transaksi bank tidak ditemukan' },
+                { success: false, message: 'Bank transaction not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -246,7 +247,7 @@ export async function POST(request: Request) {
         });
         if (!bookAccount) {
             return NextResponse.json(
-                { success: false, message: 'Transaksi buku tidak ditemukan' },
+                { success: false, message: 'Book transaction not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -273,7 +274,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: 'Transaksi berhasil dicocokkan',
+            message: 'Transactions matched successfully',
             data: {
                 bankTransactionId: validated.bankTransactionId,
                 bookTransactionId: validated.bookTransactionId,
@@ -296,7 +297,7 @@ export async function PUT(request: Request) {
 
         if (!bankTransactionId) {
             return NextResponse.json(
-                { success: false, message: 'bankTransactionId harus diisi' },
+                { success: false, message: 'bankTransactionId is required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -310,7 +311,7 @@ export async function PUT(request: Request) {
         });
         if (!bankTx) {
             return NextResponse.json(
-                { success: false, message: 'Transaksi bank tidak ditemukan' },
+                { success: false, message: 'MSG.BANK_TRANSACTION_NOT_FOUND' },
                 { status: 404 }
             );
         }

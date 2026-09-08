@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { loadDemoData, tenantHasData } from "@/lib/seed-data/demo";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { handleApiError } from "@/lib/api-error";
 
 /**
  * POST /api/demo/load
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:demo:load:${tenantId}:${ip}`, 5, 300000); // 5 per 5 minutes
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: "Terlalu banyak request. Coba lagi nanti." },
+                { success: false, error: "MSG.TOO_MANY_REQUESTS" },
                 { status: 429 }
             );
         }
@@ -68,13 +70,6 @@ export async function POST(req: Request) {
             );
         }
     } catch (error) {
-        console.error("[API /api/demo/load] Error:", error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            {
-                success: false,
-                error: error instanceof Error ? error.message : "Terjadi kesalahan saat memuat demo data",
-            },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

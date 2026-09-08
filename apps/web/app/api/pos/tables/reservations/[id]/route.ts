@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { updateReservationSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -15,7 +16,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:tables:reservations:[id]:GET:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -34,7 +35,7 @@ export async function GET(
 
         if (!reservation) {
             return NextResponse.json(
-                { success: false, error: 'Reservasi tidak ditemukan' },
+                { success: false, error: MSG.RESERVATION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -73,7 +74,7 @@ export async function PATCH(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:tables:reservations:[id]:PATCH:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -82,7 +83,7 @@ export async function PATCH(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah reservasi' },
+                { success: false, error: MSG.RESERVATION_ADMIN_ONLY_UPDATE },
                 { status: 403 }
             );
         }
@@ -101,7 +102,7 @@ export async function PATCH(
         const existing = await prisma.posTableReservation.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Reservasi tidak ditemukan' },
+                { success: false, error: MSG.RESERVATION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -113,7 +114,7 @@ export async function PATCH(
             });
             if (!table) {
                 return NextResponse.json(
-                    { success: false, error: 'Meja tidak ditemukan' },
+                    { success: false, error: MSG.TABLE_NOT_FOUND },
                     { status: 404 }
                 );
             }
@@ -121,7 +122,7 @@ export async function PATCH(
             const partySize = validation.data.partySize || existing.partySize;
             if (table.capacity < partySize) {
                 return NextResponse.json(
-                    { success: false, error: `Kapasitas meja (${table.capacity}) kurang dari jumlah tamu (${partySize})` },
+                    { success: false, error: MSG.TABLE_CAPACITY_EXCEEDED },
                     { status: 400 }
                 );
             }
@@ -200,7 +201,7 @@ export async function DELETE(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:tables:reservations:[id]:DELETE:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -209,7 +210,7 @@ export async function DELETE(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membatalkan reservasi' },
+                { success: false, error: MSG.RESERVATION_ADMIN_ONLY_CANCEL },
                 { status: 403 }
             );
         }
@@ -219,7 +220,7 @@ export async function DELETE(
         const existing = await prisma.posTableReservation.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Reservasi tidak ditemukan' },
+                { success: false, error: MSG.RESERVATION_NOT_FOUND },
                 { status: 404 }
             );
         }

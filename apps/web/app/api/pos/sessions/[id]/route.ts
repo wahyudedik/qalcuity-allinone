@@ -6,6 +6,7 @@ import { closePosSessionSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -15,7 +16,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:sessions:[id]:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -40,7 +41,7 @@ export async function GET(
 
         if (!session) {
             return NextResponse.json(
-                { success: false, error: 'Sesi tidak ditemukan' },
+                { success: false, error: MSG.SESSION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -113,7 +114,7 @@ export async function PUT(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:sessions:[id]:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -135,14 +136,14 @@ export async function PUT(
         const existing = await prisma.posSession.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Sesi tidak ditemukan' },
+                { success: false, error: MSG.SESSION_NOT_FOUND },
                 { status: 404 }
             );
         }
 
         if (existing.status !== 'OPEN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya sesi OPEN yang dapat ditutup' },
+                { success: false, error: MSG.SESSION_ONLY_OPEN_CAN_CLOSE },
                 { status: 400 }
             );
         }

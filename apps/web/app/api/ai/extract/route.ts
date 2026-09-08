@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { extractDocument, type DocumentType } from '@/lib/ai/document-extraction';
@@ -6,12 +7,13 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 // ─── Zod Schema ──────────────────────────────────────────────────────────────
 
 const extractRequestSchema = z.object({
-    fileBase64: z.string().min(1, 'File tidak boleh kosong'),
-    fileName: z.string().min(1, 'Nama file wajib diisi').max(255),
+    fileBase64: z.string().min(1, 'MSG.FILE_CANNOT_BE_EMPTY'),
+    fileName: z.string().min(1, 'MSG.FILE_NAME_REQUIRED').max(255),
     documentType: z.enum(['INVOICE', 'PURCHASE_ORDER', 'RECEIPT', 'KTP', 'NPWP'], {
         message: 'Tipe dokumen tidak valid',
     }),
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:extract:${tenantId}:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -99,19 +101,6 @@ export async function POST(req: Request) {
             data: result,
         });
     } catch (error) {
-        console.error(
-            'Document extraction error:',
-            error instanceof Error ? error.message : 'Unknown error'
-        );
-        return NextResponse.json(
-            {
-                success: false,
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : 'Gagal mengekstrak dokumen. Silakan coba lagi.',
-            },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

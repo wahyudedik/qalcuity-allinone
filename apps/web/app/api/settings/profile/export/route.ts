@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
 
         if (!user) {
             return NextResponse.json(
-                { success: false, error: 'User tidak ditemukan' },
+                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
                 { status: 404 }
             )
         }

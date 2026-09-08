@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -100,7 +101,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:balance-sheet:${ip}`, 60, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -119,7 +120,7 @@ export async function GET(request: Request) {
 
         if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Parameter tidak valid', details: validation.error.flatten() },
+                { success: false, error: 'Invalid parameters', details: validation.error.flatten(), code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }

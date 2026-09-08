@@ -32,6 +32,7 @@ import {
 import { useProjects, type ProjectDetail, type Task, type ProjectMember, type TaskStatus, type MemberRole } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import { GanttChart as GanttChartComponent, type GanttData } from '@/components/operations/gantt-chart';
 import { ResourceHeatmap, type ResourceData } from '@/components/operations/resource-heatmap';
 import { ProjectTimeline, type TimelineData } from '@/components/operations/project-timeline';
@@ -42,13 +43,13 @@ import { ProjectTimeline, type TimelineData } from '@/components/operations/proj
 
 type TabKey = 'overview' | 'tasks' | 'members' | 'budget' | 'gantt' | 'resources';
 
-const TABS: { key: TabKey; label: string; icon: typeof FileText }[] = [
-    { key: 'overview', label: 'Ringkasan', icon: BarChart3 },
-    { key: 'tasks', label: 'Task', icon: CheckCircle2 },
-    { key: 'members', label: 'Anggota', icon: Users },
-    { key: 'budget', label: 'Anggaran', icon: DollarSign },
-    { key: 'gantt', label: 'Gantt', icon: GanttChart },
-    { key: 'resources', label: 'Resource', icon: LayoutGrid },
+const TABS: { key: TabKey; i18nKey: string; icon: typeof FileText }[] = [
+    { key: 'overview', i18nKey: 'dashboard.projects.tabs.overview', icon: BarChart3 },
+    { key: 'tasks', i18nKey: 'dashboard.projects.tabs.tasks', icon: CheckCircle2 },
+    { key: 'members', i18nKey: 'dashboard.projects.tabs.members', icon: Users },
+    { key: 'budget', i18nKey: 'dashboard.projects.tabs.budget', icon: DollarSign },
+    { key: 'gantt', i18nKey: 'dashboard.projects.tabs.gantt', icon: GanttChart },
+    { key: 'resources', i18nKey: 'dashboard.projects.tabs.resources', icon: LayoutGrid },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -59,12 +60,12 @@ const STATUS_COLORS: Record<string, string> = {
     CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-    PLANNING: 'Perencanaan',
-    ACTIVE: 'Aktif',
-    ON_HOLD: 'Ditangguhkan',
-    COMPLETED: 'Selesai',
-    CANCELLED: 'Dibatalkan',
+const STATUS_I18N_KEYS: Record<string, string> = {
+    PLANNING: 'dashboard.projects.status.PLANNING',
+    ACTIVE: 'dashboard.projects.status.ACTIVE',
+    ON_HOLD: 'dashboard.projects.status.ON_HOLD',
+    COMPLETED: 'dashboard.projects.status.COMPLETED',
+    CANCELLED: 'dashboard.projects.status.CANCELLED',
 };
 
 const TASK_STATUS_COLORS: Record<string, string> = {
@@ -75,12 +76,12 @@ const TASK_STATUS_COLORS: Record<string, string> = {
     CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-const TASK_STATUS_LABELS: Record<string, string> = {
-    TODO: 'To Do',
-    IN_PROGRESS: 'Dikerjakan',
-    IN_REVIEW: 'Review',
-    DONE: 'Selesai',
-    CANCELLED: 'Dibatalkan',
+const TASK_STATUS_I18N_KEYS: Record<string, string> = {
+    TODO: 'dashboard.tasks.status.TODO',
+    IN_PROGRESS: 'dashboard.tasks.status.IN_PROGRESS',
+    IN_REVIEW: 'dashboard.tasks.status.IN_REVIEW',
+    DONE: 'dashboard.tasks.status.DONE',
+    CANCELLED: 'dashboard.tasks.status.CANCELLED',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -90,43 +91,43 @@ const PRIORITY_COLORS: Record<string, string> = {
     URGENT: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-    LOW: 'Rendah',
-    MEDIUM: 'Sedang',
-    HIGH: 'Tinggi',
-    URGENT: 'Mendesak',
+const PRIORITY_I18N_KEYS: Record<string, string> = {
+    LOW: 'dashboard.tasks.priority.LOW',
+    MEDIUM: 'dashboard.tasks.priority.MEDIUM',
+    HIGH: 'dashboard.tasks.priority.HIGH',
+    URGENT: 'dashboard.tasks.priority.URGENT',
 };
 
-const MEMBER_ROLE_LABELS: Record<string, string> = {
-    MANAGER: 'Manajer',
-    MEMBER: 'Anggota',
-    VIEWER: 'Pengamat',
+const MEMBER_ROLE_I18N_KEYS: Record<string, string> = {
+    MANAGER: 'dashboard.projects.roles.MANAGER',
+    MEMBER: 'dashboard.projects.roles.MEMBER',
+    VIEWER: 'dashboard.projects.roles.VIEWER',
 };
 
 // =============================================================================
 // Sub-components
 // =============================================================================
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-600'}`}>
-            {STATUS_LABELS[status] || status}
+            {t(STATUS_I18N_KEYS[status] || status)}
         </span>
     );
 }
 
-function TaskStatusBadge({ status }: { status: string }) {
+function TaskStatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-600'}`}>
-            {TASK_STATUS_LABELS[status] || status}
+            {t(TASK_STATUS_I18N_KEYS[status] || status)}
         </span>
     );
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
+function PriorityBadge({ priority, t }: { priority: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[priority] || 'bg-gray-100 text-gray-600'}`}>
-            {PRIORITY_LABELS[priority] || priority}
+            {t(PRIORITY_I18N_KEYS[priority] || priority)}
         </span>
     );
 }
@@ -155,6 +156,7 @@ function ProgressBar({ value, label }: { value: number; label?: string }) {
 // =============================================================================
 
 function OverviewTab({ project }: { project: ProjectDetail }) {
+    const { t } = useTranslation();
     const taskSummary = project.taskSummary;
     const totalTasks = taskSummary.total;
     const doneTasks = taskSummary.byStatus['DONE'] || 0;
@@ -214,47 +216,47 @@ function OverviewTab({ project }: { project: ProjectDetail }) {
                                 <div
                                     className="bg-gray-400 transition-all"
                                     style={{ width: `${(todoTasks / totalTasks) * 100}%` }}
-                                    title={`To Do: ${todoTasks}`}
+                                    title={`${t('dashboard.tasks.status.TODO')}: ${todoTasks}`}
                                 />
                             )}
                             {inProgressTasks > 0 && (
                                 <div
                                     className="bg-blue-500 transition-all"
                                     style={{ width: `${(inProgressTasks / totalTasks) * 100}%` }}
-                                    title={`Dikerjakan: ${inProgressTasks}`}
+                                    title={`${t('dashboard.tasks.status.IN_PROGRESS')}: ${inProgressTasks}`}
                                 />
                             )}
                             {reviewTasks > 0 && (
                                 <div
                                     className="bg-yellow-500 transition-all"
                                     style={{ width: `${(reviewTasks / totalTasks) * 100}%` }}
-                                    title={`Review: ${reviewTasks}`}
+                                    title={`${t('dashboard.tasks.status.IN_REVIEW')}: ${reviewTasks}`}
                                 />
                             )}
                             {doneTasks > 0 && (
                                 <div
                                     className="bg-green-500 transition-all"
                                     style={{ width: `${(doneTasks / totalTasks) * 100}%` }}
-                                    title={`Selesai: ${doneTasks}`}
+                                    title={`${t('dashboard.tasks.status.DONE')}: ${doneTasks}`}
                                 />
                             )}
                         </div>
                         <div className="flex flex-wrap gap-4 text-xs">
                             <div className="flex items-center gap-1.5">
                                 <div className="h-3 w-3 rounded-full bg-gray-400" />
-                                <span className="text-gray-600 dark:text-gray-400">To Do ({todoTasks})</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('dashboard.tasks.status.TODO')} ({todoTasks})</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="h-3 w-3 rounded-full bg-blue-500" />
-                                <span className="text-gray-600 dark:text-gray-400">Dikerjakan ({inProgressTasks})</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('dashboard.tasks.status.IN_PROGRESS')} ({inProgressTasks})</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                                <span className="text-gray-600 dark:text-gray-400">Review ({reviewTasks})</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('dashboard.tasks.status.IN_REVIEW')} ({reviewTasks})</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="h-3 w-3 rounded-full bg-green-500" />
-                                <span className="text-gray-600 dark:text-gray-400">Selesai ({doneTasks})</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('dashboard.tasks.status.DONE')} ({doneTasks})</span>
                             </div>
                         </div>
                     </div>
@@ -269,6 +271,7 @@ function OverviewTab({ project }: { project: ProjectDetail }) {
 // =============================================================================
 
 function TasksTab({ projectId }: { projectId: string }) {
+    const { t } = useTranslation();
     const { tasks, loading, fetchTasks, createTask, updateTaskStatus, taskFilter, setTaskFilter } = useProjects();
     const [showAddForm, setShowAddForm] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -308,7 +311,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                                 }`}
                         >
-                            {status === 'ALL' ? 'Semua' : TASK_STATUS_LABELS[status] || status}
+                            {status === 'ALL' ? t('dashboard.tasks.filter.ALL') : t(TASK_STATUS_I18N_KEYS[status] || status)}
                         </button>
                     ))}
                 </div>
@@ -358,9 +361,9 @@ function TasksTab({ projectId }: { projectId: string }) {
             ) : tasks.length === 0 ? (
                 <EmptyState
                     icon={CheckCircle2}
-                    title="Belum ada task"
-                    description="Tambahkan task pertama untuk proyek ini."
-                    actionLabel="Tambah Task"
+                    title={t('dashboard.tasks.emptyTitle')}
+                    description={t('dashboard.tasks.subtitle')}
+                    actionLabel={t('dashboard.projects.tabs.tasks')}
                     onAction={() => setShowAddForm(true)}
                 />
             ) : (
@@ -375,7 +378,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                                     <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                         {task.title}
                                     </span>
-                                    <PriorityBadge priority={task.priority} />
+                                    <PriorityBadge priority={task.priority} t={t} />
                                 </div>
                                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                     {task.dueDate && (
@@ -397,7 +400,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                                 </div>
                             </div>
 
-                            <TaskStatusBadge status={task.status} />
+                            <TaskStatusBadge status={task.status} t={t} />
 
                             {/* Status change buttons */}
                             <div className="flex gap-1">
@@ -439,6 +442,7 @@ function TasksTab({ projectId }: { projectId: string }) {
 // =============================================================================
 
 function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh: () => void }) {
+    const { t } = useTranslation();
     const { addMember, removeMember, updateMemberRole } = useProjects();
     const [showAddForm, setShowAddForm] = useState(false);
     const [newMemberId, setNewMemberId] = useState('');
@@ -494,9 +498,9 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                         onChange={(e) => setNewMemberRole(e.target.value as MemberRole)}
                         className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     >
-                        <option value="MANAGER">Manajer</option>
-                        <option value="MEMBER">Anggota</option>
-                        <option value="VIEWER">Pengamat</option>
+                        <option value="MANAGER">{t('dashboard.projects.roles.MANAGER')}</option>
+                        <option value="MEMBER">{t('dashboard.projects.roles.MEMBER')}</option>
+                        <option value="VIEWER">{t('dashboard.projects.roles.VIEWER')}</option>
                     </select>
                     <button
                         onClick={() => void handleAddMember()}
@@ -546,9 +550,9 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                                     onChange={(e) => void handleRoleChange(member.id, e.target.value)}
                                     className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
-                                    <option value="MANAGER">Manajer</option>
-                                    <option value="MEMBER">Anggota</option>
-                                    <option value="VIEWER">Pengamat</option>
+                                    <option value="MANAGER">{t('dashboard.projects.roles.MANAGER')}</option>
+                                    <option value="MEMBER">{t('dashboard.projects.roles.MEMBER')}</option>
+                                    <option value="VIEWER">{t('dashboard.projects.roles.VIEWER')}</option>
                                 </select>
                                 <button
                                     onClick={() => void handleRemoveMember(member.id)}
@@ -682,6 +686,7 @@ function GanttTab({ projectId }: { projectId: string }) {
 // =============================================================================
 
 function ResourcesTab({ projectId }: { projectId: string }) {
+    const { t } = useTranslation();
     const [resourceData, setResourceData] = useState<ResourceData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -739,7 +744,7 @@ function ResourcesTab({ projectId }: { projectId: string }) {
                                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                         <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.employeeId}</td>
                                         <td className="px-6 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                            {item.role === 'MANAGER' ? 'Manajer' : item.role === 'CONSULTANT' ? 'Konsultan' : 'Anggota'}
+                                            {item.role === 'MANAGER' ? t('dashboard.projects.roles.MANAGER') : item.role === 'CONSULTANT' ? 'Konsultan' : t('dashboard.projects.roles.MEMBER')}
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center gap-2">
@@ -775,6 +780,7 @@ export default function ProjectDetailPage() {
     const router = useRouter();
     const projectId = params?.id as string;
     const { currentProject, loading, error, fetchProjectDetail } = useProjects();
+    const { t } = useTranslation();
 
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
@@ -834,7 +840,7 @@ export default function ProjectDetailPage() {
                             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                                 {currentProject.name}
                             </h1>
-                            <StatusBadge status={currentProject.status} />
+                            <StatusBadge status={currentProject.status} t={t} />
                         </div>
                     </div>
                 </div>
@@ -871,7 +877,7 @@ export default function ProjectDetailPage() {
                                 }`}
                         >
                             <TabIcon className="h-4 w-4" />
-                            {tab.label}
+                            {t(tab.i18nKey)}
                         </button>
                     );
                 })}

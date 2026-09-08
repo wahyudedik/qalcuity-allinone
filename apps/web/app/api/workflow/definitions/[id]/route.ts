@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { MSG } from '@/lib/api-messages';
 
 /**
  * GET /api/workflow/definitions/[id]
@@ -25,14 +26,14 @@ export async function GET(
 
         if (!definition) {
             return NextResponse.json(
-                { success: false, error: 'Workflow definition not found' },
+                { success: false, error: MSG.WORKFLOW_DEFINITION_NOT_FOUND },
                 { status: 404 }
             );
         }
 
         return NextResponse.json({ success: true, data: definition });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -60,14 +61,14 @@ export async function PUT(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Workflow definition not found' },
+                { success: false, error: MSG.WORKFLOW_DEFINITION_NOT_FOUND },
                 { status: 404 }
             );
         }
 
         if (existing.isSystem) {
             return NextResponse.json(
-                { success: false, error: 'Tidak dapat mengubah system workflow' },
+                { success: false, error: MSG.WORKFLOW_SYSTEM_CANNOT_MODIFY },
                 { status: 403 }
             );
         }
@@ -81,13 +82,13 @@ export async function PUT(
             // Validate config structure
             if (!config.states || !Array.isArray(config.states) || config.states.length === 0) {
                 return NextResponse.json(
-                    { success: false, error: 'config.states harus berupa array yang tidak kosong' },
+                    { success: false, error: MSG.WORKFLOW_CONFIG_STATES_ARRAY },
                     { status: 400 }
                 );
             }
             if (!config.transitions || !Array.isArray(config.transitions)) {
                 return NextResponse.json(
-                    { success: false, error: 'config.transitions harus berupa array' },
+                    { success: false, error: MSG.WORKFLOW_CONFIG_TRANSITIONS_ARRAY },
                     { status: 400 }
                 );
             }
@@ -112,7 +113,7 @@ export async function PUT(
 
         return NextResponse.json({ success: true, data: updated });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -139,14 +140,14 @@ export async function DELETE(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Workflow definition not found' },
+                { success: false, error: MSG.WORKFLOW_DEFINITION_NOT_FOUND },
                 { status: 404 }
             );
         }
 
         if (existing.isSystem) {
             return NextResponse.json(
-                { success: false, error: 'Tidak dapat menghapus system workflow' },
+                { success: false, error: MSG.WORKFLOW_SYSTEM_CANNOT_DELETE },
                 { status: 403 }
             );
         }
@@ -165,7 +166,7 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, data: null });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

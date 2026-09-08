@@ -6,11 +6,12 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sendEmail } from '@/lib/email';
 import { sanitizeObject } from '@/lib/sanitize';
 import { z } from 'zod';
+import { MSG } from '@/lib/api-messages';
 
 const sendEmailSchema = z.object({
-    to: z.string().email('Format email tidak valid'),
-    subject: z.string().min(1, 'Subjek wajib diisi').max(255, 'Subjek maksimal 255 karakter'),
-    body: z.string().min(1, 'Isi email wajib diisi'),
+    to: z.string().email(MSG.INVALID_EMAIL_FORMAT),
+    subject: z.string().min(1, MSG.SUBJECT_REQUIRED).max(255, MSG.SUBJECT_MAX_LENGTH),
+    body: z.string().min(1, MSG.EMAIL_BODY_REQUIRED),
     entityType: z.enum(['CONTACT', 'LEAD', 'DEAL']).optional(),
     entityId: z.string().optional(),
 });
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:crm-emails:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:crm-emails:POST:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
 
         if (!result.success) {
             return NextResponse.json(
-                { success: false, error: result.error || 'Gagal mengirim email' },
+                { success: false, error: result.error || MSG.EMAIL_SEND_FAILED },
                 { status: 500 }
             );
         }
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
                     entityId: parsed.data.entityId,
                     type: 'EMAIL',
                     subject: parsed.data.subject,
-                    description: `Email dikirim ke ${parsed.data.to}\n\n${parsed.data.body}`,
+                    description: `${MSG.EMAIL_SENT_TO} ${parsed.data.to}\n\n${parsed.data.body}`,
                     createdBy: userId,
                 },
             });

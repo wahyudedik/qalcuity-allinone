@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { getSession, isAdmin } from '@/lib/session';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -67,10 +69,6 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('Error fetching admin payments:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data pembayaran' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

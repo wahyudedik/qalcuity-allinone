@@ -8,6 +8,8 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -50,14 +52,14 @@ export async function POST(request: Request) {
 
         if (!subscription) {
             return NextResponse.json(
-                { success: false, error: 'Langganan tidak ditemukan' },
+                { success: false, error: 'Subscription not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
 
         if (!subscription.plan) {
             return NextResponse.json(
-                { success: false, error: 'Paket langganan tidak valid' },
+                { success: false, error: 'Invalid subscription plan', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
 
         if (!tenant) {
             return NextResponse.json(
-                { success: false, error: 'Tenant tidak ditemukan' },
+                { success: false, error: 'Tenant not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -182,10 +184,6 @@ export async function POST(request: Request) {
             message: 'Transaksi Midtrans berhasil dibuat',
         });
     } catch (error) {
-        console.error('[Midtrans] Error creating payment:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal membuat pembayaran Midtrans' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

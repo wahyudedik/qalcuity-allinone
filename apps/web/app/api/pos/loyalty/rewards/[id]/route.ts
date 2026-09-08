@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { formatZodError } from '@/lib/validation-schemas';
+import { MSG } from '@/lib/api-messages';
 import { z } from 'zod';
 
 const updateRewardSchema = z.object({
@@ -26,7 +27,7 @@ export async function PUT(
         const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:PUT:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -37,7 +38,7 @@ export async function PUT(
 
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah reward' },
+                { success: false, error: MSG.REWARD_ADMIN_ONLY_UPDATE },
                 { status: 403 }
             );
         }
@@ -58,7 +59,7 @@ export async function PUT(
 
         if (!existingReward) {
             return NextResponse.json(
-                { success: false, error: 'Reward tidak ditemukan' },
+                { success: false, error: MSG.REWARD_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -115,7 +116,7 @@ export async function DELETE(
         const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:DELETE:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -126,7 +127,7 @@ export async function DELETE(
 
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menghapus reward' },
+                { success: false, error: MSG.REWARD_ADMIN_ONLY_DELETE },
                 { status: 403 }
             );
         }
@@ -137,7 +138,7 @@ export async function DELETE(
 
         if (!existingReward) {
             return NextResponse.json(
-                { success: false, error: 'Reward tidak ditemukan' },
+                { success: false, error: MSG.REWARD_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -161,7 +162,7 @@ export async function DELETE(
 
         return NextResponse.json({
             success: true,
-            message: 'Reward berhasil dinonaktifkan',
+            message: MSG.REWARD_DEACTIVATED,
         });
     } catch (error) {
         return handleApiError(error);

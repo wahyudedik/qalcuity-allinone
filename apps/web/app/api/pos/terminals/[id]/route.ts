@@ -6,6 +6,7 @@ import { updatePosTerminalSchema, formatZodError } from '@/lib/validation-schema
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -15,7 +16,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:terminals:[id]:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -35,7 +36,7 @@ export async function GET(
 
         if (!terminal) {
             return NextResponse.json(
-                { success: false, error: 'Terminal tidak ditemukan' },
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -74,7 +75,7 @@ export async function PUT(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:terminals:[id]:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -83,7 +84,7 @@ export async function PUT(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah terminal' },
+                { success: false, error: MSG.TERMINAL_ADMIN_ONLY_UPDATE },
                 { status: 403 }
             );
         }
@@ -102,7 +103,7 @@ export async function PUT(
         const existing = await prisma.posTerminal.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Terminal tidak ditemukan' },
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -137,7 +138,7 @@ export async function DELETE(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:terminals:[id]:DELETE:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -146,7 +147,7 @@ export async function DELETE(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menghapus terminal' },
+                { success: false, error: MSG.TERMINAL_ADMIN_ONLY_DELETE },
                 { status: 403 }
             );
         }
@@ -156,7 +157,7 @@ export async function DELETE(
         const existing = await prisma.posTerminal.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Terminal tidak ditemukan' },
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -167,7 +168,7 @@ export async function DELETE(
         });
         if (activeSession) {
             return NextResponse.json(
-                { success: false, error: 'Tidak dapat menghapus terminal dengan sesi aktif. Tutup sesi terlebih dahulu.' },
+                { success: false, error: MSG.TERMINAL_CANNOT_DELETE_ACTIVE_SESSION },
                 { status: 400 }
             );
         }
@@ -184,7 +185,7 @@ export async function DELETE(
             request,
         });
 
-        return NextResponse.json({ success: true, message: 'Terminal berhasil dihapus' });
+        return NextResponse.json({ success: true, message: MSG.TERMINAL_DELETED });
     } catch (error) {
         return handleApiError(error);
     }

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -13,7 +14,7 @@ export async function GET(
         const rateLimitResult = checkRateLimit(`api:pos:loyalty:members:transactions:${ip}`, 60, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -45,7 +46,7 @@ export async function GET(
 
         if (!member) {
             return NextResponse.json(
-                { success: false, error: 'Member tidak ditemukan' },
+                { success: false, error: MSG.MEMBER_NOT_FOUND },
                 { status: 404 }
             );
         }

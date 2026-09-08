@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -14,7 +15,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:refunds:[id]:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -42,7 +43,7 @@ export async function GET(
 
         if (!refund) {
             return NextResponse.json(
-                { success: false, error: 'Refund tidak ditemukan' },
+                { success: false, error: MSG.REFUND_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -84,7 +85,7 @@ export async function PUT(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:refunds:[id]:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -94,7 +95,7 @@ export async function PUT(
         // Only ADMIN+ can approve/reject refunds
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menyetujui atau menolak refund' },
+                { success: false, error: MSG.REFUND_ADMIN_ONLY },
                 { status: 403 }
             );
         }
@@ -106,7 +107,7 @@ export async function PUT(
 
         if (!newStatus || !['APPROVED', 'REJECTED'].includes(newStatus)) {
             return NextResponse.json(
-                { success: false, error: 'Status harus APPROVED atau REJECTED' },
+                { success: false, error: MSG.REFUND_STATUS_INVALID },
                 { status: 400 }
             );
         }
@@ -114,14 +115,14 @@ export async function PUT(
         const existing = await prisma.posRefund.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Refund tidak ditemukan' },
+                { success: false, error: MSG.REFUND_NOT_FOUND },
                 { status: 404 }
             );
         }
 
         if (existing.status !== 'PENDING') {
             return NextResponse.json(
-                { success: false, error: 'Refund sudah diproses sebelumnya' },
+                { success: false, error: MSG.REFUND_ALREADY_PROCESSED },
                 { status: 400 }
             );
         }

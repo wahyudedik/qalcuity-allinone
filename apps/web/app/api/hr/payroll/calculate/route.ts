@@ -8,6 +8,7 @@ import { calculateBPJS } from '@/lib/bpjs';
 import type { StatusKawin } from '@/lib/pph21';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 interface PayrollCalculationResult {
     employeeId: string;
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:payroll:calculate:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const body = await request.json();
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
         });
         if (!employee) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan tidak ditemukan' },
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
                 { status: 404 }
             );
         }

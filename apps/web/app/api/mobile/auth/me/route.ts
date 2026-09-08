@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { getMobileUserFromToken } from '@/lib/mobile-auth';
 
 export async function GET(request: Request) {
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return NextResponse.json(
-                { success: false, error: 'Token tidak ditemukan' },
+                { success: false, error: 'Token not found', code: 'TOKEN_NOT_FOUND' },
                 { status: 401 }
             );
         }
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
 
         if (!token) {
             return NextResponse.json(
-                { success: false, error: 'Token tidak ditemukan' },
+                { success: false, error: 'Token not found', code: 'TOKEN_NOT_FOUND' },
                 { status: 401 }
             );
         }
@@ -43,21 +44,21 @@ export async function GET(request: Request) {
             user,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan server';
+        const message = error instanceof Error ? error.message : 'An internal server error occurred';
 
         let status = 500;
         if (message.includes('invalid signature') || message.includes('jwt malformed') || message.includes('Token')) {
             status = 401;
         } else if (message.includes('expired')) {
             status = 401;
-        } else if (message.includes('tidak ditemukan') || message.includes('dinonaktifkan')) {
+        } else if (message.includes('not found') || message.includes('dinonaktifkan')) {
             status = 401;
         }
 
         console.error('[MobileAuth] Get user error:', message);
 
         return NextResponse.json(
-            { success: false, error: 'Token tidak valid atau sudah expired' },
+            { success: false, error: 'Token is invalid or has expired', code: 'INVALID_TOKEN' },
             { status }
         );
     }

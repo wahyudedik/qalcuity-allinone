@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -14,7 +15,7 @@ export async function PUT(
         const rateLimitResult = checkRateLimit(`api:approval:levels:PUT:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -46,7 +47,7 @@ export async function PUT(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Approval level tidak ditemukan' },
+                { success: false, error: 'MSG.APPROVAL_LEVEL_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -83,7 +84,7 @@ export async function DELETE(
         const rateLimitResult = checkRateLimit(`api:approval:levels:DELETE:${ip}`, 20, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -106,7 +107,7 @@ export async function DELETE(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Approval level tidak ditemukan' },
+                { success: false, error: 'MSG.APPROVAL_LEVEL_NOT_FOUND' },
                 { status: 404 }
             );
         }

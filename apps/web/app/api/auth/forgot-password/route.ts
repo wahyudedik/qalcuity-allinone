@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
@@ -8,7 +9,7 @@ import { z } from "zod";
 
 // ─── Forgot Password Schema ────────────────────────────────────────────────
 const forgotPasswordSchema = z.object({
-    email: z.string().email("Email tidak valid"),
+    email: z.string().email("Invalid email format"),
 });
 
 // ─── POST /api/auth/forgot-password ─────────────────────────────────────────
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
         if (!user) {
             return NextResponse.json({
                 success: true,
-                message: "Jika email terdaftar, tautan reset password telah dikirim.",
+                message: "If the email is registered, a password reset link has been sent.",
             });
         }
 

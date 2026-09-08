@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateWarehouseSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
@@ -22,7 +23,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         });
 
         if (!warehouse) {
-            return NextResponse.json({ success: false, error: 'Gudang tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.WAREHOUSE_NOT_FOUND, code: 'WAREHOUSE_NOT_FOUND' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, data: warehouse });
@@ -52,7 +53,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Gudang tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.WAREHOUSE_NOT_FOUND, code: 'WAREHOUSE_NOT_FOUND' }, { status: 404 });
         }
 
         // If isDefault, unset other defaults
@@ -98,19 +99,19 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Gudang tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.WAREHOUSE_NOT_FOUND, code: 'WAREHOUSE_NOT_FOUND' }, { status: 404 });
         }
 
         if (existing._count.products > 0) {
             return NextResponse.json(
-                { success: false, error: 'Gudang tidak bisa dihapus karena masih memiliki produk' },
+                { success: false, error: 'Warehouse cannot be deleted because it still has products' },
                 { status: 400 }
             );
         }
 
         if (existing.isDefault) {
             return NextResponse.json(
-                { success: false, error: 'Gudang default tidak bisa dihapus' },
+                { success: false, error: 'Default warehouse cannot be deleted' },
                 { status: 400 }
             );
         }
@@ -119,7 +120,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Warehouse', entityId: params.id, newValues: { name: existing.name } as Record<string, unknown>, request });
 
-        return NextResponse.json({ success: true, message: 'Gudang berhasil dihapus' });
+        return NextResponse.json({ success: true, message: MSG.WAREHOUSE_DELETED });
     } catch (error) {
         return handleApiError(error);
     }

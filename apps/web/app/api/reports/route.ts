@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
+import { handleApiError } from '@/lib/api-error'
 
 // ============================================
 // TYPES
@@ -462,10 +464,6 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: response })
     } catch (error) {
-        console.error('Reports API error:', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json(
-            { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
-            { status: 500 }
-        )
+        return handleApiError(error)
     }
 }

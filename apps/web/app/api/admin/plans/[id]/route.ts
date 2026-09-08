@@ -5,12 +5,14 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requireAdminAuth, isSuperAdmin } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 const updatePlanSchema = z.object({
     name: z.string().min(1).max(100).optional(),
@@ -50,7 +52,7 @@ export async function GET(
 
         if (!plan) {
             return NextResponse.json(
-                { success: false, error: 'Paket tidak ditemukan' },
+                { success: false, error: 'MSG.PLAN_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -69,11 +71,7 @@ export async function GET(
                 { status: 403 }
             );
         }
-        console.error('[AdminPlan] Error:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -117,7 +115,7 @@ export async function PUT(
 
         if (!existingPlan) {
             return NextResponse.json(
-                { success: false, error: 'Paket tidak ditemukan' },
+                { success: false, error: 'MSG.PLAN_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -195,11 +193,7 @@ export async function PUT(
                 { status: 403 }
             );
         }
-        console.error('[AdminPlan] Error updating plan:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengupdate paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -233,7 +227,7 @@ export async function DELETE(
 
         if (!plan) {
             return NextResponse.json(
-                { success: false, error: 'Paket tidak ditemukan' },
+                { success: false, error: 'MSG.PLAN_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -279,10 +273,6 @@ export async function DELETE(
                 { status: 403 }
             );
         }
-        console.error('[AdminPlan] Error deleting plan:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal menghapus paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

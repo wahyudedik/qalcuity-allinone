@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { updateTableStatusSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -24,7 +25,7 @@ export async function PATCH(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:tables:[id]:status:PATCH:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -47,7 +48,7 @@ export async function PATCH(
         const existing = await prisma.posTable.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Meja tidak ditemukan' },
+                { success: false, error: MSG.TABLE_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -56,7 +57,7 @@ export async function PATCH(
         const allowedTransitions = VALID_TRANSITIONS[existing.status] || [];
         if (!allowedTransitions.includes(newStatus)) {
             return NextResponse.json(
-                { success: false, error: `Transisi dari ${existing.status} ke ${newStatus} tidak diizinkan` },
+                { success: false, error: MSG.TABLE_STATUS_TRANSITION_INVALID },
                 { status: 400 }
             );
         }

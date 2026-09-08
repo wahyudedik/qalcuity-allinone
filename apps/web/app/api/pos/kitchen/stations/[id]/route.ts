@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { updateKitchenStationSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -15,7 +16,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:kitchen:stations:[id]:GET:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -37,7 +38,7 @@ export async function GET(
 
         if (!station) {
             return NextResponse.json(
-                { success: false, error: 'Stasiun dapur tidak ditemukan' },
+                { success: false, error: MSG.KITCHEN_STATION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -74,7 +75,7 @@ export async function PATCH(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:kitchen:stations:[id]:PATCH:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -83,7 +84,7 @@ export async function PATCH(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah stasiun dapur' },
+                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_UPDATE },
                 { status: 403 }
             );
         }
@@ -102,7 +103,7 @@ export async function PATCH(
         const existing = await prisma.posKitchenStation.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Stasiun dapur tidak ditemukan' },
+                { success: false, error: MSG.KITCHEN_STATION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -114,7 +115,7 @@ export async function PATCH(
             });
             if (duplicateName) {
                 return NextResponse.json(
-                    { success: false, error: 'Nama stasiun sudah digunakan' },
+                    { success: false, error: MSG.KITCHEN_STATION_NAME_DUPLICATE },
                     { status: 400 }
                 );
             }
@@ -161,7 +162,7 @@ export async function DELETE(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:kitchen:stations:[id]:DELETE:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -170,7 +171,7 @@ export async function DELETE(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menghapus stasiun dapur' },
+                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_DELETE },
                 { status: 403 }
             );
         }
@@ -180,7 +181,7 @@ export async function DELETE(
         const existing = await prisma.posKitchenStation.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Stasiun dapur tidak ditemukan' },
+                { success: false, error: MSG.KITCHEN_STATION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -191,7 +192,7 @@ export async function DELETE(
         });
         if (activeOrders > 0) {
             return NextResponse.json(
-                { success: false, error: 'Tidak dapat menghapus stasiun dengan pesanan aktif. Tunggu hingga semua pesanan selesai.' },
+                { success: false, error: MSG.KITCHEN_STATION_CANNOT_DELETE_ACTIVE_ORDERS },
                 { status: 400 }
             );
         }
@@ -208,7 +209,7 @@ export async function DELETE(
             request,
         });
 
-        return NextResponse.json({ success: true, message: 'Stasiun dapur berhasil dihapus' });
+        return NextResponse.json({ success: true, message: MSG.KITCHEN_STATION_DELETED });
     } catch (error) {
         return handleApiError(error);
     }

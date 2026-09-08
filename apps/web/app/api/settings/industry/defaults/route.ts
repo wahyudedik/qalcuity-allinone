@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { DEFAULT_INDUSTRY_CONFIGS, SUPPORTED_INDUSTRIES } from '@qalcuity/industry-config';
 

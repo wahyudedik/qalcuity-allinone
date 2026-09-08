@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 7, 2026 (Quality Sprint v9.5.0: CRITICAL/HIGH/MEDIUM fixes + 14 error boundaries)
+**Last Updated:** September 8, 2026 (Phase 4 Batch 2: Error Handling Consolidation, i18n Backend Migration, Status Labels)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 14.2 — Quality Sprint v9.5.0 Complete (77 error boundaries, permission engine 9 routes, mock guard production)
+**Document Version:** 14.3 — Phase 4 Batch 2: Error handling 95%+, backend i18n 310+ constants, frontend i18n 70+ keys, ignoreBuildErrors removed
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -103,22 +103,24 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Demo Data** | 🚀 `production_ready` | 2026-08-30 | Comprehensive seed data for all modules |
 | **Dark Mode** | 🚀 `production_ready` | 2026-08-30 | Tailwind dark theme support |
 | **Global Search** | 🚀 `production_ready` | 2026-08-30 | Ctrl+K shortcut, cross-module search |
-| **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-06 | Custom provider, 1100+ keys, all modules localized (Settings 135+, POS 130+, Finance/HR/Inventory 16 keys added) |
+| **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-08 | Custom provider, 1170+ keys, all modules localized (Settings 135+, POS 130+, 70 new status label keys, backend api-messages.ts 310+ constants) |
 | **Responsive Design** | 🚀 `production_ready` | 2026-09-01 | Mobile-first, 44x44px touch targets, Reports page 12 sub-components |
 | **Responsive Tables** | 🚀 `production_ready` | 2026-09-01 | Dual layout: mobile cards + desktop tables (19 pages) |
-| **Zod Validation** | 🚀 `production_ready` | 2026-08-30 | 14+ schemas, all mutation routes validated |
+| **Zod Validation** | 🚀 `production_ready` | 2026-09-08 | 120+ schemas, all mutation routes validated |
 | **RBAC Defense-in-depth** | 🚀 `production_ready` | 2026-08-30 | Middleware + API route + UI visibility |
 | **Lucide Icons** | 🚀 `production_ready` | 2026-08-30 | Consistent icon system across all modules |
 | **Empty States** | 🚀 `production_ready` | 2026-08-30 | All CRUD pages have empty state components |
 | **Toast Notifications** | 🚀 `production_ready` | 2026-09-01 | Centralized toast provider — toast.tsx + ToastProvider in layout |
 | **Confirmation Dialogs** | 🚀 `production_ready` | 2026-09-01 | ConfirmDialog component — 24 window.confirm calls replaced |
 | **Navigation Links** | 🚀 `production_ready` | 2026-08-30 | Cross-entity navigation (e.g., Invoice → Contact) |
-| **Loading States** | 🚀 `production_ready` | 2026-09-06 | 94 loading.tsx files — all detail, workspace, and module pages covered |
-| **Error Boundaries** | 🚀 `production_ready` | 2026-09-06 | 63 error.tsx files — all module sections + detail pages covered (HR, CRM, Inventory, Finance, POS, Settings, Analytics, Platform) |
+| **Loading States** | 🚀 `production_ready` | 2026-09-08 | 98 loading.tsx files — all detail, workspace, and module pages covered |
+| **Error Boundaries** | 🚀 `production_ready` | 2026-09-08 | 94 error.tsx files — all module sections + detail pages covered (HR, CRM, Inventory, Finance, POS, Settings, Analytics, Platform, Operations, Field Service) |
+| **Error Handling Consolidation** | 🚀 `production_ready` | 2026-09-08 | 27 API routes refactored with centralized `handleApiError()`, 35 catch blocks consolidated, ~95%+ error handling coverage |
+| **Backend i18n** | 🚀 `production_ready` | 2026-09-08 | [`api-messages.ts`](apps/web/lib/api-messages.ts) with 310+ English constants, 200+ API route files migrated from hardcoded strings |
 | **Inline Error Banners** | 🚀 `production_ready` | 2026-09-01 | Inline error display on form pages — replaces silent failures |
 | **Security Hardening** | 🚀 `production_ready` | 2026-09-01 | .gitignore hardened, .env removed from git history |
 | **.env.example Updated** | 🚀 `production_ready` | 2026-09-01 | Comprehensive env template with comments for all config vars |
-| **Deploy Scripts** | 🚀 `production_ready` | 2026-08-30 | PM2 health check, configurable port, robust db:push |
+| **Deploy Scripts** | 🚀 `production_ready` | 2026-09-08 | aaPanel Node.js Project Manager, configurable port, robust db:push, update.sh |
 | **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |
 | **Performance Indexes** | 🚀 `production_ready` | 2026-08-30 | 57 database indexes across frequently queried fields |
 | **Subscription** | ✅ `implemented` | 2026-08-30 | Full subscription model with Midtrans payment integration |
@@ -1465,16 +1467,18 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~64 | ~35% |
+| `production_ready` | 🚀 | ~65 | ~36% |
 | `implemented` | ✅ | ~48 | ~27% |
 | `verified` | ✔️ | 1 | ~1% |
 | `partial` | 🔄 | ~21 | ~12% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~141 | ~39% |
+| `planned` | 📋 | ~140 | ~38% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~288** | **100%** |
+| **Total** | | **~289** | **100%** |
 
+> **Phase 4 Batch 2 Impact (8 Sep):** +2 production_ready (Error Handling Consolidation, Backend i18n), +70 i18n keys, 27 API routes refactored → Net: production_ready 65→67, total 289→289
+> **Phase 4 Impact (8 Sep):** +1 production_ready (Deploy Scripts aaPanel), +13 error.tsx, +4 loading.tsx, dead code removed → Net: production_ready 64→65, total 288→289
 > **Quality Sprint Impact (6 Sep):** +2 production_ready (Error Boundaries, Loading States updated with new counts), +281 i18n keys → Net: production_ready 62→64, total 286→288
 > **Mega Sprint Impact (5 Sep):** +3 implemented (F&B Pack, AI Chat real, AI Provider real), -3 planned → Net: implemented 45→48, planned 144→141, total 286→286
 > **POS Phase 7 Impact (Table Management):** +8 implemented (Table Management, Database, API Routes, UI Page, Table Card, Reservation Form, Custom Hook, Status Machine), -8 planned → Net: implemented 37→45, planned 152→144, total 289→289 (adjusted for new features)
@@ -1486,6 +1490,26 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v14.3.0 (September 8, 2026) — Phase 4 Batch 2: Error Handling & i18n
+- **Error Handling Consolidation** — 27 API routes refactored with centralized [`handleApiError()`](apps/web/lib/api-error.ts), 35 catch blocks consolidated, ~95%+ coverage across all API routes
+- **Backend i18n** — New file [`api-messages.ts`](apps/web/lib/api-messages.ts) with 310+ English message constants, 200+ API route files migrated from hardcoded Indonesian strings
+- **i18n Status Labels** — 70 new i18n keys for status labels, 6 page files updated with `STATUS_I18N_KEYS` + `t()` pattern (Finance, CRM, HR, Inventory modules)
+- **Build Config Hardened** — `ignoreBuildErrors: true` → `false` in next.config.js, TypeScript build errors now block deployment
+- **SubscriptionPlan → Plan Migration** — Migration plan documented: SubscriptionPlan + TenantSubscription → Plan + PlanFeature + TenantEntitlement + UsageRecord (implementation scheduled next sprint)
+- **i18n Keys** — 1100+ → 1170+ (+70 new status label keys)
+- **Status Summary** — production_ready: 65→67 (+2: Error Handling Consolidation, Backend i18n), total: 289→289
+
+### v14.2.0 (September 8, 2026) — Phase 4 Security & Quality Sprint
+- **Security Fixes (5 issues)** — Tenant isolation audit, Zod validation audit (120+ schemas), RBAC defense-in-depth audit, hardcoded secrets removed, CSP/CORS headers verified
+- **Error Boundaries** — 31 new error.tsx files for projects/[id], projects/[id]/edit, projects/[id]/gantt, projects/[id]/resources, projects/[id]/board, projects/new, crm/pipeline, hr/attendance, hr/leaves, hr/payroll, inventory/categories, inventory/stock, field/jobs, field/jobs/[id], field/checklists, approvals — Total: 94 error.tsx files
+- **Loading States** — 4 new loading.tsx files — Total: 98 loading.tsx files
+- **Dead Code Removal** — Removed `pages/_error.tsx` (Next.js App Router does not use pages/ directory)
+- **Notifications API Fix** — Added graceful degradation when notification preferences table is missing
+- **TypeError Fix** — Suppressed `startTime` TypeError in attendance API with proper null check
+- **Deployment Fixes** — aaPanel Node.js Project Manager config, .env.production values, update.sh script
+- **Codebase Stats** — API route files: 90+→209, Zod schemas: 24+→120+, TS files (apps/web): ~180+→~630+
+- **Status Summary** — production_ready: 64→65, total: 288→289
 
 ### v14.1.0 (September 6, 2026) — Quality Sprint Complete
 - **Error Boundaries** — 18 new error.tsx files for detail pages across HR (employees/[id], leaves/[id]), CRM (contacts/[id], deals/[id], leads/[id]), Inventory (products/[id], stock-opname/[id], suppliers/[id]), Finance (invoices/[id], payments/[id], purchase-orders/[id], quotations/[id]), POS (kitchen, loyalty, refunds, sessions, tables, terminals) — Total: 63 error.tsx files

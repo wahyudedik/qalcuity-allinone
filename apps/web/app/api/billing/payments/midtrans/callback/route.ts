@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { getPaymentProvider } from '@/lib/payment/provider';

@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 
         if (!orderId || !status) {
             return NextResponse.json(
-                { success: false, error: 'orderId dan status wajib diisi' },
+                { success: false, error: 'MSG.ORDER_ID_AND_STATUS_REQUIRED' },
                 { status: 400 }
             );
         }

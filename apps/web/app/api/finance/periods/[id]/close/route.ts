@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -12,9 +13,9 @@ import { z } from 'zod';
 
 const closePeriodSchema = z.object({
     confirmText: z.string().refine((val) => val === 'CLOSE', {
-        message: 'Teks konfirmasi harus "CLOSE"',
+        message: 'Confirmation text must be "CLOSE"',
     }),
-    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional(),
+    notes: z.string().max(500, 'Notes must be at most 500 characters').optional(),
 });
 
 // ============================================
@@ -30,7 +31,7 @@ export async function POST(
         const rateLimitResult = checkRateLimit(`api:periods:close:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -42,7 +43,7 @@ export async function POST(
         // Hanya ADMIN+ yang boleh close period
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat menutup periode akuntansi' },
+                { success: false, error: 'Only admins can close accounting periods', code: 'FORBIDDEN' },
                 { status: 403 }
             );
         }
@@ -53,14 +54,14 @@ export async function POST(
 
         if (!period) {
             return NextResponse.json(
-                { success: false, error: 'Periode tidak ditemukan' },
+                { success: false, error: 'Period not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
 
         if (period.status !== 'OPEN') {
             return NextResponse.json(
-                { success: false, error: `Periode dengan status "${period.status}" tidak dapat ditutup` },
+                { success: false, error: `Period with status "${period.status}" cannot be closed`, code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -70,7 +71,7 @@ export async function POST(
         const validation = closePeriodSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: validation.error.issues[0]?.message || 'Data tidak valid' },
+                { success: false, error: validation.error.issues[0]?.message || 'Invalid data', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }

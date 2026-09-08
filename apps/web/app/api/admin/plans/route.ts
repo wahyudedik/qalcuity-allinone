@@ -4,11 +4,13 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requireAdminAuth, isSuperAdmin } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 type PlanWithFeatures = {
     id: string;
     name: string;
@@ -35,12 +37,12 @@ type PlanWithFeatures = {
 };
 
 const createPlanSchema = z.object({
-    name: z.string().min(1, 'Nama plan wajib diisi').max(100),
-    slug: z.string().min(1, 'Slug wajib diisi').max(50).regex(/^[a-z0-9-]+$/, 'Slug hanya boleh huruf kecil, angka, dan strip'),
+    name: z.string().min(1, MSG.NAME_REQUIRED).max(100),
+    slug: z.string().min(1, MSG.SLUG_REQUIRED).max(50).regex(/^[a-z0-9-]+$/, MSG.SLUG_ONLY_LOWERCASE_HYPHEN),
     description: z.string().max(500).optional(),
-    priceMonthly: z.number().min(0, 'Harga bulanan tidak boleh negatif'),
+    priceMonthly: z.number().min(0, 'Price must not be negative'),
     priceYearly: z.number().min(0).optional(),
-    maxUsers: z.number().int().min(-1, 'Max users minimal -1 (unlimited)'),
+    maxUsers: z.number().int().min(-1, 'Max users must be at least -1 (unlimited)'),
     maxStorage: z.number().int().min(0).optional(),
     sortOrder: z.number().int().default(0),
     features: z.array(z.object({
@@ -92,11 +94,7 @@ export async function GET() {
                 { status: 403 }
             );
         }
-        console.error('[AdminPlans] Error:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -191,10 +189,6 @@ export async function POST(request: Request) {
                 { status: 403 }
             );
         }
-        console.error('[AdminPlans] Error creating plan:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal membuat paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

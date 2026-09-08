@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -11,9 +12,9 @@ import { z } from 'zod';
 // ============================================
 
 const createPeriodSchema = z.object({
-    name: z.string().min(1, 'Nama period wajib diisi').max(100),
-    startDate: z.string().min(1, 'Tanggal mulai wajib diisi'),
-    endDate: z.string().min(1, 'Tanggal akhir wajib diisi'),
+    name: z.string().min(1, 'MSG.PERIOD_NAME_REQUIRED').max(100),
+    startDate: z.string().min(1, 'MSG.START_DATE_REQUIRED'),
+    endDate: z.string().min(1, 'MSG.END_DATE_REQUIRED'),
 });
 
 const generatePeriodsSchema = z.object({
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:periods:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:periods:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
             const genValidation = generatePeriodsSchema.safeParse(body);
             if (!genValidation.success) {
                 return NextResponse.json(
-                    { success: false, error: 'Tahun tidak valid' },
+                    { success: false, error: 'Invalid year', code: 'VALIDATION_ERROR' },
                     { status: 400 }
                 );
             }
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
 
             return NextResponse.json({
                 success: true,
-                data: { created: periods.length, message: `${periods.length} periode berhasil dibuat untuk tahun ${genValidation.data.year}` },
+                data: { created: periods.length, message: `${periods.length} periods created for year ${genValidation.data.year}` },
             }, { status: 201 });
         }
 
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
         const validation = createPeriodSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: validation.error.issues[0]?.message || 'Data tidak valid' },
+                { success: false, error: validation.error.issues[0]?.message || 'Invalid data', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }

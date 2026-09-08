@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -17,7 +18,7 @@ export async function GET(
         const rateLimitResult = checkRateLimit(`api:periods:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -32,7 +33,7 @@ export async function GET(
 
         if (!period) {
             return NextResponse.json(
-                { success: false, error: 'Periode tidak ditemukan' },
+                { success: false, error: 'Period not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -97,7 +98,7 @@ export async function PUT(
         const rateLimitResult = checkRateLimit(`api:periods:PUT:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -109,7 +110,7 @@ export async function PUT(
         // Hanya ADMIN+ yang boleh update period
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah periode akuntansi' },
+                { success: false, error: 'Only admins can modify accounting periods', code: 'FORBIDDEN' },
                 { status: 403 }
             );
         }
@@ -120,7 +121,7 @@ export async function PUT(
 
         if (!period) {
             return NextResponse.json(
-                { success: false, error: 'Periode tidak ditemukan' },
+                { success: false, error: 'Period not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -133,14 +134,14 @@ export async function PUT(
             // Only SUPERADMIN can reopen
             if (auth.role !== 'SUPERADMIN') {
                 return NextResponse.json(
-                    { success: false, error: 'Hanya Super Admin yang dapat membuka kembali periode yang sudah ditutup' },
+                    { success: false, error: 'Only Super Admin can reopen closed periods', code: 'FORBIDDEN' },
                     { status: 403 }
                 );
             }
 
             if (!closeNotes) {
                 return NextResponse.json(
-                    { success: false, error: 'Catatan wajib diisi saat membuka kembali periode' },
+                    { success: false, error: 'Notes are required when reopening a period', code: 'VALIDATION_ERROR' },
                     { status: 400 }
                 );
             }
@@ -167,7 +168,7 @@ export async function PUT(
         }
 
         return NextResponse.json(
-            { success: false, error: 'Aksi tidak valid' },
+            { success: false, error: 'Invalid action', code: 'VALIDATION_ERROR' },
             { status: 400 }
         );
     } catch (error: unknown) {

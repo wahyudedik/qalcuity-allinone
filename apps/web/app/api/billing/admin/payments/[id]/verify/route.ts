@@ -4,6 +4,8 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { verifyBillingPaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function PUT(
     request: Request,
@@ -44,14 +46,14 @@ export async function PUT(
 
         if (!payment) {
             return NextResponse.json(
-                { success: false, error: 'Pembayaran tidak ditemukan' },
+                { success: false, error: MSG.PAYMENT_NOT_FOUND, code: 'PAYMENT_NOT_FOUND' },
                 { status: 404 }
             );
         }
 
         if (payment.status !== 'PENDING') {
             return NextResponse.json(
-                { success: false, error: 'Pembayaran sudah diproses' },
+                { success: false, error: MSG.PAYMENT_ALREADY_PROCESSED, code: 'PAYMENT_ALREADY_PROCESSED' },
                 { status: 400 }
             );
         }
@@ -97,7 +99,7 @@ export async function PUT(
 
             return NextResponse.json({
                 success: true,
-                message: 'Pembayaran berhasil diverifikasi. Langganan tenant telah diaktifkan.',
+                message: MSG.PAYMENT_VERIFIED,
             });
         } else {
             // Reject (rejectReason guaranteed by Zod refine validation)
@@ -116,14 +118,10 @@ export async function PUT(
 
             return NextResponse.json({
                 success: true,
-                message: 'Pembayaran ditolak.',
+                message: MSG.PAYMENT_REJECTED,
             });
         }
     } catch (error) {
-        console.error('Error verifying payment:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal memproses verifikasi pembayaran' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

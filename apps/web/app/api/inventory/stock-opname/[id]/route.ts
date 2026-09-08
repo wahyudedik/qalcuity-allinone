@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { formatZodError } from '@/lib/validation-schemas';
 import { z } from 'zod';
+import { MSG } from '@/lib/api-messages';
 
 const updateStockOpnameSchema = z.object({
     status: z.enum(['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
@@ -34,7 +35,7 @@ export async function GET(
 
         if (!opname) {
             return NextResponse.json(
-                { success: false, error: 'Stock opname tidak ditemukan' },
+                { success: false, error: MSG.STOCK_OPNAME_NOT_FOUND, code: 'STOCK_OPNAME_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -72,7 +73,7 @@ export async function PUT(
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Stock opname tidak ditemukan' },
+                { success: false, error: MSG.STOCK_OPNAME_NOT_FOUND, code: 'STOCK_OPNAME_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -88,7 +89,7 @@ export async function PUT(
             const allowed = validTransitions[existing.status] || [];
             if (!allowed.includes(validatedData.status)) {
                 return NextResponse.json(
-                    { success: false, error: `Transisi dari status ${existing.status} ke ${validatedData.status} tidak diizinkan` },
+                    { success: false, error: `${MSG.INVALID_STATUS_TRANSITION}: ${existing.status} → ${validatedData.status}`, code: 'INVALID_STATUS_TRANSITION' },
                     { status: 400 }
                 );
             }

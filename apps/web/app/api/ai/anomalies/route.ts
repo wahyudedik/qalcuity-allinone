@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { runAnomalyScan, type AnomalySeverity, type AnomalyStatus, type AnomalyEntityType } from '@/lib/ai/anomaly-detection';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 // ─── Zod Schema ──────────────────────────────────────────────────────────────
 
@@ -94,14 +96,7 @@ export async function GET(req: Request) {
             },
         });
     } catch (error) {
-        console.error(
-            'Anomalies list error:',
-            error instanceof Error ? error.message : 'Unknown error'
-        );
-        return NextResponse.json(
-            { success: false, error: 'Gagal memuat data anomali' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -129,7 +124,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:anomalies:scan:${tenantId}:${ip}`, 5, 300000); // 5 per 5 min
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak scan request. Tunggu beberapa menit.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -138,7 +133,7 @@ export async function POST(req: Request) {
         const validation = scanRequestSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Input tidak valid' },
+                { success: false, error: 'MSG.INVALID_INPUT' },
                 { status: 400 }
             );
         }
@@ -166,13 +161,6 @@ export async function POST(req: Request) {
             data: scanResult,
         });
     } catch (error) {
-        console.error(
-            'Anomaly scan error:',
-            error instanceof Error ? error.message : 'Unknown error'
-        );
-        return NextResponse.json(
-            { success: false, error: 'Gagal menjalankan scan anomali' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

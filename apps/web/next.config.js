@@ -56,10 +56,13 @@ const nextConfig = {
     reactStrictMode: true, // ← Best practice untuk production
     transpilePackages: ["@qalcuity/ui"],
     typescript: {
-        // Skip TypeScript checking during `next build` to avoid failures on VPS
-        // caused by environment differences (Node.js version, Prisma client version, etc.).
-        // TypeScript can still be checked manually via `npx tsc --noEmit`.
-        ignoreBuildErrors: true,
+        // ignoreBuildErrors dihapus (M12 audit — September 2026).
+        // Build passing tanpa ignoreBuildErrors. TypeScript checking dilakukan
+        // via `npx tsc --noEmit` dan juga oleh `next build` secara otomatis.
+        // Jika build gagal karena environment differences di VPS, pertimbangkan
+        // untuk menggunakan `tsc --noEmit` sebagai pre-build check alih-alih
+        // mengabaikan semua errors.
+        ignoreBuildErrors: false,
     },
     experimental: {
         optimizePackageImports: ["lucide-react"],

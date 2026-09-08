@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
 
         if (!user) {
             return NextResponse.json(
-                { success: false, error: 'User tidak ditemukan' },
+                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
                 { status: 404 }
             )
         }
@@ -90,14 +91,14 @@ export async function POST(request: Request) {
 
         if (!user) {
             return NextResponse.json(
-                { success: false, error: 'User tidak ditemukan' },
+                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
                 { status: 404 }
             )
         }
 
         if (user.twoFactorEnabled) {
             return NextResponse.json(
-                { success: false, error: '2FA sudah aktif. Nonaktifkan terlebih dahulu.' },
+                { success: false, error: '2FA is already enabled. Disable it first.', code: '2FA_ALREADY_ENABLED' },
                 { status: 400 }
             )
         }
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
             const isValid = verifyTOTP(body.secret, body.code)
             if (!isValid) {
                 return NextResponse.json(
-                    { success: false, error: 'Kode verifikasi salah. Pastikan waktu perangkat sudah benar.' },
+                    { success: false, error: 'Invalid verification code. Ensure your device time is correct.', code: 'INVALID_2FA_CODE' },
                     { status: 400 }
                 )
             }
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
 
             return NextResponse.json({
                 success: true,
-                message: '2FA berhasil diaktifkan',
+                message: '2FA has been enabled successfully',
                 data: {
                     backupCodes, // Plain text — only shown once
                     backupCodesCount: backupCodes.length,
@@ -212,14 +213,14 @@ export async function DELETE(request: Request) {
 
         if (!user) {
             return NextResponse.json(
-                { success: false, error: 'User tidak ditemukan' },
+                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
                 { status: 404 }
             )
         }
 
         if (!user.twoFactorEnabled) {
             return NextResponse.json(
-                { success: false, error: '2FA belum aktif' },
+                { success: false, error: '2FA is not enabled', code: '2FA_NOT_ENABLED' },
                 { status: 400 }
             )
         }
@@ -228,7 +229,7 @@ export async function DELETE(request: Request) {
         const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
         if (!isPasswordValid) {
             return NextResponse.json(
-                { success: false, error: 'Password salah' },
+                { success: false, error: 'Incorrect password', code: 'INVALID_PASSWORD' },
                 { status: 400 }
             )
         }
@@ -257,7 +258,7 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: '2FA berhasil dinonaktifkan',
+            message: '2FA has been disabled successfully',
         })
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error'

@@ -8,6 +8,8 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/api-error'
+import { createKPISchema } from '@/lib/validation-schemas'
+import { MSG } from '@/lib/api-messages'
 
 // ============================================
 // TYPES
@@ -35,7 +37,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request)
         const rateLimitResult = checkRateLimit(`api:analytics:kpi:route:GET:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -115,7 +117,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request)
         const rateLimitResult = checkRateLimit(`api:analytics:kpi:route:POST:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -123,46 +125,30 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const body: CreateKPIBody = await request.json()
 
-        // Validate required fields
-        if (!body.name || !body.category || !body.metricId || body.target === undefined) {
+        // Validasi input dengan Zod schema
+        const body = await request.json()
+        const validated = createKPISchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: name, category, metricId, target' },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             )
         }
 
-        // Validate category
-        const validCategories = ['finance', 'sales', 'inventory', 'hr', 'crm', 'cross_module']
-        if (!validCategories.includes(body.category)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid category. Must be one of: ${validCategories.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate period
-        const validPeriods = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']
-        const period = body.period || 'monthly'
-        if (!validPeriods.includes(period)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid period. Must be one of: ${validPeriods.join(', ')}` },
-                { status: 400 }
-            )
-        }
+        const period = validated.data.period || 'monthly'
 
         const kpi = await prisma.kPI.create({
             data: {
-                name: body.name,
-                description: body.description,
-                category: body.category,
-                metricId: body.metricId,
-                formula: body.formula,
-                target: body.target,
-                targetType: body.targetType || 'gte',
-                warningThreshold: body.warningThreshold ?? 10,
-                criticalThreshold: body.criticalThreshold ?? 25,
+                name: validated.data.name,
+                description: validated.data.description,
+                category: validated.data.category,
+                metricId: validated.data.metricId,
+                formula: validated.data.formula,
+                target: validated.data.target,
+                targetType: validated.data.targetType || 'gte',
+                warningThreshold: validated.data.warningThreshold ?? 10,
+                criticalThreshold: validated.data.criticalThreshold ?? 25,
                 period,
                 ownerId: userId,
                 tenantId,

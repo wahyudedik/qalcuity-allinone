@@ -5,6 +5,7 @@ import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { updateEmployeeSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -36,7 +37,7 @@ export async function GET(
 
         if (!employee) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan tidak ditemukan' },
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -115,7 +116,7 @@ export async function PUT(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan tidak ditemukan' },
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -160,7 +161,7 @@ export async function DELETE(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan tidak ditemukan' },
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -169,7 +170,7 @@ export async function DELETE(
         const deleteResult = await prisma.employee.deleteMany({ where: { id, tenantId } });
         if (deleteResult.count === 0) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan tidak ditemukan atau akses ditolak' },
+                { success: false, error: MSG.EMPLOYEE_ACCESS_DENIED, code: 'EMPLOYEE_ACCESS_DENIED' },
                 { status: 404 }
             );
         }

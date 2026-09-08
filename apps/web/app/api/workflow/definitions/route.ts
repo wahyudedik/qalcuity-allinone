@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { MSG } from '@/lib/api-messages';
 
 /**
  * GET /api/workflow/definitions
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 
         if (!entityType || !name || !config) {
             return NextResponse.json(
-                { success: false, error: 'entityType, name, dan config wajib diisi' },
+                { success: false, error: MSG.WORKFLOW_DEFINITION_FIELDS_REQUIRED },
                 { status: 400 }
             );
         }
@@ -53,28 +54,28 @@ export async function POST(request: Request) {
         // Validate config structure
         if (!config.states || !Array.isArray(config.states) || config.states.length === 0) {
             return NextResponse.json(
-                { success: false, error: 'config.states harus berupa array yang tidak kosong' },
+                { success: false, error: MSG.WORKFLOW_CONFIG_STATES_ARRAY },
                 { status: 400 }
             );
         }
 
         if (!config.transitions || !Array.isArray(config.transitions)) {
             return NextResponse.json(
-                { success: false, error: 'config.transitions harus berupa array' },
+                { success: false, error: MSG.WORKFLOW_CONFIG_TRANSITIONS_ARRAY },
                 { status: 400 }
             );
         }
 
         if (!config.initialState) {
             return NextResponse.json(
-                { success: false, error: 'config.initialState wajib diisi' },
+                { success: false, error: MSG.WORKFLOW_CONFIG_INITIAL_STATE_REQUIRED },
                 { status: 400 }
             );
         }
 
         if (!config.finalStates || !Array.isArray(config.finalStates)) {
             return NextResponse.json(
-                { success: false, error: 'config.finalStates harus berupa array' },
+                { success: false, error: MSG.WORKFLOW_CONFIG_FINAL_STATES_ARRAY },
                 { status: 400 }
             );
         }
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
         if (existing) {
             if (existing.isSystem) {
                 return NextResponse.json(
-                    { success: false, error: 'Tidak dapat mengubah system workflow' },
+                    { success: false, error: MSG.WORKFLOW_SYSTEM_CANNOT_MODIFY },
                     { status: 403 }
                 );
             }

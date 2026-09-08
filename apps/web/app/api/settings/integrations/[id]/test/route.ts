@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
@@ -33,7 +34,7 @@ export async function POST(
 
         if (!integration) {
             return NextResponse.json(
-                { success: false, error: 'Integrasi tidak ditemukan' },
+                { success: false, error: 'Integration not found', code: 'INTEGRATION_NOT_FOUND' },
                 { status: 404 }
             )
         }
@@ -114,7 +115,7 @@ async function testWhatsApp(apiKey: string | null): Promise<TestResult> {
     if (!apiKey) {
         return {
             success: false,
-            message: 'WhatsApp API Key belum dikonfigurasi',
+            message: 'WhatsApp API Key not configured',
         }
     }
 
@@ -122,7 +123,7 @@ async function testWhatsApp(apiKey: string | null): Promise<TestResult> {
     if (apiKey.length < 10) {
         return {
             success: false,
-            message: 'Format WhatsApp API Key tidak valid',
+            message: 'Invalid WhatsApp API Key format',
         }
     }
 
@@ -130,7 +131,7 @@ async function testWhatsApp(apiKey: string | null): Promise<TestResult> {
     // For now, validate that the key exists and has reasonable format
     return {
         success: true,
-        message: 'WhatsApp Business API — kredensial valid',
+        message: 'WhatsApp Business API — credentials valid',
         details: {
             provider: 'WhatsApp Business API',
             keyLength: apiKey.length,
@@ -145,7 +146,7 @@ async function testEmail(
     if (!apiKey) {
         return {
             success: false,
-            message: 'Email password/app password belum dikonfigurasi',
+            message: 'Email password/app password not configured',
         }
     }
 
@@ -155,14 +156,14 @@ async function testEmail(
     if (!smtpHost) {
         return {
             success: false,
-            message: 'SMTP Host belum dikonfigurasi',
+            message: 'SMTP Host not configured',
         }
     }
 
     // In production, this would attempt to connect to SMTP server
     return {
         success: true,
-        message: `SMTP dikonfigurasi ke ${smtpHost}:${smtpPort || '587'}`,
+        message: `SMTP configured to ${smtpHost}:${smtpPort || '587'}`,
         details: {
             host: smtpHost,
             port: smtpPort || '587',
@@ -177,7 +178,7 @@ async function testPaymentGateway(
     if (!apiKey) {
         return {
             success: false,
-            message: `${name} API Key belum dikonfigurasi`,
+            message: `${name} API Key not configured`,
         }
     }
 
@@ -188,20 +189,20 @@ async function testPaymentGateway(
     if (isMidtrans && !apiKey.startsWith('SB-Mid-') && !apiKey.startsWith('SB-Mid-server')) {
         return {
             success: false,
-            message: 'Format Midtrans Server Key tidak valid (harus diawali SB-Mid-)',
+            message: 'Invalid Midtrans Server Key format (must start with SB-Mid-)',
         }
     }
 
     if (isXendit && !apiKey.startsWith('xnd_')) {
         return {
             success: false,
-            message: 'Format Xendit Secret Key tidak valid (harus diawali xnd_)',
+            message: 'Invalid Xendit Secret Key format (must start with xnd_)',
         }
     }
 
     return {
         success: true,
-        message: `${name} — kredensial valid`,
+        message: `${name} — credentials valid`,
         details: {
             provider: name,
             environment: apiKey.includes('development') || apiKey.startsWith('SB-') ? 'sandbox' : 'production',

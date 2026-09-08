@@ -18,6 +18,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
 import { generateMobileToken, generateRefreshToken, type MobileUser } from '@/lib/mobile-auth';
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:mobile-register:${ip}`, 5, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak percobaan registrasi. Coba lagi dalam 5 menit.' },
+                { success: false, error: 'Too many registration attempts. Please try again in 5 minutes.', code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
         // Validate required fields
         if (!sanitizedName || !sanitizedEmail || !password || !sanitizedCompany) {
             return NextResponse.json(
-                { success: false, error: 'Semua field harus diisi (name, email, password, companyName)' },
+                { success: false, error: 'All fields are required (name, email, password, companyName)', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
         // Validate email format
         if (!isValidEmail(sanitizedEmail)) {
             return NextResponse.json(
-                { success: false, error: 'Format email tidak valid' },
+                { success: false, error: 'Invalid email format', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
         // Validate password
         if (typeof password !== 'string' || password.length < 8) {
             return NextResponse.json(
-                { success: false, error: 'Password minimal 8 karakter' },
+                { success: false, error: 'Password must be at least 8 characters', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
 
         if (existingUser) {
             return NextResponse.json(
-                { success: false, error: 'Email sudah terdaftar' },
+                { success: false, error: 'Email already registered', code: 'DUPLICATE_EMAIL' },
                 { status: 400 }
             );
         }

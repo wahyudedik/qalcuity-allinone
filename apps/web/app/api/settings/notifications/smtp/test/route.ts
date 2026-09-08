@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
         // Validate required fields
         if (!smtpHost || !smtpPort || !smtpEmail) {
             return NextResponse.json(
-                { success: false, error: 'SMTP Host, Port, dan Email wajib diisi untuk test' },
+                { success: false, error: 'MSG.SMTP_HOST_PORT_EMAIL_REQUIRED_FOR_TEST' },
                 { status: 400 }
             )
         }
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
         const port = parseInt(smtpPort, 10)
         if (isNaN(port) || port < 1 || port > 65535) {
             return NextResponse.json(
-                { success: false, error: 'Port tidak valid' },
+                { success: false, error: 'Invalid port', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             )
         }

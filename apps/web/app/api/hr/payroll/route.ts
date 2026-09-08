@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { createPayrollSchema, updatePayrollSchema, approvePayrollSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:payroll:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:payroll:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
         const body = await request.json();
 
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
         });
         if (!employee) {
             return NextResponse.json(
-                { success: false, error: 'Karyawan tidak ditemukan' },
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -181,7 +182,7 @@ export async function PATCH(request: Request) {
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payroll record tidak ditemukan' },
+                { success: false, error: MSG.PAYROLL_RECORD_NOT_FOUND, code: 'PAYROLL_RECORD_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -216,7 +217,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID wajib diisi' },
+                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -236,7 +237,7 @@ export async function PUT(request: Request) {
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payroll record tidak ditemukan' },
+                { success: false, error: MSG.PAYROLL_RECORD_NOT_FOUND, code: 'PAYROLL_RECORD_NOT_FOUND' },
                 { status: 404 }
             );
         }

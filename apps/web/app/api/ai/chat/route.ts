@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getAIProvider, type AIChatMessage } from '@/lib/ai/provider';
@@ -6,6 +7,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 const chatMessageSchema = z.object({
     role: z.enum(['user', 'assistant', 'system']),
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:chat:${tenantId}:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -80,10 +82,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, response });
     } catch (error) {
-        console.error('AI Chat error:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'AI service unavailable' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

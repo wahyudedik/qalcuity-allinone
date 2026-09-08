@@ -5,6 +5,8 @@ import { sanitizeInput } from '@/lib/sanitize';
 import { notifySuperadminPayment } from '@/lib/email';
 import { logAudit } from '@/lib/audit';
 import { createBillingPaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -45,11 +47,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('Error fetching payments:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data pembayaran' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -92,7 +90,7 @@ export async function POST(request: Request) {
 
         if (!subscription) {
             return NextResponse.json(
-                { success: false, error: 'Langganan tidak ditemukan' },
+                { success: false, error: MSG.SUBSCRIPTION_NOT_FOUND, code: 'SUBSCRIPTION_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -136,13 +134,9 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             data: payment,
-            message: 'Bukti transfer berhasil dikirim. Menunggu verifikasi admin.',
+            message: MSG.BILLING_PROOF_SUBMITTED,
         });
     } catch (error) {
-        console.error('Error creating payment:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengirim bukti transfer' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

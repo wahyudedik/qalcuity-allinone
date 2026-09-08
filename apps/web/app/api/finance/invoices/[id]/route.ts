@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -102,7 +103,7 @@ export async function PUT(
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Invoice tidak ditemukan' },
+                { success: false, error: 'Invoice not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }

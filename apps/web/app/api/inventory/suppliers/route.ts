@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createSupplierSchema, updateSupplierSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:suppliers:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:suppliers:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
         const body = await request.json();
 
@@ -138,7 +139,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID harus diisi' },
+                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -157,7 +158,7 @@ export async function PUT(request: Request) {
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Supplier tidak ditemukan' },
+                { success: false, error: MSG.SUPPLIER_NOT_FOUND, code: 'SUPPLIER_NOT_FOUND' },
                 { status: 404 }
             );
         }

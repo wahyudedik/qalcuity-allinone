@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
 
         if (!token) {
             return NextResponse.json(
-                { success: false, error: 'Token wajib diisi' },
+                { success: false, error: 'Token is required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             )
         }
@@ -151,7 +152,7 @@ export async function DELETE(request: Request) {
 
             if (!session) {
                 return NextResponse.json(
-                    { success: false, error: 'Sesi tidak ditemukan atau sudah dinonaktifkan' },
+                    { success: false, error: 'MSG.SESSION_NOT_FOUND_OR_DISABLED' },
                     { status: 404 }
                 )
             }

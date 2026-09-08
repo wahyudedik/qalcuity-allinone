@@ -11,12 +11,14 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getRateLimitStats, getRealtimeStats, cleanupOldLogs } from '@/lib/rate-limit-monitor';
 import { getRedisHealth } from '@/lib/redis';
 import { rateLimitConfig } from '@/lib/rate-limit-config';
+import { handleApiError } from '@/lib/api-error';
 
 // ============================================================
 // GET /api/admin/rate-limits
@@ -94,11 +96,7 @@ export async function GET(req: Request) {
             recentViolations,
         });
     } catch (error) {
-        console.error('[Admin] Rate limit stats error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -130,10 +128,6 @@ export async function POST(req: Request) {
             retentionDays,
         });
     } catch (error) {
-        console.error('[Admin] Rate limit cleanup error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
