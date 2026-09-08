@@ -48,6 +48,10 @@ export default function ProfileSettingsPage() {
                     email: data.data.email || '',
                     phone: data.data.company?.phone || '',
                 })
+                // Load avatar from database
+                if (data.data.avatar) {
+                    setPhotoPreview(data.data.avatar)
+                }
             }
         } catch {
             // Fallback: use session data
@@ -156,35 +160,41 @@ export default function ProfileSettingsPage() {
         setSaveMessage(null)
 
         try {
-            // Convert to base64 for preview and upload
-            const reader = new FileReader()
-            reader.onload = async () => {
-                const base64 = reader.result as string
-                setPhotoPreview(base64)
+            // Step 1: Upload file via /api/upload (FormData)
+            const uploadFormData = new FormData()
+            uploadFormData.append('file', file)
 
-                try {
-                    const res = await fetch('/api/settings/profile', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: formData.name, image: base64 }),
-                    })
-                    const data = await res.json()
-                    if (data.success) {
-                        setSaveMessage({ type: 'success', text: 'Foto profil berhasil diubah!' })
-                        await updateSession({ image: base64 })
-                    } else {
-                        setSaveMessage({ type: 'error', text: data.error || 'Gagal mengubah foto' })
-                    }
-                } catch {
-                    setSaveMessage({ type: 'error', text: 'Gagal mengunggah foto' })
-                } finally {
-                    setPhotoUploading(false)
-                }
+            const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                body: uploadFormData,
+            })
+            const uploadData = await uploadRes.json()
+
+            if (!uploadData.success || !uploadData.data?.url) {
+                setSaveMessage({ type: 'error', text: uploadData.error || 'Gagal mengunggah foto' })
+                return
             }
-            reader.readAsDataURL(file)
+
+            const avatarUrl = uploadData.data.url
+
+            // Step 2: Update profile with avatar URL
+            const profileRes = await fetch('/api/settings/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatar: avatarUrl }),
+            })
+            const profileData = await profileRes.json()
+
+            if (profileData.success) {
+                setPhotoPreview(avatarUrl)
+                setSaveMessage({ type: 'success', text: 'Foto profil berhasil diubah!' })
+            } else {
+                setSaveMessage({ type: 'error', text: profileData.error || 'Gagal menyimpan foto profil' })
+            }
         } catch {
+            setSaveMessage({ type: 'error', text: 'Gagal mengunggah foto' })
+        } finally {
             setPhotoUploading(false)
-            setSaveMessage({ type: 'error', text: 'Gagal membaca file' })
         }
 
         // Reset input

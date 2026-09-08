@@ -23,6 +23,7 @@ export async function GET(request: Request) {
                 name: true,
                 email: true,
                 role: true,
+                avatar: true,
                 createdAt: true,
                 tenant: {
                     select: {
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                avatar: user.avatar || null,
                 phone: user.tenant?.phone || '',
                 createdAt: user.createdAt.toISOString(),
                 company: {
@@ -96,6 +98,9 @@ export async function PUT(request: Request) {
         if (validation.data.email !== undefined) {
             updateData.email = validation.data.email.trim();
         }
+        if (validation.data.avatar !== undefined) {
+            updateData.avatar = validation.data.avatar;
+        }
 
         if (Object.keys(updateData).length === 0) {
             return NextResponse.json(
@@ -112,6 +117,7 @@ export async function PUT(request: Request) {
                 name: true,
                 email: true,
                 role: true,
+                avatar: true,
             },
         });
 

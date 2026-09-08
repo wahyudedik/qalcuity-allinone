@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -159,6 +160,19 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
+        // Graceful fallback: PosKitchenOrder/PosKitchenStation tables not yet available (migration pending)
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+            console.warn('[Kitchen Stats API] Kitchen tables not found — returning empty fallback');
+            return NextResponse.json({
+                success: true,
+                data: {
+                    today: { total: 0, pending: 0, preparing: 0, ready: 0, served: 0, cancelled: 0 },
+                    avgEstimatedMinutes: null,
+                    avgActualMinutes: null,
+                    stations: [],
+                },
+            });
+        }
         return handleApiError(error);
     }
 }

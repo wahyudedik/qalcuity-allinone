@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -54,6 +55,11 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
+        // Graceful fallback: PosKitchenStation table not yet available (migration pending)
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+            console.warn('[Kitchen Stations API] PosKitchenStation table not found — returning empty fallback');
+            return NextResponse.json({ success: true, data: [] });
+        }
         return handleApiError(error);
     }
 }
