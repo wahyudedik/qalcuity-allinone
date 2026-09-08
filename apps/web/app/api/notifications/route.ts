@@ -1,8 +1,33 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { updateNotificationSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error'
+
+/**
+ * Graceful fallback when the InAppNotification table does not exist yet
+ * (migration pending on production). Returns a 200 with empty data so
+ * the client-side notification centre degrades silently.
+ */
+function tableNotFoundFallback(kind: 'list' | 'mark' | 'delete') {
+    console.warn('[Notifications API] InAppNotification table not found — returning empty fallback')
+    if (kind === 'list') {
+        return NextResponse.json({ success: true, data: [], unreadCount: 0, total: 0 })
+    }
+    if (kind === 'mark') {
+        return NextResponse.json({ success: true, unreadCount: 0 })
+    }
+    // kind === 'delete'
+    return NextResponse.json({ success: true, deleted: 0 })
+}
+
+function isTableNotFoundError(error: unknown): boolean {
+    return (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2021'
+    )
+}
 
 /**
  * GET /api/notifications
@@ -30,15 +55,6 @@ export async function GET(request: Request) {
         const unreadOnly = searchParams.get('unreadOnly') === 'true'
         const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
         const offset = parseInt(searchParams.get('offset') || '0')
-
-        // Defensive check: pastikan Prisma client memiliki model InAppNotification
-        if (!prisma.inAppNotification) {
-            console.error('[Notifications API] Prisma model InAppNotification not available. Run: cd packages/db && npx prisma generate')
-            return NextResponse.json(
-                { success: false, error: 'Notifications service temporarily unavailable. Please contact administrator.' },
-                { status: 503 }
-            )
-        }
 
         const where: Record<string, unknown> = {
             tenantId,
@@ -71,6 +87,9 @@ export async function GET(request: Request) {
             total,
         })
     } catch (error) {
+        if (isTableNotFoundError(error)) {
+            return tableNotFoundFallback('list')
+        }
         console.error('[Notifications API] GET error:', error)
         return handleApiError(error)
     }
@@ -133,6 +152,9 @@ export async function PUT(request: Request) {
             unreadCount,
         })
     } catch (error) {
+        if (isTableNotFoundError(error)) {
+            return tableNotFoundFallback('mark')
+        }
         console.error('[Notifications API] PUT error:', error)
         return handleApiError(error)
     }
@@ -160,6 +182,9 @@ export async function DELETE(request: Request) {
             deleted: result.count,
         })
     } catch (error) {
+        if (isTableNotFoundError(error)) {
+            return tableNotFoundFallback('delete')
+        }
         console.error('[Notifications API] DELETE error:', error)
         return handleApiError(error)
     }

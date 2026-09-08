@@ -2,14 +2,21 @@ import { NextResponse } from 'next/server';
 
 /**
  * GET /api/auth/providers
- * 
+ *
  * Returns which authentication providers are available and working.
  * Used by login/register pages to conditionally show provider buttons.
- * 
+ *
  * Google OAuth is considered available only if:
  * 1. GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars are set
  * 2. The credentials look valid (non-empty, proper format)
- * 3. Google's OAuth discovery endpoint is reachable
+ * 3. Google's OAuth discovery endpoint is reachable (unless GOOGLE_OAUTH_SKIP_HEALTH_CHECK=true)
+ *
+ * Environment variables:
+ * - GOOGLE_CLIENT_ID: Google OAuth client ID
+ * - GOOGLE_CLIENT_SECRET: Google OAuth client secret
+ * - GOOGLE_OAUTH_SKIP_HEALTH_CHECK: Set to "true" to skip the network health check.
+ *   Useful when VPS cannot reach accounts.google.com (firewall/DNS restriction)
+ *   but credentials are valid. The actual OAuth flow handles connectivity at login time.
  */
 export async function GET() {
     const providers: Record<string, boolean> = {
@@ -36,36 +43,48 @@ export async function GET() {
             !googleClientSecret.includes('placeholder');
 
         if (isValidFormat) {
-            // Try to reach Google's OAuth discovery endpoint
-            // This is a lightweight check to verify network connectivity
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-                const response = await fetch(
-                    'https://accounts.google.com/.well-known/openid-configuration',
-                    {
-                        method: 'HEAD',
-                        signal: controller.signal,
-                    }
+            // If GOOGLE_OAUTH_SKIP_HEALTH_CHECK is set, skip the network check entirely.
+            // This is useful when the VPS cannot reach accounts.google.com (network/firewall
+            // restriction) but the OAuth credentials are valid. The actual OAuth flow will
+            // handle its own connectivity errors at login time.
+            if (process.env.GOOGLE_OAUTH_SKIP_HEALTH_CHECK === 'true') {
+                providers.google = true;
+                console.log(
+                    '[Auth Providers] Google OAuth health check skipped (GOOGLE_OAUTH_SKIP_HEALTH_CHECK=true). ' +
+                    'Google login is enabled based on valid credentials.'
                 );
+            } else {
+                // Try to reach Google's OAuth discovery endpoint
+                // This is a lightweight check to verify network connectivity
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-                clearTimeout(timeoutId);
+                    const response = await fetch(
+                        'https://accounts.google.com/.well-known/openid-configuration',
+                        {
+                            method: 'HEAD',
+                            signal: controller.signal,
+                        }
+                    );
 
-                if (response.ok) {
-                    providers.google = true;
-                } else {
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        providers.google = true;
+                    } else {
+                        console.warn(
+                            `[Auth Providers] Google OAuth endpoint returned status ${response.status}. ` +
+                            `Google login is disabled.`
+                        );
+                    }
+                } catch (error) {
+                    // Network error, timeout, or DNS failure — Google OAuth is not reachable
                     console.warn(
-                        `[Auth Providers] Google OAuth endpoint returned status ${response.status}. ` +
-                        `Google login is disabled.`
+                        `[Auth Providers] Cannot reach Google OAuth endpoint. ` +
+                        `Google login is disabled. Error: ${error instanceof Error ? error.message : 'Unknown'}`,
                     );
                 }
-            } catch (error) {
-                // Network error, timeout, or DNS failure — Google OAuth is not reachable
-                console.warn(
-                    `[Auth Providers] Cannot reach Google OAuth endpoint. ` +
-                    `Google login is disabled. Error: ${error instanceof Error ? error.message : 'Unknown'}`,
-                );
             }
         } else {
             console.warn(
