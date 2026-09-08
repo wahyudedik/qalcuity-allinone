@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -16,7 +17,7 @@ export async function GET(
         const rateLimitResult = checkRateLimit(`api:field-checklist:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -35,7 +36,7 @@ export async function GET(
         });
 
         if (!checklist) {
-            return NextResponse.json({ success: false, error: 'Checklist tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.CHECKLIST_NOT_FOUND' }, { status: 404 });
         }
 
         return NextResponse.json({
@@ -67,7 +68,7 @@ export async function PATCH(
         const rateLimitResult = checkRateLimit(`api:field-checklist:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -90,7 +91,7 @@ export async function PATCH(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Checklist tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.CHECKLIST_NOT_FOUND' }, { status: 404 });
         }
 
         const updateData: Record<string, unknown> = {};
@@ -132,7 +133,7 @@ export async function DELETE(
         const rateLimitResult = checkRateLimit(`api:field-checklist:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -146,7 +147,7 @@ export async function DELETE(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Checklist tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.CHECKLIST_NOT_FOUND' }, { status: 404 });
         }
 
         await prisma.fieldChecklist.delete({

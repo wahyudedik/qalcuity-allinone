@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { createTenantSchema } from "@/lib/validation-schemas";
+import { handleApiError } from "@/lib/api-error";
 
 // ─── GET /api/platform/tenants ────────────────────────────────────────────────
 // Returns paginated list of all tenants with stats.
@@ -82,11 +85,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error("[Platform Tenants Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -100,17 +99,19 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { name, email, slug, plan } = body;
 
-        // 3. Validate required fields
-        if (!name || !email || !slug) {
+        // 2. Validate input dengan Zod schema
+        const validated = createTenantSchema.safeParse(body);
+        if (!validated.success) {
             return NextResponse.json(
-                { error: "Name, email, and slug are required" },
+                { error: validated.error.issues[0]?.message || "Invalid input", code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
 
-        // 4. Check slug uniqueness
+        const { name, email, slug, plan } = validated.data;
+
+        // 3. Check slug uniqueness
         const existing = await prisma.tenant.findUnique({
             where: { slug },
         });
@@ -165,10 +166,6 @@ export async function POST(request: Request) {
             },
         }, { status: 201 });
     } catch (error) {
-        console.error("[Platform Tenants Create Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

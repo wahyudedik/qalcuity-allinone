@@ -1434,3 +1434,57 @@ export const updateNotificationSchema = z.object({
 }).refine((data) => data.ids || data.markAll, {
     message: 'Harus menyediakan array ids atau markAll=true',
 });
+
+// ============================================
+// Platform Tenant Schemas
+// ============================================
+
+export const createTenantSchema = z.object({
+    name: z.string().min(1, 'Nama tenant wajib diisi').max(255, 'Nama tenant maksimal 255 karakter'),
+    email: z.string().email('Format email tidak valid').max(255, 'Email maksimal 255 karakter'),
+    slug: z.string().min(1, 'Slug wajib diisi').max(100, 'Slug maksimal 100 karakter').regex(
+        /^[a-z0-9-]+$/,
+        'Slug hanya boleh berisi huruf kecil, angka, dan hyphen'
+    ),
+    domain: z.string().max(255, 'Domain maksimal 255 karakter').optional().nullable(),
+    industryType: z.string().max(100, 'Tipe industri maksimal 100 karakter').optional().nullable(),
+    plan: z.string().max(50, 'Plan maksimal 50 karakter').optional().nullable(),
+});
+
+// ============================================
+// Analytics KPI Schemas
+// ============================================
+
+export const createKPISchema = z.object({
+    name: z.string().min(1, 'Nama KPI wajib diisi').max(255, 'Nama KPI maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    category: z.enum(['finance', 'sales', 'inventory', 'hr', 'crm', 'cross_module'], {
+        message: 'Kategori tidak valid',
+    }),
+    metricId: z.string().min(1, 'Metric ID wajib diisi').max(255, 'Metric ID maksimal 255 karakter'),
+    formula: z.string().max(500, 'Formula maksimal 500 karakter').optional().nullable(),
+    target: z.number({ message: 'Target harus berupa angka' }),
+    targetType: z.enum(['gte', 'lte', 'eq', 'range'], {
+        message: 'Target type tidak valid',
+    }).optional(),
+    warningThreshold: z.number().min(0).max(100, 'Warning threshold maksimal 100').optional(),
+    criticalThreshold: z.number().min(0).max(100, 'Critical threshold maksimal 100').optional(),
+    period: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly'], {
+        message: 'Periode tidak valid',
+    }).optional(),
+    ownerId: z.string().optional().nullable(),
+    departmentId: z.string().optional().nullable(),
+});
+
+// ============================================
+// Workflow Transition Schemas
+// ============================================
+
+export const workflowTransitionSchema = z.object({
+    entityType: z.enum(['INVOICE', 'QUOTATION', 'PURCHASE_ORDER', 'LEAVE_REQUEST', 'PAYROLL', 'DEAL'], {
+        message: 'Tipe entitas tidak valid',
+    }),
+    entityId: z.string().min(1, 'Entity ID wajib diisi').max(255, 'Entity ID maksimal 255 karakter'),
+    action: z.string().min(1, 'Aksi wajib diisi').max(100, 'Aksi maksimal 100 karakter'),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});

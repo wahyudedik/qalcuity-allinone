@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { handleApiError } from "@/lib/api-error";
 
 // ─── GET /api/platform/tenants/[id] ───────────────────────────────────────────
 // Returns detailed tenant information.
@@ -105,11 +107,7 @@ export async function GET(
             },
         });
     } catch (error) {
-        console.error("[Platform Tenant Detail Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -195,11 +193,7 @@ export async function PUT(
             },
         });
     } catch (error) {
-        console.error("[Platform Tenant Update Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -246,10 +240,6 @@ export async function DELETE(
             },
         });
     } catch (error) {
-        console.error("[Platform Tenant Delete Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

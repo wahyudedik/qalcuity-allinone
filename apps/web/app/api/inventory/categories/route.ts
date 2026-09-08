@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit'
 import { createCategorySchema, formatZodError } from '@/lib/validation-schemas'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 // GET /api/inventory/categories — List categories with product count and total value
 export async function GET(request: Request) {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
         // Rate limiting (using tenant-based key since no request param)
         const rateLimitResult = checkRateLimit(`api:categories:${tenantId}`, 100, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const categories = await prisma.category.findMany({
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request)
         const rateLimitResult = checkRateLimit(`api:categories:POST:${ip}`, 30, 60000)
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 })
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 })
         }
 
         const body = await request.json()
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
 
         if (existing) {
             return NextResponse.json(
-                { success: false, error: 'Kategori dengan nama tersebut sudah ada' },
+                { success: false, error: MSG.CATEGORY_NAME_DUPLICATE, code: 'CATEGORY_NAME_DUPLICATE' },
                 { status: 409 }
             )
         }
@@ -144,7 +145,7 @@ export async function DELETE(request: Request) {
         const id = searchParams.get('id')
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID kategori diperlukan' },
+                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
                 { status: 400 }
             )
         }
@@ -157,7 +158,7 @@ export async function DELETE(request: Request) {
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Kategori tidak ditemukan' },
+                { success: false, error: MSG.CATEGORY_NOT_FOUND, code: 'CATEGORY_NOT_FOUND' },
                 { status: 404 }
             )
         }
@@ -180,7 +181,7 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: 'Kategori berhasil dihapus',
+            message: MSG.CATEGORY_DELETED,
         })
     } catch (error) {
         return handleApiError(error)

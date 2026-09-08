@@ -25,16 +25,17 @@ import {
 import { useProjects, type Task, type TaskStatus } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatDate } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const BOARD_COLUMNS: { key: TaskStatus; label: string; color: string; bgColor: string }[] = [
-    { key: 'TODO', label: 'To Do', color: 'text-gray-600', bgColor: 'bg-gray-100 dark:bg-gray-800' },
-    { key: 'IN_PROGRESS', label: 'Dikerjakan', color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
-    { key: 'IN_REVIEW', label: 'Review', color: 'text-yellow-600', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' },
-    { key: 'DONE', label: 'Selesai', color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-900/20' },
+const BOARD_COLUMNS: { key: TaskStatus; i18nKey: string; color: string; bgColor: string }[] = [
+    { key: 'TODO', i18nKey: 'dashboard.tasks.status.TODO', color: 'text-gray-600', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+    { key: 'IN_PROGRESS', i18nKey: 'dashboard.tasks.status.IN_PROGRESS', color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
+    { key: 'IN_REVIEW', i18nKey: 'dashboard.tasks.status.IN_REVIEW', color: 'text-yellow-600', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' },
+    { key: 'DONE', i18nKey: 'dashboard.tasks.status.DONE', color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-900/20' },
 ];
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -44,11 +45,11 @@ const PRIORITY_COLORS: Record<string, string> = {
     URGENT: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-    LOW: 'Rendah',
-    MEDIUM: 'Sedang',
-    HIGH: 'Tinggi',
-    URGENT: 'Mendesak',
+const PRIORITY_I18N_KEYS: Record<string, string> = {
+    LOW: 'dashboard.tasks.priority.LOW',
+    MEDIUM: 'dashboard.tasks.priority.MEDIUM',
+    HIGH: 'dashboard.tasks.priority.HIGH',
+    URGENT: 'dashboard.tasks.priority.URGENT',
 };
 
 const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
@@ -63,10 +64,10 @@ const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
 // Sub-components
 // =============================================================================
 
-function PriorityBadge({ priority }: { priority: string }) {
+function PriorityBadge({ priority, t }: { priority: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[priority] || 'bg-gray-100 text-gray-600'}`}>
-            {PRIORITY_LABELS[priority] || priority}
+            {t(PRIORITY_I18N_KEYS[priority] || priority)}
         </span>
     );
 }
@@ -74,9 +75,11 @@ function PriorityBadge({ priority }: { priority: string }) {
 function TaskCard({
     task,
     onMoveForward,
+    t,
 }: {
     task: Task;
     onMoveForward: (taskId: string, newStatus: TaskStatus) => void;
+    t: (key: string) => string;
 }) {
     const nextStatus = NEXT_STATUS[task.status];
     const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE';
@@ -90,7 +93,7 @@ function TaskCard({
 
             {/* Priority */}
             <div className="mb-2">
-                <PriorityBadge priority={task.priority} />
+                <PriorityBadge priority={task.priority} t={t} />
             </div>
 
             {/* Due date */}
@@ -98,7 +101,7 @@ function TaskCard({
                 <div className={`flex items-center gap-1 text-xs mb-1 ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(task.dueDate)}</span>
-                    {isOverdue && <span>(Terlambat)</span>}
+                    {isOverdue && <span>({t('dashboard.tasks.overdue')})</span>}
                 </div>
             )}
 
@@ -122,7 +125,7 @@ function TaskCard({
                     onClick={() => onMoveForward(task.id, nextStatus)}
                     className="flex w-full items-center justify-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
                 >
-                    Pindah ke {BOARD_COLUMNS.find(c => c.key === nextStatus)?.label}
+                    {t('dashboard.projects.board.moveTo')} {t(BOARD_COLUMNS.find(c => c.key === nextStatus)?.i18nKey || '')}
                     <ChevronRight className="h-3 w-3" />
                 </button>
             )}
@@ -158,6 +161,7 @@ export default function TaskBoardPage() {
     const router = useRouter();
     const projectId = params?.id as string;
     const { tasks, loading, error, fetchTasks, updateTaskStatus, createTask, fetchProjectDetail, currentProject } = useProjects();
+    const { t } = useTranslation();
 
     const [showAddForm, setShowAddForm] = useState<string | null>(null); // column key
     const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -199,11 +203,11 @@ export default function TaskBoardPage() {
     const handleMoveForward = useCallback(async (taskId: string, newStatus: TaskStatus) => {
         const success = await updateTaskStatus(taskId, newStatus);
         if (success) {
-            const label = BOARD_COLUMNS.find(c => c.key === newStatus)?.label || newStatus;
-            setToast({ message: `Task dipindah ke "${label}"`, type: 'success' });
+            const label = t(BOARD_COLUMNS.find(c => c.key === newStatus)?.i18nKey || newStatus);
+            setToast({ message: `${t('dashboard.projects.board.taskMoved')} "${label}"`, type: 'success' });
             void fetchTasks({ projectId, limit: 200 });
         } else {
-            setToast({ message: 'Gagal memperbarui status task', type: 'error' });
+            setToast({ message: t('dashboard.projects.board.moveFailed'), type: 'error' });
         }
     }, [updateTaskStatus, fetchTasks, projectId]);
 
@@ -214,10 +218,10 @@ export default function TaskBoardPage() {
         if (success) {
             setNewTaskTitle('');
             setShowAddForm(null);
-            setToast({ message: 'Task berhasil ditambahkan', type: 'success' });
+            setToast({ message: t('dashboard.projects.board.taskAdded'), type: 'success' });
             void fetchTasks({ projectId, limit: 200 });
         } else {
-            setToast({ message: 'Gagal menambahkan task', type: 'error' });
+            setToast({ message: t('dashboard.projects.board.addFailed'), type: 'error' });
         }
     };
 
@@ -252,7 +256,7 @@ export default function TaskBoardPage() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Task Board
+                            {t('dashboard.projects.board.title')}
                         </h1>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             {currentProject?.name || 'Memuat...'}
@@ -292,7 +296,7 @@ export default function TaskBoardPage() {
                         return (
                             <div key={col.key} className={`rounded-xl p-4 ${col.bgColor}`}>
                                 <ColumnHeader
-                                    label={col.label}
+                                    label={t(col.i18nKey)}
                                     color={col.color}
                                     count={columnTasks.length}
                                 />
@@ -301,7 +305,7 @@ export default function TaskBoardPage() {
                                 <div className="space-y-2 min-h-[100px]">
                                     {columnTasks.length === 0 ? (
                                         <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-300 p-4 text-xs text-gray-400 dark:border-gray-600 dark:text-gray-500">
-                                            Tidak ada task
+                                            {t('dashboard.projects.board.noTasks')}
                                         </div>
                                     ) : (
                                         columnTasks.map((task) => (
@@ -309,6 +313,7 @@ export default function TaskBoardPage() {
                                                 key={task.id}
                                                 task={task}
                                                 onMoveForward={handleMoveForward}
+                                                t={t}
                                             />
                                         ))
                                     )}

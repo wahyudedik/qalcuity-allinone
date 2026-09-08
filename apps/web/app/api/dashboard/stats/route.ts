@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:dashboard-stats:${auth.tenantId}:${ip}`, 20, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak permintaan. Coba lagi dalam 1 menit.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429 }
             );
         }

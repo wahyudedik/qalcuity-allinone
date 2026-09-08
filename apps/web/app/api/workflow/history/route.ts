@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
+import { MSG } from '@/lib/api-messages';
 
 /**
  * GET /api/workflow/history?entityType=INVOICE&entityId=xxx
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
 
         if (!entityType) {
             return NextResponse.json(
-                { success: false, error: 'entityType wajib diisi' },
+                { success: false, error: MSG.WORKFLOW_ENTITY_TYPE_REQUIRED },
                 { status: 400 }
             );
         }
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: history });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

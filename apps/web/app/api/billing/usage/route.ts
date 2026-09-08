@@ -6,8 +6,10 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { getUsageStats } from '@/lib/entitlement';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -27,10 +29,6 @@ export async function GET(request: Request) {
             data: usageStats,
         });
     } catch (error) {
-        console.error('[Usage] Error fetching usage:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data penggunaan' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { formatZodError } from './validation-schemas';
+import { MSG } from './api-messages';
 
 /**
  * Standardized API error handler that distinguishes between error types:
@@ -28,26 +29,26 @@ export function handleApiError(error: unknown): NextResponse {
                 const target = (error.meta?.target as string[]) || [];
                 const fields = target.length > 0 ? target.join(', ') : 'field';
                 return NextResponse.json(
-                    { success: false, error: `Data dengan ${fields} sudah ada (duplikat)` },
+                    { success: false, error: `Data with ${fields} already exists (duplicate)`, code: 'DUPLICATE_DATA' },
                     { status: 409 }
                 );
             }
             case 'P2003':
                 return NextResponse.json(
-                    { success: false, error: 'Data terkait tidak ditemukan. Pastikan referensi yang dimasukkan valid.' },
+                    { success: false, error: MSG.RELATED_DATA_NOT_FOUND, code: 'RELATED_DATA_NOT_FOUND' },
                     { status: 400 }
                 );
             case 'P2021': {
                 const tableName = (error.meta?.table as string) || 'unknown';
                 console.error(`[API Error] Prisma P2021: Table "${tableName}" does not exist. Run: cd packages/db && npx prisma migrate deploy`);
                 return NextResponse.json(
-                    { success: false, error: `Layanan tidak tersedia secara temporer. Silakan hubungi administrator. (Table: ${tableName})` },
+                    { success: false, error: `Service temporarily unavailable. Please contact administrator. (Table: ${tableName})`, code: 'SERVICE_UNAVAILABLE' },
                     { status: 503 }
                 );
             }
             case 'P2025':
                 return NextResponse.json(
-                    { success: false, error: 'Data tidak ditemukan' },
+                    { success: false, error: MSG.DATA_NOT_FOUND, code: 'NOT_FOUND' },
                     { status: 404 }
                 );
             default:
@@ -61,7 +62,7 @@ export function handleApiError(error: unknown): NextResponse {
     // Prisma unknown request errors
     if (error instanceof Prisma.PrismaClientUnknownRequestError) {
         return NextResponse.json(
-            { success: false, error: 'Terjadi kesalahan pada database' },
+            { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
             { status: 500 }
         );
     }
@@ -86,7 +87,7 @@ export function handleApiError(error: unknown): NextResponse {
 
     // Unknown error
     return NextResponse.json(
-        { success: false, error: 'Terjadi kesalahan internal server' },
+        { success: false, error: MSG.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
         { status: 500 }
     );
 }
@@ -109,21 +110,21 @@ export function apiSuccess<T>(data?: T, status: number = 200): NextResponse {
 }
 
 /** Standard 401 Unauthorized response */
-export function apiUnauthorized(message: string = 'Unauthorized'): NextResponse {
-    return NextResponse.json({ success: false, error: message }, { status: 401 });
+export function apiUnauthorized(message: string = MSG.UNAUTHORIZED): NextResponse {
+    return NextResponse.json({ success: false, error: message, code: 'UNAUTHORIZED' }, { status: 401 });
 }
 
 /** Standard 403 Forbidden response */
-export function apiForbidden(message: string = 'Forbidden'): NextResponse {
-    return NextResponse.json({ success: false, error: message }, { status: 403 });
+export function apiForbidden(message: string = MSG.FORBIDDEN): NextResponse {
+    return NextResponse.json({ success: false, error: message, code: 'FORBIDDEN' }, { status: 403 });
 }
 
 /** Standard 404 Not Found response */
-export function apiNotFound(message: string = 'Data tidak ditemukan'): NextResponse {
-    return NextResponse.json({ success: false, error: message }, { status: 404 });
+export function apiNotFound(message: string = MSG.DATA_NOT_FOUND): NextResponse {
+    return NextResponse.json({ success: false, error: message, code: 'NOT_FOUND' }, { status: 404 });
 }
 
 /** Standard 429 Too Many Requests response */
-export function apiRateLimited(message: string = 'Terlalu banyak request. Silakan coba lagi.'): NextResponse {
-    return NextResponse.json({ success: false, error: message }, { status: 429 });
+export function apiRateLimited(message: string = MSG.TOO_MANY_REQUESTS): NextResponse {
+    return NextResponse.json({ success: false, error: message, code: 'RATE_LIMITED' }, { status: 429 });
 }

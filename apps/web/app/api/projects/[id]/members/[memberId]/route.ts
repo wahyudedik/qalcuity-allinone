@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateProjectMemberSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function PATCH(
     request: Request,
@@ -31,7 +32,7 @@ export async function PATCH(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         // Find the member
@@ -40,7 +41,7 @@ export async function PATCH(
         });
 
         if (!existingMember) {
-            return NextResponse.json({ success: false, error: 'Anggota proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_MEMBER_NOT_FOUND }, { status: 404 });
         }
 
         const member = await prisma.projectMember.update({
@@ -82,7 +83,7 @@ export async function DELETE(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         // Find the member
@@ -91,7 +92,7 @@ export async function DELETE(
         });
 
         if (!existingMember) {
-            return NextResponse.json({ success: false, error: 'Anggota proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_MEMBER_NOT_FOUND }, { status: 404 });
         }
 
         await prisma.projectMember.delete({ where: { id: memberId } });

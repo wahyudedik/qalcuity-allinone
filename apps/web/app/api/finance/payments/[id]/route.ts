@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -80,7 +81,7 @@ export async function PUT(
         const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Payment tidak ditemukan' },
+                { success: false, error: 'Payment not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }

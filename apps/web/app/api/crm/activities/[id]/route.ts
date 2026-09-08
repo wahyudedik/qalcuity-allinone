@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateActivitySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -20,12 +21,12 @@ export async function GET(
         });
 
         if (!activity) {
-            return NextResponse.json({ success: false, error: 'Activity not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.ACTIVITY_NOT_FOUND }, { status: 404 });
         }
 
         return NextResponse.json({ success: true, data: activity });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -55,7 +56,7 @@ export async function PUT(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Activity not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.ACTIVITY_NOT_FOUND }, { status: 404 });
         }
 
         // Sanitize text inputs
@@ -101,7 +102,7 @@ export async function DELETE(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Activity not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.ACTIVITY_NOT_FOUND }, { status: 404 });
         }
 
         await prisma.activity.delete({ where: { id } });
@@ -111,7 +112,7 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

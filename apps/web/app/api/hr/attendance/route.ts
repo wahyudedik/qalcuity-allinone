@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:attendance:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type') || 'today';
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:attendance:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'Terlalu banyak request. Silakan coba lagi.' }, { status: 429 });
+            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
         const body = await request.json();
 

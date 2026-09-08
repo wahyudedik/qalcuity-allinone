@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
             });
             if (!account) {
                 return NextResponse.json(
-                    { success: false, message: 'Akun tidak ditemukan' },
+                    { success: false, message: 'Account not found', code: 'ACCOUNT_NOT_FOUND' },
                     { status: 404 }
                 );
             }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
         });
         if (existing) {
             return NextResponse.json(
-                { success: false, message: `Kode akun ${validated.code} sudah digunakan` },
+                { success: false, message: `Account code ${validated.code} already in use`, code: 'DUPLICATE_DATA' },
                 { status: 409 }
             );
         }
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
             });
             if (!parent) {
                 return NextResponse.json(
-                    { success: false, message: 'Akun induk tidak ditemukan' },
+                    { success: false, message: 'Parent account not found', code: 'PARENT_ACCOUNT_NOT_FOUND' },
                     { status: 404 }
                 );
             }
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: `Akun ${newAccount.name} berhasil dibuat`,
+            message: `Account ${newAccount.name} created successfully`,
             data: newAccount,
         }, { status: 201 });
     } catch (error) {
@@ -149,7 +150,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, message: 'ID akun wajib diisi' },
+                { success: false, message: 'Account ID is required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -163,7 +164,7 @@ export async function PUT(request: Request) {
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, message: 'Akun tidak ditemukan' },
+                { success: false, message: 'Account not found', code: 'ACCOUNT_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -179,7 +180,7 @@ export async function PUT(request: Request) {
             });
             if (duplicate) {
                 return NextResponse.json(
-                    { success: false, message: `Kode akun ${validated.code} sudah digunakan` },
+                    { success: false, message: `Account code ${validated.code} already in use`, code: 'DUPLICATE_DATA' },
                     { status: 409 }
                 );
             }
@@ -190,7 +191,7 @@ export async function PUT(request: Request) {
             // Pastikan tidak menjadikan diri sendiri sebagai parent
             if (validated.parentId === id) {
                 return NextResponse.json(
-                    { success: false, message: 'Akun tidak bisa menjadi induk bagi diri sendiri' },
+                    { success: false, message: 'Account cannot be its own parent', code: 'VALIDATION_ERROR' },
                     { status: 400 }
                 );
             }
@@ -199,7 +200,7 @@ export async function PUT(request: Request) {
             });
             if (!parent) {
                 return NextResponse.json(
-                    { success: false, message: 'Akun induk tidak ditemukan' },
+                    { success: false, message: 'Parent account not found', code: 'PARENT_ACCOUNT_NOT_FOUND' },
                     { status: 404 }
                 );
             }
@@ -232,7 +233,7 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: `Akun ${updated.name} berhasil diperbarui`,
+            message: `Account ${updated.name} updated successfully`,
             data: updated,
         });
     } catch (error) {
@@ -251,7 +252,7 @@ export async function DELETE(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, message: 'ID akun wajib diisi' },
+                { success: false, message: 'Account ID is required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -262,7 +263,7 @@ export async function DELETE(request: Request) {
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, message: 'Akun tidak ditemukan' },
+                { success: false, message: 'Account not found', code: 'ACCOUNT_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -273,7 +274,7 @@ export async function DELETE(request: Request) {
         });
         if (children.length > 0) {
             return NextResponse.json(
-                { success: false, message: 'Tidak bisa menghapus akun yang memiliki sub-akun' },
+                { success: false, message: 'Cannot delete account with sub-accounts', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }

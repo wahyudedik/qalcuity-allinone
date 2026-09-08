@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
+import { handleApiError } from "@/lib/api-error";
 
 // ─── GET /api/platform/plans ──────────────────────────────────────────────────
 // Returns all subscription plans with features and tenant counts.
@@ -48,10 +50,6 @@ export async function GET(request: Request) {
             })),
         });
     } catch (error) {
-        console.error("[Platform Plans Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

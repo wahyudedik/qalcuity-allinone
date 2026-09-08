@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -16,7 +17,7 @@ export async function GET(
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -42,7 +43,7 @@ export async function GET(
         });
 
         if (!job) {
-            return NextResponse.json({ success: false, error: 'Pekerjaan tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
         }
 
         return NextResponse.json({
@@ -105,7 +106,7 @@ export async function PATCH(
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -126,7 +127,7 @@ export async function PATCH(
         // Check ownership
         const existing = await prisma.fieldJob.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Pekerjaan tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
         }
 
         const data = validation.data;
@@ -186,7 +187,7 @@ export async function DELETE(
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -197,7 +198,7 @@ export async function DELETE(
 
         const existing = await prisma.fieldJob.findFirst({ where: { id, tenantId } });
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Pekerjaan tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
         }
 
         await prisma.fieldJob.delete({ where: { id } });

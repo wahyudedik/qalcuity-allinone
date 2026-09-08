@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getAIProvider, type AIChatMessage } from '@/lib/ai/provider';
@@ -7,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 // ─── Zod Schema ──────────────────────────────────────────────────────────────
 
@@ -196,7 +198,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:query:${tenantId}:${ip}`, 15, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -268,10 +270,6 @@ export async function POST(req: Request) {
             },
         });
     } catch (error) {
-        console.error('AI Query error:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'AI service unavailable' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

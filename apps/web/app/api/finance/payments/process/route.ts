@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     const rateLimitResult = checkRateLimit(`api:payments:process:${ip}`, 10, 60000);
     if (!rateLimitResult.success) {
       return NextResponse.json(
-        { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+        { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
         { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
       );
     }
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
     if (!invoice) {
       return NextResponse.json(
-        { success: false, error: 'Invoice tidak ditemukan' },
+        { success: false, error: 'Invoice not found', code: 'NOT_FOUND' },
         { status: 404 }
       );
     }

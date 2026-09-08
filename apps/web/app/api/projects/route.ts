@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createProjectSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

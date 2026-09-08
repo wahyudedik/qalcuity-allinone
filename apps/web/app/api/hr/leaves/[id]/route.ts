@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateLeaveSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -82,7 +83,7 @@ export async function PUT(
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Leave request tidak ditemukan' },
+                { success: false, error: MSG.LEAVE_REQUEST_NOT_FOUND, code: 'LEAVE_REQUEST_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -102,7 +103,7 @@ export async function PUT(
                     const isValid = canTransitionSafe('LEAVE_REQUEST', currentStatus, newStatus, tenantId);
                     if (!isValid) {
                         return NextResponse.json(
-                            { success: false, error: `Transisi status tidak valid: ${currentStatus} → ${newStatus}` },
+                            { success: false, error: `${MSG.INVALID_STATUS_TRANSITION}: ${currentStatus} → ${newStatus}`, code: 'INVALID_STATUS_TRANSITION' },
                             { status: 400 }
                         );
                     }
@@ -118,9 +119,9 @@ export async function PUT(
                         notes: validatedData.notes || null,
                     });
                 } catch (workflowError: unknown) {
-                    // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan status
+                    // Backward compatibility: if workflow engine fails, still allow status change
                     const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                    console.warn(`[Workflow] Leave workflow validation gagal, mengizinkan transisi: ${msg}`);
+                    console.warn(`[Workflow] Leave workflow validation failed, allowing transition: ${msg}`);
                 }
             }
             data.status = newStatus;

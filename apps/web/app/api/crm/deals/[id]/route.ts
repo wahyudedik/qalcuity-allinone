@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateDealSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -24,7 +25,7 @@ export async function GET(
         });
 
         if (!deal) {
-            return NextResponse.json({ success: false, error: 'Deal not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.DEAL_NOT_FOUND }, { status: 404 });
         }
 
         // Map to frontend-compatible format
@@ -78,7 +79,7 @@ export async function PUT(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Deal tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.DEAL_NOT_FOUND }, { status: 404 });
         }
 
         // Validasi workflow transition jika stage berubah
@@ -168,7 +169,7 @@ export async function DELETE(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Deal not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.DEAL_NOT_FOUND }, { status: 404 });
         }
 
         await prisma.deal.delete({ where: { id } });

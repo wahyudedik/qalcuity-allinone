@@ -5,6 +5,7 @@ import { sanitizeInput } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -29,7 +30,7 @@ export async function GET(
 
         if (!product) {
             return NextResponse.json(
-                { success: false, error: 'Produk tidak ditemukan' },
+                { success: false, error: MSG.PRODUCT_NOT_FOUND, code: 'PRODUCT_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -82,7 +83,7 @@ export async function PUT(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Produk tidak ditemukan' },
+                { success: false, error: MSG.PRODUCT_NOT_FOUND, code: 'PRODUCT_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -143,7 +144,7 @@ export async function DELETE(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Produk tidak ditemukan' },
+                { success: false, error: MSG.PRODUCT_NOT_FOUND, code: 'PRODUCT_NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -164,7 +165,7 @@ export async function DELETE(
             return NextResponse.json({
                 success: true,
                 data: null,
-                message: 'Produk dinonaktifkan (memiliki riwayat pergerakan stok)',
+                message: 'Product deactivated (has stock movement history)',
             });
         }
 

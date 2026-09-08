@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { handleApiError } from "@/lib/api-error";
 
 // ─── GET /api/platform/billing ───────────────────────────────────────────────
 // Returns billing overview: MRR, ARR, churn rate, payment history, overdue alerts.
@@ -152,10 +154,6 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error("[Platform Billing Error]", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

@@ -27,6 +27,7 @@ import { useSession } from 'next-auth/react';
 import { useProjects, type Task } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatDate } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Constants
@@ -36,11 +37,11 @@ type FilterTab = 'ALL' | 'TODAY' | 'OVERDUE' | 'COMPLETED';
 type GroupBy = 'none' | 'project' | 'status' | 'priority';
 type SortBy = 'dueDate' | 'priority' | 'created';
 
-const FILTER_TABS: { key: FilterTab; label: string; icon: typeof CheckSquare }[] = [
-    { key: 'ALL', label: 'Semua', icon: CheckSquare },
-    { key: 'TODAY', label: 'Jatuh Tempo Hari Ini', icon: Calendar },
-    { key: 'OVERDUE', label: 'Terlambat', icon: AlertCircle },
-    { key: 'COMPLETED', label: 'Selesai', icon: CheckCircle2 },
+const FILTER_TABS: { key: FilterTab; i18nKey: string; icon: typeof CheckSquare }[] = [
+    { key: 'ALL', i18nKey: 'dashboard.tasks.filter.ALL', icon: CheckSquare },
+    { key: 'TODAY', i18nKey: 'dashboard.tasks.filter.TODAY', icon: Calendar },
+    { key: 'OVERDUE', i18nKey: 'dashboard.tasks.filter.OVERDUE', icon: AlertCircle },
+    { key: 'COMPLETED', i18nKey: 'dashboard.tasks.filter.COMPLETED', icon: CheckCircle2 },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -51,12 +52,12 @@ const STATUS_COLORS: Record<string, string> = {
     CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-    TODO: 'To Do',
-    IN_PROGRESS: 'Dikerjakan',
-    IN_REVIEW: 'Review',
-    DONE: 'Selesai',
-    CANCELLED: 'Dibatalkan',
+const STATUS_I18N_KEYS: Record<string, string> = {
+    TODO: 'dashboard.tasks.status.TODO',
+    IN_PROGRESS: 'dashboard.tasks.status.IN_PROGRESS',
+    IN_REVIEW: 'dashboard.tasks.status.IN_REVIEW',
+    DONE: 'dashboard.tasks.status.DONE',
+    CANCELLED: 'dashboard.tasks.status.CANCELLED',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -66,11 +67,11 @@ const PRIORITY_COLORS: Record<string, string> = {
     URGENT: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-    LOW: 'Rendah',
-    MEDIUM: 'Sedang',
-    HIGH: 'Tinggi',
-    URGENT: 'Mendesak',
+const PRIORITY_I18N_KEYS: Record<string, string> = {
+    LOW: 'dashboard.tasks.priority.LOW',
+    MEDIUM: 'dashboard.tasks.priority.MEDIUM',
+    HIGH: 'dashboard.tasks.priority.HIGH',
+    URGENT: 'dashboard.tasks.priority.URGENT',
 };
 
 const PRIORITY_ORDER: Record<string, number> = {
@@ -84,23 +85,23 @@ const PRIORITY_ORDER: Record<string, number> = {
 // Sub-components
 // =============================================================================
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-600'}`}>
-            {STATUS_LABELS[status] || status}
+            {t(STATUS_I18N_KEYS[status] || status)}
         </span>
     );
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
+function PriorityBadge({ priority, t }: { priority: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[priority] || 'bg-gray-100 text-gray-600'}`}>
-            {PRIORITY_LABELS[priority] || priority}
+            {t(PRIORITY_I18N_KEYS[priority] || priority)}
         </span>
     );
 }
 
-function TaskRow({ task, router }: { task: Task; router: ReturnType<typeof useRouter> }) {
+function TaskRow({ task, router, t }: { task: Task; router: ReturnType<typeof useRouter>; t: (key: string) => string }) {
     const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE';
 
     return (
@@ -129,8 +130,8 @@ function TaskRow({ task, router }: { task: Task; router: ReturnType<typeof useRo
                         <FolderKanban className="h-3 w-3" />
                         {task.projectName}
                     </span>
-                    <StatusBadge status={task.status} />
-                    <PriorityBadge priority={task.priority} />
+                    <StatusBadge status={task.status} t={t} />
+                    <PriorityBadge priority={task.priority} t={t} />
                 </div>
             </div>
 
@@ -142,7 +143,7 @@ function TaskRow({ task, router }: { task: Task; router: ReturnType<typeof useRo
                             <Calendar className="h-3 w-3" />
                             {formatDate(task.dueDate)}
                         </div>
-                        {isOverdue && <span className="text-red-500">Terlambat</span>}
+                        {isOverdue && <span className="text-red-500">{t('dashboard.tasks.overdue')}</span>}
                     </div>
                 ) : (
                     <span className="text-xs text-gray-400">-</span>
@@ -171,6 +172,7 @@ export default function MyTasksPage() {
     const router = useRouter();
     const { data: session } = useSession();
     const { tasks, loading, error, fetchTasks } = useProjects();
+    const { t } = useTranslation();
 
     const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
     const [groupBy, setGroupBy] = useState<GroupBy>('none');
@@ -225,7 +227,7 @@ export default function MyTasksPage() {
 
     // Group tasks
     const groupedTasks = useMemo(() => {
-        if (groupBy === 'none') return { 'Semua Task': sortedTasks };
+        if (groupBy === 'none') return { [t('dashboard.tasks.allTasks')]: sortedTasks };
 
         const groups: Record<string, Task[]> = {};
         sortedTasks.forEach((task) => {
@@ -235,19 +237,19 @@ export default function MyTasksPage() {
                     key = task.projectName;
                     break;
                 case 'status':
-                    key = STATUS_LABELS[task.status] || task.status;
+                    key = t(STATUS_I18N_KEYS[task.status] || task.status);
                     break;
                 case 'priority':
-                    key = PRIORITY_LABELS[task.priority] || task.priority;
+                    key = t(PRIORITY_I18N_KEYS[task.priority] || task.priority);
                     break;
                 default:
-                    key = 'Semua';
+                    key = t('dashboard.tasks.all');
             }
             if (!groups[key]) groups[key] = [];
             groups[key].push(task);
         });
         return groups;
-    }, [sortedTasks, groupBy]);
+    }, [sortedTasks, groupBy, t]);
 
     // Stats
     const stats = useMemo(() => {
@@ -284,10 +286,10 @@ export default function MyTasksPage() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Task Saya
+                            {t('dashboard.tasks.title')}
                         </h1>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Semua task dari semua proyek
+                            {t('dashboard.tasks.subtitle')}
                         </p>
                     </div>
                 </div>
@@ -304,17 +306,17 @@ export default function MyTasksPage() {
                             key={tab.key}
                             onClick={() => setActiveFilter(tab.key)}
                             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap ${isActive
-                                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                                 }`}
                         >
                             <TabIcon className="h-4 w-4" />
-                            <span>{tab.label}</span>
+                            <span>{t(tab.i18nKey)}</span>
                             {count > 0 && (
                                 <span
                                     className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ${isActive
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                                            : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                                        : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                                         }`}
                                 >
                                     {count}
@@ -334,10 +336,10 @@ export default function MyTasksPage() {
                         onChange={(e) => setGroupBy(e.target.value as GroupBy)}
                         className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     >
-                        <option value="none">Tanpa Pengelompokan</option>
-                        <option value="project">Kelompok: Proyek</option>
-                        <option value="status">Kelompok: Status</option>
-                        <option value="priority">Kelompok: Prioritas</option>
+                        <option value="none">{t('dashboard.tasks.groupBy.none')}</option>
+                        <option value="project">{t('dashboard.tasks.groupBy.project')}</option>
+                        <option value="status">{t('dashboard.tasks.groupBy.status')}</option>
+                        <option value="priority">{t('dashboard.tasks.groupBy.priority')}</option>
                     </select>
                 </div>
                 <div className="flex items-center gap-2">
@@ -347,9 +349,9 @@ export default function MyTasksPage() {
                         onChange={(e) => setSortBy(e.target.value as SortBy)}
                         className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     >
-                        <option value="dueDate">Urutkan: Jatuh Tempo</option>
-                        <option value="priority">Urutkan: Prioritas</option>
-                        <option value="created">Urutkan: Dibuat</option>
+                        <option value="dueDate">{t('dashboard.tasks.sortBy.dueDate')}</option>
+                        <option value="priority">{t('dashboard.tasks.sortBy.priority')}</option>
+                        <option value="created">{t('dashboard.tasks.sortBy.created')}</option>
                     </select>
                 </div>
             </div>
@@ -377,11 +379,11 @@ export default function MyTasksPage() {
             {!loading && sortedTasks.length === 0 && (
                 <EmptyState
                     icon={CheckSquare}
-                    title="Tidak ada task"
+                    title={t('dashboard.tasks.emptyTitle')}
                     description={
                         activeFilter === 'ALL'
-                            ? 'Anda belum memiliki task dari proyek manapun.'
-                            : `Tidak ada task yang cocok dengan filter "${FILTER_TABS.find(t => t.key === activeFilter)?.label}".`
+                            ? t('dashboard.tasks.emptyDescAll')
+                            : `${t('dashboard.tasks.emptyDescFiltered')} "${t(FILTER_TABS.find(ft => ft.key === activeFilter)?.i18nKey || '')}".`
                     }
                 />
             )}
@@ -398,7 +400,7 @@ export default function MyTasksPage() {
                             )}
                             <div className="space-y-2">
                                 {groupTasks.map((task) => (
-                                    <TaskRow key={task.id} task={task} router={router} />
+                                    <TaskRow key={task.id} task={task} router={router} t={t} />
                                 ))}
                             </div>
                         </div>

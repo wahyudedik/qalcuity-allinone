@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { rejectRequestSchema, formatZodError } from '@/lib/validation-schemas';
@@ -14,7 +15,7 @@ export async function POST(
         const rateLimitResult = checkRateLimit(`api:approval:reject:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

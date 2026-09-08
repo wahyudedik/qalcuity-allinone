@@ -4,6 +4,7 @@
 // ============================================
 
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request)
         const rateLimitResult = checkRateLimit(`api:analytics:charts:GET:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request)
         const rateLimitResult = checkRateLimit(`api:analytics:charts:POST:${ip}`, 30, 60000)
         if (!rateLimitResult.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)

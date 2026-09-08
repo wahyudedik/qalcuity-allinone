@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
+import { MSG } from '@/lib/api-messages';
 
 // =============================================================================
 // GET /api/projects/[id]/gantt — Gantt chart data (tasks + dependencies + timeline)
@@ -29,7 +30,7 @@ export async function GET(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         // Fetch all tasks with dependencies

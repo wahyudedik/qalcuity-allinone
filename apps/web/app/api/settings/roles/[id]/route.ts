@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
@@ -19,7 +20,7 @@ export async function GET(
         const ip = getClientIp(request)
         const rl = checkRateLimit(`settings:roles:[id]:${ip}`, 60, 60_000)
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -35,7 +36,7 @@ export async function GET(
             const systemPermissions = SYSTEM_ROLE_PERMISSIONS[roleName]
             if (!systemPermissions) {
                 return NextResponse.json(
-                    { success: false, error: 'Role tidak ditemukan' },
+                    { success: false, error: 'Role not found', code: 'ROLE_NOT_FOUND' },
                     { status: 404 }
                 )
             }
@@ -108,7 +109,7 @@ export async function PUT(
         const ip = getClientIp(request)
         const rl = checkRateLimit(`settings:roles:[id]:PUT:${ip}`, 30, 60_000)
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -247,7 +248,7 @@ export async function DELETE(
         const ip = getClientIp(request)
         const rl = checkRateLimit(`settings:roles:[id]:DELETE:${ip}`, 30, 60_000)
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 })
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
         }
 
         const auth = await requirePermissionForRoute(request)

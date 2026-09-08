@@ -306,28 +306,30 @@ docs/UI_UX.md     ← Aturan UI/UX
 | `@qalcuity/industry-config` | ✅ Active | Industry configuration engine |
 | `@qalcuity/redis` | ✅ Active | Redis client + rate limiter (production-ready) |
 
-### Codebase Stats (Audit: 8 September 2026 — Updated)
+### Codebase Stats (Audit: 8 September 2026 — Phase 4 Batch 2 Updated)
 
 | Metric | Count |
 |--------|-------|
-| TypeScript files (apps/web) | ~180+ |
-| TypeScript files (packages) | ~45+ |
-| API route files | 80+ |
-| API routes | 120+ |
-| API route files | 54+ |
-| RBAC route entries | 54 |
+| TypeScript files (apps/web) | ~630+ (268 .ts + 370 .tsx) |
+| TypeScript files (packages) | ~48+ |
+| API route files | 209 |
+| API routes | 200+ |
+| RBAC route entries | 120+ |
 | Pages | 60+ |
 | Prisma models | 75+ |
 | Database indexes | 65+ |
-| Zod schemas | 18+ |
-| i18n keys | 500+ |
-| Loading states | 40+ |
+| Zod schemas | 120+ |
+| i18n keys | 1170+ |
+| Error boundary files | 94 |
+| Loading state files | 98 |
 | E2E tests | 63 (63 PASS) |
 | Shared packages | 12 (all active) |
 | Foundation engine packages | 3 |
 | UI components | 11 |
-| Validation schemas (apps/web) | 16+ |
+| Validation schemas (apps/web) | 120+ |
 | Rate limit configs | 3 |
+| Backend message constants (`api-messages.ts`) | 310+ |
+| API routes with centralized error handling | 27 (~95%+ coverage) |
 
 ---
 
@@ -443,6 +445,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { MSG_SOMETHING_FAILED } from '@/lib/api-messages';
 
 export async function GET(req: Request) {
   // 1. Auth check
@@ -463,6 +466,10 @@ export async function GET(req: Request) {
   return NextResponse.json(data);
 }
 ```
+
+> **Backend i18n Pattern:** Semua API route WAJIB import message constants dari [`apps/web/lib/api-messages.ts`](apps/web/lib/api-messages.ts). JANGAN hardcode string message di dalam route handler. Gunakan `MSG_*` constants untuk semua error/success messages.
+>
+> **Error Handling Pattern:** Semua API route WAJIB gunakan [`handleApiError()`](apps/web/lib/api-error.ts) di catch blocks. JANGAN buat custom error response format — gunakan standardized format: `{ success: false, error: { code, message } }`.
 
 ---
 
@@ -948,6 +955,6 @@ Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap a
 
 ---
 
-**Last Updated:** September 8, 2026 (Post-Audit Documentation Sync)
+**Last Updated:** September 8, 2026 (Phase 4 Batch 2: Error Handling, i18n, Build Config)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.1 — Post-Audit Documentation Sync
+**Document Version:** 6.2 — Phase 4 Batch 2: api-messages.ts pattern, error handling consolidation, codebase stats update

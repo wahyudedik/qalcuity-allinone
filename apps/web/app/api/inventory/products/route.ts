@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -151,7 +152,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID harus diisi' },
+                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -171,7 +172,7 @@ export async function PUT(request: Request) {
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Produk tidak ditemukan' },
+                { success: false, error: MSG.PRODUCT_NOT_FOUND, code: 'PRODUCT_NOT_FOUND' },
                 { status: 404 }
             );
         }

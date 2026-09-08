@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateProjectSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -30,7 +31,7 @@ export async function GET(
         });
 
         if (!project) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         // Get task summary by status
@@ -92,7 +93,7 @@ export async function PATCH(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         const { name, description, status, priority, startDate, endDate, budget, progress, managerId } = validation.data;
@@ -144,7 +145,7 @@ export async function DELETE(
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: 'Proyek tidak ditemukan' }, { status: 404 });
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
         // Check for active tasks
@@ -158,7 +159,7 @@ export async function DELETE(
 
         if (activeTasks > 0) {
             return NextResponse.json(
-                { success: false, error: `Tidak dapat menghapus proyek yang memiliki ${activeTasks} task aktif. Selesaikan atau batalkan semua task terlebih dahulu.` },
+                { success: false, error: MSG.PROJECT_HAS_ACTIVE_TASKS },
                 { status: 400 }
             );
         }

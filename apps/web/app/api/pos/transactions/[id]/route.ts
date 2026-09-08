@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -14,7 +15,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:transactions:[id]:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -36,7 +37,7 @@ export async function GET(
 
         if (!transaction) {
             return NextResponse.json(
-                { success: false, error: 'Transaksi tidak ditemukan' },
+                { success: false, error: MSG.TRANSACTION_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -109,7 +110,7 @@ export async function PUT(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:transactions:[id]:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -122,7 +123,7 @@ export async function PUT(
 
         if (newStatus !== 'VOIDED') {
             return NextResponse.json(
-                { success: false, error: 'Status tidak valid. Hanya VOIDED yang diizinkan.' },
+                { success: false, error: MSG.TRANSACTION_VOID_ONLY },
                 { status: 400 }
             );
         }
@@ -130,14 +131,14 @@ export async function PUT(
         const existing = await prisma.posTransaction.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Transaksi tidak ditemukan' },
+                { success: false, error: MSG.TRANSACTION_NOT_FOUND },
                 { status: 404 }
             );
         }
 
         if (existing.status !== 'COMPLETED') {
             return NextResponse.json(
-                { success: false, error: 'Hanya transaksi COMPLETED yang dapat di-void' },
+                { success: false, error: MSG.TRANSACTION_ONLY_COMPLETED_CAN_VOID },
                 { status: 400 }
             );
         }
@@ -145,7 +146,7 @@ export async function PUT(
         // Only ADMIN+ can void transactions
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membatalkan transaksi' },
+                { success: false, error: MSG.TRANSACTION_ADMIN_ONLY_CANCEL },
                 { status: 403 }
             );
         }

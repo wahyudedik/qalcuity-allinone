@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -88,7 +89,7 @@ export async function PUT(
         const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Purchase Order tidak ditemukan' },
+                { success: false, error: 'Purchase Order not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }

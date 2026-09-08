@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:invoices:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:invoices:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -235,7 +236,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID wajib diisi' },
+                { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -254,7 +255,7 @@ export async function PUT(request: Request) {
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Invoice tidak ditemukan' },
+                { success: false, error: 'Invoice not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }

@@ -16,6 +16,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { authenticateMobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:mobile-login:${ip}`, 5, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak percobaan login. Coba lagi dalam 5 menit.' },
+                { success: false, error: 'Too many login attempts. Please try again in 5 minutes.', code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -37,14 +38,14 @@ export async function POST(request: Request) {
         // Validate required fields
         if (!email || !password) {
             return NextResponse.json(
-                { success: false, error: 'Email dan password harus diisi' },
+                { success: false, error: 'Email and password are required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
 
         if (typeof email !== 'string' || typeof password !== 'string') {
             return NextResponse.json(
-                { success: false, error: 'Format input tidak valid' },
+                { success: false, error: 'Invalid input format', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -59,11 +60,11 @@ export async function POST(request: Request) {
             refreshToken: result.refreshToken,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan server';
+        const message = error instanceof Error ? error.message : 'An internal server error occurred';
 
         // Determine appropriate status code
         let status = 500;
-        if (message.includes('tidak terdaftar') || message.includes('Password salah')) {
+        if (message.includes('not registered') || message.includes('Password salah')) {
             status = 401;
         } else if (message.includes('dinonaktifkan')) {
             status = 403;

@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createLoyaltyRewardSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:${ip}`, 60, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
         // Only ADMIN+ can create rewards
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membuat reward' },
+                { success: false, error: MSG.REWARD_ADMIN_ONLY_CREATE },
                 { status: 403 }
             );
         }

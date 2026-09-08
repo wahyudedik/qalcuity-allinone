@@ -3,6 +3,8 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { logAudit } from '@/lib/audit';
+import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = [
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
 
         if (!file) {
             return NextResponse.json(
-                { success: false, error: 'File tidak ditemukan' },
+                { success: false, error: MSG.FILE_UPLOAD_REQUIRED, code: 'FILE_UPLOAD_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
         // Validasi ukuran file
         if (file.size > MAX_FILE_SIZE) {
             return NextResponse.json(
-                { success: false, error: 'Ukuran file maksimal 5MB' },
+                { success: false, error: MSG.FILE_TOO_LARGE, code: 'FILE_TOO_LARGE' },
                 { status: 400 }
             );
         }
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
         // Validasi tipe file
         if (!ALLOWED_TYPES.includes(file.type)) {
             return NextResponse.json(
-                { success: false, error: 'Tipe file tidak didukung. Gunakan JPG, PNG, WebP, atau PDF' },
+                { success: false, error: MSG.UNSUPPORTED_FILE_TYPE, code: 'UNSUPPORTED_FILE_TYPE' },
                 { status: 400 }
             );
         }
@@ -81,13 +83,9 @@ export async function POST(request: Request) {
                 size: file.size,
                 type: file.type,
             },
-            message: 'File berhasil diupload',
+            message: MSG.FILE_UPLOAD_SUCCESS,
         });
     } catch (error) {
-        console.error('Error uploading file:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengupload file' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

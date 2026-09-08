@@ -16,24 +16,25 @@ import {
     X,
 } from 'lucide-react';
 import { useProjects } from '@/hooks/use-projects';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const STATUS_OPTIONS = [
-    { value: 'PLANNING', label: 'Perencanaan' },
-    { value: 'ACTIVE', label: 'Aktif' },
-    { value: 'ON_HOLD', label: 'Ditangguhkan' },
-    { value: 'COMPLETED', label: 'Selesai' },
-    { value: 'CANCELLED', label: 'Dibatalkan' },
+    { value: 'PLANNING', i18nKey: 'dashboard.projects.status.PLANNING' },
+    { value: 'ACTIVE', i18nKey: 'dashboard.projects.status.ACTIVE' },
+    { value: 'ON_HOLD', i18nKey: 'dashboard.projects.status.ON_HOLD' },
+    { value: 'COMPLETED', i18nKey: 'dashboard.projects.status.COMPLETED' },
+    { value: 'CANCELLED', i18nKey: 'dashboard.projects.status.CANCELLED' },
 ];
 
 const PRIORITY_OPTIONS = [
-    { value: 'LOW', label: 'Rendah' },
-    { value: 'MEDIUM', label: 'Sedang' },
-    { value: 'HIGH', label: 'Tinggi' },
-    { value: 'URGENT', label: 'Mendesak' },
+    { value: 'LOW', i18nKey: 'dashboard.tasks.priority.LOW' },
+    { value: 'MEDIUM', i18nKey: 'dashboard.tasks.priority.MEDIUM' },
+    { value: 'HIGH', i18nKey: 'dashboard.tasks.priority.HIGH' },
+    { value: 'URGENT', i18nKey: 'dashboard.tasks.priority.URGENT' },
 ];
 
 // =============================================================================
@@ -45,6 +46,7 @@ export default function EditProjectPage() {
     const router = useRouter();
     const projectId = params?.id as string;
     const { currentProject, loading, error, fetchProjectDetail, updateProject } = useProjects();
+    const { t } = useTranslation();
 
     const [form, setForm] = useState({
         name: '',
@@ -277,7 +279,7 @@ export default function EditProjectPage() {
                                 >
                                     {STATUS_OPTIONS.map((opt) => (
                                         <option key={opt.value} value={opt.value}>
-                                            {opt.label}
+                                            {t(opt.i18nKey)}
                                         </option>
                                     ))}
                                 </select>
@@ -295,7 +297,7 @@ export default function EditProjectPage() {
                                 >
                                     {PRIORITY_OPTIONS.map((opt) => (
                                         <option key={opt.value} value={opt.value}>
-                                            {opt.label}
+                                            {t(opt.i18nKey)}
                                         </option>
                                     ))}
                                 </select>

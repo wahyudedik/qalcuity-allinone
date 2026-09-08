@@ -6,8 +6,10 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { getEntitlement, ensureEntitlement } from '@/lib/entitlement';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -26,10 +28,6 @@ export async function GET(request: Request) {
             data: entitlement,
         });
     } catch (error) {
-        console.error('[Entitlement] Error fetching entitlement:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data entitlement' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

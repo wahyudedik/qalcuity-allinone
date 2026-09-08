@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
+import { handleApiError } from '@/lib/api-error'
 
 interface SmtpConfig {
     smtpHost: string
@@ -55,8 +57,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[SMTP GET Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        return handleApiError(error)
     }
 }
 
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
         // Validate required fields
         if (!smtpHost || !smtpPort || !smtpEmail) {
             return NextResponse.json(
-                { success: false, error: 'SMTP Host, Port, dan Email wajib diisi' },
+                { success: false, error: 'MSG.SMTP_HOST_PORT_EMAIL_REQUIRED' },
                 { status: 400 }
             )
         }
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(smtpEmail)) {
             return NextResponse.json(
-                { success: false, error: 'Format email tidak valid' },
+                { success: false, error: 'Invalid email format', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             )
         }
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
         const port = parseInt(smtpPort, 10)
         if (isNaN(port) || port < 1 || port > 65535) {
             return NextResponse.json(
-                { success: false, error: 'Port harus antara 1-65535' },
+                { success: false, error: 'Port must be between 1-65535', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             )
         }
@@ -174,7 +175,6 @@ export async function POST(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[SMTP POST Error]', error instanceof Error ? error.message : 'Unknown error')
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+        return handleApiError(error)
     }
 }

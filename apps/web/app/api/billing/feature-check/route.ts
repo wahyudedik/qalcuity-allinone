@@ -6,13 +6,15 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { hasFeature, checkLimit } from '@/lib/entitlement';
+import { handleApiError } from '@/lib/api-error';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const featureCheckSchema = z.object({
-    featureKey: z.string().min(1, 'Feature key wajib diisi'),
+    featureKey: z.string().min(1, 'MSG.FEATURE_KEY_REQUIRED'),
     checkLimit: z.boolean().optional().default(false),
 });
 
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:feature-check:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -68,10 +70,6 @@ export async function POST(request: Request) {
             data: result,
         });
     } catch (error) {
-        console.error('[FeatureCheck] Error:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal memeriksa akses fitur' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

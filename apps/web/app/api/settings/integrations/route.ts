@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { MSG } from '@/lib/api-messages';
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`settings:integrations:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`settings:integrations:POST:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -176,7 +177,7 @@ export async function PUT(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`settings:integrations:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request)
@@ -269,7 +270,7 @@ export async function DELETE(request: Request) {
         const { id } = body as { id?: string }
         if (!id || typeof id !== 'string') {
             return NextResponse.json(
-                { success: false, error: 'ID integrasi wajib diisi' },
+                { success: false, error: 'MSG.INTEGRATION_ID_REQUIRED' },
                 { status: 400 }
             )
         }

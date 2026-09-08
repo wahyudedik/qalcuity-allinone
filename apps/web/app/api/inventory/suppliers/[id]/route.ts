@@ -4,6 +4,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { updateSupplierSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(
     request: Request,
@@ -87,7 +88,7 @@ export async function PUT(
         });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Supplier tidak ditemukan' },
+                { success: false, error: MSG.SUPPLIER_NOT_FOUND, code: 'SUPPLIER_NOT_FOUND' },
                 { status: 404 }
             );
         }

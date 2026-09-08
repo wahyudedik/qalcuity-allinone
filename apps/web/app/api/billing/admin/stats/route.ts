@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { getSession, isAdmin } from '@/lib/session';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET() {
     try {
@@ -69,10 +71,6 @@ export async function GET() {
             },
         });
     } catch (error) {
-        console.error('Error fetching billing stats:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data statistik billing' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

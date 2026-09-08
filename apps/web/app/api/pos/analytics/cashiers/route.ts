@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:analytics:cashiers:${ip}`, 60, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

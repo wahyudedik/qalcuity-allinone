@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * GET /api/billing/plans
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:plans:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const plans = await prisma.plan.findMany({
@@ -47,10 +49,6 @@ export async function GET(request: Request) {
             })),
         });
     } catch (error) {
-        console.error('Error fetching plans:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

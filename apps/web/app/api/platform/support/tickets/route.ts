@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
 
         if (!subject || !message) {
             return NextResponse.json(
-                { success: false, error: "Subject dan pesan wajib diisi" },
+                { success: false, error: "MSG.SUBJECT_AND_MESSAGE_REQUIRED" },
                 { status: 400 }
             );
         }

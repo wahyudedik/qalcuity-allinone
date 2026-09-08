@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { createContactSchema, updateContactSchema, formatZodError } from '@/lib/validation-schemas';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:contacts:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:contacts:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -155,7 +156,7 @@ export async function PUT(request: Request) {
         const rateLimitResult = checkRateLimit(`api:contacts:PUT:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -168,7 +169,7 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID wajib diisi' },
+                { success: false, error: MSG.ID_REQUIRED },
                 { status: 400 }
             );
         }
@@ -188,7 +189,7 @@ export async function PUT(request: Request) {
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Contact not found' },
+                { success: false, error: MSG.CONTACT_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -244,7 +245,7 @@ export async function DELETE(request: Request) {
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Contact not found' },
+                { success: false, error: MSG.CONTACT_NOT_FOUND },
                 { status: 404 }
             );
         }

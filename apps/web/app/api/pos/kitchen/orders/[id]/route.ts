@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { updateKitchenOrderStatusSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 // Valid state transitions for kitchen order
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -24,7 +25,7 @@ export async function GET(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:kitchen:orders:[id]:GET:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -42,7 +43,7 @@ export async function GET(
 
         if (!order) {
             return NextResponse.json(
-                { success: false, error: 'Pesanan dapur tidak ditemukan' },
+                { success: false, error: MSG.KITCHEN_ORDER_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -86,7 +87,7 @@ export async function PATCH(
         const ip = getClientIp(request);
         const rl = checkRateLimit(`pos:kitchen:orders:[id]:PATCH:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -95,7 +96,7 @@ export async function PATCH(
 
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengubah status pesanan dapur' },
+                { success: false, error: MSG.KITCHEN_ORDER_ADMIN_ONLY_UPDATE },
                 { status: 403 }
             );
         }
@@ -114,7 +115,7 @@ export async function PATCH(
         const existing = await prisma.posKitchenOrder.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
-                { success: false, error: 'Pesanan dapur tidak ditemukan' },
+                { success: false, error: MSG.KITCHEN_ORDER_NOT_FOUND },
                 { status: 404 }
             );
         }
@@ -126,7 +127,7 @@ export async function PATCH(
             return NextResponse.json(
                 {
                     success: false,
-                    error: `Transisi dari "${existing.status}" ke "${newStatus}" tidak valid. Transisi yang diizinkan: ${allowedTransitions.join(', ') || 'tidak ada'}`,
+                    error: MSG.KITCHEN_ORDER_TRANSITION_INVALID,
                 },
                 { status: 400 }
             );

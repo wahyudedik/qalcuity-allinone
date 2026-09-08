@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { WorkflowEngine } from '@qalcuity/workflow';
+import { workflowTransitionSchema } from '@/lib/validation-schemas';
+import { MSG } from '@/lib/api-messages';
 
 /**
  * POST /api/workflow/transition
@@ -23,23 +25,23 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
 
-        const { entityType, entityId, action, notes } = body;
-
-        // Validasi input
-        if (!entityType || !entityId || !action) {
+        // Validasi input dengan Zod schema
+        const validated = workflowTransitionSchema.safeParse(body);
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: 'entityType, entityId, dan action wajib diisi' },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             );
         }
 
+        const { entityType, entityId, action, notes } = validated.data;
         const upperEntityType = entityType.toUpperCase();
 
         // Dapatkan current state dari entity
         const currentState = await getCurrentState(upperEntityType, entityId, tenantId);
         if (currentState === null) {
             return NextResponse.json(
-                { success: false, error: `Entity ${entityType} dengan ID ${entityId} tidak ditemukan` },
+                { success: false, error: `${MSG.WORKFLOW_ENTITY_NOT_FOUND} (${entityType} #${entityId})` },
                 { status: 404 }
             );
         }
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
 
         if (!result.success) {
             return NextResponse.json(
-                { success: false, error: result.error || 'Transisi tidak valid' },
+                { success: false, error: result.error || MSG.WORKFLOW_TRANSITION_FAILED },
                 { status: 400 }
             );
         }
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
             },
         });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
+        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
         return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }
@@ -180,42 +182,60 @@ async function updateEntityState(
     newState: string
 ): Promise<void> {
     switch (entityType) {
-        case 'INVOICE':
+        case 'INVOICE': {
+            const entity = await prisma.invoice.findFirst({ where: { id: entityId, tenantId } });
+            if (!entity) throw new Error(MSG.WORKFLOW_ENTITY_NOT_FOUND);
             await prisma.invoice.update({
                 where: { id: entityId },
                 data: { status: newState },
             });
             break;
-        case 'QUOTATION':
+        }
+        case 'QUOTATION': {
+            const entity = await prisma.quotation.findFirst({ where: { id: entityId, tenantId } });
+            if (!entity) throw new Error(MSG.WORKFLOW_ENTITY_NOT_FOUND);
             await prisma.quotation.update({
                 where: { id: entityId },
                 data: { status: newState },
             });
             break;
-        case 'PURCHASE_ORDER':
+        }
+        case 'PURCHASE_ORDER': {
+            const entity = await prisma.purchaseOrder.findFirst({ where: { id: entityId, tenantId } });
+            if (!entity) throw new Error(MSG.WORKFLOW_ENTITY_NOT_FOUND);
             await prisma.purchaseOrder.update({
                 where: { id: entityId },
                 data: { status: newState },
             });
             break;
-        case 'LEAVE_REQUEST':
+        }
+        case 'LEAVE_REQUEST': {
+            const entity = await prisma.leaveRequest.findFirst({ where: { id: entityId, tenantId } });
+            if (!entity) throw new Error(MSG.WORKFLOW_ENTITY_NOT_FOUND);
             await prisma.leaveRequest.update({
                 where: { id: entityId },
                 data: { status: newState },
             });
             break;
-        case 'PAYROLL':
+        }
+        case 'PAYROLL': {
+            const entity = await prisma.payrollRecord.findFirst({ where: { id: entityId, tenantId } });
+            if (!entity) throw new Error(MSG.WORKFLOW_ENTITY_NOT_FOUND);
             await prisma.payrollRecord.update({
                 where: { id: entityId },
                 data: { status: newState },
             });
             break;
-        case 'DEAL':
+        }
+        case 'DEAL': {
+            const entity = await prisma.deal.findFirst({ where: { id: entityId, tenantId } });
+            if (!entity) throw new Error(MSG.WORKFLOW_ENTITY_NOT_FOUND);
             await prisma.deal.update({
                 where: { id: entityId },
                 data: { stage: newState },
             });
             break;
+        }
         default:
             throw new Error(`Unsupported entity type: ${entityType}`);
     }

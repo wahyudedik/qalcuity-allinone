@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createPosRefundSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
     try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:refunds:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:pos:refunds:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
         });
         if (!transaction) {
             return NextResponse.json(
-                { success: false, error: 'Transaksi tidak ditemukan atau tidak dalam status selesai' },
+                { success: false, error: MSG.TRANSACTION_NOT_COMPLETED },
                 { status: 400 }
             );
         }
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
         // Validate refund amount doesn't exceed transaction total
         if (validatedData.amount > Number(transaction.totalAmount)) {
             return NextResponse.json(
-                { success: false, error: 'Jumlah refund melebihi total transaksi' },
+                { success: false, error: MSG.REFUND_AMOUNT_EXCEEDS_TRANSACTION },
                 { status: 400 }
             );
         }

@@ -6,15 +6,17 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { getEntitlement, changePlan, ensureEntitlement } from '@/lib/entitlement';
 import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 const changePlanSchema = z.object({
-    planSlug: z.string().min(1, 'Plan slug wajib diisi'),
+    planSlug: z.string().min(1, 'MSG.PLAN_SLUG_REQUIRED'),
     billingCycle: z.enum(['monthly', 'yearly']).default('monthly'),
 });
 
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:plan:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -63,11 +65,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('[Plan] Error fetching plan:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengambil data paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }
 
@@ -76,7 +74,7 @@ export async function PUT(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:plan:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'Terlalu banyak request. Coba lagi nanti.' }, { status: 429 });
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -129,10 +127,6 @@ export async function PUT(request: Request) {
             message: `Paket berhasil diubah ke ${newEntitlement.plan.name}`,
         });
     } catch (error) {
-        console.error('[Plan] Error changing plan:', error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { success: false, error: 'Gagal mengubah paket' },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

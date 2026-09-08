@@ -16,6 +16,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { refreshMobileToken } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:mobile-refresh:${ip}`, 10, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak percobaan. Coba lagi dalam 5 menit.' },
+                { success: false, error: 'Too many attempts. Please try again in 5 minutes.', code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
 
         if (!refreshToken || typeof refreshToken !== 'string') {
             return NextResponse.json(
-                { success: false, error: 'Refresh token harus diisi' },
+                { success: false, error: 'Refresh token is required', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
             refreshToken: tokens.refreshToken,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan server';
+        const message = error instanceof Error ? error.message : 'An internal server error occurred';
 
         // JWT verification errors
         let status = 500;
@@ -57,14 +58,14 @@ export async function POST(request: Request) {
             status = 401;
         } else if (message.includes('expired')) {
             status = 401;
-        } else if (message.includes('tidak ditemukan') || message.includes('dinonaktifkan')) {
+        } else if (message.includes('not found') || message.includes('dinonaktifkan')) {
             status = 401;
         }
 
         console.error('[MobileAuth] Refresh error:', message);
 
         return NextResponse.json(
-            { success: false, error: 'Token tidak valid atau sudah expired' },
+            { success: false, error: 'Token is invalid or has expired', code: 'INVALID_TOKEN' },
             { status }
         );
     }

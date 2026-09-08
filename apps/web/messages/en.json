@@ -205,7 +205,79 @@
         "lowStockCount": "low stock products",
         "allStocksSafe": "All product stocks are safe",
         "needRestock": "need restock.",
-        "noRestockNeeded": "No products need restocking at this time."
+        "noRestockNeeded": "No products need restocking at this time.",
+        "tasks": {
+            "title": "My Tasks",
+            "subtitle": "All tasks from all projects",
+            "emptyTitle": "No tasks",
+            "emptyDescAll": "You don't have any tasks from any projects yet.",
+            "emptyDescFiltered": "No tasks match the filter",
+            "status": {
+                "TODO": "To Do",
+                "IN_PROGRESS": "In Progress",
+                "IN_REVIEW": "In Review",
+                "DONE": "Done",
+                "CANCELLED": "Cancelled"
+            },
+            "priority": {
+                "LOW": "Low",
+                "MEDIUM": "Medium",
+                "HIGH": "High",
+                "URGENT": "Urgent"
+            },
+            "filter": {
+                "ALL": "All",
+                "TODAY": "Due Today",
+                "OVERDUE": "Overdue",
+                "COMPLETED": "Completed"
+            },
+            "groupBy": {
+                "none": "No Grouping",
+                "project": "Group: Project",
+                "status": "Group: Status",
+                "priority": "Group: Priority"
+            },
+            "sortBy": {
+                "dueDate": "Sort: Due Date",
+                "priority": "Sort: Priority",
+                "created": "Sort: Created"
+            },
+            "allTasks": "All Tasks",
+            "all": "All",
+            "overdue": "Overdue"
+        },
+        "projects": {
+            "status": {
+                "PLANNING": "Planning",
+                "ACTIVE": "Active",
+                "ON_HOLD": "On Hold",
+                "COMPLETED": "Completed",
+                "CANCELLED": "Cancelled"
+            },
+            "tabs": {
+                "overview": "Overview",
+                "tasks": "Tasks",
+                "members": "Members",
+                "budget": "Budget",
+                "gantt": "Gantt",
+                "resources": "Resources"
+            },
+            "roles": {
+                "MANAGER": "Manager",
+                "MEMBER": "Member",
+                "VIEWER": "Viewer"
+            },
+            "board": {
+                "title": "Task Board",
+                "moveTo": "Move to",
+                "emptyColumn": "No tasks",
+                "noTasks": "No tasks",
+                "taskMoved": "Task moved to",
+                "moveFailed": "Failed to update task status",
+                "addFailed": "Failed to add task",
+                "taskAdded": "Task added successfully"
+            }
+        }
     },
     "finance": {
         "invoices": {

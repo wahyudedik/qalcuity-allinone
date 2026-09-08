@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { getTenantCustomFields } from '@/lib/industry-config';
 
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
         if (!entity) {
             return NextResponse.json(
-                { success: false, error: 'Parameter "entity" wajib diisi' },
+                { success: false, error: MSG.ENTITY_PARAM_REQUIRED },
                 { status: 400 }
             );
         }

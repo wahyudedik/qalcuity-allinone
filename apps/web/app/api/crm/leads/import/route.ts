@@ -7,6 +7,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { importLeadRowSchema, formatZodError } from '@/lib/validation-schemas';
 import { parseCsv } from '@/lib/csv-parser';
 import { parseExcel } from '@/lib/excel-parser';
+import { MSG } from '@/lib/api-messages';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const BATCH_SIZE = 50;
@@ -42,7 +43,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
         const rateLimitResult = checkRateLimit(`api:leads:import:${ip}`, 5, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429 }
             );
         }
@@ -58,7 +59,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
 
         if (!file) {
             return NextResponse.json(
-                { success: false, error: 'File wajib diupload' },
+                { success: false, error: MSG.FILE_UPLOAD_REQUIRED },
                 { status: 400 }
             );
         }
@@ -66,7 +67,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
         // Validate file size
         if (file.size > MAX_FILE_SIZE) {
             return NextResponse.json(
-                { success: false, error: 'Ukuran file maksimal 5MB' },
+                { success: false, error: MSG.FILE_TOO_LARGE },
                 { status: 400 }
             );
         }
@@ -78,7 +79,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
 
         if (!isCsv && !isExcel) {
             return NextResponse.json(
-                { success: false, error: 'Format file tidak didukung. Gunakan .csv, .xlsx, atau .xls' },
+                { success: false, error: MSG.UNSUPPORTED_FILE_FORMAT },
                 { status: 400 }
             );
         }
@@ -104,7 +105,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
 
         if (rows.length === 0) {
             return NextResponse.json(
-                { success: false, error: 'File kosong atau tidak memiliki data' },
+                { success: false, error: MSG.LEAD_IMPORT_FILE_EMPTY },
                 { status: 400 }
             );
         }
@@ -119,7 +120,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
             return NextResponse.json(
                 {
                     success: false,
-                    error: 'Kolom "name" atau "nama" wajib ada di file',
+                    error: MSG.LEAD_IMPORT_COLUMNS_REQUIRED,
                 },
                 { status: 400 }
             );

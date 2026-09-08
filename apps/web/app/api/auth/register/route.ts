@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MSG } from '@/lib/api-messages';
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:register:${ip}`, 5, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { error: "Terlalu banyak percobaan registrasi. Coba lagi dalam 5 menit." },
+                { error: "Too many registration attempts. Please try again in 5 minutes.", code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -27,14 +28,14 @@ export async function POST(request: Request) {
         // Validasi input
         if (!sanitizedCompany || !sanitizedName || !sanitizedEmail || !password) {
             return NextResponse.json(
-                { error: "Semua field harus diisi" },
+                { error: "All fields are required", code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
 
         if (password.length < 8) {
             return NextResponse.json(
-                { error: "Password minimal 8 karakter" },
+                { error: "Password must be at least 8 characters", code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
         // Validasi email format
         if (!isValidEmail(sanitizedEmail)) {
             return NextResponse.json(
-                { error: "Format email tidak valid" },
+                { error: "Invalid email format", code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 
         if (existingUser) {
             return NextResponse.json(
-                { error: "Email sudah terdaftar" },
+                { error: "Email already registered", code: 'DUPLICATE_EMAIL' },
                 { status: 400 }
             );
         }
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
                 const field = Array.isArray(target) ? target[0] : 'field';
                 console.error(`[Register] Unique constraint violation on field: ${field}`);
                 return NextResponse.json(
-                    { error: `Data sudah ada untuk ${String(field)}` },
+                    { error: `Data already exists for ${String(field)}`, code: 'DUPLICATE_DATA' },
                     { status: 400 }
                 );
             }
@@ -132,7 +133,7 @@ export async function POST(request: Request) {
             if (prismaError.code === 'P2003') {
                 console.error("[Register] Foreign key constraint violation");
                 return NextResponse.json(
-                    { error: "Referensi data tidak valid" },
+                    { error: "Invalid data reference", code: 'INVALID_REFERENCE' },
                     { status: 400 }
                 );
             }
@@ -141,14 +142,14 @@ export async function POST(request: Request) {
             if (prismaError.code === 'P2025') {
                 console.error("[Register] Record not found");
                 return NextResponse.json(
-                    { error: "Data tidak ditemukan" },
+                    { error: "Data not found", code: 'NOT_FOUND' },
                     { status: 404 }
                 );
             }
 
             console.error("[Register] Prisma error:", prismaError.code);
             return NextResponse.json(
-                { error: "Terjadi kesalahan database" },
+                { error: "A database error occurred", code: 'DATABASE_ERROR' },
                 { status: 500 }
             );
         }
@@ -156,7 +157,7 @@ export async function POST(request: Request) {
         // Handle other errors
         console.error("[Register] Unexpected error:", error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
-            { error: "Terjadi kesalahan server" },
+            { error: "An internal server error occurred", code: 'INTERNAL_SERVER_ERROR' },
             { status: 500 }
         );
     }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
@@ -13,7 +14,7 @@ export async function POST(
         const rateLimitResult = checkRateLimit(`api:quotations:convert:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -34,7 +35,7 @@ export async function POST(
 
         if (!quotation) {
             return NextResponse.json(
-                { success: false, error: 'Quotation tidak ditemukan' },
+                { success: false, error: 'Quotation not found', code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
@@ -43,7 +44,7 @@ export async function POST(
         const convertibleStatuses = ['SENT', 'ACCEPTED'];
         if (!convertibleStatuses.includes(quotation.status)) {
             return NextResponse.json(
-                { success: false, error: 'Hanya quotation dengan status SENT atau ACCEPTED yang dapat dikonversi' },
+                { success: false, error: 'Only quotations with SENT or ACCEPTED status can be converted', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
