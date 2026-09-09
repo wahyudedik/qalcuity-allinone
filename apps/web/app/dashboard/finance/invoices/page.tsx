@@ -23,13 +23,13 @@ type Invoice = {
     createdAt: string
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
-    sent: { label: 'Terkirim', color: 'bg-blue-100 text-blue-700' },
-    paid: { label: 'Lunas', color: 'bg-green-100 text-green-700' },
-    overdue: { label: 'Overdue', color: 'bg-red-100 text-red-700' },
-    partially_paid: { label: 'Bayar Sebagian', color: 'bg-yellow-100 text-yellow-700' },
-    cancelled: { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-500' },
+const statusConfig: Record<string, { labelKey: string; color: string }> = {
+    draft: { labelKey: 'finance.invoice.status.draft', color: 'bg-gray-100 text-gray-700' },
+    sent: { labelKey: 'finance.invoice.status.sent', color: 'bg-blue-100 text-blue-700' },
+    paid: { labelKey: 'finance.invoice.status.paid', color: 'bg-green-100 text-green-700' },
+    overdue: { labelKey: 'finance.invoice.status.overdue', color: 'bg-red-100 text-red-700' },
+    partially_paid: { labelKey: 'finance.invoice.status.partiallyPaid', color: 'bg-yellow-100 text-yellow-700' },
+    cancelled: { labelKey: 'finance.invoice.status.cancelled', color: 'bg-gray-100 text-gray-500' },
 }
 
 export default function InvoicesPage() {
@@ -45,7 +45,7 @@ export default function InvoicesPage() {
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
-    const [confirmTitle, setConfirmTitle] = useState('Konfirmasi Hapus')
+    const [confirmTitle, setConfirmTitle] = useState('')
     const [confirmMessage, setConfirmMessage] = useState('')
 
     useEffect(() => {
@@ -102,7 +102,7 @@ export default function InvoicesPage() {
             if (result.success) {
                 setShowCreateModal(false)
                 fetchInvoices()
-                setToast({ message: 'Invoice berhasil dibuat', type: 'success' })
+                setToast({ message: t('finance.invoices.toast.createSuccess'), type: 'success' })
             } else {
                 setToast({ message: `${t('finance.invoices.createError')}: ${result.error}`, type: 'error' })
             }
@@ -112,20 +112,20 @@ export default function InvoicesPage() {
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Konfirmasi Hapus')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus invoice ini?')
+        setConfirmTitle(t('finance.invoices.confirmDeleteTitle'))
+        setConfirmMessage(t('finance.invoices.confirmDeleteMessage'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/finance/invoices/${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchInvoices()
-                    setToast({ message: 'Invoice berhasil dihapus', type: 'success' })
+                    setToast({ message: t('finance.invoices.toast.deleteSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus: ${result.error}`, type: 'error' })
+                    setToast({ message: `${t('finance.invoices.toast.deleteFailed')}: ${result.error}`, type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menghapus invoice', type: 'error' })
+                setToast({ message: t('finance.invoices.toast.deleteError'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -241,7 +241,7 @@ export default function InvoicesPage() {
                     <EmptyState
                         icon={FileText}
                         title={t('finance.invoices.empty') || 'Belum ada invoice'}
-                        description="Buat invoice pertama Anda untuk mulai menerima pembayaran"
+                        description={t('finance.invoices.emptyDescription') || 'Buat invoice pertama Anda untuk mulai menerima pembayaran'}
                     />
                 ) : (
                     filteredInvoices.map((invoice) => (
@@ -254,7 +254,7 @@ export default function InvoicesPage() {
                                     <p className="text-sm text-gray-500">{invoice.customerName}</p>
                                 </div>
                                 <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[invoice.status]?.color || 'bg-gray-100 text-gray-700'}`}>
-                                    {statusConfig[invoice.status]?.label || invoice.status}
+                                    {statusConfig[invoice.status]?.labelKey ? t(statusConfig[invoice.status].labelKey) : invoice.status}
                                 </span>
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
@@ -306,7 +306,7 @@ export default function InvoicesPage() {
                                         <EmptyState
                                             icon={FileText}
                                             title={t('finance.invoices.empty') || 'Belum ada invoice'}
-                                            description="Buat invoice pertama Anda untuk mulai menerima pembayaran"
+                                            description={t('finance.invoices.emptyDescription') || 'Buat invoice pertama Anda untuk mulai menerima pembayaran'}
                                         />
                                     </td>
                                 </tr>
@@ -324,7 +324,7 @@ export default function InvoicesPage() {
                                         <td className="whitespace-nowrap px-6 py-4 text-right font-medium">{formatCurrency(invoice.total)}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-center">
                                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusConfig[invoice.status]?.color || 'bg-gray-100 text-gray-700'}`}>
-                                                {statusConfig[invoice.status]?.label || invoice.status}
+                                                {statusConfig[invoice.status]?.labelKey ? t(statusConfig[invoice.status].labelKey) : invoice.status}
                                             </span>
                                         </td>
                                         <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-right">
@@ -337,7 +337,7 @@ export default function InvoicesPage() {
                                                 <button
                                                     onClick={() => handleDelete(invoice.id)}
                                                     className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                    title={t('common.delete')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -375,8 +375,8 @@ export default function InvoicesPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('common.delete')}
+                cancelText={t('common.cancel')}
                 variant="danger"
             />
         </div>

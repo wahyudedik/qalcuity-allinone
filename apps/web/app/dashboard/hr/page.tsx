@@ -74,7 +74,7 @@ export default function HrPage() {
                 ])
 
                 if (!employeesRes.ok || !leavesRes.ok || !attendanceRes.ok) {
-                    throw new Error('Gagal memuat data HR')
+                    throw new Error(t('hr.overview.loadError'))
                 }
 
                 const employeesJson = await employeesRes.json()
@@ -99,7 +99,7 @@ export default function HrPage() {
                 )
             } catch (err) {
                 setError(
-                    err instanceof Error ? err.message : 'Gagal memuat data'
+                    err instanceof Error ? err.message : t('hr.overview.loadError')
                 )
             } finally {
                 setLoading(false)
@@ -146,12 +146,12 @@ export default function HrPage() {
         rejected: 'hr.overview.rejected',
     }
 
-    const leaveTypeLabels: Record<string, string> = {
-        annual: 'Cuti Tahunan',
-        sick: 'Sakit',
-        personal: 'Cuti Pribadi',
-        maternity: 'Cuti Melahirkan',
-        unpaid: 'Cuti Tanpa Gaji',
+    const leaveTypeKeys: Record<string, string> = {
+        annual: 'hr.leave.type.annual',
+        sick: 'hr.leave.type.sick',
+        personal: 'hr.leave.type.personal',
+        maternity: 'hr.leave.type.maternity',
+        unpaid: 'hr.leave.type.unpaid',
     }
 
     // Loading state
@@ -244,7 +244,7 @@ export default function HrPage() {
                         {recentLeaves.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">
                                 <Inbox className="h-8 w-8 mb-2" />
-                                <p className="text-sm">Belum ada pengajuan cuti</p>
+                                <p className="text-sm">{t('hr.overview.noLeaveRequests')}</p>
                             </div>
                         ) : (
                             recentLeaves.map((leave) => (
@@ -252,7 +252,7 @@ export default function HrPage() {
                                     <div>
                                         <p className="font-medium text-gray-900 dark:text-gray-100">{leave.employeeName}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {leaveTypeLabels[leave.type] || leave.type} · {formatDate(leave.startDate)}{leave.days > 1 ? ` - ${formatDate(leave.endDate)}` : ''}
+                                            {t(leaveTypeKeys[leave.type]) || leave.type} · {formatDate(leave.startDate)}{leave.days > 1 ? ` - ${formatDate(leave.endDate)}` : ''}
                                         </p>
                                     </div>
                                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[leave.status] || 'bg-gray-100 text-gray-800'}`}>
@@ -276,8 +276,8 @@ export default function HrPage() {
                         {birthdays.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">
                                 <Inbox className="h-8 w-8 mb-2" />
-                                <p className="text-sm">Data ulang tahun belum tersedia</p>
-                                <p className="text-xs mt-1">Field dateOfBirth belum ada di data karyawan</p>
+                                <p className="text-sm">{t('hr.overview.birthdayNotAvailable')}</p>
+                                <p className="text-xs mt-1">{t('hr.overview.birthdayFieldMissing')}</p>
                             </div>
                         ) : (
                             birthdays.map((b, i) => (

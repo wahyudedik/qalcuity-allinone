@@ -60,7 +60,7 @@ const features: FeatureCard[] = [
         icon: FileText,
         iconBg: 'bg-red-100 dark:bg-red-900/30',
         iconColor: 'text-red-600 dark:text-red-400',
-        status: 'coming-soon',
+        status: 'available',
     },
     {
         titleKey: 'ai.anomalyDetection',
@@ -68,7 +68,7 @@ const features: FeatureCard[] = [
         icon: AlertTriangle,
         iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
         iconColor: 'text-indigo-600 dark:text-indigo-400',
-        status: 'coming-soon',
+        status: 'available',
     },
 ];
 

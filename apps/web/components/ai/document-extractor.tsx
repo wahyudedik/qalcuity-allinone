@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Upload,
     FileText,
@@ -9,6 +9,7 @@ import {
     Loader2,
     X,
     ChevronDown,
+    Clock,
     type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
@@ -32,6 +33,20 @@ interface ExtractionResult {
     method: 'ai' | 'regex' | 'fallback';
 }
 
+interface ExtractionHistoryItem {
+    id: string;
+    documentType: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number | null;
+    confidence: number | null;
+    method: string;
+    sourceType: string | null;
+    sourceId: string | null;
+    extractedAt: string;
+    createdAt: string;
+}
+
 interface DocumentExtractorProps {
     onExtracted?: (result: ExtractionResult) => void;
     onApplyToForm?: (fields: ExtractedField[]) => void;
@@ -40,12 +55,13 @@ interface DocumentExtractorProps {
 
 // ─── Document Type Options ───────────────────────────────────────────────────
 
-const DOCUMENT_TYPES: { value: DocumentType; label: string; description: string }[] = [
-    { value: 'INVOICE', label: 'Invoice / Faktur', description: 'Ekstrak data dari invoice penjualan' },
-    { value: 'PURCHASE_ORDER', label: 'Purchase Order (PO)', description: 'Ekstrak data dari PO pembelian' },
-    { value: 'RECEIPT', label: 'Receipt / Struk', description: 'Ekstrak data dari struk pembelian' },
-    { value: 'KTP', label: 'KTP', description: 'Ekstrak data dari Kartu Tanda Penduduk' },
-    { value: 'NPWP', label: 'NPWP', description: 'Ekstrak data dari Nomor Pokok Wajib Pajak' },
+// Document type labels use labelKey pattern for i18n
+const DOCUMENT_TYPE_KEYS: { value: DocumentType; labelKey: string; descKey: string }[] = [
+    { value: 'INVOICE', labelKey: 'ai.extraction.invoice', descKey: 'ai.extraction.invoiceDesc' },
+    { value: 'PURCHASE_ORDER', labelKey: 'ai.extraction.purchaseOrder', descKey: 'ai.extraction.purchaseOrderDesc' },
+    { value: 'RECEIPT', labelKey: 'ai.extraction.receipt', descKey: 'ai.extraction.receiptDesc' },
+    { value: 'KTP', labelKey: 'ai.extraction.ktp', descKey: 'ai.extraction.ktpDesc' },
+    { value: 'NPWP', labelKey: 'ai.extraction.npwp', descKey: 'ai.extraction.npwpDesc' },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -59,6 +75,8 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
     const [isExtracting, setIsExtracting] = useState(false);
     const [result, setResult] = useState<ExtractionResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [history, setHistory] = useState<ExtractionHistoryItem[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(true);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleDrag = useCallback((e: React.DragEvent) => {
@@ -81,17 +99,62 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Fetch extraction history on mount
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                setHistoryLoading(true);
+                const response = await fetch('/api/ai/extraction-history?limit=10');
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    setHistory(data.data.history);
+                }
+            } catch {
+                // Silently fail — history is non-critical
+            } finally {
+                setHistoryLoading(false);
+            }
+        };
+        fetchHistory();
+    }, []);
+
+    // Refresh history after successful extraction
+    const refreshHistory = useCallback(async () => {
+        try {
+            const response = await fetch('/api/ai/extraction-history?limit=10');
+            const data = await response.json();
+            if (response.ok && data.success) {
+                setHistory(data.data.history);
+            }
+        } catch {
+            // Silently fail
+        }
+    }, []);
+
+    const handleLoadHistory = (item: ExtractionHistoryItem) => {
+        // Reconstruct ExtractionResult from history item
+        const reconstructedResult: ExtractionResult = {
+            documentType: item.documentType as DocumentType,
+            fields: [], // Fields are stored in DB but not loaded in list view
+            confidence: item.confidence || 0,
+            extractedAt: item.extractedAt,
+            method: item.method as 'ai' | 'regex' | 'fallback',
+        };
+        setResult(reconstructedResult);
+        setError(null);
+    };
+
     const handleFile = (file: File) => {
         // Validate file type
         const allowedTypes = ['image/png', 'image/jpeg', 'application/pdf'];
         if (!allowedTypes.includes(file.type)) {
-            setError('Tipe file tidak didukung. Gunakan PNG, JPEG, atau PDF.');
+            setError(t('ai.extraction.fileTypeError'));
             return;
         }
 
         // Validate file size (10MB)
         if (file.size > 10 * 1024 * 1024) {
-            setError('File terlalu besar. Maksimal 10MB.');
+            setError(t('ai.extraction.fileTooLarge'));
             return;
         }
 
@@ -144,13 +207,15 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Gagal mengekstrak dokumen');
+                throw new Error(data.error || t('ai.extraction.errorExtract'));
             }
 
             setResult(data.data);
             onExtracted?.(data.data);
+            // Refresh history after successful extraction
+            refreshHistory();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat ekstraksi');
+            setError(err instanceof Error ? err.message : t('ai.extraction.errorGeneric'));
         } finally {
             setIsExtracting(false);
         }
@@ -178,17 +243,17 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                     {t('ai.documentType') || 'Tipe Dokumen'}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {DOCUMENT_TYPES.map((type) => (
+                    {DOCUMENT_TYPE_KEYS.map((type) => (
                         <button
                             key={type.value}
                             onClick={() => setDocumentType(type.value)}
                             className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-sm transition ${documentType === type.value
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-400'
-                                    : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-800'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-800'
                                 }`}
                         >
                             <FileText className="h-5 w-5" />
-                            <span className="font-medium text-center">{type.label}</span>
+                            <span className="font-medium text-center">{t(type.labelKey)}</span>
                         </button>
                     ))}
                 </div>
@@ -203,8 +268,8 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                     onDrop={handleDrop}
                     onClick={() => inputRef.current?.click()}
                     className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition ${dragActive
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500'
                         }`}
                 >
                     <Upload className="mb-3 h-10 w-10 text-gray-400" />
@@ -212,7 +277,7 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                         {t('ai.dragDrop') || 'Drag & drop file atau klik untuk browse'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                        PNG, JPEG, PDF — Maksimal 10MB
+                        {t('ai.extraction.fileSizeHint')}
                     </p>
                     <input
                         ref={inputRef}
@@ -255,7 +320,7 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                                 {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type}
                             </p>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Tipe: {DOCUMENT_TYPES.find((d) => d.value === documentType)?.label}
+                                {t('ai.extraction.typeLabel')} {DOCUMENT_TYPE_KEYS.find((d) => d.value === documentType) ? t(DOCUMENT_TYPE_KEYS.find((d) => d.value === documentType)!.labelKey) : ''}
                             </p>
                         </div>
                     </div>
@@ -280,12 +345,12 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                     {isExtracting ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Mengekstrak data...
+                            {t('ai.extraction.extracting')}
                         </>
                     ) : (
                         <>
                             <FileText className="h-4 w-4" />
-                            Ekstrak Data
+                            {t('ai.extraction.extractData')}
                         </>
                     )}
                 </button>
@@ -296,21 +361,21 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            Hasil Ekstraksi
+                            {t('ai.extraction.results')}
                         </h3>
                         <div className="flex items-center gap-2">
                             <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${result.method === 'ai'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        : result.method === 'regex'
-                                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : result.method === 'regex'
+                                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                                     }`}
                             >
-                                {result.method === 'ai' ? 'AI Vision' : result.method === 'regex' ? 'Regex' : 'Fallback'}
+                                {result.method === 'ai' ? t('ai.aiVision') : result.method === 'regex' ? t('ai.regexBased') : t('ai.fallback')}
                             </span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {Math.round(result.confidence * 100)}% akurasi
+                                {Math.round(result.confidence * 100)}% {t('ai.extraction.accuracy')}
                             </span>
                         </div>
                     </div>
@@ -329,7 +394,7 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                                     </p>
                                     <p className="text-sm text-gray-900 dark:text-gray-100 truncate">
                                         {field.value || (
-                                            <span className="italic text-gray-400">Tidak ditemukan</span>
+                                            <span className="italic text-gray-400">{t('ai.extraction.notFound')}</span>
                                         )}
                                     </p>
                                 </div>
@@ -369,6 +434,72 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                     </div>
                 </div>
             )}
+
+            {/* Extraction History */}
+            <div className="mt-6 border-t border-gray-200 pt-6 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {t('ai.extraction.history')}
+                    </h3>
+                </div>
+
+                {historyLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{t('ai.extraction.loadingHistory')}</span>
+                    </div>
+                ) : history.length === 0 ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 py-4 text-center">
+                        {t('ai.extraction.noHistory')}
+                    </p>
+                ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {history.map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => handleLoadHistory(item)}
+                                className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        {item.fileName}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {(() => { const found = DOCUMENT_TYPE_KEYS.find((d) => d.value === item.documentType); return found ? t(found.labelKey) : item.documentType; })()}
+                                        </span>
+                                        <span className="text-xs text-gray-400">•</span>
+                                        <span className={`text-xs font-medium ${item.method === 'ai'
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : item.method === 'regex'
+                                                ? 'text-yellow-600 dark:text-yellow-400'
+                                                : 'text-gray-500 dark:text-gray-400'
+                                            }`}>
+                                            {item.method === 'ai' ? 'AI' : item.method === 'regex' ? 'Regex' : 'Fallback'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0 ml-2">
+                                    {item.confidence != null && (
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {Math.round(item.confidence * 100)}%
+                                        </span>
+                                    )}
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                                        {new Date(item.extractedAt).toLocaleDateString('id-ID', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })}
+                                    </span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { updateActivitySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(
     request: Request,
@@ -26,8 +27,7 @@ export async function GET(
 
         return NextResponse.json({ success: true, data: activity });
     } catch (error) {
-        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -82,8 +82,7 @@ export async function PUT(
 
         return NextResponse.json({ success: true, data: activity });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 
@@ -112,7 +111,6 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
-        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

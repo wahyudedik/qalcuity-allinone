@@ -5,6 +5,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 import { changePasswordSchema, formatZodError } from '@/lib/validation-schemas'
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * POST /api/settings/security/password — Change user password
@@ -82,7 +83,6 @@ export async function POST(request: Request) {
             message: 'Password berhasil diubah. Semua sesi lain telah dinonaktifkan.',
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }

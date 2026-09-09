@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { createLeaveSchema, updateLeaveSchema, approveLeaveSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -88,12 +89,11 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -161,12 +161,11 @@ export async function POST(request: Request) {
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'LeaveRequest', entityId: leave.id, newValues: { type: leave.type, startDate: leave.startDate, endDate: leave.endDate, days: leave.days } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: leave }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -213,12 +212,11 @@ export async function PATCH(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'LeaveRequest', entityId: id, newValues: { status: newStatus } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -301,12 +299,11 @@ export async function PUT(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'LeaveRequest', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -341,11 +338,10 @@ export async function DELETE(request: Request) {
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'LeaveRequest', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

@@ -5,6 +5,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 import { changePasswordSchema, formatZodError } from '@/lib/validation-schemas'
+import { handleApiError } from '@/lib/api-error';
 
 // GET /api/settings/security — Fetch user security info + login history
 export async function GET(request: Request) {
@@ -76,8 +77,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }
 
@@ -144,7 +144,6 @@ export async function PUT(request: Request) {
             message: 'Password berhasil diubah',
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }

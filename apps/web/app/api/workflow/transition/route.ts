@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { WorkflowEngine } from '@qalcuity/workflow';
 import { workflowTransitionSchema } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * POST /api/workflow/transition
@@ -108,9 +109,8 @@ export async function POST(request: Request) {
                 action: result.action,
             },
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -398,8 +399,7 @@ export async function GET(request: Request) {
         };
 
         return NextResponse.json({ success: true, data: response });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

@@ -94,10 +94,10 @@ interface TenantBilling {
     trialEndsAt: string | null
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-    PENDING: { label: 'Menunggu Verifikasi', color: 'text-yellow-700', bg: 'bg-yellow-100' },
-    VERIFIED: { label: 'Diverifikasi', color: 'text-green-700', bg: 'bg-green-100' },
-    REJECTED: { label: 'Ditolak', color: 'text-red-700', bg: 'bg-red-100' },
+const STATUS_CONFIG: Record<string, { labelKey: string; color: string; bg: string }> = {
+    PENDING: { labelKey: 'settings.billingAdmin.statusPendingVerification', color: 'text-yellow-700', bg: 'bg-yellow-100' },
+    VERIFIED: { labelKey: 'settings.billingAdmin.statusVerified', color: 'text-green-700', bg: 'bg-green-100' },
+    REJECTED: { labelKey: 'settings.billingAdmin.statusRejected', color: 'text-red-700', bg: 'bg-red-100' },
 }
 
 export default function BillingManagementPage() {
@@ -224,12 +224,12 @@ export default function BillingManagementPage() {
                 window.location.href = data.data.redirectUrl
             } else {
                 setToast({
-                    message: data.error || 'Gagal membuat pembayaran Midtrans',
+                    message: data.error || t('settings.billingAdmin.createMidtransFailed'),
                     type: 'error',
                 })
             }
         } catch {
-            setToast({ message: 'Gagal terhubung ke Midtrans', type: 'error' })
+            setToast({ message: t('settings.billingAdmin.midtransConnectionFailed'), type: 'error' })
         } finally {
             setMidtransLoading(false)
         }
@@ -249,10 +249,10 @@ export default function BillingManagementPage() {
                 fetchPayments()
                 fetchStats()
             } else {
-                setToast({ message: data.error || 'Gagal memverifikasi pembayaran', type: 'error' })
+                setToast({ message: data.error || t('settings.billingAdmin.verifyPaymentFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal memverifikasi pembayaran', type: 'error' })
+            setToast({ message: t('settings.billingAdmin.verifyPaymentFailed'), type: 'error' })
         } finally {
             setProcessingId(null)
         }
@@ -260,7 +260,7 @@ export default function BillingManagementPage() {
 
     const handleReject = async (payment: PaymentWithDetails) => {
         if (!rejectReason.trim()) {
-            setToast({ message: 'Alasan penolakan wajib diisi', type: 'error' })
+            setToast({ message: t('settings.billingAdmin.rejectReasonRequired'), type: 'error' })
             return
         }
         try {
@@ -277,10 +277,10 @@ export default function BillingManagementPage() {
                 fetchPayments()
                 fetchStats()
             } else {
-                setToast({ message: data.error || 'Gagal menolak pembayaran', type: 'error' })
+                setToast({ message: data.error || t('settings.billingAdmin.rejectPaymentFailed'), type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menolak pembayaran', type: 'error' })
+            setToast({ message: t('settings.billingAdmin.rejectPaymentFailed'), type: 'error' })
         } finally {
             setProcessingId(null)
         }
@@ -306,8 +306,8 @@ export default function BillingManagementPage() {
         return (
             <div className="flex flex-col items-center justify-center py-16">
                 <XCircle className="w-16 h-16 text-red-300 mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Akses Ditolak</h2>
-                <p className="text-gray-500">Hanya Super Admin yang dapat mengakses halaman ini.</p>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('settings.billingAdmin.accessDenied')}</h2>
+                <p className="text-gray-500">{t('settings.billingAdmin.accessDeniedDesc')}</p>
             </div>
         )
     }
@@ -316,9 +316,9 @@ export default function BillingManagementPage() {
         <div className="space-y-6">
             {/* Page Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Billing Management</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('settings.billingAdmin.pageTitle')}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Kelola pembayaran dan langganan tenant
+                    {t('settings.billingAdmin.pageSubtitle')}
                 </p>
             </div>
 
@@ -327,9 +327,9 @@ export default function BillingManagementPage() {
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 dark:bg-green-900/20 dark:border-green-800">
                     <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                     <div>
-                        <p className="text-sm font-medium text-green-800 dark:text-green-300">Pembayaran Berhasil</p>
+                        <p className="text-sm font-medium text-green-800 dark:text-green-300">{t('settings.billingAdmin.paymentSuccessBanner')}</p>
                         <p className="text-xs text-green-600 dark:text-green-400">
-                            Pembayaran Anda telah diterima. Langganan akan diaktifkan setelah verifikasi.
+                            {t('settings.billingAdmin.paymentSuccessDesc')}
                         </p>
                     </div>
                     <button
@@ -346,10 +346,10 @@ export default function BillingManagementPage() {
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         <Zap className="h-5 w-5 text-blue-600" />
-                        Langganan & Pembayaran
+                        {t('settings.billingAdmin.subscriptionPayment')}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Kelola langganan dan lakukan pembayaran untuk tenant ini
+                        {t('settings.billingAdmin.subscriptionPaymentDesc')}
                     </p>
                 </div>
                 <div className="p-6">
@@ -369,11 +369,11 @@ export default function BillingManagementPage() {
                                                 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                                                 : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
                                         }`}>
-                                        {subscription.status === 'ACTIVE' && 'Aktif'}
-                                        {subscription.status === 'PENDING_PAYMENT' && 'Menunggu Pembayaran'}
-                                        {subscription.status === 'TRIAL' && 'Trial'}
-                                        {subscription.status === 'SUSPENDED' && 'Suspended'}
-                                        {subscription.status === 'CANCELLED' && 'Dibatalkan'}
+                                        {subscription.status === 'ACTIVE' && t('settings.billingAdmin.statusActive')}
+                                        {subscription.status === 'PENDING_PAYMENT' && t('settings.billingAdmin.statusPendingPayment')}
+                                        {subscription.status === 'TRIAL' && t('settings.billingAdmin.statusTrial')}
+                                        {subscription.status === 'SUSPENDED' && t('settings.billingAdmin.statusSuspended')}
+                                        {subscription.status === 'CANCELLED' && t('settings.billingAdmin.statusCancelled')}
                                         {!['ACTIVE', 'PENDING_PAYMENT', 'TRIAL', 'SUSPENDED', 'CANCELLED'].includes(subscription.status) && subscription.status}
                                     </span>
                                 </div>
@@ -381,11 +381,11 @@ export default function BillingManagementPage() {
                                     <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                         {formatCurrency(Number(subscription.plan.price))}
                                     </span>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">/ bulan</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.perMonth')}</span>
                                 </div>
                                 {subscription.nextBillingDate && (
                                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                        Tagihan berikutnya: {formatDate(subscription.nextBillingDate)}
+                                        {t('settings.billingAdmin.nextBilling')} {formatDate(subscription.nextBillingDate)}
                                     </p>
                                 )}
                             </div>
@@ -398,12 +398,12 @@ export default function BillingManagementPage() {
                                     {midtransLoading ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            Memproses...
+                                            {t('settings.billingAdmin.processing')}
                                         </>
                                     ) : (
                                         <>
                                             <CreditCard className="w-4 h-4" />
-                                            Bayar dengan Midtrans
+                                            {t('settings.billingAdmin.payWithMidtrans')}
                                             <ArrowRight className="w-4 h-4" />
                                         </>
                                     )}
@@ -413,8 +413,8 @@ export default function BillingManagementPage() {
                     ) : (
                         <div className="flex flex-col items-center justify-center py-8">
                             <CreditCard className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">Belum ada langganan aktif</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Pilih paket untuk memulai</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">{t('settings.billingAdmin.noActiveSubscriptionYet')}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('settings.billingAdmin.selectPlanToStart')}</p>
                         </div>
                     )}
                 </div>
@@ -428,14 +428,14 @@ export default function BillingManagementPage() {
                             <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.pending')}</p>
                             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                 {stats?.pendingCount || 0}
                             </p>
                         </div>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Total: {formatCurrency(Number(stats?.pendingTotal || 0))}
+                        {t('settings.billingAdmin.total')} {formatCurrency(Number(stats?.pendingTotal || 0))}
                     </p>
                 </div>
 
@@ -445,14 +445,14 @@ export default function BillingManagementPage() {
                             <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Bulan Ini</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.thisMonth')}</p>
                             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                 {stats?.monthlyCount || 0}
                             </p>
                         </div>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Total: {formatCurrency(Number(stats?.monthlyTotal || 0))}
+                        {t('settings.billingAdmin.total')} {formatCurrency(Number(stats?.monthlyTotal || 0))}
                     </p>
                 </div>
 
@@ -462,7 +462,7 @@ export default function BillingManagementPage() {
                             <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Tenant Aktif</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.activeTenants')}</p>
                             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                 {stats?.activeTenants || 0}
                             </p>
@@ -476,7 +476,7 @@ export default function BillingManagementPage() {
                             <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Revenue Bulan Ini</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.revenueThisMonth')}</p>
                             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                 {formatCurrency(Number(stats?.monthlyRevenue || 0))}
                             </p>
@@ -533,7 +533,7 @@ export default function BillingManagementPage() {
                                                 </div>
                                             </div>
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
-                                                {statusCfg.label}
+                                                {t(statusCfg.labelKey)}
                                             </span>
                                         </div>
                                         <div className="mt-2 flex items-center justify-between">
@@ -587,13 +587,13 @@ export default function BillingManagementPage() {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tanggal</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tenant</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Paket</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Jumlah</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bank</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Aksi</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tableDate')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tableTenant')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tablePlan')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tableAmount')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tableBank')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tableStatus')}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('settings.billingAdmin.tableAction')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -627,7 +627,7 @@ export default function BillingManagementPage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
-                                                        {statusCfg.label}
+                                                        {t(statusCfg.labelKey)}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -636,7 +636,7 @@ export default function BillingManagementPage() {
                                                             <button
                                                                 onClick={() => setProofModal(payment)}
                                                                 className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
-                                                                title="Lihat Bukti"
+                                                                title={t('settings.billingAdmin.viewProofBtn')}
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                             </button>
@@ -647,7 +647,7 @@ export default function BillingManagementPage() {
                                                                     onClick={() => setApproveModal(payment)}
                                                                     disabled={processingId === payment.id}
                                                                     className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
-                                                                    title="Approve"
+                                                                    title={t('settings.billingAdmin.approve')}
                                                                 >
                                                                     <Check className="w-4 h-4" />
                                                                 </button>
@@ -655,7 +655,7 @@ export default function BillingManagementPage() {
                                                                     onClick={() => { setRejectModal(payment); setRejectReason('') }}
                                                                     disabled={processingId === payment.id}
                                                                     className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
-                                                                    title="Reject"
+                                                                    title={t('settings.billingAdmin.reject')}
                                                                 >
                                                                     <X className="w-4 h-4" />
                                                                 </button>
@@ -676,7 +676,7 @@ export default function BillingManagementPage() {
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-3">
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Halaman {page} dari {totalPages}
+                            {t('settings.billingAdmin.pageInfo').replace('{page}', String(page)).replace('{totalPages}', String(totalPages))}
                         </p>
                         <div className="flex items-center gap-2">
                             <button
@@ -709,7 +709,7 @@ export default function BillingManagementPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 dark:bg-gray-800 dark:border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Detail Pembayaran</h2>
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('settings.billingAdmin.detailPayment')}</h2>
                             <button
                                 onClick={() => setDetailModal(null)}
                                 className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -721,12 +721,12 @@ export default function BillingManagementPage() {
                             {/* Status Badge */}
                             <div className="flex items-center gap-3">
                                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${STATUS_CONFIG[detailModal.status]?.bg} ${STATUS_CONFIG[detailModal.status]?.color}`}>
-                                    {STATUS_CONFIG[detailModal.status]?.label}
+                                    {t(STATUS_CONFIG[detailModal.status]?.labelKey)}
                                 </span>
                                 {detailModal.waConfirmed && (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                                         <MessageSquare className="w-3 h-3" />
-                                        WA Confirmed
+                                        {t('settings.billingAdmin.waConfirmed')}
                                     </span>
                                 )}
                             </div>
@@ -735,19 +735,19 @@ export default function BillingManagementPage() {
                             <div className="bg-gray-50 rounded-lg p-4 dark:bg-gray-750">
                                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                                     <Building2 className="w-4 h-4" />
-                                    Informasi Tenant
+                                    {t('settings.billingAdmin.tenantInfo')}
                                 </h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <p className="text-xs text-gray-400">Nama</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.name')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.tenant.name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Email</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.email')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.tenant.email}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Status Langganan</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.subscriptionStatus')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.tenant.subscriptionStatus}</p>
                                     </div>
                                 </div>
@@ -757,15 +757,15 @@ export default function BillingManagementPage() {
                             <div className="bg-gray-50 rounded-lg p-4 dark:bg-gray-750">
                                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                                     <CreditCard className="w-4 h-4" />
-                                    Informasi Paket
+                                    {t('settings.billingAdmin.planInfo')}
                                 </h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <p className="text-xs text-gray-400">Paket</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.plan')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.subscription.plan.name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Harga/Bulan</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.pricePerMonth')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Number(detailModal.subscription.plan.price))}</p>
                                     </div>
                                 </div>
@@ -775,42 +775,42 @@ export default function BillingManagementPage() {
                             <div className="bg-gray-50 rounded-lg p-4 dark:bg-gray-750">
                                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                                     <CreditCard className="w-4 h-4" />
-                                    Informasi Pembayaran
+                                    {t('settings.billingAdmin.paymentInfo')}
                                 </h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <p className="text-xs text-gray-400">Jumlah</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.amount')}</p>
                                         <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Number(detailModal.amount))}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Tanggal</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.date')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDateTime(detailModal.createdAt)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Bank Pengirim</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.senderBank')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.bankName || '-'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Rekening Pengirim</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.senderAccount')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.accountNumber || '-'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Nama Pengirim</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.senderName')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.accountName || '-'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Reference</p>
+                                        <p className="text-xs text-gray-400">{t('settings.billingAdmin.reference')}</p>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{detailModal.reference || '-'}</p>
                                     </div>
                                     {detailModal.notes && (
                                         <div className="col-span-2">
-                                            <p className="text-xs text-gray-400">Catatan</p>
+                                            <p className="text-xs text-gray-400">{t('settings.billingAdmin.notes')}</p>
                                             <p className="text-sm text-gray-700 dark:text-gray-300">{detailModal.notes}</p>
                                         </div>
                                     )}
                                     {detailModal.rejectReason && (
                                         <div className="col-span-2">
-                                            <p className="text-xs text-red-400">Alasan Penolakan</p>
+                                            <p className="text-xs text-red-400">{t('settings.billingAdmin.rejectReason')}</p>
                                             <p className="text-sm text-red-600 dark:text-red-400">{detailModal.rejectReason}</p>
                                         </div>
                                     )}
@@ -820,13 +820,13 @@ export default function BillingManagementPage() {
                             {/* Proof */}
                             {detailModal.proofFileUrl && (
                                 <div className="bg-gray-50 rounded-lg p-4 dark:bg-gray-750">
-                                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Bukti Transfer</h3>
+                                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">{t('settings.billingAdmin.transferProof')}</h3>
                                     <button
                                         onClick={() => setProofModal(detailModal)}
                                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                                     >
                                         <Eye className="w-4 h-4" />
-                                        Lihat Bukti Transfer
+                                        {t('settings.billingAdmin.viewProof')}
                                         <ExternalLink className="w-3 h-3" />
                                     </button>
                                 </div>
@@ -840,14 +840,14 @@ export default function BillingManagementPage() {
                                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition"
                                     >
                                         <Check className="w-4 h-4" />
-                                        Approve
+                                        {t('settings.billingAdmin.approve')}
                                     </button>
                                     <button
                                         onClick={() => { setRejectModal(detailModal); setRejectReason(''); setDetailModal(null) }}
                                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
                                     >
                                         <X className="w-4 h-4" />
-                                        Reject
+                                        {t('settings.billingAdmin.reject')}
                                     </button>
                                 </div>
                             )}
@@ -871,23 +871,23 @@ export default function BillingManagementPage() {
                                 <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Approve Pembayaran</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Konfirmasi verifikasi pembayaran</p>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('settings.billingAdmin.approvePayment')}</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.confirmVerification')}</p>
                             </div>
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4 mb-4 dark:bg-gray-750">
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500">Tenant</span>
+                                    <span className="text-sm text-gray-500">{t('settings.billingAdmin.tenant')}</span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{approveModal.tenant.name}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500">Paket</span>
+                                    <span className="text-sm text-gray-500">{t('settings.billingAdmin.plan')}</span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{approveModal.subscription.plan.name}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500">Jumlah</span>
+                                    <span className="text-sm text-gray-500">{t('settings.billingAdmin.amount')}</span>
                                     <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Number(approveModal.amount))}</span>
                                 </div>
                             </div>
@@ -897,7 +897,7 @@ export default function BillingManagementPage() {
                             <div className="flex items-start gap-2">
                                 <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                                 <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                    Setelah disetujui, langganan tenant akan diaktifkan dan status berubah menjadi ACTIVE.
+                                    {t('settings.billingAdmin.approveWarning')}
                                 </p>
                             </div>
                         </div>
@@ -907,7 +907,7 @@ export default function BillingManagementPage() {
                                 onClick={() => setApproveModal(null)}
                                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                             >
-                                Batal
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={() => handleApprove(approveModal)}
@@ -919,7 +919,7 @@ export default function BillingManagementPage() {
                                 ) : (
                                     <Check className="w-4 h-4" />
                                 )}
-                                Ya, Approve
+                                {t('settings.billingAdmin.yesApprove')}
                             </button>
                         </div>
                     </div>
@@ -941,19 +941,19 @@ export default function BillingManagementPage() {
                                 <X className="h-5 w-5 text-red-600 dark:text-red-400" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tolak Pembayaran</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Berikan alasan penolakan</p>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('settings.billingAdmin.rejectPayment')}</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.billingAdmin.provideRejectReason')}</p>
                             </div>
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4 mb-4 dark:bg-gray-750">
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500">Tenant</span>
+                                    <span className="text-sm text-gray-500">{t('settings.billingAdmin.tenant')}</span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{rejectModal.tenant.name}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500">Jumlah</span>
+                                    <span className="text-sm text-gray-500">{t('settings.billingAdmin.amount')}</span>
                                     <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(Number(rejectModal.amount))}</span>
                                 </div>
                             </div>
@@ -961,13 +961,13 @@ export default function BillingManagementPage() {
 
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Alasan Penolakan <span className="text-red-500">*</span>
+                                {t('settings.billingAdmin.rejectReasonLabel')} <span className="text-red-500">*</span>
                             </label>
                             <textarea
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
                                 rows={3}
-                                placeholder="Masukkan alasan penolakan..."
+                                placeholder={t('settings.billingAdmin.rejectReasonPlaceholder')}
                                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                             />
                         </div>
@@ -977,7 +977,7 @@ export default function BillingManagementPage() {
                                 onClick={() => setRejectModal(null)}
                                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                             >
-                                Batal
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={() => handleReject(rejectModal)}
@@ -989,7 +989,7 @@ export default function BillingManagementPage() {
                                 ) : (
                                     <X className="w-4 h-4" />
                                 )}
-                                Tolak Pembayaran
+                                {t('settings.billingAdmin.rejectPaymentBtn')}
                             </button>
                         </div>
                     </div>
@@ -1008,7 +1008,7 @@ export default function BillingManagementPage() {
                     >
                         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 dark:bg-gray-800 dark:border-gray-700">
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bukti Transfer</h2>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('settings.billingAdmin.transferProof')}</h2>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">{proofModal.proofFileName || 'bukti-transfer'}</p>
                             </div>
                             <button
@@ -1022,7 +1022,7 @@ export default function BillingManagementPage() {
                             {proofModal.proofFileUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? (
                                 <img
                                     src={getProofUrl(proofModal.proofFileUrl) || ''}
-                                    alt="Bukti Transfer"
+                                    alt={t('settings.billingAdmin.transferProof')}
                                     className="w-full rounded-lg border border-gray-200 dark:border-gray-600"
                                 />
                             ) : proofModal.proofFileUrl.match(/\.pdf$/i) ? (
@@ -1034,13 +1034,13 @@ export default function BillingManagementPage() {
                                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
                                     >
                                         <ExternalLink className="w-4 h-4" />
-                                        Buka PDF
+                                        {t('settings.billingAdmin.openPdf')}
                                     </a>
                                 </div>
                             ) : (
                                 <div className="text-center py-8 text-gray-500">
                                     <Eye className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                                    <p>Preview tidak tersedia untuk tipe file ini</p>
+                                    <p>{t('settings.billingAdmin.previewNotAvailable')}</p>
                                     <a
                                         href={getProofUrl(proofModal.proofFileUrl) || '#'}
                                         target="_blank"
@@ -1048,7 +1048,7 @@ export default function BillingManagementPage() {
                                         className="inline-flex items-center gap-2 mt-2 text-blue-600 hover:underline"
                                     >
                                         <ExternalLink className="w-4 h-4" />
-                                        Download File
+                                        {t('settings.billingAdmin.downloadFile')}
                                     </a>
                                 </div>
                             )}

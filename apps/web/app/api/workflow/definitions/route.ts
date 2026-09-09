@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * GET /api/workflow/definitions
@@ -22,9 +23,8 @@ export async function GET(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: definitions });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -127,8 +127,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: definition });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

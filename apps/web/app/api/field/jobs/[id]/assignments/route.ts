@@ -47,8 +47,7 @@ export async function GET(
             })),
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 

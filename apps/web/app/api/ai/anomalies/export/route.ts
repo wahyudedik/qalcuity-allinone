@@ -1,0 +1,88 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { handleApiError } from '@/lib/api-error';
+
+// ─── GET: Export anomalies to CSV ─────────────────────────────────────────────
+// Requires ADMIN/SUPERADMIN role. Supports filtering by severity, status, entityType.
+
+export async function GET(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        // ADMIN+ required for export
+        const role = session.user.role;
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: 'Forbidden' },
+                { status: 403 }
+            );
+        }
+
+        const tenantId = session.user.tenantId;
+        const { searchParams } = new URL(req.url);
+        const severity = searchParams.get('severity');
+        const status = searchParams.get('status');
+        const entityType = searchParams.get('entityType');
+
+        // ── Build Prisma where clause with tenant isolation ──
+        const where: Record<string, unknown> = { tenantId };
+        if (severity && severity !== 'ALL') where.severity = severity;
+        if (status && status !== 'ALL') where.status = status;
+        if (entityType && entityType !== 'ALL') where.entityType = entityType;
+
+        const anomalies = await prisma.anomalyDetection.findMany({
+            where,
+            orderBy: { detectedAt: 'desc' },
+        });
+
+        // ── Build CSV ──
+        const headers = [
+            'ID',
+            'Rule',
+            'Severity',
+            'Category',
+            'Entity Type',
+            'Entity ID',
+            'Message',
+            'Status',
+            'AI Risk Score',
+            'Detected At',
+            'Created At',
+        ];
+
+        const rows = anomalies.map((a) => [
+            a.id,
+            a.ruleName,
+            a.severity,
+            a.category,
+            a.entityType,
+            a.entityId,
+            `"${(a.message || '').replace(/"/g, '""')}"`, // Escape quotes for CSV
+            a.status,
+            a.aiRiskScore?.toString() || '',
+            a.detectedAt.toISOString(),
+            a.createdAt.toISOString(),
+        ]);
+
+        const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        return new NextResponse(csv, {
+            headers: {
+                'Content-Type': 'text/csv',
+                'Content-Disposition': `attachment; filename="anomalies-${dateStr}.csv"`,
+            },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * GET /api/workflow/history?entityType=INVOICE&entityId=xxx
@@ -47,8 +48,7 @@ export async function GET(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: history });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

@@ -49,12 +49,11 @@ export async function GET(
         };
 
         return NextResponse.json({ success: true, data });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 

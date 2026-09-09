@@ -8,6 +8,7 @@ import { createApprovalRequestSchema, formatZodError } from '@/lib/validation-sc
 import { createApprovalRequest, getApprovalLevels } from '@/lib/approval';
 import { checkAutoApproval } from '@/lib/auto-approval';
 import { notifyApprover } from '@/lib/approval-notifications';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -103,9 +104,8 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -205,8 +205,7 @@ export async function POST(request: Request) {
         }
 
         return NextResponse.json({ success: true, data: approvalRequest }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

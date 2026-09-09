@@ -8,6 +8,7 @@ import { importContactRowSchema, formatZodError } from '@/lib/validation-schemas
 import { parseCsv } from '@/lib/csv-parser';
 import { parseExcel } from '@/lib/excel-parser';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const BATCH_SIZE = 50;
@@ -226,7 +227,6 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
             },
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error) as NextResponse<ImportResult>;
     }
 }

@@ -10,22 +10,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import type { Prisma } from '@prisma/client'
 import { handleApiError } from '@/lib/api-error'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface CreateAlertBody {
-    name: string
-    description?: string
-    metricId: string
-    condition: string
-    threshold: number
-    severity?: string
-    notificationChannels?: string[]
-    recipients?: string[]
-    cooldownMinutes?: number
-}
+import { createAlertSchema } from '@/lib/validation-schemas'
 
 // ============================================
 // GET — List alert rules for tenant
@@ -105,46 +90,30 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { tenantId } = auth
-        const body: CreateAlertBody = await request.json()
 
-        // Validate required fields
-        if (!body.name || !body.metricId || !body.condition || body.threshold === undefined) {
+        // Validasi input dengan Zod schema
+        const body = await request.json()
+        const validated = createAlertSchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: name, metricId, condition, threshold' },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             )
         }
 
-        // Validate condition
-        const validConditions = ['below', 'above', 'equals', 'not_equals', 'changes_by']
-        if (!validConditions.includes(body.condition)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid condition. Must be one of: ${validConditions.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate severity
-        const validSeverities = ['low', 'medium', 'high', 'critical']
-        const severity = body.severity || 'medium'
-        if (!validSeverities.includes(severity)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid severity. Must be one of: ${validSeverities.join(', ')}` },
-                { status: 400 }
-            )
-        }
+        const severity = validated.data.severity || 'medium'
 
         const rule = await prisma.alertRule.create({
             data: {
-                name: body.name,
-                description: body.description,
-                metricId: body.metricId,
-                condition: body.condition,
-                threshold: body.threshold,
+                name: validated.data.name,
+                description: validated.data.description,
+                metricId: validated.data.metricId,
+                condition: validated.data.condition,
+                threshold: validated.data.threshold,
                 severity,
-                notificationChannels: body.notificationChannels || ['in_app'],
-                recipients: body.recipients || [],
-                cooldownMinutes: body.cooldownMinutes || 60,
+                notificationChannels: validated.data.notificationChannels || ['in_app'],
+                recipients: validated.data.recipients || [],
+                cooldownMinutes: validated.data.cooldownMinutes || 60,
                 tenantId,
             },
         })

@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { runPreCloseChecks } from '@/lib/period-closing';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 // ============================================
 // Validation
@@ -131,8 +132,7 @@ export async function POST(
             },
             message: `Periode "${period.name}" berhasil ditutup.`,
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

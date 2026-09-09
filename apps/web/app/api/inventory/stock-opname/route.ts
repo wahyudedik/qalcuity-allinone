@@ -5,6 +5,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { createStockOpnameSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -63,8 +64,7 @@ export async function GET(request: Request) {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -149,7 +149,6 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, data: opname }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }

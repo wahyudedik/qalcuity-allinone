@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { revokeSessionSchema, formatZodError } from '@/lib/validation-schemas'
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * GET /api/settings/security/sessions — List active sessions for the current user
@@ -52,8 +53,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }
 
@@ -113,8 +113,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }
 
@@ -210,7 +209,6 @@ export async function DELETE(request: Request) {
             data: { revokedCount: result.count },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }

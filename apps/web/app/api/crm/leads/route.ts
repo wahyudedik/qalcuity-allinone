@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { createLeadSchema, updateLeadSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -79,8 +80,7 @@ export async function GET(request: Request) {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -130,8 +130,7 @@ export async function POST(request: Request) {
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Lead', entityId: lead.id, newValues: { name: lead.name, company: lead.company, status: lead.status } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: lead }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 
@@ -200,8 +199,7 @@ export async function PUT(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Lead', entityId: id, newValues: updateData as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: lead });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 
@@ -236,7 +234,6 @@ export async function DELETE(request: Request) {
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Lead', entityId: id, oldValues: { name: existing.name, company: existing.company, status: existing.status } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

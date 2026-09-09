@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 // =============================================================================
 // GET /api/projects/[id]/gantt — Gantt chart data (tasks + dependencies + timeline)
@@ -147,7 +148,6 @@ export async function GET(
             },
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

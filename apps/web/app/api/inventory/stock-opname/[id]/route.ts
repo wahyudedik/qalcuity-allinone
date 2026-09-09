@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { formatZodError } from '@/lib/validation-schemas';
 import { z } from 'zod';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 const updateStockOpnameSchema = z.object({
     status: z.enum(['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
@@ -41,9 +42,8 @@ export async function GET(
         }
 
         return NextResponse.json({ success: true, data: opname });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -117,8 +117,7 @@ export async function PUT(
         });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

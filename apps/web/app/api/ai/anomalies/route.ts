@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { runAnomalyScan, type AnomalySeverity, type AnomalyStatus, type AnomalyEntityType } from '@/lib/ai/anomaly-detection';
+import { prisma } from '@/lib/db';
+import { runAnomalyScan } from '@/lib/ai/anomaly-detection';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
@@ -22,25 +23,24 @@ const querySchema = z.object({
     offset: z.coerce.number().int().min(0).optional(),
 });
 
-// ─── In-memory cache (per-tenant, 5 min TTL) ─────────────────────────────────
+// ─── Valid statuses constant ──────────────────────────────────────────────────
 
-const scanCache = new Map<string, { data: ReturnType<typeof runAnomalyScan> extends Promise<infer T> ? T : never; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const VALID_STATUSES = ['OPEN', 'INVESTIGATING', 'DISMISSED', 'BLOCKED'] as const;
 
-// ─── GET: List anomalies ─────────────────────────────────────────────────────
+// ─── GET: List anomalies (DB-first, fallback to scan) ────────────────────────
 
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: MSG.UNAUTHORIZED }, { status: 401 });
         }
 
         // ADMIN+ required for anomaly management
         const role = session.user.role;
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { error: 'Anda tidak memiliki akses untuk melihat anomali' },
+                { error: MSG.ANOMALY_ADMIN_ONLY },
                 { status: 403 }
             );
         }
@@ -59,40 +59,102 @@ export async function GET(req: Request) {
 
         if (!queryResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Parameter tidak valid', details: queryResult.error.issues },
+                { success: false, error: MSG.INVALID_INPUT, details: queryResult.error.issues },
                 { status: 400 }
             );
         }
 
         const { severity, status, entityType, limit = 50, offset = 0 } = queryResult.data;
 
-        // Get or run scan
-        const cached = scanCache.get(tenantId);
-        let scanResult;
-        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-            scanResult = cached.data;
-        } else {
-            scanResult = await runAnomalyScan(tenantId);
-            scanCache.set(tenantId, { data: scanResult, timestamp: Date.now() });
+        // ── Build Prisma where clause with tenant isolation ──
+        const where: Record<string, unknown> = { tenantId };
+        if (severity) where.severity = severity;
+        if (status) where.status = status;
+        if (entityType) where.entityType = entityType;
+
+        // ── Load from database first ──
+        const [dbAnomalies, total] = await Promise.all([
+            prisma.anomalyDetection.findMany({
+                where,
+                orderBy: [
+                    { severity: 'asc' }, // CRITICAL first (alphabetical: CRITICAL < HIGH < LOW < MEDIUM)
+                    { detectedAt: 'desc' },
+                ],
+                skip: offset,
+                take: limit,
+            }),
+            prisma.anomalyDetection.count({ where }),
+        ]);
+
+        // ── Auto-trigger scan if last scan is older than 1 hour (fire-and-forget) ──
+        const ONE_HOUR_MS = 60 * 60 * 1000;
+        if (total > 0 && dbAnomalies.length > 0) {
+            const lastScanTime = dbAnomalies[0]?.detectedAt;
+            if (!lastScanTime || (Date.now() - new Date(lastScanTime).getTime()) > ONE_HOUR_MS) {
+                // Fire-and-forget — don't await, don't block the response
+                runAnomalyScan(tenantId).catch(console.error);
+            }
         }
 
-        // Apply filters
+        // ── If DB has data, return from DB ──
+        if (total > 0) {
+            // Compute summary from DB
+            const summaryResult = await prisma.anomalyDetection.groupBy({
+                by: ['severity'],
+                where: { tenantId },
+                _count: true,
+            });
+
+            const summaryMap: Record<string, number> = {};
+            for (const row of summaryResult) {
+                summaryMap[row.severity] = row._count;
+            }
+
+            return NextResponse.json({
+                success: true,
+                data: {
+                    anomalies: dbAnomalies.map((a) => ({
+                        ...a,
+                        details: a.details ?? {},
+                        suggestedActions: a.suggestedActions
+                            ? JSON.parse(a.suggestedActions)
+                            : [],
+                    })),
+                    total,
+                    summary: {
+                        total: summaryResult.reduce((sum, r) => sum + r._count, 0),
+                        critical: summaryMap['CRITICAL'] || 0,
+                        high: summaryMap['HIGH'] || 0,
+                        medium: summaryMap['MEDIUM'] || 0,
+                        low: summaryMap['LOW'] || 0,
+                    },
+                    scanDuration: 0, // DB query, not a scan
+                    scannedAt: new Date().toISOString(),
+                    source: 'database',
+                },
+            });
+        }
+
+        // ── Fallback: no DB data → trigger scan ──
+        const scanResult = await runAnomalyScan(tenantId);
+
         let filtered = scanResult.anomalies;
         if (severity) filtered = filtered.filter((a) => a.severity === severity);
         if (status) filtered = filtered.filter((a) => a.status === status);
         if (entityType) filtered = filtered.filter((a) => a.entityType === entityType);
 
-        const total = filtered.length;
+        const fallbackTotal = filtered.length;
         filtered = filtered.slice(offset, offset + limit);
 
         return NextResponse.json({
             success: true,
             data: {
                 anomalies: filtered,
-                total,
+                total: fallbackTotal,
                 summary: scanResult.summary,
                 scanDuration: scanResult.scanDuration,
                 scannedAt: scanResult.scannedAt,
+                source: 'scan',
             },
         });
     } catch (error) {
@@ -106,14 +168,14 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: MSG.UNAUTHORIZED }, { status: 401 });
         }
 
         // ADMIN+ required for manual scan
         const role = session.user.role;
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { error: 'Anda tidak memiliki akses untuk menjalankan scan' },
+                { error: MSG.ANOMALY_ADMIN_ONLY },
                 { status: 403 }
             );
         }
@@ -124,7 +186,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:anomalies:scan:${tenantId}:${ip}`, 5, 300000); // 5 per 5 min
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -133,7 +195,7 @@ export async function POST(req: Request) {
         const validation = scanRequestSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.INVALID_INPUT' },
+                { success: false, error: MSG.INVALID_INPUT },
                 { status: 400 }
             );
         }
@@ -148,17 +210,18 @@ export async function POST(req: Request) {
             request: req,
         });
 
-        // Run scan (clear cache if forced)
-        if (validation.data.force) {
-            scanCache.delete(tenantId);
-        }
-
+        // Run scan — runAnomalyScan() internally persists to DB via persistAnomalies()
         const scanResult = await runAnomalyScan(tenantId);
-        scanCache.set(tenantId, { data: scanResult, timestamp: Date.now() });
+
+        // Count how many anomalies were persisted (deduplicated by entityId+ruleId)
+        const persistedCount = scanResult.anomalies.length;
 
         return NextResponse.json({
             success: true,
-            data: scanResult,
+            data: {
+                ...scanResult,
+                persistedCount,
+            },
         });
     } catch (error) {
         return handleApiError(error);

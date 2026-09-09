@@ -23,6 +23,7 @@ import {
     ClipboardCheck,
     Check,
     X,
+    Shield,
     type LucideIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -104,6 +105,15 @@ interface ApprovalsData {
     requests: ApprovalRequest[]
 }
 
+interface AnomalySummary {
+    total: number
+    critical: number
+    high: number
+    medium: number
+    low: number
+    lastScanTime: string | null
+}
+
 const ENTITY_LABELS: Record<string, string> = {
     INVOICE: 'Invoice',
     PURCHASE_ORDER: 'PO',
@@ -117,6 +127,7 @@ export default function DashboardPage() {
     const [kpi, setKpi] = useState<KpiData | null>(null)
     const [charts, setCharts] = useState<ChartsData | null>(null)
     const [approvals, setApprovals] = useState<ApprovalsData>({ count: 0, requests: [] })
+    const [anomalySummary, setAnomalySummary] = useState<AnomalySummary | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { t } = useTranslation()
@@ -128,12 +139,13 @@ export default function DashboardPage() {
                 setLoading(true)
                 setError(null)
 
-                // Fetch dashboard stats + KPI + charts + approvals in parallel
-                const [statsRes, kpiRes, chartsRes, approvalsRes] = await Promise.all([
+                // Fetch dashboard stats + KPI + charts + approvals + anomalies in parallel
+                const [statsRes, kpiRes, chartsRes, approvalsRes, anomaliesRes] = await Promise.all([
                     fetch('/api/dashboard/stats'),
                     fetch('/api/dashboard/kpi'),
                     fetch('/api/dashboard/charts'),
                     fetch('/api/dashboard/approvals'),
+                    fetch('/api/ai/anomalies?limit=1').catch(() => null), // Graceful degradation
                 ])
 
                 const [statsJson, kpiJson, chartsJson, approvalsJson] = await Promise.all([
@@ -157,6 +169,17 @@ export default function DashboardPage() {
 
                 if (approvalsJson.success) {
                     setApprovals(approvalsJson.data)
+                }
+
+                // Process anomaly summary (graceful degradation if fetch fails)
+                if (anomaliesRes?.ok) {
+                    const anomaliesJson = await anomaliesRes.json().catch(() => null)
+                    if (anomaliesJson?.success && anomaliesJson.data?.summary) {
+                        setAnomalySummary({
+                            ...anomaliesJson.data.summary,
+                            lastScanTime: anomaliesJson.data.scannedAt || null,
+                        })
+                    }
                 }
             } catch {
                 setError(t('dashboard.failedToLoad'))
@@ -387,6 +410,58 @@ export default function DashboardPage() {
                             )
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* Anomaly Detection Summary Widget */}
+            {anomalySummary && anomalySummary.total > 0 && (
+                <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="flex items-center justify-between">
+                        <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <Shield className="h-5 w-5 text-purple-600" />
+                            {t('dashboard.anomalyDetection') || 'Anomaly Detection'}
+                            <span className="ml-2 inline-flex items-center justify-center rounded-full bg-purple-100 px-2.5 py-0.5 text-sm font-bold text-purple-800 dark:bg-purple-800 dark:text-purple-200">
+                                {anomalySummary.total}
+                            </span>
+                        </h3>
+                        <Link
+                            href="/dashboard/ai/anomalies"
+                            className="text-sm font-medium text-purple-700 hover:text-purple-900 dark:text-purple-300 dark:hover:text-purple-100"
+                        >
+                            {t('dashboard.viewAllLink') || 'Lihat Semua'} →
+                        </Link>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {anomalySummary.critical > 0 && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+                                <p className="text-xs font-medium text-red-600 dark:text-red-400">Critical</p>
+                                <p className="mt-1 text-2xl font-bold text-red-700 dark:text-red-400">{anomalySummary.critical}</p>
+                            </div>
+                        )}
+                        {anomalySummary.high > 0 && (
+                            <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-900/20">
+                                <p className="text-xs font-medium text-orange-600 dark:text-orange-400">High</p>
+                                <p className="mt-1 text-2xl font-bold text-orange-700 dark:text-orange-400">{anomalySummary.high}</p>
+                            </div>
+                        )}
+                        {anomalySummary.medium > 0 && (
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
+                                <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">Medium</p>
+                                <p className="mt-1 text-2xl font-bold text-yellow-700 dark:text-yellow-400">{anomalySummary.medium}</p>
+                            </div>
+                        )}
+                        {anomalySummary.low > 0 && (
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
+                                <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Low</p>
+                                <p className="mt-1 text-2xl font-bold text-blue-700 dark:text-blue-400">{anomalySummary.low}</p>
+                            </div>
+                        )}
+                    </div>
+                    {anomalySummary.lastScanTime && (
+                        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                            {t('dashboard.lastScan') || 'Scan terakhir'}: {formatDateTime(anomalySummary.lastScanTime)}
+                        </p>
+                    )}
                 </div>
             )}
 

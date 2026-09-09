@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { DEFAULT_INDUSTRY_CONFIGS, SUPPORTED_INDUSTRIES } from '@qalcuity/industry-config';
+import { handleApiError } from '@/lib/api-error';
 
 // ─── GET /api/settings/industry/defaults ─────────────────────────────────────
 
@@ -22,7 +23,6 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

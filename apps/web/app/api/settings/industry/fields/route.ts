@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { getTenantCustomFields } from '@/lib/industry-config';
+import { handleApiError } from '@/lib/api-error';
 
 // ─── GET /api/settings/industry/fields?entity=product ────────────────────────
 
@@ -32,7 +33,6 @@ export async function GET(request: Request) {
             data: fields,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

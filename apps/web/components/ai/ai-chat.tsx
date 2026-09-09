@@ -99,7 +99,7 @@ export function AIChat() {
             <button
                 onClick={() => setIsOpen(true)}
                 className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700"
-                aria-label="Buka AI Assistant"
+                aria-label={t('ai.chat.openAssistant')}
             >
                 <Bot className="h-6 w-6" />
             </button>
@@ -119,8 +119,8 @@ export function AIChat() {
                     </div>
                     {!isMinimized && (
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">AI Assistant</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Qalcuity AI</p>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('ai.chat.assistantTitle')}</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('ai.chat.assistantSubtitle')}</p>
                         </div>
                     )}
                 </div>
@@ -128,14 +128,14 @@ export function AIChat() {
                     <button
                         onClick={() => setIsMinimized(!isMinimized)}
                         className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-                        aria-label={isMinimized ? 'Maximize' : 'Minimize'}
+                        aria-label={isMinimized ? t('ai.chat.maximize') : t('ai.chat.minimize')}
                     >
                         {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
                     </button>
                     <button
                         onClick={() => setIsOpen(false)}
                         className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-                        aria-label="Tutup"
+                        aria-label={t('ai.chat.close')}
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -202,22 +202,22 @@ export function AIChat() {
                     {/* Quick Actions */}
                     <div className="flex flex-wrap gap-2 px-4 pb-2">
                         <button
-                            onClick={() => setInput('Tampilkan penjualan bulan ini')}
+                            onClick={() => setInput(t('ai.exampleQ1'))}
                             className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                         >
-                            <BarChart3 className="mr-1 inline h-3 w-3" /> Penjualan
+                            <BarChart3 className="mr-1 inline h-3 w-3" /> {t('ai.chat.quickSales')}
                         </button>
                         <button
-                            onClick={() => setInput('Status invoice')}
+                            onClick={() => setInput(t('ai.exampleQ2'))}
                             className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                         >
-                            <FileText className="mr-1 inline h-3 w-3" /> Invoice
+                            <FileText className="mr-1 inline h-3 w-3" /> {t('ai.chat.quickInvoice')}
                         </button>
                         <button
-                            onClick={() => setInput('Analisis profit')}
+                            onClick={() => setInput(t('ai.exampleQ4'))}
                             className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                         >
-                            <DollarSign className="mr-1 inline h-3 w-3" /> Profit
+                            <DollarSign className="mr-1 inline h-3 w-3" /> {t('ai.chat.quickProfit')}
                         </button>
                     </div>
 
@@ -229,7 +229,7 @@ export function AIChat() {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="Tanyakan sesuatu..."
+                                placeholder={t('ai.chat.placeholder')}
                                 className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                             />
                             <button

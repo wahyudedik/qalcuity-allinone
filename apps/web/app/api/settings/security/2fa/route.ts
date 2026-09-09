@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
+import { handleApiError } from '@/lib/api-error'
 import {
     generateSecret,
     generateTOTP,
@@ -55,8 +56,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }
 
@@ -171,8 +171,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }
 
@@ -261,7 +260,6 @@ export async function DELETE(request: Request) {
             message: '2FA has been disabled successfully',
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }

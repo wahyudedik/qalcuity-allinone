@@ -33,8 +33,7 @@ export async function GET(
 
         return NextResponse.json({ success: true, data: lead });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -115,7 +114,6 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

@@ -3,6 +3,7 @@ import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
+import { handleApiError } from '@/lib/api-error';
 
 interface TestResult {
     success: boolean
@@ -99,11 +100,10 @@ export async function POST(
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        if (message.startsWith('Forbidden')) {
-            return NextResponse.json({ success: false, error: message }, { status: 403 })
+        if (error instanceof Error && error.message.includes('Forbidden')) {
+            return NextResponse.json({ success: false, error: error.message }, { status: 403 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }
 

@@ -3,6 +3,7 @@ import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -133,7 +134,6 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { createEmployeeSchema, updateEmployeeSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -76,9 +77,8 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -148,15 +148,8 @@ export async function POST(request: Request) {
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Employee', entityId: employee.id, newValues: { name: employee.name, email: employee.email, position: employee.position } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: employee }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message.includes('Unique constraint')) {
-            return NextResponse.json(
-                { success: false, error: MSG.EMPLOYEE_DATA_DUPLICATE, code: 'EMPLOYEE_DATA_DUPLICATE' },
-                { status: 409 }
-            );
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -215,9 +208,8 @@ export async function PUT(request: Request) {
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Employee', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: employee });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -260,8 +252,7 @@ export async function DELETE(request: Request) {
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Employee', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

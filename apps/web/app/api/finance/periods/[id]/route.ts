@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 // ============================================
 // GET — Detail period
@@ -79,9 +80,8 @@ export async function GET(
                 },
             },
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -171,8 +171,7 @@ export async function PUT(
             { success: false, error: 'Invalid action', code: 'VALIDATION_ERROR' },
             { status: 400 }
         );
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

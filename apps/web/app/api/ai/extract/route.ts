@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { extractDocument, type DocumentType } from '@/lib/ai/document-extraction';
+import { extractDocument, persistExtraction, type DocumentType } from '@/lib/ai/document-extraction';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
@@ -95,6 +95,10 @@ export async function POST(req: Request) {
             documentType: documentType as DocumentType,
             mimeType,
         });
+
+        // Persist extraction result to history (fire-and-forget)
+        const fileSizeBytes = Math.ceil((fileBase64.length * 3) / 4);
+        persistExtraction(tenantId, result, sanitizedFileName, mimeType, fileSizeBytes).catch(console.error);
 
         return NextResponse.json({
             success: true,

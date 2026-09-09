@@ -7,6 +7,7 @@ import { sendEmail } from '@/lib/email';
 import { sanitizeObject } from '@/lib/sanitize';
 import { z } from 'zod';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 const sendEmailSchema = z.object({
     to: z.string().email(MSG.INVALID_EMAIL_FORMAT),
@@ -66,8 +67,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
-        const message = error instanceof Error ? error.message : MSG.INTERNAL_SERVER_ERROR;
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -151,7 +151,6 @@ export async function POST(request: Request) {
             },
         }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
