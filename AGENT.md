@@ -268,7 +268,7 @@ docs/UI_UX.md     ← Aturan UI/UX
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                  DATA LAYER                              │
-│  Prisma 5.15 → PostgreSQL (75+ models, 65+ indexes)     │
+│  Prisma 5.15 → PostgreSQL (90+ models, 65+ indexes)     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -294,7 +294,7 @@ docs/UI_UX.md     ← Aturan UI/UX
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (75+ models) |
+| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (90+ models) |
 | `@qalcuity/types` | ✅ Active | Shared TypeScript types |
 | `@qalcuity/utils` | ✅ Active | Utility functions |
 | `@qalcuity/config` | ✅ Active | App constants + env config |
@@ -304,7 +304,7 @@ docs/UI_UX.md     ← Aturan UI/UX
 | `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with ~120 API routes |
 | `@qalcuity/workflow` | ✅ Active | Workflow engine (state machine) — integrated with 8 entities |
 | `@qalcuity/industry-config` | ✅ Active | Industry configuration engine |
-| `@qalcuity/redis` | ✅ Active | Redis client + rate limiter (production-ready) |
+| *(internal)* Redis client | ✅ Active | Redis client + rate limiter — internal module di [`apps/web/lib/redis.ts`](apps/web/lib/redis.ts) |
 
 ### Codebase Stats (Audit: 8 September 2026 — Phase 4 Batch 2 Updated)
 
@@ -316,14 +316,14 @@ docs/UI_UX.md     ← Aturan UI/UX
 | API routes | 200+ |
 | RBAC route entries | 120+ |
 | Pages | 60+ |
-| Prisma models | 75+ |
+| Prisma models | 90+ |
 | Database indexes | 65+ |
 | Zod schemas | 120+ |
 | i18n keys | 1170+ |
 | Error boundary files | 94 |
 | Loading state files | 98 |
 | E2E tests | 63 (63 PASS) |
-| Shared packages | 12 (all active) |
+| Shared packages | 11 (all active) + 1 internal redis module |
 | Foundation engine packages | 3 |
 | UI components | 11 |
 | Validation schemas (apps/web) | 120+ |
@@ -693,98 +693,100 @@ Sebelum menandai task selesai, tanyakan:
 
 ### 💰 AI Features — Termasuk dalam Sewa
 
+> ⚠️ **Catatan Penting:** Beberapa fitur AI membutuhkan environment variable `AI_API_KEY` untuk berfungsi dengan AI provider yang sebenarnya. Tanpa key, fitur akan menggunakan mode mock/keyword-based.
+
 | Komponen AI | Status |
 |-------------|--------|
-| **AI Agent** (Finance, Sales, Inventory, HR, Support) | ✅ Built-in |
-| **Natural Language Query** | ✅ Built-in |
-| **Smart Document Extraction** | ✅ Built-in |
-| **AI Template Generator** | ✅ Built-in |
-| **Anomaly Detection** | ✅ Built-in |
-| **Cash Flow Prediction** | ✅ Built-in |
+| **AI Agent** (Finance, Sales, Inventory, HR, Support) | ❌ Planned — Belum diimplementasi sebagai autonomous agents |
+| **Natural Language Query** | ✅ Functional (keyword-based) |
+| **Smart Document Extraction** | ✅ Functional (membutuhkan `AI_API_KEY` untuk AI provider; tanpa key = mock extraction) |
+| **AI Template Generator** | ❌ Planned — Belum diimplementasi |
+| **Anomaly Detection** | ⚠️ Partial (hanya Invoice, 6 dari 12 rules aktif; membutuhkan `AI_API_KEY` untuk full mode) |
+| **Cash Flow Prediction** | ❌ Planned — Belum diimplementasi |
 
 ### 12.1 Finance Agent 🏦
 
 **Tujuan:** Membantu user dengan tugas-tugas keuangan secara otomatis.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **Auto-Generate Invoice** | Buat invoice dari data transaksi | "Buat invoice untuk PT ABC" |
-| **Anomaly Detection** | Deteksi transaksi mencurigakan | Real-time monitoring |
-| **Cash Flow Prediction** | Prediksi arus kas 30/60/90 hari | "Prediksi cash flow bulan depan" |
-| **Payment Reminder** | Kirim reminder otomatis untuk overdue | Scheduled task |
-| **Expense Categorization** | Auto-kategorikan expense dari receipt | Upload receipt |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **Auto-Generate Invoice** | Buat invoice dari data transaksi | 📋 Planned | — |
+| **Anomaly Detection** | Deteksi transaksi mencurigakan | ⚠️ Partial — hanya Invoice, 6 dari 12 rules | Real-time monitoring |
+| **Cash Flow Prediction** | Prediksi arus kas 30/60/90 hari | 📋 Planned | — |
+| **Payment Reminder** | Kirim reminder otomatis untuk overdue | 📋 Planned | — |
+| **Expense Categorization** | Auto-kategorikan expense dari receipt | 📋 Planned | — |
 
 ### 12.2 Sales Agent 📈
 
 **Tujuan:** Meningkatkan konversi dan efisiensi sales team.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **Win Probability** | Prediksi peluang menang deal | Setiap perubahan deal stage |
-| **Next Best Action** | Sarankan langkah selanjutnya | Opening deal page |
-| **Lead Scoring** | Auto-score leads berdasarkan engagement | New lead masuk |
-| **Sales Forecasting** | Prediksi revenue dari pipeline | "Forecast penjualan Q3" |
-| **Competitor Analysis** | Analisis win/loss vs kompetitor | "Analisis kompetitor" |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **Win Probability** | Prediksi peluang menang deal | 📋 Planned | — |
+| **Next Best Action** | Sarankan langkah selanjutnya | 📋 Planned | — |
+| **Lead Scoring** | Auto-score leads berdasarkan engagement | 📋 Planned | — |
+| **Sales Forecasting** | Prediksi revenue dari pipeline | 📋 Planned | — |
+| **Competitor Analysis** | Analisis win/loss vs kompetitor | 📋 Planned | — |
 
 ### 12.3 Inventory Agent 📦
 
 **Tujuan:** Optimasi stok dan supply chain.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **Stockout Prediction** | Prediksi kapan stok habis | Real-time monitoring |
-| **Auto-reorder Suggestion** | Sarankan reorder berdasarkan demand | Stok menipis |
-| **Demand Forecasting** | Prediksi demand mingguan/bulanan | "Forecast demand produk X" |
-| **Dead Stock Detection** | Identifikasi produk tidak bergerak | Weekly scan |
-| **Price Monitoring** | Bandingkan harga supplier | "Bandingkan harga supplier A vs B" |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **Stockout Prediction** | Prediksi kapan stok habis | 📋 Planned | — |
+| **Auto-reorder Suggestion** | Sarankan reorder berdasarkan demand | 📋 Planned | — |
+| **Demand Forecasting** | Prediksi demand mingguan/bulanan | 📋 Planned | — |
+| **Dead Stock Detection** | Identifikasi produk tidak bergerak | 📋 Planned | — |
+| **Price Monitoring** | Bandingkan harga supplier | 📋 Planned | — |
 
 ### 12.4 HR Agent 👥
 
 **Tujuan:** Automasi HR tasks dan document generation.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **Contract Generator** | Generate kontrak kerja dari template | "Buat kontrak untuk karyawan baru" |
-| **Leave Prediction** | Prediksi pattern cuti | "Prediksi cuti bulan depan" |
-| **Attrition Risk** | Identifikasi karyawan berisiko resign | Monthly analysis |
-| **Performance Insight** | Analisis performa tim | "Analisis performa Q2" |
-| **Compliance Check** | Cek kelengkapan dokumen | "Cek dokumen karyawan tidak lengkap" |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **Contract Generator** | Generate kontrak kerja dari template | 📋 Planned | — |
+| **Leave Prediction** | Prediksi pattern cuti | 📋 Planned | — |
+| **Attrition Risk** | Identifikasi karyawan berisiko resign | 📋 Planned | — |
+| **Performance Insight** | Analisis performa tim | 📋 Planned | — |
+| **Compliance Check** | Cek kelengkapan dokumen | 📋 Planned | — |
 
 ### 12.5 Support Agent 🎧
 
 **Tujuan:** Meningkatkan efisiensi customer support.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **Auto-Categorize** | Kategorikan tiket otomatis | New ticket masuk |
-| **Suggested Reply** | Sarankan balasan berdasarkan konten tiket | Opening tiket |
-| **Sentiment Analysis** | Analisis sentimen customer | Real-time |
-| **Knowledge Suggestion** | Sarankan artikel dari knowledge base | Agent menulis reply |
-| **Escalation Predictor** | Prediksi tiket yang perlu escalation | Pattern detection |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **Auto-Categorize** | Kategorikan tiket otomatis | 📋 Planned | — |
+| **Suggested Reply** | Sarankan balasan berdasarkan konten tiket | 📋 Planned | — |
+| **Sentiment Analysis** | Analisis sentimen customer | 📋 Planned | — |
+| **Knowledge Suggestion** | Sarankan artikel dari knowledge base | 📋 Planned | — |
+| **Escalation Predictor** | Prediksi tiket yang perlu escalation | 📋 Planned | — |
 
 ### 12.6 Document Agent 📄
 
 **Tujuan:** Ekstraksi dan pemrosesan dokumen.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **PDF Extraction** | Ekstraksi data dari PDF | Upload PDF |
-| **OCR Processing** | Scan dokumen fisik | Upload foto |
-| **Auto-validation** | Validasi kelengkapan data | Setelah extraction |
-| **Auto-entry** | Push data ke system | Validation passed |
-| **Batch Processing** | Proses multiple dokumen | Upload batch |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **PDF Extraction** | Ekstraksi data dari PDF | ✅ Functional (butuh `AI_API_KEY`) | Upload PDF |
+| **OCR Processing** | Scan dokumen fisik | 📋 Planned | — |
+| **Auto-validation** | Validasi kelengkapan data | ✅ Functional | Setelah extraction |
+| **Auto-entry** | Push data ke system | 📋 Planned | — |
+| **Batch Processing** | Proses multiple dokumen | 📋 Planned | — |
 
 ### 12.7 Template Agent 📝
 
 **Tujuan:** Generate dokumen HR dan bisnis dari template.
 
-| Fitur | Deskripsi | Trigger |
-|-------|-----------|---------|
-| **Contract Generation** | Generate kontrak dari spesifikasi | "Buat kontrak kerja" |
-| **JD Generator** | Generate job description | "Buat JD untuk Marketing Manager" |
-| **Email Template** | Generate email contextual | "Draft email penawaran" |
-| **Report Summary** | Ringkas laporan panjang | "Ringkas laporan Q2" |
-| **Custom Template** | Buat template baru | "Buat template surat peringatan" |
+| Fitur | Deskripsi | Status | Trigger |
+|-------|-----------|--------|---------|
+| **Contract Generation** | Generate kontrak dari spesifikasi | 📋 Planned | — |
+| **JD Generator** | Generate job description | 📋 Planned | — |
+| **Email Template** | Generate email contextual | 📋 Planned | — |
+| **Report Summary** | Ringkas laporan panjang | 📋 Planned | — |
+| **Custom Template** | Buat template baru | 📋 Planned | — |
 
 ---
 
@@ -955,6 +957,6 @@ Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap a
 
 ---
 
-**Last Updated:** September 8, 2026 (Phase 4 Batch 2: Error Handling, i18n, Build Config)
+**Last Updated:** September 9, 2026 (AI Features Status Accuracy Fix)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.2 — Phase 4 Batch 2: api-messages.ts pattern, error handling consolidation, codebase stats update
+**Document Version:** 6.3 — AI features status accuracy, AI_API_KEY notes, agent implementation status
