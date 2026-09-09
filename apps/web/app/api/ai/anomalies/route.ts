@@ -116,8 +116,8 @@ export async function GET(req: Request) {
                     anomalies: dbAnomalies.map((a) => ({
                         ...a,
                         details: a.details ?? {},
-                        suggestedActions: a.suggestedActions
-                            ? JSON.parse(a.suggestedActions)
+                        suggestedActions: Array.isArray(a.suggestedActions)
+                            ? a.suggestedActions
                             : [],
                     })),
                     total,
