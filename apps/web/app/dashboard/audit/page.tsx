@@ -21,37 +21,37 @@ type AuditLog = {
     timestamp: string
 }
 
-const actionConfig: Record<string, { bg: string; text: string; label: string }> = {
-    CREATE: { bg: 'bg-green-100', text: 'text-green-700', label: 'Pembuatan' },
-    UPDATE: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Pembaruan' },
-    DELETE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Penghapusan' },
-    READ: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Pembacaan' },
-    TEST: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Testing' },
+const actionConfig: Record<string, { bg: string; text: string; labelKey: string }> = {
+    CREATE: { bg: 'bg-green-100', text: 'text-green-700', labelKey: 'audit.actionLabel.create' },
+    UPDATE: { bg: 'bg-blue-100', text: 'text-blue-700', labelKey: 'audit.actionLabel.update' },
+    DELETE: { bg: 'bg-red-100', text: 'text-red-700', labelKey: 'audit.actionLabel.delete' },
+    READ: { bg: 'bg-gray-100', text: 'text-gray-700', labelKey: 'audit.actionLabel.read' },
+    TEST: { bg: 'bg-purple-100', text: 'text-purple-700', labelKey: 'audit.actionLabel.testing' },
 }
 
 const modules = ['all', 'Invoice', 'Deal', 'Lead', 'Contact', 'Product', 'Employee', 'Payment', 'Quotation', 'PurchaseOrder']
 const actions = ['all', 'CREATE', 'UPDATE', 'DELETE']
 
-const moduleLabels: Record<string, string> = {
-    all: 'Semua Modul',
-    Invoice: 'Finance',
-    Deal: 'Sales',
-    Lead: 'CRM',
-    Contact: 'CRM',
-    Product: 'Inventory',
-    Employee: 'HR',
-    Payment: 'Finance',
-    Quotation: 'Finance',
-    PurchaseOrder: 'Finance',
-    TenantNotificationSettings: 'Settings',
-    TenantIntegration: 'Settings',
+const moduleKeyMap: Record<string, string> = {
+    all: 'audit.module.all',
+    Invoice: 'audit.module.invoice',
+    Deal: 'audit.module.deal',
+    Lead: 'audit.module.lead',
+    Contact: 'audit.module.contact',
+    Product: 'audit.module.product',
+    Employee: 'audit.module.employee',
+    Payment: 'audit.module.payment',
+    Quotation: 'audit.module.quotation',
+    PurchaseOrder: 'audit.module.purchaseOrder',
+    TenantNotificationSettings: 'audit.module.tenantNotificationSettings',
+    TenantIntegration: 'audit.module.tenantIntegration',
 }
 
-const actionLabels: Record<string, string> = {
-    all: 'Semua Aksi',
-    CREATE: 'Pembuatan',
-    UPDATE: 'Pembaruan',
-    DELETE: 'Penghapusan',
+const actionKeyMap: Record<string, string> = {
+    all: 'audit.filterAll',
+    CREATE: 'audit.actionLabel.create',
+    UPDATE: 'audit.actionLabel.update',
+    DELETE: 'audit.actionLabel.delete',
 }
 
 export default function AuditPage() {
@@ -221,7 +221,7 @@ export default function AuditPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Download className="w-4 h-4" />
-                    Export CSV
+                    {t('audit.exportCsv')}
                 </button>
             </div>
 
@@ -266,7 +266,7 @@ export default function AuditPage() {
                             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
                             {modules.map(m => (
-                                <option key={m} value={m}>{moduleLabels[m] || m}</option>
+                                <option key={m} value={m}>{t(moduleKeyMap[m] || m)}</option>
                             ))}
                         </select>
                         <select
@@ -275,7 +275,7 @@ export default function AuditPage() {
                             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
                             {actions.map(a => (
-                                <option key={a} value={a}>{actionLabels[a] || a}</option>
+                                <option key={a} value={a}>{t(actionKeyMap[a] || a)}</option>
                             ))}
                         </select>
                     </div>
@@ -287,7 +287,7 @@ export default function AuditPage() {
                                 type="date"
                                 value={dateFrom}
                                 onChange={(e) => setDateFrom(e.target.value)}
-                                placeholder="Dari tanggal"
+                                placeholder={t('audit.dateFrom')}
                                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
                             <span className="text-gray-400 text-sm">—</span>
@@ -295,7 +295,7 @@ export default function AuditPage() {
                                 type="date"
                                 value={dateTo}
                                 onChange={(e) => setDateTo(e.target.value)}
-                                placeholder="Sampai tanggal"
+                                placeholder={t('audit.dateTo')}
                                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
                         </div>
@@ -305,7 +305,7 @@ export default function AuditPage() {
                                 className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                             >
                                 <X className="w-4 h-4" />
-                                Reset Filter
+                                {t('audit.resetFilter')}
                             </button>
                         )}
                     </div>
@@ -347,7 +347,7 @@ export default function AuditPage() {
                             {/* Desktop Table View */}
                             <div className="hidden md:block divide-y divide-gray-100 dark:divide-gray-700">
                                 {logs.map((log) => {
-                                    const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', label: log.action }
+                                    const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', labelKey: '' }
                                     const isExpanded = expandedId === log.id
                                     const details = parseDetails(log.details)
                                     const oldVals = parseDetails(log.oldValues)
@@ -378,10 +378,10 @@ export default function AuditPage() {
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className="font-medium text-gray-900 dark:text-white">{log.userName}</span>
                                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
-                                                                {colorConfig.label}
+                                                                {colorConfig.labelKey ? t(colorConfig.labelKey) : log.action}
                                                             </span>
                                                             <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                                                                {moduleLabels[log.entity] || log.entity}
+                                                                {t(moduleKeyMap[log.entity] || log.entity)}
                                                             </span>
                                                         </div>
                                                         <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{log.description}</p>
@@ -406,24 +406,24 @@ export default function AuditPage() {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-10">
                                                         {/* Left: Metadata */}
                                                         <div className="space-y-2">
-                                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detail Aktivitas</h4>
+                                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('audit.detailActivity')}</h4>
                                                             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2 text-sm">
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-500 dark:text-gray-400">Waktu</span>
+                                                                    <span className="text-gray-500 dark:text-gray-400">{t('audit.time')}</span>
                                                                     <span className="text-gray-900 dark:text-white font-medium">{formatTimestampFull(log.timestamp)}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-500 dark:text-gray-400">User</span>
+                                                                    <span className="text-gray-500 dark:text-gray-400">{t('audit.user')}</span>
                                                                     <span className="text-gray-900 dark:text-white">{log.userName}</span>
                                                                 </div>
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-500 dark:text-gray-400">Aksi</span>
+                                                                    <span className="text-gray-500 dark:text-gray-400">{t('audit.action')}</span>
                                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
                                                                         {log.action}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex justify-between">
-                                                                    <span className="text-gray-500 dark:text-gray-400">Modul</span>
+                                                                    <span className="text-gray-500 dark:text-gray-400">{t('audit.moduleHeader')}</span>
                                                                     <span className="text-gray-900 dark:text-white">{log.entity}</span>
                                                                 </div>
                                                                 {log.entityId && (
@@ -441,7 +441,7 @@ export default function AuditPage() {
 
                                                         {/* Right: Changes */}
                                                         <div className="space-y-2">
-                                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Perubahan Data</h4>
+                                                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('audit.dataChanges')}</h4>
                                                             {details ? (
                                                                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3">
                                                                     {log.action === 'UPDATE' && oldVals ? (
@@ -469,7 +469,7 @@ export default function AuditPage() {
                                                                 </div>
                                                             ) : (
                                                                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-sm text-gray-500 dark:text-gray-400 italic">
-                                                                    Tidak ada detail perubahan tersedia
+                                                                    {t('audit.noChanges')}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -484,7 +484,7 @@ export default function AuditPage() {
                             {/* Mobile Card View */}
                             <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
                                 {logs.map((log) => {
-                                    const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', label: log.action }
+                                    const colorConfig = actionConfig[log.action] || { bg: 'bg-gray-100', text: 'text-gray-700', labelKey: '' }
                                     const isExpanded = expandedId === log.id
                                     const details = parseDetails(log.details)
                                     const oldVals = parseDetails(log.oldValues)
@@ -512,10 +512,10 @@ export default function AuditPage() {
                                                 </div>
                                                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
-                                                        {colorConfig.label}
+                                                        {colorConfig.labelKey ? t(colorConfig.labelKey) : log.action}
                                                     </span>
                                                     <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                                                        {moduleLabels[log.entity] || log.entity}
+                                                        {t(moduleKeyMap[log.entity] || log.entity)}
                                                     </span>
                                                     <span className="text-xs text-gray-500 dark:text-gray-400">{formatTimestamp(log.timestamp)}</span>
                                                 </div>
@@ -529,24 +529,24 @@ export default function AuditPage() {
                                             {isExpanded && (
                                                 <div className="px-4 pb-4 pt-2 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700">
                                                     <div className="space-y-3">
-                                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detail Aktivitas</h4>
+                                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('audit.detailActivity')}</h4>
                                                         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2 text-sm">
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500 dark:text-gray-400">Waktu</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">{t('audit.time')}</span>
                                                                 <span className="text-gray-900 dark:text-white font-medium text-right">{formatTimestampFull(log.timestamp)}</span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500 dark:text-gray-400">User</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">{t('audit.user')}</span>
                                                                 <span className="text-gray-900 dark:text-white">{log.userName}</span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500 dark:text-gray-400">Aksi</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">{t('audit.action')}</span>
                                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorConfig.bg} ${colorConfig.text}`}>
                                                                     {log.action}
                                                                 </span>
                                                             </div>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-500 dark:text-gray-400">Modul</span>
+                                                                <span className="text-gray-500 dark:text-gray-400">{t('audit.moduleHeader')}</span>
                                                                 <span className="text-gray-900 dark:text-white">{log.entity}</span>
                                                             </div>
                                                             {log.entityId && (
@@ -563,7 +563,7 @@ export default function AuditPage() {
 
                                                         {details && (
                                                             <>
-                                                                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Perubahan Data</h4>
+                                                                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('audit.dataChanges')}</h4>
                                                                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-3">
                                                                     {log.action === 'UPDATE' && oldVals ? (
                                                                         <div className="space-y-2">

@@ -87,7 +87,7 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                     {t('ai.noAnomalies') || 'Tidak ada anomali terdeteksi'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Semua transaksi terlihat normal
+                    {t('ai.anomaly.allNormal')}
                 </p>
             </div>
         );
@@ -103,10 +103,10 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                     <div
                         key={anomaly.id}
                         className={`rounded-lg border transition ${anomaly.severity === 'CRITICAL'
-                                ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/10'
-                                : anomaly.severity === 'HIGH'
-                                    ? 'border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-900/10'
-                                    : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+                            ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/10'
+                            : anomaly.severity === 'HIGH'
+                                ? 'border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-900/10'
+                                : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
                             }`}
                     >
                         {/* Header */}
@@ -115,10 +115,10 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                             onClick={() => toggleExpand(anomaly.id)}
                         >
                             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${anomaly.severity === 'CRITICAL'
-                                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                                    : anomaly.severity === 'HIGH'
-                                        ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                : anomaly.severity === 'HIGH'
+                                    ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                                 }`}>
                                 <SeverityIcon className="h-4 w-4" />
                             </div>
@@ -159,10 +159,10 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                                 {/* Entity Info */}
                                 <div className="mb-3 rounded bg-gray-50 p-2 dark:bg-gray-900/50">
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        <span className="font-medium">Entitas:</span> {anomaly.entityDescription}
+                                        <span className="font-medium">{t('ai.anomaly.entity')}</span> {anomaly.entityDescription}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        <span className="font-medium">Detected:</span>{' '}
+                                        <span className="font-medium">{t('ai.anomaly.detected')}</span>{' '}
                                         {new Date(anomaly.detectedAt).toLocaleString('id-ID')}
                                     </p>
                                 </div>
@@ -171,7 +171,7 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                                 {anomaly.suggestedActions.length > 0 && (
                                     <div className="mb-3">
                                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Saran Tindakan:
+                                            {t('ai.anomaly.suggestedActions')}
                                         </p>
                                         <ul className="space-y-1">
                                             {anomaly.suggestedActions.map((action, idx) => (
@@ -188,13 +188,13 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                                 {anomaly.details && typeof anomaly.details === 'object' && 'aiRiskScore' in anomaly.details && (
                                     <div className="mb-3 flex items-center gap-2">
                                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                            AI Risk Score:
+                                            {t('ai.anomaly.riskScore')}
                                         </span>
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${(anomaly.details.aiRiskScore as number) >= 8
-                                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                : (anomaly.details.aiRiskScore as number) >= 5
-                                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                            : (anomaly.details.aiRiskScore as number) >= 5
+                                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                             }`}>
                                             {anomaly.details.aiRiskScore as number}/10
                                         </span>
@@ -212,7 +212,7 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                                             className="flex items-center gap-1.5 rounded-lg bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-700 transition hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30"
                                         >
                                             <Eye className="h-3.5 w-3.5" />
-                                            Investigate
+                                            {t('ai.investigate')}
                                         </button>
                                         <button
                                             onClick={(e) => {
@@ -222,7 +222,7 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                                             className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                                         >
                                             <XCircle className="h-3.5 w-3.5" />
-                                            Dismiss
+                                            {t('ai.dismiss')}
                                         </button>
                                         <button
                                             onClick={(e) => {
@@ -232,7 +232,7 @@ export function AnomalyList({ anomalies, onAction, loading = false, className = 
                                             className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                                         >
                                             <Ban className="h-3.5 w-3.5" />
-                                            Block
+                                            {t('ai.block')}
                                         </button>
                                     </div>
                                 )}

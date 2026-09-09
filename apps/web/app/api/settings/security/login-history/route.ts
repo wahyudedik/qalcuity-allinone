@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * GET /api/settings/security/login-history — List recent login attempts for the current user
@@ -69,7 +70,6 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }

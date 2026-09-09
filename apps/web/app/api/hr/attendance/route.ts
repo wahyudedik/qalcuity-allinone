@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -91,12 +92,11 @@ export async function GET(request: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -172,12 +172,11 @@ export async function POST(request: Request) {
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'AttendanceRecord', entityId: record.id, newValues: { date: record.date, status: record.status, employeeId: record.employeeId, workHours: record.workHours } as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: record }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -233,12 +232,11 @@ export async function PATCH(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -298,12 +296,11 @@ export async function PUT(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: updated });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -335,11 +332,10 @@ export async function DELETE(request: Request) {
         await prisma.attendanceRecord.delete({ where: { id } });
 
         return NextResponse.json({ success: true, data: null });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

@@ -51,18 +51,18 @@ interface LeaveDetail {
 // CONFIG
 // ============================================
 
-const leaveTypeConfig: Record<string, { label: string; icon: typeof Palmtree; color: string; bgColor: string }> = {
-    annual: { label: 'Cuti Tahunan', icon: Palmtree, color: 'text-blue-700', bgColor: 'bg-blue-100' },
-    sick: { label: 'Sakit', icon: Thermometer, color: 'text-red-700', bgColor: 'bg-red-100' },
-    personal: { label: 'Cuti Pribadi', icon: Home, color: 'text-purple-700', bgColor: 'bg-purple-100' },
-    maternity: { label: 'Cuti Melahirkan', icon: Baby, color: 'text-pink-700', bgColor: 'bg-pink-100' },
-    unpaid: { label: 'Cuti Tanpa Gaji', icon: Wallet, color: 'text-orange-700', bgColor: 'bg-orange-100' },
+const leaveTypeConfig: Record<string, { labelKey: string; icon: typeof Palmtree; color: string; bgColor: string }> = {
+    annual: { labelKey: 'hr.leave.type.annual', icon: Palmtree, color: 'text-blue-700', bgColor: 'bg-blue-100' },
+    sick: { labelKey: 'hr.leave.type.sick', icon: Thermometer, color: 'text-red-700', bgColor: 'bg-red-100' },
+    personal: { labelKey: 'hr.leave.type.personal', icon: Home, color: 'text-purple-700', bgColor: 'bg-purple-100' },
+    maternity: { labelKey: 'hr.leave.type.maternity', icon: Baby, color: 'text-pink-700', bgColor: 'bg-pink-100' },
+    unpaid: { labelKey: 'hr.leave.type.unpaid', icon: Wallet, color: 'text-orange-700', bgColor: 'bg-orange-100' },
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    pending: { label: 'Menunggu', color: 'bg-yellow-100 text-yellow-800' },
-    approved: { label: 'Disetujui', color: 'bg-green-100 text-green-800' },
-    rejected: { label: 'Ditolak', color: 'bg-red-100 text-red-800' },
+const statusConfig: Record<string, { labelKey: string; color: string }> = {
+    pending: { labelKey: 'hr.leave.status.pending', color: 'bg-yellow-100 text-yellow-800' },
+    approved: { labelKey: 'hr.leave.status.approved', color: 'bg-green-100 text-green-800' },
+    rejected: { labelKey: 'hr.leave.status.rejected', color: 'bg-red-100 text-red-800' },
 }
 
 // ============================================
@@ -113,10 +113,10 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
             if (data.success) {
                 setLeave(data.data)
             } else {
-                setError(data.error || 'Gagal memuat data cuti')
+                setError(data.error || t('hr.leave.error.loadFailed'))
             }
         } catch {
-            setError('Gagal memuat data cuti')
+            setError(t('hr.leave.error.loadFailed'))
         } finally {
             setLoading(false)
         }
@@ -127,8 +127,8 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
     // ============================================
 
     const handleApprove = () => {
-        setConfirmTitle('Setujui Cuti')
-        setConfirmMessage(`Apakah Anda yakin ingin menyetujui cuti ${leave?.employeeName}?`)
+        setConfirmTitle(t('hr.leave.confirm.approveTitle'))
+        setConfirmMessage(`${t('hr.leave.confirm.approveMessage')} ${leave?.employeeName || ''}`)
         setConfirmAction(() => async () => {
             try {
                 setProcessing(true)
@@ -140,12 +140,12 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                 const result = await response.json()
                 if (result.success) {
                     setLeave((prev) => prev ? { ...prev, status: 'approved' } : prev)
-                    setToast({ message: 'Cuti berhasil disetujui', type: 'success' })
+                    setToast({ message: t('hr.leave.toast.approveSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: result.error || 'Gagal menyetujui cuti', type: 'error' })
+                    setToast({ message: result.error || t('hr.leave.toast.approveFailed'), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menyetujui cuti', type: 'error' })
+                setToast({ message: t('hr.leave.toast.approveFailed'), type: 'error' })
             } finally {
                 setProcessing(false)
             }
@@ -154,8 +154,8 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
     }
 
     const handleReject = () => {
-        setConfirmTitle('Tolak Cuti')
-        setConfirmMessage(`Apakah Anda yakin ingin menolak cuti ${leave?.employeeName}?`)
+        setConfirmTitle(t('hr.leave.confirm.rejectTitle'))
+        setConfirmMessage(`${t('hr.leave.confirm.rejectMessage')} ${leave?.employeeName || ''}`)
         setConfirmAction(() => async () => {
             try {
                 setProcessing(true)
@@ -167,12 +167,12 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                 const result = await response.json()
                 if (result.success) {
                     setLeave((prev) => prev ? { ...prev, status: 'rejected' } : prev)
-                    setToast({ message: 'Cuti berhasil ditolak', type: 'success' })
+                    setToast({ message: t('hr.leave.toast.rejectSuccess'), type: 'success' })
                 } else {
-                    setToast({ message: result.error || 'Gagal menolak cuti', type: 'error' })
+                    setToast({ message: result.error || t('hr.leave.toast.rejectFailed'), type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Gagal menolak cuti', type: 'error' })
+                setToast({ message: t('hr.leave.toast.rejectFailed'), type: 'error' })
             } finally {
                 setProcessing(false)
             }
@@ -235,12 +235,12 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
             <div className="p-6">
                 <div className="flex flex-col items-center justify-center py-12">
                     <AlertTriangle className="h-12 w-12 text-gray-300 mb-4" />
-                    <p className="text-gray-500">{error || 'Data cuti tidak ditemukan'}</p>
+                    <p className="text-gray-500">{error || t('hr.leave.error.notFound')}</p>
                     <Link
                         href="/dashboard/hr/leaves"
                         className="mt-4 text-blue-600 hover:underline"
                     >
-                        ← Kembali ke daftar cuti
+                        ← {t('hr.leave.backToList')}
                     </Link>
                 </div>
             </div>
@@ -260,20 +260,20 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
     const timelineEvents = [
         {
             date: leave.appliedDate,
-            label: 'Cuti diajukan',
+            label: t('hr.leave.timeline.applied'),
             color: 'bg-blue-500',
         },
     ]
     if (leave.status === 'approved' && leave.approvedBy) {
         timelineEvents.push({
             date: leave.appliedDate,
-            label: `Disetujui oleh ${leave.approvedBy}`,
+            label: `${t('hr.leave.timeline.approvedBy')} ${leave.approvedBy || ''}`,
             color: 'bg-green-500',
         })
     } else if (leave.status === 'rejected') {
         timelineEvents.push({
             date: leave.appliedDate,
-            label: 'Cuti ditolak',
+            label: t('hr.leave.timeline.rejected'),
             color: 'bg-red-500',
         })
     }
@@ -304,7 +304,7 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                 }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText={processing ? 'Memproses...' : 'Konfirmasi'}
+                confirmText={processing ? t('hr.leave.processing') : t('common.confirm')}
                 variant="danger"
             />
 
@@ -320,10 +320,10 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                                Detail Cuti
+                                {t('hr.leave.detailTitle')}
                             </h1>
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCfg.color}`}>
-                                {statusCfg.label}
+                                {t(statusCfg.labelKey)}
                             </span>
                         </div>
                         <p className="text-gray-500 mt-1">{leave.employeeName} — {leave.employeeNumber}</p>
@@ -338,7 +338,7 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                                 className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                             >
                                 {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                Setujui
+                                {t('hr.leave.approve')}
                             </button>
                             <button
                                 onClick={handleReject}
@@ -346,7 +346,7 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                                 className="flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                             >
                                 <X className="h-4 w-4" />
-                                Tolak
+                                {t('hr.leave.reject')}
                             </button>
                         </>
                     )}
@@ -361,37 +361,37 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <FileText className="h-5 w-5 text-gray-400" />
-                            Detail Cuti
+                            {t('hr.leave.detailTitle')}
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm text-gray-500">Tipe Cuti</p>
+                                <p className="text-sm text-gray-500">{t('hr.leave.fields.type')}</p>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${typeConfig.bgColor} ${typeConfig.color}`}>
                                         <TypeIcon className="h-3.5 w-3.5" />
-                                        {typeConfig.label}
+                                        {t(typeConfig.labelKey)}
                                     </span>
                                 </div>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Jumlah Hari</p>
-                                <p className="font-medium text-gray-900 mt-1">{leave.days} hari</p>
+                                <p className="text-sm text-gray-500">{t('hr.leave.fields.days')}</p>
+                                <p className="font-medium text-gray-900 mt-1">{leave.days}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Tanggal Mulai</p>
+                                <p className="text-sm text-gray-500">{t('hr.leave.fields.startDate')}</p>
                                 <p className="font-medium text-gray-900 mt-1">{formatDate(leave.startDate)}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Tanggal Selesai</p>
+                                <p className="text-sm text-gray-500">{t('hr.leave.fields.endDate')}</p>
                                 <p className="font-medium text-gray-900 mt-1">{formatDate(leave.endDate)}</p>
                             </div>
                             <div className="sm:col-span-2">
-                                <p className="text-sm text-gray-500">Alasan</p>
+                                <p className="text-sm text-gray-500">{t('hr.leave.fields.reason')}</p>
                                 <p className="font-medium text-gray-900 mt-1">{leave.reason || '-'}</p>
                             </div>
                             {leave.notes && (
                                 <div className="sm:col-span-2">
-                                    <p className="text-sm text-gray-500">Catatan</p>
+                                    <p className="text-sm text-gray-500">{t('hr.leave.fields.notes')}</p>
                                     <p className="font-medium text-gray-900 mt-1">{leave.notes}</p>
                                 </div>
                             )}
@@ -402,7 +402,7 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <Clock className="h-5 w-5 text-gray-400" />
-                            Riwayat Status
+                            {t('hr.leave.timeline.title')}
                         </h2>
                         <div className="relative ml-3 border-l-2 border-gray-200 pl-6">
                             {timelineEvents.map((event, idx) => (
@@ -422,23 +422,23 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <User className="h-5 w-5 text-gray-400" />
-                            Info Karyawan
+                            {t('hr.leave.employeeInfo.title')}
                         </h2>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Nama</span>
+                                <span className="text-sm text-gray-500">{t('hr.leave.employeeInfo.name')}</span>
                                 <span className="text-sm font-medium text-gray-900">{leave.employeeName}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">NIP</span>
+                                <span className="text-sm text-gray-500">{t('hr.leave.employeeInfo.nip')}</span>
                                 <span className="font-mono text-sm text-gray-900">{leave.employeeNumber}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Posisi</span>
+                                <span className="text-sm text-gray-500">{t('hr.leave.employeeInfo.position')}</span>
                                 <span className="text-sm font-medium text-gray-900">{leave.position || '-'}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Departemen</span>
+                                <span className="text-sm text-gray-500">{t('hr.leave.employeeInfo.department')}</span>
                                 <span className="text-sm font-medium text-gray-900">{leave.department || '-'}</span>
                             </div>
                         </div>
@@ -448,22 +448,22 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <Calendar className="h-5 w-5 text-gray-400" />
-                            Ringkasan
+                            {t('hr.leave.summary.title')}
                         </h2>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Diajukan</span>
+                                <span className="text-sm text-gray-500">{t('hr.leave.summary.applied')}</span>
                                 <span className="text-sm text-gray-900">{formatDate(leave.appliedDate)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Status</span>
+                                <span className="text-sm text-gray-500">{t('common.status')}</span>
                                 <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusCfg.color}`}>
-                                    {statusCfg.label}
+                                    {t(statusCfg.labelKey)}
                                 </span>
                             </div>
                             {leave.approvedBy && (
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-500">Disetujui Oleh</span>
+                                    <span className="text-sm text-gray-500">{t('hr.leave.summary.approvedBy')}</span>
                                     <span className="text-sm font-medium text-gray-900">{leave.approvedBy}</span>
                                 </div>
                             )}
@@ -472,21 +472,21 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
 
                     {/* Quick Actions */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Aksi</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('hr.leave.actions.title')}</h2>
                         <div className="space-y-3">
                             <Link
                                 href={`/dashboard/hr/employees/${leave.employeeId}`}
                                 className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 w-full"
                             >
                                 <User className="h-4 w-4" />
-                                Lihat Profil Karyawan
+                                {t('hr.leave.actions.viewProfile')}
                             </Link>
                             <Link
                                 href="/dashboard/hr/leaves"
                                 className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 w-full"
                             >
                                 <ArrowLeft className="h-4 w-4" />
-                                Kembali ke Daftar Cuti
+                                {t('hr.leave.actions.backToList')}
                             </Link>
                         </div>
                     </div>

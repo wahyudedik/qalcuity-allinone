@@ -9,26 +9,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface CreateDashboardBody {
-    name: string
-    description?: string
-    slug: string
-    layout?: string
-    theme?: string
-    visibility?: string
-    department?: string
-    allowedRoles?: string
-    allowedUsers?: string
-    isDefault?: boolean
-    isTemplate?: boolean
-    tags?: string
-    refreshAll?: number
-}
+import { createDashboardSchema } from '@/lib/validation-schemas'
 
 // ============================================
 // GET — List all dashboards for tenant
@@ -130,54 +111,36 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const body: CreateDashboardBody = await request.json()
 
-        // Validate required fields
-        if (!body.name || !body.slug) {
+        // Validasi input dengan Zod schema
+        const body = await request.json()
+        const validated = createDashboardSchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: name, slug' },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             )
         }
 
-        // Validate visibility
-        const validVisibilities = ['PRIVATE', 'TEAM', 'DEPARTMENT', 'ORGANIZATION']
-        const visibility = body.visibility || 'PRIVATE'
-        if (!validVisibilities.includes(visibility)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid visibility. Must be one of: ${validVisibilities.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate theme if provided
-        if (body.theme) {
-            const validThemes = ['LIGHT', 'DARK', 'AUTO']
-            if (!validThemes.includes(body.theme)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid theme. Must be one of: ${validThemes.join(', ')}` },
-                    { status: 400 }
-                )
-            }
-        }
+        const visibility = validated.data.visibility || 'PRIVATE'
 
         const dashboard = await prisma.analyticsDashboard.create({
             data: {
-                name: body.name,
-                description: body.description,
-                slug: body.slug,
-                layout: body.layout || '{}',
-                theme: body.theme || null,
+                name: validated.data.name,
+                description: validated.data.description,
+                slug: validated.data.slug,
+                layout: validated.data.layout || '{}',
+                theme: validated.data.theme || null,
                 visibility,
                 ownerId: userId,
                 ownerName: null,
-                department: body.department || null,
-                allowedRoles: body.allowedRoles || null,
-                allowedUsers: body.allowedUsers || null,
-                isDefault: body.isDefault ?? false,
-                isTemplate: body.isTemplate ?? false,
-                tags: body.tags || null,
-                refreshAll: body.refreshAll ?? null,
+                department: validated.data.department || null,
+                allowedRoles: validated.data.allowedRoles || null,
+                allowedUsers: validated.data.allowedUsers || null,
+                isDefault: validated.data.isDefault ?? false,
+                isTemplate: validated.data.isTemplate ?? false,
+                tags: validated.data.tags || null,
+                refreshAll: validated.data.refreshAll ?? null,
                 tenantId,
             },
         })

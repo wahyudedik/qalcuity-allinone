@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { createContactSchema, updateContactSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -91,8 +92,7 @@ export async function GET(request: Request) {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -145,8 +145,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, data: contact }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -219,8 +218,7 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({ success: true, data: contact });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -263,7 +261,6 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

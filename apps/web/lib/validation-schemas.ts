@@ -1478,6 +1478,70 @@ export const createKPISchema = z.object({
 });
 
 // ============================================
+// Analytics Report Schemas
+// ============================================
+
+export const createReportSchema = z.object({
+    name: z.string().min(1, 'Nama laporan wajib diisi').max(255, 'Nama laporan maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    type: z.enum(['report', 'chart', 'pivot', 'query', 'dashboard'], {
+        message: 'Tipe laporan tidak valid',
+    }).optional(),
+    config: z.record(z.string(), z.unknown()).refine((val) => Object.keys(val).length > 0, {
+        message: 'Konfigurasi laporan wajib diisi',
+    }),
+    tags: z.array(z.string().max(50)).max(20, 'Maksimal 20 tags').optional(),
+    folder: z.string().max(255).optional().nullable(),
+});
+
+// ============================================
+// Analytics Dashboard Schemas
+// ============================================
+
+export const createDashboardSchema = z.object({
+    name: z.string().min(1, 'Nama dashboard wajib diisi').max(255, 'Nama dashboard maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    slug: z.string().min(1, 'Slug wajib diisi').max(255, 'Slug maksimal 255 karakter').regex(
+        /^[a-z0-9-]+$/,
+        'Slug hanya boleh berisi huruf kecil, angka, dan strip'
+    ),
+    layout: z.string().max(10000).optional(),
+    theme: z.enum(['LIGHT', 'DARK', 'AUTO'], {
+        message: 'Theme tidak valid',
+    }).optional(),
+    visibility: z.enum(['PRIVATE', 'TEAM', 'DEPARTMENT', 'ORGANIZATION'], {
+        message: 'Visibilitas tidak valid',
+    }).optional(),
+    department: z.string().max(255).optional().nullable(),
+    allowedRoles: z.string().max(500).optional().nullable(),
+    allowedUsers: z.string().max(500).optional().nullable(),
+    isDefault: z.boolean().optional(),
+    isTemplate: z.boolean().optional(),
+    tags: z.string().max(500).optional().nullable(),
+    refreshAll: z.number().int().min(0).max(3600).optional(),
+});
+
+// ============================================
+// Analytics Alert Schemas
+// ============================================
+
+export const createAlertSchema = z.object({
+    name: z.string().min(1, 'Nama alert wajib diisi').max(255, 'Nama alert maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    metricId: z.string().min(1, 'Metric ID wajib diisi').max(255),
+    condition: z.enum(['below', 'above', 'equals', 'not_equals', 'changes_by'], {
+        message: 'Kondisi alert tidak valid',
+    }),
+    threshold: z.number({ message: 'Threshold harus berupa angka' }),
+    severity: z.enum(['low', 'medium', 'high', 'critical'], {
+        message: 'Severity tidak valid',
+    }).optional(),
+    notificationChannels: z.array(z.string().max(50)).max(10, 'Maksimal 10 channel').optional(),
+    recipients: z.array(z.string().max(255)).max(50, 'Maksimal 50 penerima').optional(),
+    cooldownMinutes: z.number().int().min(0).max(1440, 'Cooldown maksimal 1440 menit').optional(),
+});
+
+// ============================================
 // Workflow Transition Schemas
 // ============================================
 

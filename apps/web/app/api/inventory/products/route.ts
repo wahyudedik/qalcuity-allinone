@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -83,11 +84,10 @@ export async function GET(request: Request) {
             totalPages: Math.ceil(filteredTotal / limit),
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        if (message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: message }, { status: 401 });
+        if (error instanceof Error && error.message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }
 
@@ -130,14 +130,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, data: product }, { status: 201 });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        if (message.includes('Unique constraint')) {
-            return NextResponse.json(
-                { success: false, error: 'SKU already exists' },
-                { status: 409 }
-            );
-        }
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 
@@ -198,8 +191,7 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({ success: true, data: product });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Invalid request body';
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
+        return handleApiError(error);
     }
 }
 
@@ -243,7 +235,6 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+        return handleApiError(error);
     }
 }

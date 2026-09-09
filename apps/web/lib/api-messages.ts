@@ -304,6 +304,15 @@ export const MSG = {
     FILE_CANNOT_BE_EMPTY: 'File cannot be empty',
     FILE_UPLOAD_NOT_EMPTY: 'File upload must not be empty',
     NAME_REQUIRED: 'Name is required',
+
+    // -----------------------------------------------------------------------
+    // AI / Anomaly Detection
+    // -----------------------------------------------------------------------
+    ANOMALY_NOT_FOUND: 'Anomaly not found',
+    ANOMALY_INVALID_STATUS: 'Invalid anomaly status',
+    ANOMALY_STATUS_UPDATED: 'Anomaly status updated',
+    ANOMALY_SCAN_FAILED: 'Anomaly scan failed',
+    ANOMALY_ADMIN_ONLY: 'Only admin can manage anomalies',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

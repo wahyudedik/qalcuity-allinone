@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateYearlyPeriods } from '@/lib/period-closing';
 import { z } from 'zod';
+import { handleApiError } from '@/lib/api-error';
 
 // ============================================
 // Validation Schemas
@@ -69,9 +70,8 @@ export async function GET(request: Request) {
         }));
 
         return NextResponse.json({ success: true, data });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -188,8 +188,7 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: period }, { status: 201 });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

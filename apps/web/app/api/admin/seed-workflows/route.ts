@@ -10,6 +10,7 @@ import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { DEFAULT_WORKFLOWS } from '@qalcuity/workflow';
+import { handleApiError } from '@/lib/api-error';
 
 export async function POST(request: Request) {
     try {
@@ -75,11 +76,6 @@ export async function POST(request: Request) {
             },
         });
     } catch (error) {
-        const message =
-            error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json(
-            { success: false, error: message },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

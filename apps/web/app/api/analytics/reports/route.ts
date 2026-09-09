@@ -10,19 +10,7 @@ import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import type { Prisma } from '@prisma/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface CreateReportBody {
-    name: string
-    description?: string
-    type?: string
-    config: Record<string, unknown>
-    tags?: string[]
-    folder?: string
-}
+import { createReportSchema } from '@/lib/validation-schemas'
 
 // ============================================
 // GET — List saved reports for tenant
@@ -112,36 +100,29 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const body: CreateReportBody = await request.json()
 
-        // Validate required fields
-        if (!body.name || !body.config) {
+        // Validasi input dengan Zod schema
+        const body = await request.json()
+        const validated = createReportSchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: name, config' },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             )
         }
 
-        // Validate type
-        const validTypes = ['report', 'chart', 'pivot', 'query', 'dashboard']
-        const type = body.type || 'report'
-        if (!validTypes.includes(type)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid type. Must be one of: ${validTypes.join(', ')}` },
-                { status: 400 }
-            )
-        }
+        const type = validated.data.type || 'report'
 
         const report = await prisma.savedReport.create({
             data: {
-                name: body.name,
-                description: body.description,
+                name: validated.data.name,
+                description: validated.data.description,
                 type,
-                config: body.config as Prisma.InputJsonValue,
+                config: validated.data.config as Prisma.InputJsonValue,
                 ownerId: userId,
                 tenantId,
-                tags: body.tags || [],
-                folder: body.folder || null,
+                tags: validated.data.tags || [],
+                folder: validated.data.folder || null,
             },
             include: {
                 owner: {

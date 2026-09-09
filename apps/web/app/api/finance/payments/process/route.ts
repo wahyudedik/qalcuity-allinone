@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { processPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 import { getPublicBaseUrl } from '@/lib/utils';
+import { handleApiError } from '@/lib/api-error';
 
 // ============================================================
 // Payment Gateway Process API
@@ -168,8 +169,7 @@ export async function POST(request: Request) {
         provider: providerName,
       },
     }, { status: 201 });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  } catch (error) {
+      return handleApiError(error);
   }
 }

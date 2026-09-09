@@ -980,6 +980,16 @@
                 "deactivate": "Deactivate",
                 "activate": "Activate"
             }
+        },
+        "invoice": {
+            "status": {
+                "draft": "Draft",
+                "sent": "Sent",
+                "paid": "Paid",
+                "overdue": "Overdue",
+                "partiallyPaid": "Partially Paid",
+                "cancelled": "Cancelled"
+            }
         }
     },
     "crm": {
@@ -2266,6 +2276,72 @@
             "name": "Name",
             "updateSuccess": "Employee profile updated successfully",
             "updateError": "Failed to update employee profile"
+        },
+        "leave": {
+            "type": {
+                "annual": "Annual Leave",
+                "sick": "Sick Leave",
+                "personal": "Personal Leave",
+                "maternity": "Maternity Leave",
+                "unpaid": "Unpaid Leave"
+            },
+            "status": {
+                "pending": "Pending",
+                "approved": "Approved",
+                "rejected": "Rejected"
+            },
+            "error": {
+                "loadFailed": "Failed to load leave data",
+                "notFound": "Leave data not found"
+            },
+            "toast": {
+                "approveSuccess": "Leave approved successfully",
+                "approveFailed": "Failed to approve leave",
+                "rejectSuccess": "Leave rejected successfully",
+                "rejectFailed": "Failed to reject leave"
+            },
+            "confirm": {
+                "approveTitle": "Approve Leave",
+                "approveMessage": "Are you sure you want to approve leave for",
+                "rejectTitle": "Reject Leave",
+                "rejectMessage": "Are you sure you want to reject leave for"
+            },
+            "processing": "Processing...",
+            "detailTitle": "Leave Detail",
+            "approve": "Approve",
+            "reject": "Reject",
+            "backToList": "Back to leave list",
+            "fields": {
+                "type": "Leave Type",
+                "days": "Number of Days",
+                "startDate": "Start Date",
+                "endDate": "End Date",
+                "reason": "Reason",
+                "notes": "Notes"
+            },
+            "timeline": {
+                "title": "Status History",
+                "applied": "Leave requested",
+                "approvedBy": "Approved by",
+                "rejected": "Leave rejected"
+            },
+            "employeeInfo": {
+                "title": "Employee Info",
+                "name": "Name",
+                "nip": "Employee Number",
+                "position": "Position",
+                "department": "Department"
+            },
+            "summary": {
+                "title": "Summary",
+                "applied": "Applied",
+                "approvedBy": "Approved By"
+            },
+            "actions": {
+                "title": "Actions",
+                "viewProfile": "View Employee Profile",
+                "backToList": "Back to Leave List"
+            }
         }
     },
     "settings": {
@@ -2676,7 +2752,84 @@
             "tabPending": "Pending",
             "tabVerified": "Verified",
             "tabRejected": "Rejected",
-            "emptyPayments": "No payment data yet"
+            "emptyPayments": "No payment data yet",
+            "accessDenied": "Access Denied",
+            "accessDeniedDesc": "Only Super Admin can access this page.",
+            "pageTitle": "Billing Management",
+            "pageSubtitle": "Manage payments and tenant subscriptions",
+            "paymentSuccessBanner": "Payment Successful",
+            "paymentSuccessDesc": "Your payment has been received. Subscription will be activated after verification.",
+            "subscriptionPayment": "Subscription & Payment",
+            "subscriptionPaymentDesc": "Manage subscription and make payments for this tenant",
+            "statusActive": "Active",
+            "statusPendingPayment": "Pending Payment",
+            "statusTrial": "Trial",
+            "statusSuspended": "Suspended",
+            "statusCancelled": "Cancelled",
+            "perMonth": "/ month",
+            "nextBilling": "Next billing:",
+            "payWithMidtrans": "Pay with Midtrans",
+            "processing": "Processing...",
+            "noActiveSubscriptionYet": "No active subscription yet",
+            "selectPlanToStart": "Select a plan to start",
+            "pending": "Pending",
+            "thisMonth": "This Month",
+            "activeTenants": "Active Tenants",
+            "revenueThisMonth": "Revenue This Month",
+            "total": "Total:",
+            "tableDate": "Date",
+            "tableTenant": "Tenant",
+            "tablePlan": "Plan",
+            "tableAmount": "Amount",
+            "tableBank": "Bank",
+            "tableStatus": "Status",
+            "tableAction": "Action",
+            "pageInfo": "Page {page} of {totalPages}",
+            "detailPayment": "Payment Detail",
+            "waConfirmed": "WA Confirmed",
+            "tenantInfo": "Tenant Information",
+            "name": "Name",
+            "email": "Email",
+            "subscriptionStatus": "Subscription Status",
+            "planInfo": "Plan Information",
+            "plan": "Plan",
+            "pricePerMonth": "Price/Month",
+            "paymentInfo": "Payment Information",
+            "amount": "Amount",
+            "date": "Date",
+            "senderBank": "Sender Bank",
+            "senderAccount": "Sender Account",
+            "senderName": "Sender Name",
+            "reference": "Reference",
+            "notes": "Notes",
+            "rejectReason": "Rejection Reason",
+            "transferProof": "Transfer Proof",
+            "viewProof": "View Transfer Proof",
+            "approve": "Approve",
+            "reject": "Reject",
+            "approvePayment": "Approve Payment",
+            "confirmVerification": "Confirm payment verification",
+            "approveWarning": "After approval, the tenant subscription will be activated and status will change to ACTIVE.",
+            "tenant": "Tenant",
+            "cancel": "Cancel",
+            "yesApprove": "Yes, Approve",
+            "rejectPayment": "Reject Payment",
+            "provideRejectReason": "Provide rejection reason",
+            "rejectReasonLabel": "Rejection Reason",
+            "rejectReasonPlaceholder": "Enter rejection reason...",
+            "rejectPaymentBtn": "Reject Payment",
+            "openPdf": "Open PDF",
+            "previewNotAvailable": "Preview not available for this file type",
+            "downloadFile": "Download File",
+            "viewProofBtn": "View Proof",
+            "createMidtransFailed": "Failed to create Midtrans payment",
+            "midtransConnectionFailed": "Failed to connect to Midtrans",
+            "verifyPaymentFailed": "Failed to verify payment",
+            "rejectPaymentFailed": "Failed to reject payment",
+            "rejectReasonRequired": "Rejection reason is required",
+            "statusPendingVerification": "Pending Verification",
+            "statusVerified": "Verified",
+            "statusRejected": "Rejected"
         },
         "noMembersFound": "No members found",
         "you": "You",
@@ -2840,7 +2993,57 @@
         "details": "Details",
         "create": "Created",
         "update": "Updated",
-        "delete": "Deleted"
+        "delete": "Deleted",
+        "subtitle": "Track all activities and changes in the system",
+        "searchPlaceholder": "Search audit logs...",
+        "totalActivity": "Total Activity",
+        "creation": "Creation",
+        "updateAction": "Updates",
+        "deletion": "Deletions",
+        "loading": "Loading audit logs...",
+        "loadError": "Failed to load audit logs",
+        "networkError": "Network error. Please try again.",
+        "retry": "Retry",
+        "empty": "No audit logs found",
+        "emptyDescription": "No activities recorded yet",
+        "justNow": "Just now",
+        "hoursAgo": "hours ago",
+        "yesterday": "Yesterday",
+        "daysAgo": "days ago",
+        "pagination": "Page {page} of {totalPages} ({count} records)",
+        "previous": "Previous",
+        "next": "Next",
+        "exportCsv": "Export CSV",
+        "resetFilter": "Reset Filter",
+        "actionLabel": {
+            "create": "Creation",
+            "update": "Update",
+            "delete": "Deletion",
+            "read": "Read",
+            "testing": "Testing"
+        },
+        "module": {
+            "all": "All Modules",
+            "invoice": "Finance",
+            "deal": "Sales",
+            "lead": "CRM",
+            "contact": "CRM",
+            "product": "Inventory",
+            "employee": "HR",
+            "payment": "Finance",
+            "quotation": "Finance",
+            "purchaseOrder": "Finance",
+            "tenantNotificationSettings": "Settings",
+            "tenantIntegration": "Settings"
+        },
+        "filterAll": "All Actions",
+        "detailActivity": "Activity Details",
+        "time": "Time",
+        "moduleHeader": "Module",
+        "dataChanges": "Data Changes",
+        "noChanges": "No change details available",
+        "dateFrom": "From date",
+        "dateTo": "To date"
     },
     "search": {
         "placeholder": "Search invoices, deals, contacts, products...",
@@ -3579,6 +3782,11 @@
                 "prev": "Prev",
                 "next": "Next",
                 "pageInfo": "Page {current} of {total}"
+            },
+            "errors": {
+                "selectDimensions": "Select at least one dimension or measure",
+                "saveFailed": "Failed to save report",
+                "queryFailed": "Failed to execute query. Please try again."
             }
         },
         "kpi": {
@@ -3618,6 +3826,8 @@
                 "above_target": "Above Target",
                 "on_target": "On Target",
                 "below_target": "Below Target",
+                "critical": "Critical",
+                "unknown": "Unknown",
                 "no_data": "No Data"
             },
             "periods": {
@@ -3654,15 +3864,7 @@
             "lastEvaluated": "Last evaluated:",
             "periodLabel": "Period:",
             "categoryLabel": "Category:",
-            "reEvaluate": "Re-evaluate",
-            "statuses": {
-                "above_target": "Above Target",
-                "on_target": "On Target",
-                "below_target": "Below Target",
-                "critical": "Critical",
-                "unknown": "Unknown",
-                "no_data": "No Data"
-            }
+            "reEvaluate": "Re-evaluate"
         },
         "reports": {
             "title": "Saved Reports",
@@ -4236,7 +4438,91 @@
         "regexBased": "Regex Based",
         "fallback": "Fallback",
         "confidence": "Confidence",
-        "applyToFormSuccess": "Data applied to form successfully"
+        "applyToFormSuccess": "Data applied to form successfully",
+        "financeAgent": "Finance Agent",
+        "financeAgentDesc": "Automated financial tasks and insights",
+        "salesAgent": "Sales Agent",
+        "salesAgentDesc": "Boost conversion and efficiency",
+        "inventoryAgent": "Inventory Agent",
+        "inventoryAgentDesc": "Optimize stock and supply chain",
+        "nlqTitle": "Natural Language Query",
+        "nlqDesc": "Ask questions in plain language",
+        "docExtraction": "Document Extraction",
+        "docExtractionDesc": "Extract data from documents",
+        "anomalyDetection": "Anomaly Detection",
+        "anomalyDetectionDesc": "Detect suspicious transactions",
+        "basicAvailable": "Basic Available",
+        "comingSoon": "Coming Soon",
+        "tryAssistant": "Try AI Assistant",
+        "tryAssistantDesc": "Ask questions about your business data",
+        "exampleQuestions": "Example questions:",
+        "exampleQ1": "Show me this month's sales",
+        "exampleQ2": "What's my outstanding invoice status?",
+        "exampleQ3": "Compare Q2 vs Q3 revenue",
+        "exampleQ4": "Analyze my profit & loss",
+        "backToDashboard": "Back to Dashboard",
+        "anomaly": {
+            "errorScan": "Failed to run scan",
+            "errorLoad": "Failed to load anomaly data",
+            "errorGeneric": "An error occurred",
+            "total": "Total",
+            "critical": "Critical",
+            "high": "High",
+            "medium": "Medium",
+            "low": "Low",
+            "open": "Open",
+            "investigating": "Investigating",
+            "dismissed": "Dismissed",
+            "blocked": "Blocked",
+            "allNormal": "All transactions look normal",
+            "entity": "Entity:",
+            "detected": "Detected:",
+            "suggestedActions": "Suggested Actions:",
+            "riskScore": "AI Risk Score:",
+            "lastScanLabel": "Last scan:",
+            "scannedEntities": "Entities scanned",
+            "scanDuration": "Scan duration",
+            "exportCsv": "Export CSV",
+            "noData": "No anomalies found"
+        },
+        "extraction": {
+            "invoice": "Invoice / Faktur",
+            "invoiceDesc": "Extract data from sales invoice",
+            "purchaseOrder": "Purchase Order (PO)",
+            "purchaseOrderDesc": "Extract data from purchase PO",
+            "receipt": "Receipt / Struk",
+            "receiptDesc": "Extract data from purchase receipt",
+            "ktp": "KTP",
+            "ktpDesc": "Extract data from ID card",
+            "npwp": "NPWP",
+            "npwpDesc": "Extract data from tax ID",
+            "fileTypeError": "Unsupported file type. Use PNG, JPEG, or PDF.",
+            "fileTooLarge": "File is too large. Maximum 10MB.",
+            "errorExtract": "Failed to extract document",
+            "errorGeneric": "An error occurred during extraction",
+            "fileSizeHint": "PNG, JPEG, PDF — Maximum 10MB",
+            "typeLabel": "Type:",
+            "extracting": "Extracting data...",
+            "extractData": "Extract Data",
+            "results": "Extraction Results",
+            "accuracy": "accuracy",
+            "notFound": "Not found",
+            "history": "Extraction History",
+            "loadingHistory": "Loading history...",
+            "noHistory": "No extraction history yet."
+        },
+        "chat": {
+            "openAssistant": "Open AI Assistant",
+            "assistantTitle": "AI Assistant",
+            "assistantSubtitle": "Qalcuity AI",
+            "maximize": "Maximize",
+            "minimize": "Minimize",
+            "close": "Close",
+            "quickSales": "Sales",
+            "quickInvoice": "Invoice",
+            "quickProfit": "Profit",
+            "placeholder": "Ask something..."
+        }
     },
     "periodClosing": {
         "title": "Accounting Periods",
@@ -5051,5 +5337,80 @@
                 }
             }
         }
-    }
+    },
+    "toast": {
+        "createSuccess": "Invoice created successfully",
+        "deleteSuccess": "Invoice deleted successfully",
+        "deleteFailed": "Failed to delete",
+        "deleteError": "Failed to delete invoice",
+        "approveSuccess": "Leave approved successfully",
+        "approveFailed": "Failed to approve leave",
+        "rejectSuccess": "Leave rejected successfully",
+        "rejectFailed": "Failed to reject leave"
+    },
+    "emptyDescription": "Create your first invoice to start receiving payments",
+    "confirmDeleteTitle": "Confirm Deletion",
+    "confirmDeleteMessage": "Are you sure you want to delete this invoice?",
+    "type": {
+        "annual": "Annual Leave",
+        "sick": "Sick Leave",
+        "personal": "Personal Leave",
+        "maternity": "Maternity Leave",
+        "unpaid": "Unpaid Leave"
+    },
+    "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+    },
+    "error": {
+        "loadFailed": "Failed to load leave data",
+        "notFound": "Leave data not found"
+    },
+    "confirm": {
+        "approveTitle": "Approve Leave",
+        "approveMessage": "Are you sure you want to approve leave for {{name}}?",
+        "rejectTitle": "Reject Leave",
+        "rejectMessage": "Are you sure you want to reject leave for {{name}}?"
+    },
+    "processing": "Processing...",
+    "detailTitle": "Leave Detail",
+    "approve": "Approve",
+    "reject": "Reject",
+    "backToList": "Back to leave list",
+    "fields": {
+        "type": "Leave Type",
+        "days": "Number of Days",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "reason": "Reason",
+        "notes": "Notes"
+    },
+    "timeline": {
+        "title": "Status History",
+        "applied": "Leave requested",
+        "approvedBy": "Approved by {{name}}",
+        "rejected": "Leave rejected"
+    },
+    "employeeInfo": {
+        "title": "Employee Info",
+        "name": "Name",
+        "nip": "Employee Number",
+        "position": "Position",
+        "department": "Department"
+    },
+    "summary": {
+        "title": "Summary",
+        "applied": "Applied",
+        "approvedBy": "Approved By"
+    },
+    "actions": {
+        "title": "Actions",
+        "viewProfile": "View Employee Profile",
+        "backToList": "Back to Leave List"
+    },
+    "noLeaveRequests": "No leave requests yet",
+    "birthdayNotAvailable": "Birthday data not available",
+    "birthdayFieldMissing": "dateOfBirth field not available in employee data",
+    "loadError": "Failed to load HR data"
 }

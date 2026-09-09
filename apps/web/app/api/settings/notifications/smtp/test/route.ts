@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
 import { createConnection } from 'net'
 import tls from 'tls'
+import { handleApiError } from '@/lib/api-error';
 
 interface SmtpTestRequest {
     smtpHost: string
@@ -150,7 +151,6 @@ export async function POST(request: Request) {
             })
         }
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
-        return NextResponse.json({ success: false, error: message }, { status: 500 })
+        return handleApiError(error);
     }
 }

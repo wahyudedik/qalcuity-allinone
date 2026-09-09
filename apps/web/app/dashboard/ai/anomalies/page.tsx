@@ -72,7 +72,7 @@ export default function AnomalyDetectionPage() {
                 });
                 const scanData = await scanRes.json();
                 if (!scanRes.ok || !scanData.success) {
-                    throw new Error(scanData.error || 'Gagal menjalankan scan');
+                    throw new Error(scanData.error || t('ai.anomaly.errorScan'));
                 }
                 setAnomalies(scanData.data.anomalies);
                 setSummary(scanData.data.summary);
@@ -88,7 +88,7 @@ export default function AnomalyDetectionPage() {
                 const res = await fetch(`/api/ai/anomalies?${params.toString()}`);
                 const data = await res.json();
                 if (!res.ok || !data.success) {
-                    throw new Error(data.error || 'Gagal memuat data anomali');
+                    throw new Error(data.error || t('ai.anomaly.errorLoad'));
                 }
                 setAnomalies(data.data.anomalies);
                 setSummary(data.data.summary);
@@ -96,7 +96,7 @@ export default function AnomalyDetectionPage() {
                 setScanDuration(data.data.scanDuration);
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+            setError(err instanceof Error ? err.message : t('ai.anomaly.errorGeneric'));
         } finally {
             setLoading(false);
             setScanning(false);
@@ -108,22 +108,61 @@ export default function AnomalyDetectionPage() {
     }, [fetchAnomalies]);
 
     const handleAction = async (anomalyId: string, action: 'investigate' | 'dismiss' | 'block') => {
+        const statusMap: Record<string, AnomalyStatus> = {
+            investigate: 'INVESTIGATING',
+            dismiss: 'DISMISSED',
+            block: 'BLOCKED',
+        };
+
         // Optimistic update
         setAnomalies((prev) =>
             prev.map((a) =>
                 a.id === anomalyId
-                    ? { ...a, status: action === 'investigate' ? 'INVESTIGATING' : action === 'dismiss' ? 'DISMISSED' : 'BLOCKED' }
+                    ? { ...a, status: statusMap[action] }
                     : a
             )
         );
+
+        try {
+            const response = await fetch(`/api/ai/anomalies/${anomalyId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: statusMap[action] }),
+            });
+
+            if (!response.ok) {
+                // Revert optimistic update on failure
+                setAnomalies((prev) =>
+                    prev.map((a) =>
+                        a.id === anomalyId
+                            ? { ...a, status: 'OPEN' }
+                            : a
+                    )
+                );
+                console.error('Failed to update anomaly status');
+            } else {
+                // Re-fetch to get accurate summary counts
+                fetchAnomalies();
+            }
+        } catch (error) {
+            // Revert on network error
+            setAnomalies((prev) =>
+                prev.map((a) =>
+                    a.id === anomalyId
+                        ? { ...a, status: 'OPEN' }
+                        : a
+                )
+            );
+            console.error('Network error updating anomaly:', error);
+        }
     };
 
     const summaryCards = [
-        { label: 'Total', value: summary.total, color: 'text-gray-900 dark:text-gray-100', bg: 'bg-gray-50 dark:bg-gray-800' },
-        { label: 'Critical', value: summary.critical, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
-        { label: 'High', value: summary.high, color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
-        { label: 'Medium', value: summary.medium, color: 'text-yellow-700 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
-        { label: 'Low', value: summary.low, color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+        { label: t('ai.anomaly.total'), value: summary.total, color: 'text-gray-900 dark:text-gray-100', bg: 'bg-gray-50 dark:bg-gray-800' },
+        { label: t('ai.anomaly.critical'), value: summary.critical, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
+        { label: t('ai.anomaly.high'), value: summary.high, color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+        { label: t('ai.anomaly.medium'), value: summary.medium, color: 'text-yellow-700 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
+        { label: t('ai.anomaly.low'), value: summary.low, color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
     ];
 
     return (
@@ -152,11 +191,11 @@ export default function AnomalyDetectionPage() {
                             onChange={(e) => setFilterSeverity(e.target.value as AnomalySeverity | 'ALL')}
                             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                         >
-                            <option value="ALL">Semua Severity</option>
-                            <option value="CRITICAL">Critical</option>
-                            <option value="HIGH">High</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="LOW">Low</option>
+                            <option value="ALL">{t('ai.allSeverity')}</option>
+                            <option value="CRITICAL">{t('ai.anomaly.critical')}</option>
+                            <option value="HIGH">{t('ai.anomaly.high')}</option>
+                            <option value="MEDIUM">{t('ai.anomaly.medium')}</option>
+                            <option value="LOW">{t('ai.anomaly.low')}</option>
                         </select>
                     </div>
 
@@ -166,18 +205,18 @@ export default function AnomalyDetectionPage() {
                         onChange={(e) => setFilterStatus(e.target.value as AnomalyStatus | 'ALL')}
                         className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                     >
-                        <option value="ALL">Semua Status</option>
-                        <option value="OPEN">Open</option>
-                        <option value="INVESTIGATING">Investigating</option>
-                        <option value="DISMISSED">Dismissed</option>
-                        <option value="BLOCKED">Blocked</option>
+                        <option value="ALL">{t('ai.allStatus')}</option>
+                        <option value="OPEN">{t('ai.anomaly.open')}</option>
+                        <option value="INVESTIGATING">{t('ai.anomaly.investigating')}</option>
+                        <option value="DISMISSED">{t('ai.anomaly.dismissed')}</option>
+                        <option value="BLOCKED">{t('ai.anomaly.blocked')}</option>
                     </select>
                 </div>
 
                 <div className="flex items-center gap-3">
                     {scannedAt && (
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                            Last scan: {new Date(scannedAt).toLocaleString('id-ID')}
+                            {t('ai.anomaly.lastScanLabel')} {new Date(scannedAt).toLocaleString('id-ID')}
                             {scanDuration && ` (${scanDuration}ms)`}
                         </span>
                     )}
@@ -189,12 +228,12 @@ export default function AnomalyDetectionPage() {
                         {scanning ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Scanning...
+                                {t('ai.scanning')}
                             </>
                         ) : (
                             <>
                                 <RefreshCw className="h-4 w-4" />
-                                Scan Now
+                                {t('ai.scanNow')}
                             </>
                         )}
                     </button>

@@ -394,3 +394,38 @@ export function getDocumentFields(documentType: DocumentType): { key: string; la
 export function getSupportedDocumentTypes(): DocumentType[] {
     return Object.keys(DOCUMENT_FIELDS) as DocumentType[];
 }
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+
+/**
+ * Persist an extraction result to the database for history tracking.
+ * This is fire-and-forget — persistence failure should not break extraction flow.
+ */
+export async function persistExtraction(
+    tenantId: string,
+    result: ExtractionResult,
+    fileName: string,
+    mimeType: string,
+    fileSize?: number
+): Promise<void> {
+    try {
+        const { prisma } = await import('@/lib/db');
+
+        await prisma.extractionHistory.create({
+            data: {
+                tenantId,
+                documentType: result.documentType,
+                fileName,
+                mimeType,
+                fileSize: fileSize || null,
+                fields: JSON.parse(JSON.stringify(result.fields)),
+                confidence: result.confidence,
+                method: result.method,
+                extractedAt: result.extractedAt,
+            },
+        });
+    } catch (error) {
+        console.error('[DocumentExtraction] Failed to persist extraction:', error instanceof Error ? error.message : 'Unknown');
+        // Don't throw — persistence failure shouldn't break extraction
+    }
+}

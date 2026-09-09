@@ -980,6 +980,16 @@
                 "deactivate": "Nonaktifkan",
                 "activate": "Aktifkan"
             }
+        },
+        "invoice": {
+            "status": {
+                "draft": "Draft",
+                "sent": "Terkirim",
+                "paid": "Lunas",
+                "overdue": "Jatuh Tempo",
+                "partiallyPaid": "Bayar Sebagian",
+                "cancelled": "Dibatalkan"
+            }
         }
     },
     "crm": {
@@ -2266,6 +2276,72 @@
             "name": "Nama",
             "updateSuccess": "Profil karyawan berhasil diperbarui",
             "updateError": "Gagal memperbarui profil karyawan"
+        },
+        "leave": {
+            "type": {
+                "annual": "Cuti Tahunan",
+                "sick": "Cuti Sakit",
+                "personal": "Cuti Pribadi",
+                "maternity": "Cuti Melahirkan",
+                "unpaid": "Cuti Tanpa Gaji"
+            },
+            "status": {
+                "pending": "Menunggu",
+                "approved": "Disetujui",
+                "rejected": "Ditolak"
+            },
+            "error": {
+                "loadFailed": "Gagal memuat data cuti",
+                "notFound": "Data cuti tidak ditemukan"
+            },
+            "toast": {
+                "approveSuccess": "Cuti berhasil disetujui",
+                "approveFailed": "Gagal menyetujui cuti",
+                "rejectSuccess": "Cuti berhasil ditolak",
+                "rejectFailed": "Gagal menolak cuti"
+            },
+            "confirm": {
+                "approveTitle": "Setujui Cuti",
+                "approveMessage": "Apakah Anda yakin ingin menyetujui cuti",
+                "rejectTitle": "Tolak Cuti",
+                "rejectMessage": "Apakah Anda yakin ingin menolak cuti"
+            },
+            "processing": "Memproses...",
+            "detailTitle": "Detail Cuti",
+            "approve": "Setujui",
+            "reject": "Tolak",
+            "backToList": "Kembali ke daftar cuti",
+            "fields": {
+                "type": "Tipe Cuti",
+                "days": "Jumlah Hari",
+                "startDate": "Tanggal Mulai",
+                "endDate": "Tanggal Selesai",
+                "reason": "Alasan",
+                "notes": "Catatan"
+            },
+            "timeline": {
+                "title": "Riwayat Status",
+                "applied": "Cuti diajukan",
+                "approvedBy": "Disetujui oleh",
+                "rejected": "Cuti ditolak"
+            },
+            "employeeInfo": {
+                "title": "Info Karyawan",
+                "name": "Nama",
+                "nip": "NIP",
+                "position": "Posisi",
+                "department": "Departemen"
+            },
+            "summary": {
+                "title": "Ringkasan",
+                "applied": "Diajukan",
+                "approvedBy": "Disetujui Oleh"
+            },
+            "actions": {
+                "title": "Aksi",
+                "viewProfile": "Lihat Profil Karyawan",
+                "backToList": "Kembali ke Daftar Cuti"
+            }
         }
     },
     "settings": {
@@ -2676,7 +2752,84 @@
             "tabPending": "Menunggu",
             "tabVerified": "Diverifikasi",
             "tabRejected": "Ditolak",
-            "emptyPayments": "Belum ada data pembayaran"
+            "emptyPayments": "Belum ada data pembayaran",
+            "accessDenied": "Akses Ditolak",
+            "accessDeniedDesc": "Hanya Super Admin yang dapat mengakses halaman ini.",
+            "pageTitle": "Billing Management",
+            "pageSubtitle": "Kelola pembayaran dan langganan tenant",
+            "paymentSuccessBanner": "Pembayaran Berhasil",
+            "paymentSuccessDesc": "Pembayaran Anda telah diterima. Langganan akan diaktifkan setelah verifikasi.",
+            "subscriptionPayment": "Langganan & Pembayaran",
+            "subscriptionPaymentDesc": "Kelola langganan dan lakukan pembayaran untuk tenant ini",
+            "statusActive": "Aktif",
+            "statusPendingPayment": "Menunggu Pembayaran",
+            "statusTrial": "Trial",
+            "statusSuspended": "Suspended",
+            "statusCancelled": "Dibatalkan",
+            "perMonth": "/ bulan",
+            "nextBilling": "Tagihan berikutnya:",
+            "payWithMidtrans": "Bayar dengan Midtrans",
+            "processing": "Memproses...",
+            "noActiveSubscriptionYet": "Belum ada langganan aktif",
+            "selectPlanToStart": "Pilih paket untuk memulai",
+            "pending": "Pending",
+            "thisMonth": "Bulan Ini",
+            "activeTenants": "Tenant Aktif",
+            "revenueThisMonth": "Revenue Bulan Ini",
+            "total": "Total:",
+            "tableDate": "Tanggal",
+            "tableTenant": "Tenant",
+            "tablePlan": "Paket",
+            "tableAmount": "Jumlah",
+            "tableBank": "Bank",
+            "tableStatus": "Status",
+            "tableAction": "Aksi",
+            "pageInfo": "Halaman {page} dari {totalPages}",
+            "detailPayment": "Detail Pembayaran",
+            "waConfirmed": "WA Confirmed",
+            "tenantInfo": "Informasi Tenant",
+            "name": "Nama",
+            "email": "Email",
+            "subscriptionStatus": "Status Langganan",
+            "planInfo": "Informasi Paket",
+            "plan": "Paket",
+            "pricePerMonth": "Harga/Bulan",
+            "paymentInfo": "Informasi Pembayaran",
+            "amount": "Jumlah",
+            "date": "Tanggal",
+            "senderBank": "Bank Pengirim",
+            "senderAccount": "Rekening Pengirim",
+            "senderName": "Nama Pengirim",
+            "reference": "Reference",
+            "notes": "Catatan",
+            "rejectReason": "Alasan Penolakan",
+            "transferProof": "Bukti Transfer",
+            "viewProof": "Lihat Bukti Transfer",
+            "approve": "Approve",
+            "reject": "Reject",
+            "approvePayment": "Approve Pembayaran",
+            "confirmVerification": "Konfirmasi verifikasi pembayaran",
+            "approveWarning": "Setelah disetujui, langganan tenant akan diaktifkan dan status berubah menjadi ACTIVE.",
+            "tenant": "Tenant",
+            "cancel": "Batal",
+            "yesApprove": "Ya, Approve",
+            "rejectPayment": "Tolak Pembayaran",
+            "provideRejectReason": "Berikan alasan penolakan",
+            "rejectReasonLabel": "Alasan Penolakan",
+            "rejectReasonPlaceholder": "Masukkan alasan penolakan...",
+            "rejectPaymentBtn": "Tolak Pembayaran",
+            "openPdf": "Buka PDF",
+            "previewNotAvailable": "Preview tidak tersedia untuk tipe file ini",
+            "downloadFile": "Download File",
+            "viewProofBtn": "Lihat Bukti",
+            "createMidtransFailed": "Gagal membuat pembayaran Midtrans",
+            "midtransConnectionFailed": "Gagal terhubung ke Midtrans",
+            "verifyPaymentFailed": "Gagal memverifikasi pembayaran",
+            "rejectPaymentFailed": "Gagal menolak pembayaran",
+            "rejectReasonRequired": "Alasan penolakan wajib diisi",
+            "statusPendingVerification": "Menunggu Verifikasi",
+            "statusVerified": "Diverifikasi",
+            "statusRejected": "Ditolak"
         },
         "noMembersFound": "Tidak ada anggota ditemukan",
         "you": "Anda",
@@ -2840,7 +2993,57 @@
         "details": "Detail",
         "create": "Membuat",
         "update": "Memperbarui",
-        "delete": "Menghapus"
+        "delete": "Menghapus",
+        "subtitle": "Lacak semua aktivitas dan perubahan dalam sistem",
+        "searchPlaceholder": "Cari jejak audit...",
+        "totalActivity": "Total Aktivitas",
+        "creation": "Pembuatan",
+        "updateAction": "Pembaruan",
+        "deletion": "Penghapusan",
+        "loading": "Memuat jejak audit...",
+        "loadError": "Gagal memuat jejak audit",
+        "networkError": "Error jaringan. Silakan coba lagi.",
+        "retry": "Coba Lagi",
+        "empty": "Tidak ada jejak audit ditemukan",
+        "emptyDescription": "Belum ada aktivitas yang tercatat",
+        "justNow": "Baru saja",
+        "hoursAgo": "jam lalu",
+        "yesterday": "Kemarin",
+        "daysAgo": "hari lalu",
+        "pagination": "Halaman {page} dari {totalPages} ({count} record)",
+        "previous": "Sebelumnya",
+        "next": "Selanjutnya",
+        "exportCsv": "Export CSV",
+        "resetFilter": "Reset Filter",
+        "actionLabel": {
+            "create": "Pembuatan",
+            "update": "Pembaruan",
+            "delete": "Penghapusan",
+            "read": "Pembacaan",
+            "testing": "Testing"
+        },
+        "module": {
+            "all": "Semua Modul",
+            "invoice": "Finance",
+            "deal": "Sales",
+            "lead": "CRM",
+            "contact": "CRM",
+            "product": "Inventory",
+            "employee": "HR",
+            "payment": "Finance",
+            "quotation": "Finance",
+            "purchaseOrder": "Finance",
+            "tenantNotificationSettings": "Settings",
+            "tenantIntegration": "Settings"
+        },
+        "filterAll": "Semua Aksi",
+        "detailActivity": "Detail Aktivitas",
+        "time": "Waktu",
+        "moduleHeader": "Modul",
+        "dataChanges": "Perubahan Data",
+        "noChanges": "Tidak ada detail perubahan tersedia",
+        "dateFrom": "Dari tanggal",
+        "dateTo": "Sampai tanggal"
     },
     "search": {
         "placeholder": "Cari invoice, deal, kontak, produk...",
@@ -3579,6 +3782,11 @@
                 "prev": "Sebelumnya",
                 "next": "Selanjutnya",
                 "pageInfo": "Halaman {current} dari {total}"
+            },
+            "errors": {
+                "selectDimensions": "Select at least one dimension or measure",
+                "saveFailed": "Failed to save report",
+                "queryFailed": "Failed to execute query. Please try again."
             }
         },
         "kpi": {
@@ -3618,6 +3826,8 @@
                 "above_target": "Di Atas Target",
                 "on_target": "Sesuai Target",
                 "below_target": "Di Bawah Target",
+                "critical": "Kritis",
+                "unknown": "Tidak Diketahui",
                 "no_data": "Tidak Ada Data"
             },
             "periods": {
@@ -3654,15 +3864,7 @@
             "lastEvaluated": "Terakhir dievaluasi:",
             "periodLabel": "Periode:",
             "categoryLabel": "Kategori:",
-            "reEvaluate": "Evaluasi Ulang",
-            "statuses": {
-                "above_target": "Di Atas Target",
-                "on_target": "Sesuai Target",
-                "below_target": "Di Bawah Target",
-                "critical": "Kritis",
-                "unknown": "Tidak Diketahui",
-                "no_data": "Tidak Ada Data"
-            }
+            "reEvaluate": "Evaluasi Ulang"
         },
         "reports": {
             "title": "Laporan Tersimpan",
@@ -4236,7 +4438,91 @@
         "regexBased": "Berdasarkan Regex",
         "fallback": "Fallback",
         "confidence": "Tingkat Akurasi",
-        "applyToFormSuccess": "Data berhasil diterapkan ke form"
+        "applyToFormSuccess": "Data berhasil diterapkan ke form",
+        "financeAgent": "Agent Keuangan",
+        "financeAgentDesc": "Tugas keuangan otomatis dan insight",
+        "salesAgent": "Agent Penjualan",
+        "salesAgentDesc": "Tingkatkan konversi dan efisiensi",
+        "inventoryAgent": "Agent Inventaris",
+        "inventoryAgentDesc": "Optimasi stok dan supply chain",
+        "nlqTitle": "Query Bahasa Alami",
+        "nlqDesc": "Ajukan pertanyaan dalam bahasa sehari-hari",
+        "docExtraction": "Ekstraksi Dokumen",
+        "docExtractionDesc": "Ekstrak data dari dokumen",
+        "anomalyDetection": "Deteksi Anomali",
+        "anomalyDetectionDesc": "Deteksi transaksi mencurigakan",
+        "basicAvailable": "Versi Dasar Tersedia",
+        "comingSoon": "Segera Hadir",
+        "tryAssistant": "Coba AI Assistant",
+        "tryAssistantDesc": "Ajukan pertanyaan tentang data bisnis Anda",
+        "exampleQuestions": "Contoh pertanyaan:",
+        "exampleQ1": "Tampilkan penjualan bulan ini",
+        "exampleQ2": "Bagaimana status invoice yang belum dibayar?",
+        "exampleQ3": "Bandingkan revenue Q2 vs Q3",
+        "exampleQ4": "Analisis profit & loss saya",
+        "backToDashboard": "Kembali ke Dashboard",
+        "anomaly": {
+            "errorScan": "Gagal menjalankan scan",
+            "errorLoad": "Gagal memuat data anomali",
+            "errorGeneric": "Terjadi kesalahan",
+            "total": "Total",
+            "critical": "Kritis",
+            "high": "Tinggi",
+            "medium": "Sedang",
+            "low": "Rendah",
+            "open": "Terbuka",
+            "investigating": "Investigasi",
+            "dismissed": "Dibatalkan",
+            "blocked": "Diblokir",
+            "allNormal": "Semua transaksi terlihat normal",
+            "entity": "Entitas:",
+            "detected": "Terdeteksi:",
+            "suggestedActions": "Saran Tindakan:",
+            "riskScore": "Skor Risiko AI:",
+            "lastScanLabel": "Scan terakhir:",
+            "scannedEntities": "Entitas yang dipindai",
+            "scanDuration": "Durasi scan",
+            "exportCsv": "Ekspor CSV",
+            "noData": "Tidak ada anomali ditemukan"
+        },
+        "extraction": {
+            "invoice": "Invoice / Faktur",
+            "invoiceDesc": "Ekstrak data dari invoice penjualan",
+            "purchaseOrder": "Purchase Order (PO)",
+            "purchaseOrderDesc": "Ekstrak data dari PO pembelian",
+            "receipt": "Receipt / Struk",
+            "receiptDesc": "Ekstrak data dari struk pembelian",
+            "ktp": "KTP",
+            "ktpDesc": "Ekstrak data dari Kartu Tanda Penduduk",
+            "npwp": "NPWP",
+            "npwpDesc": "Ekstrak data dari Nomor Pokok Wajib Pajak",
+            "fileTypeError": "Tipe file tidak didukung. Gunakan PNG, JPEG, atau PDF.",
+            "fileTooLarge": "File terlalu besar. Maksimal 10MB.",
+            "errorExtract": "Gagal mengekstrak dokumen",
+            "errorGeneric": "Terjadi kesalahan saat ekstraksi",
+            "fileSizeHint": "PNG, JPEG, PDF — Maksimal 10MB",
+            "typeLabel": "Tipe:",
+            "extracting": "Mengekstrak data...",
+            "extractData": "Ekstrak Data",
+            "results": "Hasil Ekstraksi",
+            "accuracy": "akurasi",
+            "notFound": "Tidak ditemukan",
+            "history": "Riwayat Ekstraksi",
+            "loadingHistory": "Memuat riwayat...",
+            "noHistory": "Belum ada riwayat ekstraksi."
+        },
+        "chat": {
+            "openAssistant": "Buka AI Assistant",
+            "assistantTitle": "AI Assistant",
+            "assistantSubtitle": "Qalcuity AI",
+            "maximize": "Perbesar",
+            "minimize": "Perkecil",
+            "close": "Tutup",
+            "quickSales": "Penjualan",
+            "quickInvoice": "Invoice",
+            "quickProfit": "Profit",
+            "placeholder": "Tanyakan sesuatu..."
+        }
     },
     "periodClosing": {
         "title": "Periode Akuntansi",
@@ -5051,5 +5337,80 @@
                 }
             }
         }
-    }
+    },
+    "toast": {
+        "createSuccess": "Invoice berhasil dibuat",
+        "deleteSuccess": "Invoice berhasil dihapus",
+        "deleteFailed": "Gagal menghapus",
+        "deleteError": "Gagal menghapus invoice",
+        "approveSuccess": "Cuti berhasil disetujui",
+        "approveFailed": "Gagal menyetujui cuti",
+        "rejectSuccess": "Cuti berhasil ditolak",
+        "rejectFailed": "Gagal menolak cuti"
+    },
+    "emptyDescription": "Buat invoice pertama Anda untuk mulai menerima pembayaran",
+    "confirmDeleteTitle": "Konfirmasi Hapus",
+    "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus invoice ini?",
+    "type": {
+        "annual": "Cuti Tahunan",
+        "sick": "Cuti Sakit",
+        "personal": "Cuti Pribadi",
+        "maternity": "Cuti Melahirkan",
+        "unpaid": "Cuti Tanpa Gaji"
+    },
+    "status": {
+        "pending": "Menunggu",
+        "approved": "Disetujui",
+        "rejected": "Ditolak"
+    },
+    "error": {
+        "loadFailed": "Gagal memuat data cuti",
+        "notFound": "Data cuti tidak ditemukan"
+    },
+    "confirm": {
+        "approveTitle": "Setujui Cuti",
+        "approveMessage": "Apakah Anda yakin ingin menyetujui cuti {{name}}?",
+        "rejectTitle": "Tolak Cuti",
+        "rejectMessage": "Apakah Anda yakin ingin menolak cuti {{name}}?"
+    },
+    "processing": "Memproses...",
+    "detailTitle": "Detail Cuti",
+    "approve": "Setujui",
+    "reject": "Tolak",
+    "backToList": "Kembali ke daftar cuti",
+    "fields": {
+        "type": "Tipe Cuti",
+        "days": "Jumlah Hari",
+        "startDate": "Tanggal Mulai",
+        "endDate": "Tanggal Selesai",
+        "reason": "Alasan",
+        "notes": "Catatan"
+    },
+    "timeline": {
+        "title": "Riwayat Status",
+        "applied": "Cuti diajukan",
+        "approvedBy": "Disetujui oleh {{name}}",
+        "rejected": "Cuti ditolak"
+    },
+    "employeeInfo": {
+        "title": "Info Karyawan",
+        "name": "Nama",
+        "nip": "NIP",
+        "position": "Posisi",
+        "department": "Departemen"
+    },
+    "summary": {
+        "title": "Ringkasan",
+        "applied": "Diajukan",
+        "approvedBy": "Disetujui Oleh"
+    },
+    "actions": {
+        "title": "Aksi",
+        "viewProfile": "Lihat Profil Karyawan",
+        "backToList": "Kembali ke Daftar Cuti"
+    },
+    "noLeaveRequests": "Belum ada pengajuan cuti",
+    "birthdayNotAvailable": "Data ulang tahun belum tersedia",
+    "birthdayFieldMissing": "Field dateOfBirth belum ada di data karyawan",
+    "loadError": "Gagal memuat data HR"
 }
