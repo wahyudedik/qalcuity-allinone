@@ -13,12 +13,37 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { getSeverityColor, getStatusColor } from '@/lib/ai/anomaly-detection';
+// NOTE: getSeverityColor & getStatusColor are inlined here (not imported from
+// @/lib/ai/anomaly-detection) to avoid pulling server-only dependencies
+// (nodemailer via email.ts) into the client bundle, which breaks production
+// builds with "Module not found: Can't resolve 'fs'/'net'/'dns'".
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type AnomalySeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 type AnomalyStatus = 'OPEN' | 'DISMISSED' | 'INVESTIGATING' | 'BLOCKED';
+
+// ─── Inline Color Helpers (mirrored from anomaly-detection.ts) ───────────────
+
+function getSeverityColor(severity: AnomalySeverity): string {
+    switch (severity) {
+        case 'CRITICAL': return 'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400';
+        case 'HIGH': return 'text-orange-700 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400';
+        case 'MEDIUM': return 'text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400';
+        case 'LOW': return 'text-blue-700 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400';
+        default: return 'text-gray-700 bg-gray-100';
+    }
+}
+
+function getStatusColor(status: AnomalyStatus): string {
+    switch (status) {
+        case 'OPEN': return 'text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400';
+        case 'INVESTIGATING': return 'text-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400';
+        case 'BLOCKED': return 'text-purple-700 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400';
+        case 'DISMISSED': return 'text-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-gray-400';
+        default: return 'text-gray-700 bg-gray-100';
+    }
+}
 
 interface AnomalyItem {
     id: string;

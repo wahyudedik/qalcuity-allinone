@@ -66,6 +66,9 @@ const nextConfig = {
     },
     experimental: {
         optimizePackageImports: ["lucide-react"],
+        // Belt-and-suspenders: ensure nodemailer (server-only) is never bundled
+        // into client chunks. See: apps/web/components/ai/anomaly-list.tsx fix.
+        serverComponentsExternalPackages: ["nodemailer"],
     },
     // ─── Security Headers ──────────────────────────────────────────────────────
     // See: docs/SECURITY.md — H02 (CSP) & H03 (CORS)
