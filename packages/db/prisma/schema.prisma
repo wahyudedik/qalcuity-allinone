@@ -143,6 +143,10 @@ model Tenant {
   projects             Project[]
   projectBudgets       ProjectBudget[]
   resourceAllocations  ResourceAllocation[]
+
+  // AI
+  anomalyDetections    AnomalyDetection[]
+  extractionHistories  ExtractionHistory[]
 }
 
 model User {
@@ -2414,4 +2418,68 @@ model FieldChecklistResult {
   @@index([tenantId, jobId])
   @@index([tenantId, checklistId])
   @@index([tenantId, employeeId])
+}
+
+// ============================================
+// AI — ANOMALY DETECTION
+// ============================================
+
+model AnomalyDetection {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  ruleId          String
+  ruleName        String
+  severity        String   // CRITICAL, HIGH, MEDIUM, LOW
+  category        String   // finance, inventory, hr, sales, etc.
+  entityType      String   // INVOICE, PAYMENT, PRODUCT, etc.
+  entityId        String
+  message         String
+  details         Json?
+  suggestedActions Json?
+  aiRiskScore     Decimal? @db.Decimal(5, 2)
+  aiAnalysis      String?  @db.Text
+
+  status          String   @default("OPEN") // OPEN, INVESTIGATING, DISMISSED, BLOCKED
+  statusNote      String?
+  statusChangedBy String?
+  statusChangedAt DateTime?
+
+  detectedAt      DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, severity])
+  @@index([tenantId, status])
+  @@index([tenantId, entityType])
+  @@index([detectedAt])
+}
+
+// ============================================
+// AI — DOCUMENT EXTRACTION HISTORY
+// ============================================
+
+model ExtractionHistory {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  documentType  String
+  fileName      String
+  mimeType      String
+  fileSize      Int?
+  fields        Json     // Extracted fields from the document
+  confidence    Decimal  @db.Decimal(5, 2)
+  method        String   // OCR, AI, MANUAL
+  sourceType    String?  // Upload, Email, API
+  sourceId      String?
+
+  extractedAt   DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, documentType])
+  @@index([extractedAt])
 }
