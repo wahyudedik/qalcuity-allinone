@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { z } from 'zod'
 import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
@@ -56,9 +56,11 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
     const [selectedTaxRateId, setSelectedTaxRateId] = useState<string>('')
     const [loadingTaxRates, setLoadingTaxRates] = useState(false)
 
-    // Fetch active tax rates when modal opens
+    // Fetch active tax rates when modal opens (useRef to avoid re-fetching)
+    const taxRatesFetched = useRef(false)
     useEffect(() => {
-        if (isOpen && taxRates.length === 0) {
+        if (isOpen && !taxRatesFetched.current) {
+            taxRatesFetched.current = true
             setLoadingTaxRates(true)
             fetch('/api/finance/tax-rates?active=true')
                 .then((res) => res.json())
@@ -81,7 +83,7 @@ export function InvoiceForm({ isOpen, onClose, onSubmit }: InvoiceFormProps) {
                 })
                 .finally(() => setLoadingTaxRates(false))
         }
-    }, [isOpen, taxRates.length])
+    }, [isOpen])
 
     const selectedTaxRate = taxRates.find((t) => t.id === selectedTaxRateId)
 
