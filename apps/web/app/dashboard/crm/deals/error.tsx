@@ -3,7 +3,7 @@
 import { ModuleError } from '@/components/ui/error-boundary'
 import { useTranslation } from '@/lib/i18n'
 
-export default function JournalEntriesError({
+export default function DealsError({
     error,
     reset,
 }: {
@@ -15,8 +15,8 @@ export default function JournalEntriesError({
         <ModuleError
             error={error}
             reset={reset}
-            title={t('errors.financeJournalEntries.title') || 'Gagal Memuat Jurnal Umum'}
-            description={t('errors.financeJournalEntries.description') || 'Terjadi kesalahan saat memuat data jurnal umum. Silakan coba lagi.'}
+            title={t('errors.crmDeals.title') || 'Gagal Memuat Deal'}
+            description={t('errors.crmDeals.description') || 'Terjadi kesalahan saat memuat data deal. Silakan coba lagi.'}
         />
     )
 }

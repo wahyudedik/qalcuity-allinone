@@ -3,7 +3,7 @@
 import { ModuleError } from '@/components/ui/error-boundary'
 import { useTranslation } from '@/lib/i18n'
 
-export default function JournalEntriesError({
+export default function StockOpnameError({
     error,
     reset,
 }: {
@@ -15,8 +15,8 @@ export default function JournalEntriesError({
         <ModuleError
             error={error}
             reset={reset}
-            title={t('errors.financeJournalEntries.title') || 'Gagal Memuat Jurnal Umum'}
-            description={t('errors.financeJournalEntries.description') || 'Terjadi kesalahan saat memuat data jurnal umum. Silakan coba lagi.'}
+            title={t('errors.inventoryStockOpname.title') || 'Gagal Memuat Stock Opname'}
+            description={t('errors.inventoryStockOpname.description') || 'Terjadi kesalahan saat memuat data stock opname. Silakan coba lagi.'}
         />
     )
 }
