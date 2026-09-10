@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Query History API — GET (list), POST (create)
+// Query History API â€” GET (list), POST (create)
 // Query history with pagination
 // ============================================
 
@@ -31,7 +33,7 @@ interface CreateQueryHistoryBody {
 }
 
 // ============================================
-// GET — List query history for tenant (with pagination)
+// GET â€” List query history for tenant (with pagination)
 // ============================================
 
 export async function GET(request: Request) {
@@ -115,7 +117,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Save query to history
+// POST â€” Save query to history
 // ============================================
 
 export async function POST(request: Request) {

@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Alert Rules API — GET (list), POST (create)
+// Alert Rules API â€” GET (list), POST (create)
 // CRUD for alert rules
 // ============================================
 
@@ -13,7 +15,7 @@ import { handleApiError } from '@/lib/api-error'
 import { createAlertSchema } from '@/lib/validation-schemas'
 
 // ============================================
-// GET — List alert rules for tenant
+// GET â€” List alert rules for tenant
 // ============================================
 
 export async function GET(request: Request) {
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create alert rule
+// POST â€” Create alert rule
 // ============================================
 
 export async function POST(request: Request) {

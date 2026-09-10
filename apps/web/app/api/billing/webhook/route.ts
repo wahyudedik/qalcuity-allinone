@@ -1,8 +1,10 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/billing/webhook
  *
  * Handle payment webhook from payment providers (Midtrans, Xendit, etc.).
- * This route is PUBLIC (no auth required) — called by payment provider servers.
+ * This route is PUBLIC (no auth required) â€” called by payment provider servers.
  *
  * Security: Webhook signature verification using HMAC SHA256.
  * The signature is computed as HMAC-SHA256(rawBody, BILLING_WEBHOOK_SECRET).
@@ -46,18 +48,18 @@ function verifyWebhookSignature(rawBody: string, signature: string): boolean {
             Buffer.from(signature, 'hex')
         );
     } catch {
-        // Buffer lengths differ or invalid hex — signature is invalid
+        // Buffer lengths differ or invalid hex â€” signature is invalid
         return false;
     }
 }
 
 export async function POST(request: Request) {
     try {
-        // ─── Step 1: Extract and verify webhook signature ──────────────────
+        // â”€â”€â”€ Step 1: Extract and verify webhook signature â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const signature = request.headers.get('x-webhook-signature');
 
         if (!signature) {
-            console.warn('[Webhook] Missing X-Webhook-Signature header — rejecting request');
+            console.warn('[Webhook] Missing X-Webhook-Signature header â€” rejecting request');
             return NextResponse.json(
                 { success: false, error: 'Missing webhook signature' },
                 { status: 401 }
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
         const rawBody = await request.text();
 
         if (!verifyWebhookSignature(rawBody, signature)) {
-            console.error('[Webhook] Invalid webhook signature — rejecting request');
+            console.error('[Webhook] Invalid webhook signature â€” rejecting request');
             // Log failed attempt for security monitoring
             void logAudit({
                 userId: 'system',
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // ─── Step 2: Parse and validate payload ────────────────────────────
+        // â”€â”€â”€ Step 2: Parse and validate payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const body = JSON.parse(rawBody) as Record<string, unknown>;
 
         const { orderId, status, transactionId } = body as {

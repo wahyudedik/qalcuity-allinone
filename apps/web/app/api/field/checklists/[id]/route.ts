@@ -1,20 +1,18 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { updateFieldChecklistSchema, formatZodError } from '@/lib/validation-schemas';
+import { createFieldChecklistSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request) {
     try {
-        const { id } = await params;
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:field-checklist:${ip}`, 100, 60000);
+        const rateLimitResult = checkRateLimit(`api:field-checklists:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
@@ -26,46 +24,73 @@ export async function GET(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
-        const checklist = await prisma.fieldChecklist.findFirst({
-            where: { id, tenantId },
-            include: {
-                _count: {
-                    select: { results: true },
-                },
-            },
-        });
+        const { searchParams } = new URL(request.url);
+        const category = searchParams.get('category');
+        const isActive = searchParams.get('isActive');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        if (!checklist) {
-            return NextResponse.json({ success: false, error: 'MSG.CHECKLIST_NOT_FOUND' }, { status: 404 });
+        const where: Record<string, unknown> = { tenantId };
+
+        if (category) {
+            where.category = category.toUpperCase();
         }
+        if (isActive !== null && isActive !== undefined) {
+            where.isActive = isActive === 'true';
+        }
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        const [checklists, total] = await Promise.all([
+            prisma.fieldChecklist.findMany({
+                where,
+                include: {
+                    _count: {
+                        select: { results: true },
+                    },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.fieldChecklist.count({ where }),
+        ]);
+
+        const data = checklists.map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            category: c.category,
+            items: c.items,
+            isActive: c.isActive,
+            usageCount: c._count.results,
+            createdAt: c.createdAt.toISOString(),
+            updatedAt: c.updatedAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
-            data: {
-                id: checklist.id,
-                name: checklist.name,
-                description: checklist.description,
-                category: checklist.category,
-                items: checklist.items,
-                isActive: checklist.isActive,
-                usageCount: checklist._count.results,
-                createdAt: checklist.createdAt.toISOString(),
-                updatedAt: checklist.updatedAt.toISOString(),
-            },
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PATCH(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request) {
     try {
-        const { id } = await params;
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:field-checklist:${ip}`, 30, 60000);
+        const rateLimitResult = checkRateLimit(`api:field-checklists:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
@@ -78,7 +103,7 @@ export async function PATCH(
         const { userId, tenantId } = auth;
         const body = await request.json();
 
-        const validation = updateFieldChecklistSchema.safeParse(body);
+        const validation = createFieldChecklistSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -86,85 +111,29 @@ export async function PATCH(
             );
         }
 
-        const existing = await prisma.fieldChecklist.findFirst({
-            where: { id, tenantId },
-        });
+        const { name, description, category, items } = validation.data;
 
-        if (!existing) {
-            return NextResponse.json({ success: false, error: 'MSG.CHECKLIST_NOT_FOUND' }, { status: 404 });
-        }
-
-        const updateData: Record<string, unknown> = {};
-        if (validation.data.name !== undefined) updateData.name = validation.data.name.trim();
-        if (validation.data.description !== undefined) updateData.description = validation.data.description?.trim() || null;
-        if (validation.data.category !== undefined) updateData.category = validation.data.category;
-        if (validation.data.items !== undefined) updateData.items = validation.data.items as object[];
-        if (validation.data.isActive !== undefined) updateData.isActive = validation.data.isActive;
-
-        const updated = await prisma.fieldChecklist.update({
-            where: { id },
-            data: updateData,
+        const checklist = await prisma.fieldChecklist.create({
+            data: {
+                tenantId,
+                name: name.trim(),
+                description: description?.trim() || null,
+                category: category || 'GENERAL',
+                items: items as object[],
+            },
         });
 
         await logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'FieldChecklist',
-            entityId: id,
-            oldValues: { name: existing.name, category: existing.category },
-            newValues: { name: updated.name, category: updated.category },
+            entityId: checklist.id,
+            newValues: { name: checklist.name, category: checklist.category },
             request,
         });
 
-        return NextResponse.json({ success: true, data: updated });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const { id } = await params;
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:field-checklist:${ip}`, 10, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-
-        const existing = await prisma.fieldChecklist.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: 'MSG.CHECKLIST_NOT_FOUND' }, { status: 404 });
-        }
-
-        await prisma.fieldChecklist.delete({
-            where: { id },
-        });
-
-        await logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'FieldChecklist',
-            entityId: id,
-            oldValues: { name: existing.name, category: existing.category },
-            request,
-        });
-
-        return NextResponse.json({ success: true, message: 'Checklist berhasil dihapus' });
+        return NextResponse.json({ success: true, data: checklist }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

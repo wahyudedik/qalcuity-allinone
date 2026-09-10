@@ -1,30 +1,66 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createLoyaltyRewardSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
-import { formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
-import { z } from 'zod';
 
-const updateRewardSchema = z.object({
-    name: z.string().min(1).max(255).optional(),
-    description: z.string().optional().nullable(),
-    pointsCost: z.number().int().min(1).optional(),
-    rewardType: z.enum(['DISCOUNT_PERCENT', 'DISCOUNT_FIXED', 'FREE_ITEM', 'VOUCHER']).optional(),
-    rewardValue: z.number().min(0).optional(),
-    stock: z.number().int().optional(),
-});
-
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:PUT:${ip}`, 30, 60000);
+        const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:${ip}`, 60, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
+
+        const { searchParams } = new URL(request.url);
+        const showAll = searchParams.get('showAll') === 'true';
+
+        const where: Record<string, unknown> = { tenantId };
+        if (!showAll) {
+            where.isActive = true;
+        }
+
+        const rewards = await prisma.loyaltyReward.findMany({
+            where,
+            orderBy: { pointsCost: 'asc' },
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: rewards.map((r) => ({
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                pointsCost: r.pointsCost,
+                rewardType: r.rewardType,
+                rewardValue: Number(r.rewardValue),
+                isActive: r.isActive,
+                stock: r.stock,
+                createdAt: r.createdAt.toISOString(),
+            })),
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: MSG.TOO_MANY_REQUESTS },
@@ -36,16 +72,17 @@ export async function PUT(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId, role } = auth;
 
+        // Only ADMIN+ can create rewards
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_UPDATE },
+                { success: false, error: MSG.REWARD_ADMIN_ONLY_CREATE },
                 { status: 403 }
             );
         }
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const validation = updateRewardSchema.safeParse(sanitizedBody);
+        const validation = createLoyaltyRewardSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -53,117 +90,44 @@ export async function PUT(
             );
         }
 
-        const existingReward = await prisma.loyaltyReward.findFirst({
-            where: { id: params.id, tenantId },
-        });
-
-        if (!existingReward) {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
         const validatedData = validation.data;
-        const updatedReward = await prisma.loyaltyReward.update({
-            where: { id: params.id },
+
+        const reward = await prisma.loyaltyReward.create({
             data: {
-                ...(validatedData.name !== undefined && { name: validatedData.name }),
-                ...(validatedData.description !== undefined && { description: validatedData.description || null }),
-                ...(validatedData.pointsCost !== undefined && { pointsCost: validatedData.pointsCost }),
-                ...(validatedData.rewardType !== undefined && { rewardType: validatedData.rewardType }),
-                ...(validatedData.rewardValue !== undefined && { rewardValue: validatedData.rewardValue }),
-                ...(validatedData.stock !== undefined && { stock: validatedData.stock }),
+                tenantId,
+                name: validatedData.name,
+                description: validatedData.description || null,
+                pointsCost: validatedData.pointsCost,
+                rewardType: validatedData.rewardType,
+                rewardValue: validatedData.rewardValue,
+                stock: validatedData.stock ?? -1,
             },
         });
 
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'LoyaltyReward',
-            entityId: params.id,
-            oldValues: { name: existingReward.name },
-            newValues: validatedData,
+            entityId: reward.id,
+            newValues: { name: validatedData.name, pointsCost: validatedData.pointsCost, rewardType: validatedData.rewardType },
             request,
         });
 
         return NextResponse.json({
             success: true,
             data: {
-                id: updatedReward.id,
-                name: updatedReward.name,
-                description: updatedReward.description,
-                pointsCost: updatedReward.pointsCost,
-                rewardType: updatedReward.rewardType,
-                rewardValue: Number(updatedReward.rewardValue),
-                isActive: updatedReward.isActive,
-                stock: updatedReward.stock,
-                createdAt: updatedReward.createdAt.toISOString(),
+                id: reward.id,
+                name: reward.name,
+                description: reward.description,
+                pointsCost: reward.pointsCost,
+                rewardType: reward.rewardType,
+                rewardValue: Number(reward.rewardValue),
+                isActive: reward.isActive,
+                stock: reward.stock,
+                createdAt: reward.createdAt.toISOString(),
             },
-        });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:pos:loyalty:rewards:DELETE:${ip}`, 30, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_DELETE },
-                { status: 403 }
-            );
-        }
-
-        const existingReward = await prisma.loyaltyReward.findFirst({
-            where: { id: params.id, tenantId },
-        });
-
-        if (!existingReward) {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        // Soft delete: set isActive to false
-        await prisma.loyaltyReward.update({
-            where: { id: params.id },
-            data: { isActive: false },
-        });
-
-        void logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'LoyaltyReward',
-            entityId: params.id,
-            oldValues: { name: existingReward.name, isActive: true },
-            newValues: { isActive: false },
-            request,
-        });
-
-        return NextResponse.json({
-            success: true,
-            message: MSG.REWARD_DEACTIVATED,
-        });
+        }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

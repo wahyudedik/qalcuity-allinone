@@ -1,76 +1,131 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateTaskSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createTaskSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:tasks:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const projectId = searchParams.get('projectId');
+        const status = searchParams.get('status');
+        const priority = searchParams.get('priority');
+        const assigneeId = searchParams.get('assigneeId');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-        const task = await prisma.task.findFirst({
-            where: { id, tenantId },
-            include: {
-                project: {
-                    select: { id: true, name: true },
-                },
-                comments: {
-                    orderBy: { createdAt: 'asc' },
-                },
-                timeLogs: {
-                    orderBy: { date: 'desc' },
-                },
-            },
-        });
+        const where: Record<string, unknown> = { tenantId };
 
-        if (!task) {
-            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
+        if (projectId) {
+            where.projectId = projectId;
         }
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+        if (priority) {
+            where.priority = priority.toUpperCase();
+        }
+        if (assigneeId) {
+            where.assigneeId = assigneeId;
+        }
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        const [tasks, total] = await Promise.all([
+            prisma.task.findMany({
+                where,
+                include: {
+                    project: {
+                        select: { id: true, name: true },
+                    },
+                    _count: {
+                        select: {
+                            comments: true,
+                            timeLogs: true,
+                        },
+                    },
+                },
+                skip,
+                take: limit,
+                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+            }),
+            prisma.task.count({ where }),
+        ]);
+
+        const data = tasks.map((t) => ({
+            id: t.id,
+            projectId: t.projectId,
+            projectName: t.project.name,
+            title: t.title,
+            description: t.description,
+            status: t.status,
+            priority: t.priority,
+            assigneeId: t.assigneeId,
+            dueDate: t.dueDate?.toISOString() || null,
+            estimatedHours: t.estimatedHours ? Number(t.estimatedHours) : null,
+            actualHours: t.actualHours ? Number(t.actualHours) : 0,
+            tags: t.tags,
+            sortOrder: t.sortOrder,
+            commentCount: t._count.comments,
+            timeLogCount: t._count.timeLogs,
+            createdAt: t.createdAt.toISOString(),
+            updatedAt: t.updatedAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
-            data: {
-                ...task,
-                estimatedHours: task.estimatedHours ? Number(task.estimatedHours) : null,
-                actualHours: task.actualHours ? Number(task.actualHours) : 0,
-                dueDate: task.dueDate?.toISOString() || null,
-                createdAt: task.createdAt.toISOString(),
-                updatedAt: task.updatedAt.toISOString(),
-                timeLogs: task.timeLogs.map((tl) => ({
-                    ...tl,
-                    hours: Number(tl.hours),
-                    date: tl.date.toISOString(),
-                    createdAt: tl.createdAt.toISOString(),
-                    updatedAt: tl.updatedAt.toISOString(),
-                })),
-            },
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:tasks:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
 
         // Validasi input dengan Zod
-        const validation = updateTaskSchema.safeParse(body);
+        const validation = createTaskSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -78,29 +133,36 @@ export async function PATCH(
             );
         }
 
-        const existing = await prisma.task.findFirst({
-            where: { id, tenantId },
+        // Verify project exists and belongs to tenant
+        const project = await prisma.project.findFirst({
+            where: { id: validation.data.projectId, tenantId },
         });
 
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
+        if (!project) {
+            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
         }
 
-        const { title, description, status, priority, assigneeId, dueDate, estimatedHours, actualHours, tags, sortOrder } = validation.data;
+        const { projectId, title, description, status, priority, assigneeId, dueDate, estimatedHours, tags } = validation.data;
 
-        const task = await prisma.task.update({
-            where: { id },
+        // Get next sort order
+        const maxSortOrder = await prisma.task.aggregate({
+            where: { projectId, tenantId },
+            _max: { sortOrder: true },
+        });
+
+        const task = await prisma.task.create({
             data: {
-                ...(typeof title === 'string' && { title: title.trim() }),
-                ...(typeof description !== 'undefined' && { description: description?.trim() || null }),
-                ...(typeof status === 'string' && { status }),
-                ...(typeof priority === 'string' && { priority }),
-                ...(typeof assigneeId !== 'undefined' && { assigneeId: assigneeId || null }),
-                ...(typeof dueDate !== 'undefined' && { dueDate: dueDate ? new Date(dueDate) : null }),
-                ...(typeof estimatedHours !== 'undefined' && { estimatedHours: estimatedHours || null }),
-                ...(typeof actualHours === 'number' && { actualHours }),
-                ...(typeof tags !== 'undefined' && { tags: tags?.trim() || null }),
-                ...(typeof sortOrder === 'number' && { sortOrder }),
+                tenantId,
+                projectId,
+                title: title.trim(),
+                description: description?.trim() || null,
+                status: status || 'TODO',
+                priority: priority || 'MEDIUM',
+                assigneeId: assigneeId || null,
+                dueDate: dueDate ? new Date(dueDate) : null,
+                estimatedHours: estimatedHours || null,
+                tags: tags?.trim() || null,
+                sortOrder: (maxSortOrder._max.sortOrder || 0) + 1,
             },
         });
 
@@ -108,52 +170,14 @@ export async function PATCH(
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'Task',
-            entityId: id,
-            oldValues: { status: existing.status, priority: existing.priority, assigneeId: existing.assigneeId } as Record<string, unknown>,
+            entityId: task.id,
             newValues: validation.data as unknown as Record<string, unknown>,
             request,
         });
 
-        return NextResponse.json({ success: true, data: task });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
-
-        const existing = await prisma.task.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
-        }
-
-        await prisma.task.delete({ where: { id } });
-
-        // Audit logging non-blocking
-        void logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'Task',
-            entityId: id,
-            oldValues: existing as unknown as Record<string, unknown>,
-            request,
-        });
-
-        return NextResponse.json({ success: true, data: null });
+        return NextResponse.json({ success: true, data: task }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -8,7 +10,7 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/customers
  *
- * Customer analytics — repeat rate, avg spend, top customers, loyalty stats.
+ * Customer analytics â€” repeat rate, avg spend, top customers, loyalty stats.
  *
  * Query params:
  *   - dateFrom: ISO date string (default: 30 days ago)
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // ─── Total unique customers in period ───
+        // â”€â”€â”€ Total unique customers in period â”€â”€â”€
         // Customer = identified by customerName or customerPhone
         const totalCustomersResult = await prisma.$queryRawUnsafe<
             Array<{ total_customers: number }>
@@ -61,7 +63,7 @@ export async function GET(request: Request) {
         );
         const totalCustomers = totalCustomersResult[0]?.total_customers || 0;
 
-        // ─── Total transactions (including anonymous) ───
+        // â”€â”€â”€ Total transactions (including anonymous) â”€â”€â”€
         const totalTransactionsResult = await prisma.$queryRawUnsafe<
             Array<{ total_transactions: number }>
         >(
@@ -77,7 +79,7 @@ export async function GET(request: Request) {
         );
         const totalTransactions = totalTransactionsResult[0]?.total_transactions || 0;
 
-        // ─── Repeat customers (2+ transactions) ───
+        // â”€â”€â”€ Repeat customers (2+ transactions) â”€â”€â”€
         const repeatCustomersResult = await prisma.$queryRawUnsafe<
             Array<{ repeat_customers: number }>
         >(
@@ -102,7 +104,7 @@ export async function GET(request: Request) {
             ? Math.round((repeatCustomers / totalCustomers) * 10000) / 100
             : 0;
 
-        // ─── Top customers by total spend ───
+        // â”€â”€â”€ Top customers by total spend â”€â”€â”€
         const topCustomers = await prisma.$queryRawUnsafe<
             Array<{
                 customer_name: string;
@@ -137,7 +139,7 @@ export async function GET(request: Request) {
             limit
         );
 
-        // ─── Loyalty member stats ───
+        // â”€â”€â”€ Loyalty member stats â”€â”€â”€
         const loyaltyStats = await prisma.$queryRawUnsafe<
             Array<{
                 total_members: number;
@@ -168,7 +170,7 @@ export async function GET(request: Request) {
             tenantId
         );
 
-        // ─── New vs returning customers ───
+        // â”€â”€â”€ New vs returning customers â”€â”€â”€
         const newCustomersResult = await prisma.$queryRawUnsafe<
             Array<{ new_customers: number }>
         >(

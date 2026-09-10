@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -9,7 +11,7 @@ import { handleApiError } from '@/lib/api-error';
  *
  * Returns all active subscription plans with their features.
  * Uses the new Plan + PlanFeature model (unified with platform billing).
- * Public endpoint — no auth required (plan listing is public info).
+ * Public endpoint â€” no auth required (plan listing is public info).
  */
 export async function GET(request: Request) {
     try {

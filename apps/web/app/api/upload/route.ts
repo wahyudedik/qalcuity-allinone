@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -22,7 +24,7 @@ const ALLOWED_TYPES = [
 
 export async function POST(request: Request) {
     try {
-        // 1. Auth + RBAC check — minimal MEMBER ke atas
+        // 1. Auth + RBAC check â€” minimal MEMBER ke atas
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json(
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // 4. Determine upload directory — tenant-isolated path
+        // 4. Determine upload directory â€” tenant-isolated path
         const baseUploadDir = process.env.UPLOAD_DIR
             ? join(process.cwd(), process.env.UPLOAD_DIR)
             : join(process.cwd(), 'public', 'uploads');

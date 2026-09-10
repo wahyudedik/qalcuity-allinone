@@ -1,96 +1,125 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { sanitizeObject } from '@/lib/sanitize';
+import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
+import { sendInvoiceCreatedEmail } from '@/lib/email';
+import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
-        const { id } = params;
-
-        const invoice = await prisma.invoice.findFirst({
-            where: { id, tenantId },
-            include: {
-                contact: true,
-                items: true,
-                payments: {
-                    orderBy: { createdAt: 'desc' },
-                },
-            },
-        });
-
-        if (!invoice) {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:invoices:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Invoice not found' },
-                { status: 404 }
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
 
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
+
+        const where: Record<string, unknown> = { tenantId };
+
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+
+        if (search) {
+            where.OR = [
+                { invoiceNumber: { contains: search } },
+                { contact: { name: { contains: search } } },
+            ];
+        }
+
+        const [invoices, total] = await Promise.all([
+            prisma.invoice.findMany({
+                where,
+                include: {
+                    contact: { select: { id: true, name: true, email: true, phone: true } },
+                    items: true,
+                    payments: { select: { id: true, amount: true, status: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.invoice.count({ where }),
+        ]);
+
         // Map to frontend-compatible format
-        const data = {
-            id: invoice.id,
-            invoiceNumber: invoice.invoiceNumber,
-            customerName: invoice.contact?.name || '-',
-            customerAddress: invoice.contact?.address || '',
-            customerEmail: invoice.contact?.email || '',
-            customerPhone: invoice.contact?.phone || '',
-            contactId: invoice.contactId,
-            items: invoice.items.map((item) => ({
+        const data = invoices.map((inv) => ({
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            customerName: inv.contact?.name || '-',
+            contactId: inv.contactId,
+            subtotal: inv.subtotal,
+            tax: inv.taxAmount,
+            total: inv.total,
+            currency: 'IDR',
+            status: inv.status.toLowerCase(),
+            dueDate: inv.dueDate.toISOString().split('T')[0],
+            createdAt: inv.createdAt.toISOString(),
+            notes: inv.notes,
+            items: inv.items.map((item) => ({
                 id: item.id,
-                name: item.description,
                 description: item.description,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 total: item.total,
             })),
-            subtotal: invoice.subtotal,
-            tax: invoice.taxAmount,
-            total: invoice.total,
-            currency: 'IDR',
-            status: invoice.status.toLowerCase(),
-            dueDate: invoice.dueDate.toISOString().split('T')[0],
-            createdAt: invoice.createdAt.toISOString(),
-            notes: invoice.notes || '',
-            payments: invoice.payments.map((p) => ({
-                id: p.id,
-                paymentNumber: p.paymentNumber,
-                amount: p.amount,
-                method: p.method,
-                status: p.status.toLowerCase(),
-                date: p.paymentDate.toISOString(),
-                reference: p.reference,
-                notes: p.notes,
-            })),
-        };
+            paidAmount: inv.payments
+                .filter((p) => p.status === 'COMPLETED')
+                .reduce((sum, p) => sum + Number(p.amount), 0),
+        }));
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:invoices:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
 
-        const { items, ...restBody } = body;
-        const validation = updateInvoiceSchema.safeParse({ ...restBody, items });
+        // Sanitize text inputs before validation
+        const sanitizedBody = sanitizeObject(body);
+
+        const validation = createInvoiceSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -100,6 +129,131 @@ export async function PUT(
 
         const validatedData = validation.data;
 
+        // Calculate totals
+        const subtotal = validatedData.items.reduce(
+            (sum, item) => sum + item.quantity * item.unitPrice,
+            0
+        );
+        const taxRate = validatedData.taxRate || 0;
+        const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+
+        // Use transaction for atomicity: contact creation + invoice + items
+        const invoice = await prisma.$transaction(async (tx) => {
+            // Generate unique invoice number using timestamp + random suffix to prevent race condition
+            const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+            // If no contactId but customerName provided, create contact first
+            let contactId = validatedData.contactId;
+            if (!contactId && validatedData.customerName) {
+                const contact = await tx.contact.create({
+                    data: {
+                        name: validatedData.customerName,
+                        type: 'CUSTOMER',
+                        email: validatedData.customerEmail || undefined,
+                        phone: validatedData.customerPhone || undefined,
+                        address: validatedData.customerAddress || undefined,
+                        tenantId,
+                    },
+                });
+                contactId = contact.id;
+            }
+
+            // Create invoice with items in single transaction
+            return tx.invoice.create({
+                data: {
+                    invoiceNumber,
+                    status: 'DRAFT',
+                    dueDate: new Date(validatedData.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()),
+                    notes: validatedData.notes || '',
+                    subtotal,
+                    taxRate,
+                    taxCode: validatedData.taxCode || null,
+                    taxAmount,
+                    totalBeforeTax: subtotal,
+                    total,
+                    tenantId,
+                    contactId,
+                    items: {
+                        create: validatedData.items.map((item) => ({
+                            description: item.description,
+                            quantity: item.quantity,
+                            unitPrice: item.unitPrice,
+                            total: item.total || item.quantity * item.unitPrice,
+                        })),
+                    },
+                },
+                include: { items: true, contact: true },
+            });
+        });
+
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Invoice', entityId: invoice.id, newValues: invoice as unknown as Record<string, unknown>, request });
+
+        // Approval Engine: trigger approval if levels are configured
+        const approvalResult = await createApprovalRequest({
+            tenantId,
+            entityType: 'INVOICE',
+            entityId: invoice.id,
+            userId,
+            request,
+        });
+
+        // If approval was triggered, update invoice status to PENDING_APPROVAL
+        if (approvalResult) {
+            await prisma.invoice.update({
+                where: { id: invoice.id },
+                data: { status: 'DRAFT' }, // Keep as DRAFT until approved
+            });
+        }
+
+        // Fire-and-forget email notification (graceful â€” never crashes)
+        const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, id: true } });
+        if (tenant) {
+            void sendInvoiceCreatedEmail(
+                {
+                    id: invoice.id,
+                    invoiceNumber: invoice.invoiceNumber,
+                    total: invoice.total,
+                    dueDate: invoice.dueDate,
+                    contact: invoice.contact,
+                },
+                tenant
+            );
+        }
+
+        return NextResponse.json({ success: true, data: invoice }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const { id, items, ...updateData } = sanitizedBody;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        const validation = updateInvoiceSchema.safeParse({ ...updateData, items });
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        // Verify invoice belongs to tenant
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) {
             return NextResponse.json(
@@ -108,54 +262,25 @@ export async function PUT(
             );
         }
 
-        const updateData: Record<string, unknown> = {};
+        // Build safe update data
+        const data: Record<string, unknown> = {};
         if (validatedData.status) {
-            const newStatus = validatedData.status.toUpperCase();
-            const currentStatus = existing.status;
-            if (newStatus !== currentStatus) {
-                // Workflow engine: validasi transisi status dengan backward compatibility
-                try {
-                    const { canTransitionSafe, logWorkflowHistory } = await import('@/lib/workflow');
-                    const isValid = canTransitionSafe('INVOICE', currentStatus, newStatus, tenantId);
-                    if (!isValid) {
-                        return NextResponse.json(
-                            { success: false, error: `Transisi status tidak valid: ${currentStatus} → ${newStatus}` },
-                            { status: 400 }
-                        );
-                    }
-                    // Log workflow history dengan backward compatibility
-                    await logWorkflowHistory({
-                        tenantId,
-                        entityType: 'INVOICE',
-                        entityId: id,
-                        fromState: currentStatus,
-                        toState: newStatus,
-                        action: newStatus.toLowerCase(),
-                        userId,
-                        notes: null,
-                    });
-                } catch (workflowError: unknown) {
-                    // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan status
-                    const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                    console.warn(`[Workflow] Invoice workflow validation gagal, mengizinkan transisi: ${msg}`);
-                }
-            }
-            updateData.status = newStatus;
+            data.status = validatedData.status.toUpperCase();
         }
         if (validatedData.dueDate !== undefined) {
-            updateData.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
+            data.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
         }
         if (validatedData.taxRate !== undefined) {
-            updateData.taxRate = validatedData.taxRate;
+            data.taxRate = validatedData.taxRate;
         }
         if (validatedData.taxCode !== undefined) {
-            updateData.taxCode = validatedData.taxCode || null;
+            data.taxCode = validatedData.taxCode || null;
         }
         if (validatedData.notes !== undefined) {
-            updateData.notes = validatedData.notes;
+            data.notes = validatedData.notes;
         }
 
-        // Handle items update if provided — use transaction for atomicity
+        // If items changed, recalculate and use transaction for atomicity
         if (validatedData.items && validatedData.items.length > 0) {
             const subtotal = validatedData.items.reduce(
                 (sum, item) => sum + item.quantity * item.unitPrice,
@@ -163,12 +288,13 @@ export async function PUT(
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
             const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
-            updateData.subtotal = subtotal;
-            updateData.totalBeforeTax = subtotal;
-            updateData.taxAmount = taxAmount;
-            updateData.total = subtotal + taxAmount;
+            data.subtotal = subtotal;
+            data.totalBeforeTax = subtotal;
+            data.taxAmount = taxAmount;
+            data.total = subtotal + taxAmount;
 
-            await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+            // Delete old items and create new ones in transaction
+            await prisma.$transaction(async (tx) => {
                 await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
                 await tx.invoiceItem.createMany({
                     data: (validatedData.items ?? []).map((item) => ({
@@ -184,11 +310,11 @@ export async function PUT(
 
         const invoice = await prisma.invoice.update({
             where: { id },
-            data: updateData,
+            data,
             include: { items: true, contact: true },
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: updateData as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: data as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: invoice });
     } catch (error) {
@@ -196,15 +322,20 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
 
         const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!existing) {
@@ -223,7 +354,6 @@ export async function DELETE(
             );
         }
 
-        // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: null });

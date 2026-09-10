@@ -1,122 +1,155 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { formatZodError } from '@/lib/validation-schemas';
-import { z } from 'zod';
-import { MSG } from '@/lib/api-messages';
+import { createStockOpnameSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
 import { handleApiError } from '@/lib/api-error';
 
-const updateStockOpnameSchema = z.object({
-    status: z.enum(['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
-    notes: z.string().optional(),
-});
-
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const warehouseId = searchParams.get('warehouseId');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        const opname = await prisma.stockOpname.findFirst({
-            where: { id, tenantId },
-            include: {
-                warehouse: { select: { id: true, name: true, code: true } },
-                items: {
-                    include: {
-                        product: { select: { id: true, name: true, sku: true, unit: true, stock: true } },
-                    },
-                },
-            },
-        });
+        const where: Record<string, unknown> = { tenantId: auth.tenantId };
 
-        if (!opname) {
-            return NextResponse.json(
-                { success: false, error: MSG.STOCK_OPNAME_NOT_FOUND, code: 'STOCK_OPNAME_NOT_FOUND' },
-                { status: 404 }
-            );
+        if (status && status !== 'all') {
+            where.status = status;
         }
 
-        return NextResponse.json({ success: true, data: opname });
+        if (warehouseId) {
+            where.warehouseId = warehouseId;
+        }
+
+        const [opnames, total] = await Promise.all([
+            prisma.stockOpname.findMany({
+                where,
+                include: {
+                    warehouse: { select: { id: true, name: true, code: true } },
+                    _count: { select: { items: true } },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.stockOpname.count({ where }),
+        ]);
+
+        const data = opnames.map((o) => ({
+            id: o.id,
+            opnameNumber: o.opnameNumber,
+            status: o.status,
+            opnameDate: o.opnameDate.toISOString(),
+            notes: o.notes,
+            totalDifference: o.totalDifference,
+            warehouseName: o.warehouse?.name || 'Semua Gudang',
+            warehouseCode: o.warehouse?.code || '-',
+            itemCount: o._count.items,
+            createdAt: o.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        const validation = updateStockOpnameSchema.safeParse(body);
+        const validation = createStockOpnameSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
-
         const validatedData = validation.data;
 
-        const existing = await prisma.stockOpname.findFirst({
-            where: { id, tenantId },
+        // Generate opname number
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const countToday = await prisma.stockOpname.count({
+            where: {
+                tenantId,
+                createdAt: {
+                    gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+                },
+            },
         });
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.STOCK_OPNAME_NOT_FOUND, code: 'STOCK_OPNAME_NOT_FOUND' },
-                { status: 404 }
-            );
-        }
+        const opnameNumber = `SOP-${dateStr}-${String(countToday + 1).padStart(4, '0')}`;
 
-        // Validate status transitions
-        if (validatedData.status) {
-            const validTransitions: Record<string, string[]> = {
-                DRAFT: ['IN_PROGRESS', 'CANCELLED'],
-                IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
-                COMPLETED: [],
-                CANCELLED: [],
+        // Get system quantities for all products
+        const productIds = validatedData.items.map((item) => item.productId);
+        const products = await prisma.product.findMany({
+            where: { id: { in: productIds }, tenantId },
+            select: { id: true, stock: true },
+        });
+
+        const productStockMap = new Map(products.map((p) => [p.id, p.stock]));
+
+        // Calculate differences
+        const items = validatedData.items.map((item) => {
+            const systemQty = productStockMap.get(item.productId) || 0;
+            return {
+                productId: item.productId,
+                systemQuantity: systemQty,
+                physicalQuantity: item.physicalQuantity,
+                difference: item.physicalQuantity - systemQty,
+                notes: item.notes || null,
             };
-            const allowed = validTransitions[existing.status] || [];
-            if (!allowed.includes(validatedData.status)) {
-                return NextResponse.json(
-                    { success: false, error: `${MSG.INVALID_STATUS_TRANSITION}: ${existing.status} → ${validatedData.status}`, code: 'INVALID_STATUS_TRANSITION' },
-                    { status: 400 }
-                );
-            }
-        }
-
-        const updateData: Record<string, unknown> = {};
-        if (validatedData.status !== undefined) updateData.status = validatedData.status;
-        if (validatedData.notes !== undefined) updateData.notes = validatedData.notes;
-
-        const updated = await prisma.stockOpname.update({
-            where: { id },
-            data: updateData,
         });
 
-        // Audit logging
-        await logAudit({
-            userId,
-            tenantId,
-            action: 'UPDATE',
-            entity: 'StockOpname',
-            entityId: id,
-            oldValues: existing as unknown as Record<string, unknown>,
-            newValues: updated as unknown as Record<string, unknown>,
-            request,
+        const totalDifference = items.reduce((sum, item) => sum + Math.abs(item.difference), 0);
+
+        // Create stock opname with items
+        const opname = await prisma.stockOpname.create({
+            data: {
+                opnameNumber,
+                tenantId,
+                warehouseId: validatedData.warehouseId || null,
+                opnameDate: validatedData.opnameDate ? new Date(validatedData.opnameDate) : now,
+                notes: validatedData.notes || null,
+                totalDifference,
+                status: 'DRAFT',
+                items: {
+                    create: items,
+                },
+            },
+            include: {
+                warehouse: { select: { name: true } },
+                items: {
+                    include: {
+                        product: { select: { id: true, name: true, sku: true } },
+                    },
+                },
+            },
         });
 
-        return NextResponse.json({ success: true, data: updated });
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'StockOpname', entityId: opname.id, newValues: { opnameNumber, totalDifference } as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: opname }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

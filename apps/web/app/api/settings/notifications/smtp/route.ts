@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -51,7 +53,7 @@ export async function GET(request: Request) {
                 smtpHost: (config.smtpHost as string) || '',
                 smtpPort: (config.smtpPort as string) || '587',
                 smtpEmail: (config.smtpEmail as string) || '',
-                smtpPassword: integration.apiSecret ? '••••••••' : '',
+                smtpPassword: integration.apiSecret ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : '',
                 useTLS: config.useTLS !== false,
                 isConfigured: true,
             },
@@ -127,7 +129,7 @@ export async function POST(request: Request) {
             status: 'active',
             config: configData,
         }
-        if (smtpPassword && smtpPassword !== '••••••••') {
+        if (smtpPassword && smtpPassword !== 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢') {
             updateData.apiSecret = smtpPassword
         }
 
@@ -169,7 +171,7 @@ export async function POST(request: Request) {
                 smtpHost,
                 smtpPort,
                 smtpEmail,
-                smtpPassword: smtpPassword ? '••••••••' : '',
+                smtpPassword: smtpPassword ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : '',
                 useTLS: useTLS !== false,
                 isConfigured: true,
             },

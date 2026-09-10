@@ -1,15 +1,17 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 
-// ─── GET /api/platform/security/events ──────────────────────────────────────
+// â”€â”€â”€ GET /api/platform/security/events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns security events from LoginLog and AuditLog models.
 // SUPERADMIN only.
 export async function GET(request: Request) {
     try {
-        // 1. Auth + RBAC check — SUPERADMIN only
+        // 1. Auth + RBAC check â€” SUPERADMIN only
         const auth = await requirePermissionForRoute(request);
         if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 

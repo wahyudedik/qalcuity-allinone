@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -5,7 +7,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { handleApiError } from '@/lib/api-error';
 
 /**
- * GET /api/settings/security/login-history — List recent login attempts for the current user
+ * GET /api/settings/security/login-history â€” List recent login attempts for the current user
  * 
  * Returns paginated login history with IP, device, timestamp, and status.
  * Data comes from both UserSession and LoginLog tables.

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -8,11 +10,11 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError, apiForbidden } from '@/lib/api-error';
 
-// ─── GET /api/settings/custom-fields?entity=product ──────────────────────────
+// â”€â”€â”€ GET /api/settings/custom-fields?entity=product â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Dapatkan custom fields untuk tenant.
- * Query param: entity (optional) — filter by entity
+ * Query param: entity (optional) â€” filter by entity
  */
 export async function GET(request: Request) {
     try {
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── POST /api/settings/custom-fields ────────────────────────────────────────
+// â”€â”€â”€ POST /api/settings/custom-fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Buat custom field baru untuk tenant.

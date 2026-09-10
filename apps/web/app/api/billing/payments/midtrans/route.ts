@@ -1,8 +1,10 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Midtrans Snap Payment API Route
  *
  * Membuat transaksi Midtrans Snap untuk pembayaran billing/subscription.
- * Flow: User pilih plan → POST ke route ini → Redirect ke Midtrans Snap.
+ * Flow: User pilih plan â†’ POST ke route ini â†’ Redirect ke Midtrans Snap.
  *
  * @see https://docs.midtrans.com/#snap-integration
  */
@@ -89,7 +91,7 @@ export async function POST(request: Request) {
         const appUrl = getPublicBaseUrl();
         const callbackUrl = `${appUrl}/dashboard/billing?payment=success&orderId=${orderId}`;
 
-        // Hitung total amount (price × 1 bulan)
+        // Hitung total amount (price Ã— 1 bulan)
         const amount = Number(subscription.plan.price);
 
         // Buat billing payment record

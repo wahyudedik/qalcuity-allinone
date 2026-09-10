@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// KPI API — GET (list), POST (create)
+// KPI API â€” GET (list), POST (create)
 // CRUD for KPI definitions
 // ============================================
 
@@ -29,7 +31,7 @@ interface CreateKPIBody {
 }
 
 // ============================================
-// GET — List all KPIs for tenant
+// GET â€” List all KPIs for tenant
 // ============================================
 
 export async function GET(request: Request) {
@@ -109,7 +111,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create new KPI
+// POST â€” Create new KPI
 // ============================================
 
 export async function POST(request: Request) {

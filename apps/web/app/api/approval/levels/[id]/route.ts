@@ -1,19 +1,52 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { updateApprovalLevelSchema, formatZodError } from '@/lib/validation-schemas';
+import { createApprovalLevelSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:approval:levels:PUT:${ip}`, 30, 60000);
+        const rateLimitResult = checkRateLimit(`api:approval:levels:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
+
+        const { searchParams } = new URL(request.url);
+        const entityType = searchParams.get('entityType');
+
+        const where: Record<string, unknown> = { tenantId };
+        if (entityType) {
+            where.entityType = entityType.toUpperCase();
+        }
+
+        const levels = await prisma.approvalLevel.findMany({
+            where,
+            orderBy: [{ entityType: 'asc' }, { level: 'asc' }],
+        });
+
+        return NextResponse.json({ success: true, data: levels });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:approval:levels:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
@@ -25,6 +58,7 @@ export async function PUT(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId, role } = auth;
 
+        // Only ADMIN+ can manage approval levels
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return NextResponse.json(
                 { success: false, error: 'Hanya admin yang dapat mengelola approval levels' },
@@ -33,7 +67,7 @@ export async function PUT(
         }
 
         const body = await request.json();
-        const validation = updateApprovalLevelSchema.safeParse(body);
+        const validation = createApprovalLevelSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -41,95 +75,46 @@ export async function PUT(
             );
         }
 
-        // Verify ownership
+        const { entityType, level, name, requiredRole, isActive } = validation.data;
+
+        // Check if level already exists for this entity type
         const existing = await prisma.approvalLevel.findFirst({
-            where: { id: params.id, tenantId },
+            where: {
+                tenantId,
+                entityType,
+                level,
+            },
         });
 
-        if (!existing) {
+        if (existing) {
             return NextResponse.json(
-                { success: false, error: 'MSG.APPROVAL_LEVEL_NOT_FOUND' },
-                { status: 404 }
+                { success: false, error: `Level ${level} untuk ${entityType} sudah ada` },
+                { status: 409 }
             );
         }
 
-        const updated = await prisma.approvalLevel.update({
-            where: { id: params.id },
-            data: validation.data,
+        const created = await prisma.approvalLevel.create({
+            data: {
+                tenantId,
+                entityType,
+                level,
+                name,
+                requiredRole,
+                isActive: isActive ?? true,
+            },
         });
 
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'ApprovalLevel',
-            entityId: params.id,
-            oldValues: existing as unknown as Record<string, unknown>,
-            newValues: updated as unknown as Record<string, unknown>,
+            entityId: created.id,
+            newValues: created as unknown as Record<string, unknown>,
             request,
         });
 
-        return NextResponse.json({ success: true, data: updated });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:approval:levels:DELETE:${ip}`, 20, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat mengelola approval levels' },
-                { status: 403 }
-            );
-        }
-
-        // Verify ownership
-        const existing = await prisma.approvalLevel.findFirst({
-            where: { id: params.id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'MSG.APPROVAL_LEVEL_NOT_FOUND' },
-                { status: 404 }
-            );
-        }
-
-        // Soft delete — deactivate instead of hard delete
-        const deactivated = await prisma.approvalLevel.update({
-            where: { id: params.id },
-            data: { isActive: false },
-        });
-
-        void logAudit({
-            userId,
-            tenantId,
-            action: 'UPDATE',
-            entity: 'ApprovalLevel',
-            entityId: params.id,
-            oldValues: { isActive: true },
-            newValues: { isActive: false },
-            request,
-        });
-
-        return NextResponse.json({ success: true, data: deactivated });
+        return NextResponse.json({ success: true, data: created }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

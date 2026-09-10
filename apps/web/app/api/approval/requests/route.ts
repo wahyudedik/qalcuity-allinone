@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -162,11 +164,11 @@ export async function POST(request: Request) {
         });
 
         if (!approvalRequest) {
-            // No approval levels — auto-approved
+            // No approval levels â€” auto-approved
             return NextResponse.json({
                 success: true,
                 data: null,
-                message: 'Tidak ada approval level yang dikonfigurasi — auto-approved',
+                message: 'Tidak ada approval level yang dikonfigurasi â€” auto-approved',
             });
         }
 

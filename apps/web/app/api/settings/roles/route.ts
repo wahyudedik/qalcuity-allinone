@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -9,7 +11,7 @@ import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/api-error'
 
-// ─── GET /api/settings/roles ───────────────────────────────────────────────────
+// â”€â”€â”€ GET /api/settings/roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // List semua roles (system + custom) untuk tenant ini.
 
 export async function GET(request: Request) {
@@ -87,7 +89,7 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── POST /api/settings/roles ──────────────────────────────────────────────────
+// â”€â”€â”€ POST /api/settings/roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Buat custom role baru.
 
 export async function POST(request: Request) {
@@ -188,7 +190,7 @@ export async function POST(request: Request) {
     }
 }
 
-// ─── Helper ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getSystemRoleDescription(roleName: string): string {
     const descriptions: Record<string, string> = {

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
@@ -9,7 +11,7 @@ import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
 
-// ─── Zod Schema ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Zod Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const scanRequestSchema = z.object({
     force: z.boolean().optional(),
@@ -23,11 +25,11 @@ const querySchema = z.object({
     offset: z.coerce.number().int().min(0).optional(),
 });
 
-// ─── Valid statuses constant ──────────────────────────────────────────────────
+// â”€â”€â”€ Valid statuses constant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const VALID_STATUSES = ['OPEN', 'INVESTIGATING', 'DISMISSED', 'BLOCKED'] as const;
 
-// ─── GET: List anomalies (DB-first, fallback to scan) ────────────────────────
+// â”€â”€â”€ GET: List anomalies (DB-first, fallback to scan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function GET(req: Request) {
     try {
@@ -66,13 +68,13 @@ export async function GET(req: Request) {
 
         const { severity, status, entityType, limit = 50, offset = 0 } = queryResult.data;
 
-        // ── Build Prisma where clause with tenant isolation ──
+        // â”€â”€ Build Prisma where clause with tenant isolation â”€â”€
         const where: Record<string, unknown> = { tenantId };
         if (severity) where.severity = severity;
         if (status) where.status = status;
         if (entityType) where.entityType = entityType;
 
-        // ── Load from database first ──
+        // â”€â”€ Load from database first â”€â”€
         const [dbAnomalies, total] = await Promise.all([
             prisma.anomalyDetection.findMany({
                 where,
@@ -86,17 +88,17 @@ export async function GET(req: Request) {
             prisma.anomalyDetection.count({ where }),
         ]);
 
-        // ── Auto-trigger scan if last scan is older than 1 hour (fire-and-forget) ──
+        // â”€â”€ Auto-trigger scan if last scan is older than 1 hour (fire-and-forget) â”€â”€
         const ONE_HOUR_MS = 60 * 60 * 1000;
         if (total > 0 && dbAnomalies.length > 0) {
             const lastScanTime = dbAnomalies[0]?.detectedAt;
             if (!lastScanTime || (Date.now() - new Date(lastScanTime).getTime()) > ONE_HOUR_MS) {
-                // Fire-and-forget — don't await, don't block the response
+                // Fire-and-forget â€” don't await, don't block the response
                 runAnomalyScan(tenantId).catch(console.error);
             }
         }
 
-        // ── If DB has data, return from DB ──
+        // â”€â”€ If DB has data, return from DB â”€â”€
         if (total > 0) {
             // Compute summary from DB
             const summaryResult = await prisma.anomalyDetection.groupBy({
@@ -135,7 +137,7 @@ export async function GET(req: Request) {
             });
         }
 
-        // ── Fallback: no DB data → trigger scan ──
+        // â”€â”€ Fallback: no DB data â†’ trigger scan â”€â”€
         const scanResult = await runAnomalyScan(tenantId);
 
         let filtered = scanResult.anomalies;
@@ -162,7 +164,7 @@ export async function GET(req: Request) {
     }
 }
 
-// ─── POST: Trigger manual scan ───────────────────────────────────────────────
+// â”€â”€â”€ POST: Trigger manual scan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function POST(req: Request) {
     try {
@@ -180,7 +182,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // Rate limiting (lower limit for scan — heavier operation)
+        // Rate limiting (lower limit for scan â€” heavier operation)
         const ip = getClientIp(req);
         const tenantId = session.user.tenantId;
         const rateLimitResult = checkRateLimit(`api:ai:anomalies:scan:${tenantId}:${ip}`, 5, 300000); // 5 per 5 min
@@ -210,7 +212,7 @@ export async function POST(req: Request) {
             request: req,
         });
 
-        // Run scan — runAnomalyScan() internally persists to DB via persistAnomalies()
+        // Run scan â€” runAnomalyScan() internally persists to DB via persistAnomalies()
         const scanResult = await runAnomalyScan(tenantId);
 
         // Count how many anomalies were persisted (deduplicated by entityId+ruleId)

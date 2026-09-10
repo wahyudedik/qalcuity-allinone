@@ -1,98 +1,133 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { updateTableStatusSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
-import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
 
-// Valid status transitions
-const VALID_TRANSITIONS: Record<string, string[]> = {
-    AVAILABLE: ['OCCUPIED', 'RESERVED', 'CLEANING', 'DISABLED'],
-    OCCUPIED: ['AVAILABLE', 'CLEANING', 'RESERVED'],
-    RESERVED: ['OCCUPIED', 'AVAILABLE', 'DISABLED'],
-    CLEANING: ['AVAILABLE', 'DISABLED'],
-    DISABLED: ['AVAILABLE'],
-};
-
-export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rl = checkRateLimit(`pos:tables:[id]:status:PATCH:${ip}`, 30, 60_000);
-        if (!rl.success) {
-            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
+        const rateLimitResult = checkRateLimit(`api:pos:tables:stats:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
         }
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
+        const { tenantId } = auth;
 
-        const { id } = params;
-        const body = await request.json();
-        const sanitizedBody = sanitizeObject(body);
-        const validation = updateTableStatusSchema.safeParse(sanitizedBody);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const { status: newStatus } = validation.data;
+        const [
+            totalTables,
+            availableCount,
+            occupiedCount,
+            reservedCount,
+            cleaningCount,
+            disabledCount,
+            activeReservationsToday,
+            totalReservationsToday,
+        ] = await Promise.all([
+            // Total active tables
+            prisma.posTable.count({
+                where: { tenantId, isActive: true },
+            }),
+            // Available tables
+            prisma.posTable.count({
+                where: { tenantId, status: 'AVAILABLE', isActive: true },
+            }),
+            // Occupied tables
+            prisma.posTable.count({
+                where: { tenantId, status: 'OCCUPIED', isActive: true },
+            }),
+            // Reserved tables
+            prisma.posTable.count({
+                where: { tenantId, status: 'RESERVED', isActive: true },
+            }),
+            // Cleaning tables
+            prisma.posTable.count({
+                where: { tenantId, status: 'CLEANING', isActive: true },
+            }),
+            // Disabled tables
+            prisma.posTable.count({
+                where: { tenantId, status: 'DISABLED' },
+            }),
+            // Active reservations today (CONFIRMED or SEATED)
+            prisma.posTableReservation.count({
+                where: {
+                    tenantId,
+                    status: { in: ['CONFIRMED', 'SEATED'] },
+                    reservationTime: { gte: today, lt: tomorrow },
+                },
+            }),
+            // Total reservations today (all statuses)
+            prisma.posTableReservation.count({
+                where: {
+                    tenantId,
+                    reservationTime: { gte: today, lt: tomorrow },
+                },
+            }),
+        ]);
 
-        const existing = await prisma.posTable.findFirst({ where: { id, tenantId } });
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.TABLE_NOT_FOUND },
-                { status: 404 }
-            );
-        }
+        // Calculate utilization rate
+        const activeTables = totalTables - disabledCount;
+        const utilizationRate = activeTables > 0
+            ? Math.round(((occupiedCount + reservedCount) / activeTables) * 100)
+            : 0;
 
-        // Validate status transition
-        const allowedTransitions = VALID_TRANSITIONS[existing.status] || [];
-        if (!allowedTransitions.includes(newStatus)) {
-            return NextResponse.json(
-                { success: false, error: MSG.TABLE_STATUS_TRANSITION_INVALID },
-                { status: 400 }
-            );
-        }
+        // Get total capacity
+        const capacityResult = await prisma.posTable.aggregate({
+            where: { tenantId, isActive: true },
+            _sum: { capacity: true },
+        });
+        const totalCapacity = capacityResult._sum.capacity || 0;
 
-        // If setting to OCCUPIED, clear currentSessionId when transitioning to AVAILABLE
-        const updateData: Record<string, unknown> = { status: newStatus };
-        if (newStatus === 'AVAILABLE') {
-            updateData.currentSessionId = null;
-        }
-
-        const table = await prisma.posTable.update({
-            where: { id },
-            data: updateData,
+        // Get zone breakdown
+        const zoneBreakdown = await prisma.posTable.groupBy({
+            by: ['zone'],
+            where: { tenantId, isActive: true, zone: { not: null } },
+            _count: { id: true },
         });
 
-        void logAudit({
-            userId,
-            tenantId,
-            action: 'UPDATE',
-            entity: 'PosTable',
-            entityId: id,
-            oldValues: { status: existing.status },
-            newValues: { status: newStatus },
-            request,
-        });
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                id: table.id,
-                number: table.number,
-                status: table.status,
-                updatedAt: table.updatedAt.toISOString(),
+        const data = {
+            tables: {
+                total: totalTables,
+                active: activeTables,
+                available: availableCount,
+                occupied: occupiedCount,
+                reserved: reservedCount,
+                cleaning: cleaningCount,
+                disabled: disabledCount,
             },
-        });
+            capacity: {
+                total: totalCapacity,
+            },
+            utilization: {
+                rate: utilizationRate,
+                occupiedOrReserved: occupiedCount + reservedCount,
+            },
+            reservations: {
+                activeToday: activeReservationsToday,
+                totalToday: totalReservationsToday,
+            },
+            zones: zoneBreakdown
+                .filter((z) => z.zone !== null)
+                .map((z) => ({
+                    name: z.zone,
+                    count: z._count.id,
+                })),
+        };
+
+        return NextResponse.json({ success: true, data });
     } catch (error) {
         return handleApiError(error);
     }

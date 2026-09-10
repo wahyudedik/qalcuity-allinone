@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -185,13 +187,13 @@ export async function PUT(request: Request) {
 
         const updateData: Record<string, unknown> = {}
         if (validation.data.role) {
-            // SECURITY: Block ALL SUPERADMIN role assignments — no exceptions.
+            // SECURITY: Block ALL SUPERADMIN role assignments â€” no exceptions.
             // The SUPERADMIN role is exclusively for the platform owner (info@qalcuity.com)
             // and can ONLY be assigned via direct database operation by the platform owner.
             // This prevents privilege escalation even by existing SUPERADMIN users.
             if (validation.data.role === 'SUPERADMIN') {
                 return NextResponse.json(
-                    { success: false, error: 'Cannot assign SUPERADMIN role — platform owner only' },
+                    { success: false, error: 'Cannot assign SUPERADMIN role â€” platform owner only' },
                     { status: 403 }
                 )
             }

@@ -1,77 +1,81 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updatePayrollSchema, formatZodError } from '@/lib/validation-schemas';
-import { MSG } from '@/lib/api-messages';
+import { calculatePayrollSchema, formatZodError } from '@/lib/validation-schemas';
+import { calculatePPh21 } from '@/lib/pph21';
+import { calculateBPJS } from '@/lib/bpjs';
+import type { StatusKawin } from '@/lib/pph21';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
-        const { id } = params;
-
-        const record = await prisma.payrollRecord.findFirst({
-            where: { id, tenantId },
-            include: {
-                employee: {
-                    select: { id: true, name: true, employeeId: true, position: true, department: true, email: true, phone: true, salary: true },
-                },
-            },
-        });
-
-        if (!record) {
-            return NextResponse.json(
-                { success: false, error: 'Payroll record not found' },
-                { status: 404 }
-            );
-        }
-
-        const data = {
-            id: record.id,
-            employeeId: record.employeeId,
-            employeeName: record.employee.name,
-            employeeNumber: record.employee.employeeId,
-            position: record.employee.position,
-            department: record.employee.department,
-            period: record.period,
-            baseSalary: record.baseSalary,
-            allowances: record.allowances,
-            deductions: record.deductions,
-            bonus: record.bonus,
-            netSalary: record.netSalary,
-            status: record.status.toLowerCase(),
-            paidAt: record.paidAt ? record.paidAt.toISOString() : null,
-            notes: record.notes || '',
-            createdAt: record.createdAt.toISOString(),
+interface PayrollCalculationResult {
+    employeeId: string;
+    employeeName: string;
+    employeeCode: string;
+    period: string;
+    baseSalary: number;
+    allowances: {
+        transport: number;
+        meal: number;
+        other: number;
+        total: number;
+    };
+    deductions: {
+        late: number;
+        absent: number;
+        other: number;
+        total: number;
+    };
+    bonus: number;
+    grossSalary: number;
+    pph21: {
+        statusKawin: StatusKawin;
+        ptkpYearly: number;
+        pkpYearly: number;
+        pph21Yearly: number;
+        pph21Monthly: number;
+        effectiveRate: number;
+    };
+    bpjs: {
+        kesehatan: {
+            employee: number;
+            employer: number;
         };
-
-        return NextResponse.json({ success: true, data });
-    } catch (error) {
-        if (error instanceof Error && error.message === 'Unauthorized') {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
-        return handleApiError(error);
-    }
+        ketenagakerjaan: {
+            jkk: number;
+            jkm: number;
+            jhtEmployee: number;
+            jhtEmployer: number;
+            jpEmployee: number;
+            jpEmployer: number;
+            totalEmployee: number;
+            totalEmployer: number;
+        };
+        totalEmployee: number;
+        totalEmployer: number;
+    };
+    totalDeductions: number;
+    totalAllowances: number;
+    netSalary: number;
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
-        const body = await request.json();
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:payroll:calculate:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
+        }
 
-        const validation = updatePayrollSchema.safeParse(body);
+        const body = await request.json();
+        const validation = calculatePayrollSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -79,122 +83,122 @@ export async function PUT(
             );
         }
 
-        const validatedData = validation.data;
+        const data = validation.data;
 
-        const existing = await prisma.payrollRecord.findFirst({
-            where: { id, tenantId },
+        // Validate employee belongs to tenant
+        const employee = await prisma.employee.findFirst({
+            where: { id: data.employeeId, tenantId },
+            select: { id: true, name: true, employeeId: true, salary: true },
         });
-        if (!existing) {
+        if (!employee) {
             return NextResponse.json(
-                { success: false, error: MSG.PAYROLL_RECORD_NOT_FOUND, code: 'PAYROLL_RECORD_NOT_FOUND' },
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
                 { status: 404 }
             );
         }
 
-        const data: Record<string, unknown> = {};
-        if (validatedData.period !== undefined) data.period = validatedData.period;
-        if (validatedData.baseSalary !== undefined) data.baseSalary = validatedData.baseSalary;
-        if (validatedData.allowances !== undefined) data.allowances = validatedData.allowances;
-        if (validatedData.deductions !== undefined) data.deductions = validatedData.deductions;
-        if (validatedData.bonus !== undefined) data.bonus = validatedData.bonus;
-        if (validatedData.status !== undefined) {
-            const newStatus = validatedData.status.toUpperCase();
-            const currentStatus = existing.status;
-            if (newStatus !== currentStatus) {
-                try {
-                    const { canTransitionSafe, logWorkflowHistory } = await import('@/lib/workflow');
-                    const isValid = canTransitionSafe('PAYROLL', currentStatus, newStatus, tenantId);
-                    if (!isValid) {
-                        return NextResponse.json(
-                            { success: false, error: `${MSG.INVALID_STATUS_TRANSITION}: ${currentStatus} → ${newStatus}`, code: 'INVALID_STATUS_TRANSITION' },
-                            { status: 400 }
-                        );
-                    }
-                    // Log workflow history dengan backward compatibility
-                    await logWorkflowHistory({
-                        tenantId,
-                        entityType: 'PAYROLL',
-                        entityId: id,
-                        fromState: currentStatus,
-                        toState: newStatus,
-                        action: newStatus.toLowerCase(),
-                        userId,
-                        notes: validatedData.notes || null,
-                    });
-                } catch (workflowError: unknown) {
-                    // Backward compatibility: if workflow engine fails, still allow status change
-                    const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                    console.warn(`[Workflow] Payroll workflow validation failed, allowing transition: ${msg}`);
-                }
-            }
-            data.status = newStatus;
-        }
-        if (validatedData.notes !== undefined) data.notes = validatedData.notes;
+        // Calculate allowances breakdown
+        const transportAllowance = data.transportAllowance || 0;
+        const mealAllowance = data.mealAllowance || 0;
+        const otherAllowance = data.otherAllowance || 0;
+        const totalAllowances = transportAllowance + mealAllowance + otherAllowance + (data.allowances || 0);
 
-        // Recalculate netSalary if any compensation field changed
-        if (data.baseSalary !== undefined || data.allowances !== undefined || data.deductions !== undefined || data.bonus !== undefined) {
-            const base = typeof data.baseSalary === 'number' ? data.baseSalary : Number(existing.baseSalary);
-            const allow = typeof data.allowances === 'number' ? data.allowances : Number(existing.allowances);
-            const deduc = typeof data.deductions === 'number' ? data.deductions : Number(existing.deductions);
-            const bon = typeof data.bonus === 'number' ? data.bonus : Number(existing.bonus);
-            data.netSalary = base + allow - deduc + bon;
-        }
+        // Calculate deductions breakdown
+        const lateDeduction = data.lateDeduction || 0;
+        const absentDeduction = data.absentDeduction || 0;
+        const otherDeduction = data.otherDeduction || 0;
+        const totalDeductions = lateDeduction + absentDeduction + otherDeduction + (data.deductions || 0);
 
-        // Set paidAt when status changes to PAID
-        if (data.status === 'PAID' && existing.status !== 'PAID') {
-            data.paidAt = new Date();
-        }
+        // Gross salary = base salary + allowances
+        const grossSalary = data.baseSalary + totalAllowances;
 
-        const updated = await prisma.payrollRecord.update({
-            where: { id },
-            data,
-            include: {
-                employee: { select: { name: true, employeeId: true } },
+        // Calculate PPh21 based on gross salary
+        const pph21Result = calculatePPh21({
+            grossSalaryMonthly: grossSalary,
+            statusKawin: data.statusKawin as StatusKawin,
+        });
+
+        // Calculate BPJS based on base salary
+        const bpjsResult = calculateBPJS({
+            grossSalary: data.baseSalary,
+            jkkRiskLevel: data.jkkRiskLevel || 'low',
+        });
+
+        // Total deductions = custom deductions + PPh21 + BPJS employee
+        const totalAllDeductions = totalDeductions + pph21Result.pph21Monthly + bpjsResult.totalEmployee;
+
+        // Net salary = gross salary - all deductions + bonus
+        const netSalary = grossSalary - totalAllDeductions + (data.bonus || 0);
+
+        const result: PayrollCalculationResult = {
+            employeeId: employee.id,
+            employeeName: employee.name,
+            employeeCode: employee.employeeId,
+            period: data.period,
+            baseSalary: data.baseSalary,
+            allowances: {
+                transport: transportAllowance,
+                meal: mealAllowance,
+                other: otherAllowance,
+                total: totalAllowances,
             },
+            deductions: {
+                late: lateDeduction,
+                absent: absentDeduction,
+                other: otherDeduction,
+                total: totalDeductions,
+            },
+            bonus: data.bonus || 0,
+            grossSalary,
+            pph21: {
+                statusKawin: pph21Result.statusKawin,
+                ptkpYearly: pph21Result.ptkpYearly,
+                pkpYearly: pph21Result.pkpYearly,
+                pph21Yearly: pph21Result.pph21Yearly,
+                pph21Monthly: pph21Result.pph21Monthly,
+                effectiveRate: pph21Result.effectiveRate,
+            },
+            bpjs: {
+                kesehatan: {
+                    employee: bpjsResult.kesehatan.employee,
+                    employer: bpjsResult.kesehatan.employer,
+                },
+                ketenagakerjaan: {
+                    jkk: bpjsResult.ketenagakerjaan.jkk.employer,
+                    jkm: bpjsResult.ketenagakerjaan.jkm.employer,
+                    jhtEmployee: bpjsResult.ketenagakerjaan.jht.employee,
+                    jhtEmployer: bpjsResult.ketenagakerjaan.jht.employer,
+                    jpEmployee: bpjsResult.ketenagakerjaan.jp.employee,
+                    jpEmployer: bpjsResult.ketenagakerjaan.jp.employer,
+                    totalEmployee: bpjsResult.ketenagakerjaan.totalEmployee,
+                    totalEmployer: bpjsResult.ketenagakerjaan.totalEmployer,
+                },
+                totalEmployee: bpjsResult.totalEmployee,
+                totalEmployer: bpjsResult.totalEmployer,
+            },
+            totalDeductions: totalAllDeductions,
+            totalAllowances,
+            netSalary: Math.max(0, netSalary),
+        };
+
+        // Log audit
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'CALCULATE',
+            entity: 'Payroll',
+            entityId: employee.id,
+            newValues: {
+                period: data.period,
+                baseSalary: data.baseSalary,
+                pph21: pph21Result.pph21Monthly,
+                bpjsEmployee: bpjsResult.totalEmployee,
+                netSalary: result.netSalary,
+            } as Record<string, unknown>,
+            request,
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PayrollRecord', entityId: id, newValues: data as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: updated });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
-
-        const existing = await prisma.payrollRecord.findFirst({
-            where: { id, tenantId },
-        });
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Payroll record not found' },
-                { status: 404 }
-            );
-        }
-
-        // Don't allow deleting paid records
-        if (existing.status === 'PAID') {
-            return NextResponse.json(
-                { success: false, error: 'Cannot delete paid payroll records' },
-                { status: 400 }
-            );
-        }
-
-        await prisma.payrollRecord.delete({ where: { id } });
-
-        // Log audit delete
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'PayrollRecord', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: null });
+        return NextResponse.json({ success: true, data: result });
     } catch (error) {
         return handleApiError(error);
     }

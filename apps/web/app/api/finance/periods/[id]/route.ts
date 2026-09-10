@@ -1,19 +1,34 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { generateYearlyPeriods } from '@/lib/period-closing';
+import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
 
 // ============================================
-// GET — Detail period
+// Validation Schemas
 // ============================================
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+const createPeriodSchema = z.object({
+    name: z.string().min(1, 'MSG.PERIOD_NAME_REQUIRED').max(100),
+    startDate: z.string().min(1, 'MSG.START_DATE_REQUIRED'),
+    endDate: z.string().min(1, 'MSG.END_DATE_REQUIRED'),
+});
+
+const generatePeriodsSchema = z.object({
+    year: z.number().int().min(2020).max(2099),
+});
+
+// ============================================
+// GET â€” List periods
+// ============================================
+
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:periods:${ip}`, 100, 60000);
@@ -28,77 +43,51 @@ export async function GET(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
-        const period = await prisma.accountingPeriod.findFirst({
-            where: { id: params.id, tenantId },
-        });
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const year = searchParams.get('year');
 
-        if (!period) {
-            return NextResponse.json(
-                { success: false, error: 'Period not found', code: 'NOT_FOUND' },
-                { status: 404 }
-            );
+        const where: Record<string, unknown> = { tenantId };
+        if (status) where.status = status.toUpperCase();
+        if (year) {
+            const yearNum = parseInt(year);
+            where.startDate = { gte: new Date(yearNum, 0, 1), lte: new Date(yearNum, 11, 31, 23, 59, 59, 999) };
         }
 
-        // Get summary data
-        const journalEntries = await prisma.journalEntry.findMany({
-            where: {
-                tenantId,
-                date: { gte: period.startDate, lte: period.endDate },
-            },
+        const periods = await prisma.accountingPeriod.findMany({
+            where,
+            orderBy: { startDate: 'desc' },
         });
 
-        const postedEntries = journalEntries.filter((e) => e.status === 'POSTED');
-        const draftEntries = journalEntries.filter((e) => e.status === 'DRAFT');
-        const voidEntries = journalEntries.filter((e) => e.status === 'VOID');
+        const data = periods.map((p) => ({
+            id: p.id,
+            name: p.name,
+            startDate: p.startDate.toISOString(),
+            endDate: p.endDate.toISOString(),
+            status: p.status,
+            closedBy: p.closedBy,
+            closedAt: p.closedAt?.toISOString() || null,
+            closeNotes: p.closeNotes,
+            createdAt: p.createdAt.toISOString(),
+        }));
 
-        let totalDebit = 0;
-        let totalCredit = 0;
-        for (const entry of postedEntries) {
-            totalDebit += Number(entry.totalDebit);
-            totalCredit += Number(entry.totalCredit);
-        }
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                id: period.id,
-                name: period.name,
-                startDate: period.startDate.toISOString(),
-                endDate: period.endDate.toISOString(),
-                status: period.status,
-                closedBy: period.closedBy,
-                closedAt: period.closedAt?.toISOString() || null,
-                closeNotes: period.closeNotes,
-                createdAt: period.createdAt.toISOString(),
-                summary: {
-                    totalEntries: journalEntries.length,
-                    postedEntries: postedEntries.length,
-                    draftEntries: draftEntries.length,
-                    voidEntries: voidEntries.length,
-                    totalDebit,
-                    totalCredit,
-                },
-            },
-        });
+        return NextResponse.json({ success: true, data });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
 // ============================================
-// PUT — Update period (reopen, only ADMIN)
+// POST â€” Create period or generate yearly periods
 // ============================================
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:periods:PUT:${ip}`, 30, 60000);
+        const rateLimitResult = checkRateLimit(`api:periods:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' },
+                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -107,70 +96,100 @@ export async function PUT(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
-        // Hanya ADMIN+ yang boleh update period
+        // Hanya ADMIN+ yang boleh create period
         if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
             return NextResponse.json(
-                { success: false, error: 'Only admins can modify accounting periods', code: 'FORBIDDEN' },
+                { success: false, error: 'Hanya admin yang dapat membuat periode akuntansi' },
                 { status: 403 }
             );
         }
 
-        const period = await prisma.accountingPeriod.findFirst({
-            where: { id: params.id, tenantId },
-        });
-
-        if (!period) {
-            return NextResponse.json(
-                { success: false, error: 'Period not found', code: 'NOT_FOUND' },
-                { status: 404 }
-            );
-        }
-
         const body = await request.json();
-        const { status: newStatus, closeNotes } = body;
 
-        // Only allow reopening CLOSED periods
-        if (newStatus === 'OPEN' && period.status === 'CLOSED') {
-            // Only SUPERADMIN can reopen
-            if (auth.role !== 'SUPERADMIN') {
+        // Check if this is a "generate yearly" request
+        if (body.year && !body.name) {
+            const genValidation = generatePeriodsSchema.safeParse(body);
+            if (!genValidation.success) {
                 return NextResponse.json(
-                    { success: false, error: 'Only Super Admin can reopen closed periods', code: 'FORBIDDEN' },
-                    { status: 403 }
-                );
-            }
-
-            if (!closeNotes) {
-                return NextResponse.json(
-                    { success: false, error: 'Notes are required when reopening a period', code: 'VALIDATION_ERROR' },
+                    { success: false, error: 'Invalid year', code: 'VALIDATION_ERROR' },
                     { status: 400 }
                 );
             }
 
-            const updated = await prisma.accountingPeriod.update({
-                where: { id: params.id },
-                data: {
-                    status: 'OPEN',
-                    closedBy: null,
-                    closedAt: null,
-                    closeNotes: `[REOPENED] ${closeNotes}`,
-                },
-            });
+            const periods = await generateYearlyPeriods(tenantId, genValidation.data.year);
 
-            void logAudit({
-                userId, tenantId, action: 'UPDATE', entity: 'AccountingPeriod',
-                entityId: period.id,
-                oldValues: { status: period.status, closedBy: period.closedBy },
-                newValues: { status: 'OPEN', closeNotes: `[REOPENED] ${closeNotes}` },
-                request,
-            });
+            if (periods.length > 0) {
+                void logAudit({
+                    userId, tenantId, action: 'CREATE', entity: 'AccountingPeriod',
+                    entityId: 'bulk',
+                    newValues: { count: periods.length, year: genValidation.data.year },
+                    request,
+                });
+            }
 
-            return NextResponse.json({ success: true, data: updated });
+            return NextResponse.json({
+                success: true,
+                data: { created: periods.length, message: `${periods.length} periods created for year ${genValidation.data.year}` },
+            }, { status: 201 });
         }
 
-        return NextResponse.json(
-            { success: false, error: 'Invalid action', code: 'VALIDATION_ERROR' },
-            { status: 400 }
-        );
+        // Manual period creation
+        const validation = createPeriodSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, error: validation.error.issues[0]?.message || 'Invalid data', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        const { name, startDate, endDate } = validation.data;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (end <= start) {
+            return NextResponse.json(
+                { success: false, error: 'Tanggal akhir harus setelah tanggal mulai' },
+                { status: 400 }
+            );
+        }
+
+        // Check for overlapping periods
+        const overlapping = await prisma.accountingPeriod.findFirst({
+            where: {
+                tenantId,
+                OR: [
+                    { startDate: { lte: start }, endDate: { gte: start } },
+                    { startDate: { lte: end }, endDate: { gte: end } },
+                    { startDate: { gte: start }, endDate: { lte: end } },
+                ],
+            },
+        });
+
+        if (overlapping) {
+            return NextResponse.json(
+                { success: false, error: `Periode tumpang tindih dengan "${overlapping.name}"` },
+                { status: 409 }
+            );
+        }
+
+        const period = await prisma.accountingPeriod.create({
+            data: {
+                tenantId,
+                name,
+                startDate: start,
+                endDate: end,
+                status: 'OPEN',
+            },
+        });
+
+        void logAudit({
+            userId, tenantId, action: 'CREATE', entity: 'AccountingPeriod',
+            entityId: period.id,
+            newValues: period as unknown as Record<string, unknown>,
+            request,
+        });
+
+        return NextResponse.json({ success: true, data: period }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

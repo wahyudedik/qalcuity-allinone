@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -10,7 +12,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError, apiForbidden } from '@/lib/api-error';
 
-// ─── GET /api/settings/industry ──────────────────────────────────────────────
+// â”€â”€â”€ GET /api/settings/industry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Dapatkan industry config untuk tenant saat ini.
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── PUT /api/settings/industry ──────────────────────────────────────────────
+// â”€â”€â”€ PUT /api/settings/industry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Update industry config untuk tenant saat ini.

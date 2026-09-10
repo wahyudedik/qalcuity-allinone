@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Dashboards API — GET (list), POST (create)
+// Dashboards API â€” GET (list), POST (create)
 // CRUD for Analytics Dashboards
 // ============================================
 
@@ -12,7 +14,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createDashboardSchema } from '@/lib/validation-schemas'
 
 // ============================================
-// GET — List all dashboards for tenant
+// GET â€” List all dashboards for tenant
 // ============================================
 
 export async function GET(request: Request) {
@@ -95,7 +97,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create new dashboard
+// POST â€” Create new dashboard
 // ============================================
 
 export async function POST(request: Request) {

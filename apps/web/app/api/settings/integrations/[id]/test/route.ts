@@ -1,82 +1,222 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
-import { handleApiError } from '@/lib/api-error';
+import { createIntegrationSchema, updateIntegrationSchema, formatZodError } from '@/lib/validation-schemas'
+import { sanitizeObject } from '@/lib/sanitize'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError, apiNotFound } from '@/lib/api-error'
 
-interface TestResult {
-    success: boolean
-    message: string
-    latencyMs?: number
-    details?: Record<string, unknown>
+/**
+ * GET /api/settings/integrations
+ *
+ * Ambil semua integrations dari database untuk tenant yang sedang login.
+ * Jika tidak ada record, return status berdasarkan environment variables.
+ */
+export async function GET(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:integrations:${ip}`, 60, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+        }
+        const { tenantId } = auth
+
+        // Ambil integrations dari database
+        const dbIntegrations = await prisma.tenantIntegration.findMany({
+            where: { tenantId },
+            orderBy: { createdAt: 'asc' },
+        })
+
+        // Jika sudah ada data di DB, gunakan itu
+        if (dbIntegrations.length > 0) {
+            const integrations = dbIntegrations.map((item: typeof dbIntegrations[number]) => ({
+                id: item.id,
+                type: item.type,
+                name: item.name,
+                status: item.status,
+                config: item.config,
+                hasApiKey: !!item.apiKey,
+                hasApiSecret: !!item.apiSecret,
+                webhookUrl: item.webhookUrl,
+                lastSyncAt: item.lastSyncAt?.toISOString() || null,
+                lastErrorAt: item.lastErrorAt?.toISOString() || null,
+                lastError: item.lastError,
+                createdAt: item.createdAt.toISOString(),
+                updatedAt: item.updatedAt.toISOString(),
+            }))
+
+            return NextResponse.json({ success: true, data: integrations })
+        }
+
+        // Fallback: return status berdasarkan env vars (backward compatibility)
+        const isProduction = process.env.NODE_ENV === 'production';
+        const aiProvider = process.env.AI_PROVIDER || 'mock';
+        const envIntegrations = {
+            whatsapp: !!process.env.WHATSAPP_API_KEY,
+            email: !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS,
+            midtrans: !!process.env.MIDTRANS_SERVER_KEY,
+            xendit: !!process.env.XENDIT_SECRET_KEY,
+            ai: !!process.env.AI_API_KEY && (isProduction ? aiProvider !== 'mock' : true),
+            payment: !!process.env.MIDTRANS_SERVER_KEY || !!process.env.XENDIT_SECRET_KEY,
+            _warnings: isProduction && aiProvider === 'mock'
+                ? ['AI provider is set to mock in production. Configure a real AI provider.']
+                : [],
+        }
+
+        return NextResponse.json({
+            success: true,
+            data: [],
+            envStatus: envIntegrations,
+        })
+    } catch (error) {
+        return handleApiError(error)
+    }
 }
 
 /**
- * POST /api/settings/integrations/[id]/test
+ * POST /api/settings/integrations
  *
- * Test connection untuk integration tertentu.
- * Melakukan validasi credentials dan mencoba koneksi ke service external.
+ * Tambah integration baru untuk tenant.
  */
-export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:integrations:POST:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+
         const auth = await requirePermissionForRoute(request)
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+        }
         const { userId, tenantId } = auth
-        const { id } = params
+        const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
 
-        // Verify ownership
-        const integration = await prisma.tenantIntegration.findFirst({
-            where: { id, tenantId },
-        })
-
-        if (!integration) {
+        const validation = createIntegrationSchema.safeParse(sanitizedBody)
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Integration not found', code: 'INTEGRATION_NOT_FOUND' },
-                { status: 404 }
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
             )
         }
 
-        const startTime = Date.now()
-        let testResult: TestResult
+        const { type, name, config, apiKey, apiSecret, webhookUrl } = validation.data
 
-        // Test berdasarkan tipe integrasi
-        switch (integration.type) {
-            case 'whatsapp':
-                testResult = await testWhatsApp(integration.apiKey)
-                break
-            case 'email':
-                testResult = await testEmail(integration.apiKey, integration.config as Record<string, unknown>)
-                break
-            case 'payment':
-                testResult = await testPaymentGateway(integration.name, integration.apiKey)
-                break
-            case 'accounting':
-                testResult = await testAccountingSoftware(integration.apiKey)
-                break
-            default:
-                testResult = {
-                    success: !!integration.apiKey,
-                    message: integration.apiKey
-                        ? 'Kredensial tersedia — silakan verifikasi secara manual'
-                        : 'API Key belum dikonfigurasi',
-                }
+        // Check uniqueness
+        const existing = await prisma.tenantIntegration.findUnique({
+            where: { tenantId_type_name: { tenantId, type, name } },
+        })
+
+        if (existing) {
+            return NextResponse.json(
+                { success: false, error: `Integrasi "${name}" sudah ada untuk tipe "${type}"` },
+                { status: 409 }
+            )
         }
 
-        const latencyMs = Date.now() - startTime
+        const integration = await prisma.tenantIntegration.create({
+            data: {
+                tenantId,
+                type,
+                name,
+                config: (config || {}) as Prisma.InputJsonValue,
+                apiKey: apiKey || null,
+                apiSecret: apiSecret || null,
+                webhookUrl: webhookUrl || null,
+            },
+        })
 
-        // Update status berdasarkan hasil test
-        const newStatus = testResult.success ? 'active' : 'error'
-        await prisma.tenantIntegration.update({
+        // Non-blocking audit log
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'CREATE',
+            entity: 'TenantIntegration',
+            entityId: integration.id,
+            newValues: { type, name },
+            request,
+        })
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: integration.id,
+                type: integration.type,
+                name: integration.name,
+                status: integration.status,
+                config: integration.config,
+                hasApiKey: !!integration.apiKey,
+                hasApiSecret: !!integration.apiSecret,
+                webhookUrl: integration.webhookUrl,
+                createdAt: integration.createdAt.toISOString(),
+                updatedAt: integration.updatedAt.toISOString(),
+            },
+        }, { status: 201 })
+    } catch (error) {
+        return handleApiError(error)
+    }
+}
+
+/**
+ * PUT /api/settings/integrations
+ *
+ * Update integration yang sudah ada. Body harus menyertakan `id`.
+ */
+export async function PUT(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rl = checkRateLimit(`settings:integrations:PUT:${ip}`, 30, 60_000);
+        if (!rl.success) {
+            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
+        }
+        const { userId, tenantId } = auth
+        const body = await request.json()
+        const sanitizedBody = sanitizeObject(body)
+
+        const validation = updateIntegrationSchema.safeParse(sanitizedBody)
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            )
+        }
+
+        const { id, ...updateData } = validation.data
+
+        // Verify ownership
+        const existing = await prisma.tenantIntegration.findFirst({
+            where: { id, tenantId },
+        })
+
+        if (!existing) {
+            return apiNotFound('Integration')
+        }
+
+        const updated = await prisma.tenantIntegration.update({
             where: { id },
             data: {
-                status: newStatus,
-                lastSyncAt: testResult.success ? new Date() : undefined,
-                lastErrorAt: testResult.success ? undefined : new Date(),
-                lastError: testResult.success ? null : testResult.message,
+                ...(updateData.status !== undefined && { status: updateData.status }),
+                ...(updateData.config !== undefined && { config: updateData.config as Prisma.InputJsonValue }),
+                ...(updateData.apiKey !== undefined && { apiKey: updateData.apiKey || null }),
+                ...(updateData.apiSecret !== undefined && { apiSecret: updateData.apiSecret || null }),
+                ...(updateData.webhookUrl !== undefined && { webhookUrl: updateData.webhookUrl || null }),
             },
         })
 
@@ -86,143 +226,81 @@ export async function POST(
             tenantId,
             action: 'UPDATE',
             entity: 'TenantIntegration',
-            entityId: id,
-            oldValues: { status: integration.status },
-            newValues: { status: newStatus, lastTestResult: testResult.success },
-            request: request,
+            entityId: updated.id,
+            oldValues: { status: existing.status },
+            newValues: { status: updated.status },
+            request,
         })
 
         return NextResponse.json({
             success: true,
             data: {
-                ...testResult,
-                latencyMs,
+                id: updated.id,
+                type: updated.type,
+                name: updated.name,
+                status: updated.status,
+                config: updated.config,
+                hasApiKey: !!updated.apiKey,
+                hasApiSecret: !!updated.apiSecret,
+                webhookUrl: updated.webhookUrl,
+                lastSyncAt: updated.lastSyncAt?.toISOString() || null,
+                lastErrorAt: updated.lastErrorAt?.toISOString() || null,
+                lastError: updated.lastError,
+                createdAt: updated.createdAt.toISOString(),
+                updatedAt: updated.updatedAt.toISOString(),
             },
         })
     } catch (error) {
-        if (error instanceof Error && error.message.includes('Forbidden')) {
-            return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-        }
-        return handleApiError(error);
+        return handleApiError(error)
     }
 }
 
-// ============================================
-// Test Functions per Integration Type
-// ============================================
-
-async function testWhatsApp(apiKey: string | null): Promise<TestResult> {
-    if (!apiKey) {
-        return {
-            success: false,
-            message: 'WhatsApp API Key not configured',
+/**
+ * DELETE /api/settings/integrations
+ *
+ * Hapus integration. Body harus menyertakan `id`.
+ */
+export async function DELETE(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
-    }
+        const { userId, tenantId } = auth
+        const body = await request.json()
 
-    // Validate API key format (basic check)
-    if (apiKey.length < 10) {
-        return {
-            success: false,
-            message: 'Invalid WhatsApp API Key format',
+        const { id } = body as { id?: string }
+        if (!id || typeof id !== 'string') {
+            return NextResponse.json(
+                { success: false, error: 'MSG.INTEGRATION_ID_REQUIRED' },
+                { status: 400 }
+            )
         }
-    }
 
-    // In production, this would make an actual API call to WhatsApp Business API
-    // For now, validate that the key exists and has reasonable format
-    return {
-        success: true,
-        message: 'WhatsApp Business API — credentials valid',
-        details: {
-            provider: 'WhatsApp Business API',
-            keyLength: apiKey.length,
-        },
-    }
-}
+        // Verify ownership
+        const existing = await prisma.tenantIntegration.findFirst({
+            where: { id, tenantId },
+        })
 
-async function testEmail(
-    apiKey: string | null,
-    config: Record<string, unknown> | null
-): Promise<TestResult> {
-    if (!apiKey) {
-        return {
-            success: false,
-            message: 'Email password/app password not configured',
+        if (!existing) {
+            return apiNotFound('Integration')
         }
-    }
 
-    const smtpHost = config?.smtpHost as string | undefined
-    const smtpPort = config?.smtpPort as string | undefined
+        await prisma.tenantIntegration.delete({ where: { id } })
 
-    if (!smtpHost) {
-        return {
-            success: false,
-            message: 'SMTP Host not configured',
-        }
-    }
+        // Non-blocking audit log
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'DELETE',
+            entity: 'TenantIntegration',
+            entityId: id,
+            oldValues: { type: existing.type, name: existing.name },
+            request,
+        })
 
-    // In production, this would attempt to connect to SMTP server
-    return {
-        success: true,
-        message: `SMTP configured to ${smtpHost}:${smtpPort || '587'}`,
-        details: {
-            host: smtpHost,
-            port: smtpPort || '587',
-        },
-    }
-}
-
-async function testPaymentGateway(
-    name: string,
-    apiKey: string | null
-): Promise<TestResult> {
-    if (!apiKey) {
-        return {
-            success: false,
-            message: `${name} API Key not configured`,
-        }
-    }
-
-    // Validate API key format based on provider
-    const isMidtrans = name.toLowerCase().includes('midtrans')
-    const isXendit = name.toLowerCase().includes('xendit')
-
-    if (isMidtrans && !apiKey.startsWith('SB-Mid-') && !apiKey.startsWith('SB-Mid-server')) {
-        return {
-            success: false,
-            message: 'Invalid Midtrans Server Key format (must start with SB-Mid-)',
-        }
-    }
-
-    if (isXendit && !apiKey.startsWith('xnd_')) {
-        return {
-            success: false,
-            message: 'Invalid Xendit Secret Key format (must start with xnd_)',
-        }
-    }
-
-    return {
-        success: true,
-        message: `${name} — credentials valid`,
-        details: {
-            provider: name,
-            environment: apiKey.includes('development') || apiKey.startsWith('SB-') ? 'sandbox' : 'production',
-        },
-    }
-}
-
-async function testAccountingSoftware(apiKey: string | null): Promise<TestResult> {
-    if (!apiKey) {
-        return {
-            success: false,
-            message: 'API Key software akuntansi belum dikonfigurasi',
-        }
-    }
-
-    return {
-        success: true,
-        message: 'Software akuntansi — kredensial tersedia',
-        details: {
-            note: 'Verifikasi sinkronisasi data secara manual',
-        },
+        return NextResponse.json({ success: true, message: 'Integrasi berhasil dihapus' })
+    } catch (error) {
+        return handleApiError(error)
     }
 }

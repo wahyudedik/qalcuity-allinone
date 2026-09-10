@@ -1,15 +1,17 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 
-// ─── GET /api/platform/support/tickets ──────────────────────────────────────
+// â”€â”€â”€ GET /api/platform/support/tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns support tickets derived from AuditLog entries (support-related actions).
 // SUPERADMIN sees all tickets; other roles see only their tenant's tickets.
 export async function GET(request: Request) {
     try {
-        // 1. Auth + RBAC check — SUPERADMIN only
+        // 1. Auth + RBAC check â€” SUPERADMIN only
         const auth = await requirePermissionForRoute(request);
         if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -20,7 +22,7 @@ export async function GET(request: Request) {
         const status = searchParams.get("status") || "";
         const search = searchParams.get("search") || "";
 
-        // Build where clause for AuditLog — map audit actions to support tickets
+        // Build where clause for AuditLog â€” map audit actions to support tickets
         const where: Record<string, unknown> = {};
 
         // For non-SUPERADMIN, filter by tenantId
@@ -112,11 +114,11 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── POST /api/platform/support/tickets ─────────────────────────────────────
+// â”€â”€â”€ POST /api/platform/support/tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Create a new support ticket (stored as AuditLog entry).
 export async function POST(request: Request) {
     try {
-        // 1. Auth + RBAC check — SUPERADMIN only
+        // 1. Auth + RBAC check â€” SUPERADMIN only
         const auth = await requirePermissionForRoute(request);
         if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 

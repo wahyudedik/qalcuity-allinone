@@ -1,119 +1,248 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateLeadSchema, formatZodError } from '@/lib/validation-schemas';
-import { handleApiError } from '@/lib/api-error';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { sanitizeObject } from '@/lib/sanitize';
+import { importLeadRowSchema, formatZodError } from '@/lib/validation-schemas';
+import { parseCsv } from '@/lib/csv-parser';
+import { parseExcel } from '@/lib/excel-parser';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
-        const { id } = params;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const BATCH_SIZE = 50;
 
-        const lead = await prisma.lead.findFirst({
-            where: { id, tenantId },
-            include: {
-                contact: { select: { id: true, name: true, email: true, phone: true } },
-                deals: {
-                    select: { id: true, title: true, value: true, stage: true, probability: true, createdAt: true },
-                    orderBy: { createdAt: 'desc' },
-                },
-            },
-        });
-
-        if (!lead) {
-            return NextResponse.json({ success: false, error: MSG.LEAD_NOT_FOUND }, { status: 404 });
-        }
-
-        return NextResponse.json({ success: true, data: lead });
-    } catch (error) {
-        return handleApiError(error);
-    }
+interface ImportError {
+    row: number;
+    field?: string;
+    message: string;
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
-        const body = await request.json();
+interface ImportResult {
+    success: boolean;
+    data?: {
+        imported: number;
+        errors: number;
+        totalRows: number;
+        errorDetails: ImportError[];
+    };
+    error?: string;
+}
 
-        // Validasi input dengan Zod
-        const validation = updateLeadSchema.safeParse(body);
-        if (!validation.success) {
+/**
+ * POST /api/crm/leads/import
+ * Import leads dari file CSV atau Excel.
+ * 
+ * Menerima FormData dengan field 'file'.
+ * Return detailed report: success count, error count, error details.
+ */
+export async function POST(request: Request): Promise<NextResponse<ImportResult>> {
+    try {
+        // Rate limit
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:leads:import:${ip}`, 5, 60000);
+        if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429 }
+            );
+        }
+
+        // Auth check â€” VIEWER tidak boleh import
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        // Parse FormData
+        const formData = await request.formData();
+        const file = formData.get('file') as File | null;
+
+        if (!file) {
+            return NextResponse.json(
+                { success: false, error: MSG.FILE_UPLOAD_REQUIRED },
                 { status: 400 }
             );
         }
 
-        const existing = await prisma.lead.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.LEAD_NOT_FOUND }, { status: 404 });
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json(
+                { success: false, error: MSG.FILE_TOO_LARGE },
+                { status: 400 }
+            );
         }
 
-        const lead = await prisma.lead.update({
-            where: { id },
+        // Validate file type
+        const fileName = file.name.toLowerCase();
+        const isCsv = fileName.endsWith('.csv');
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+        if (!isCsv && !isExcel) {
+            return NextResponse.json(
+                { success: false, error: MSG.UNSUPPORTED_FILE_FORMAT },
+                { status: 400 }
+            );
+        }
+
+        // Convert file to buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Parse file
+        let rows: Record<string, string>[];
+        let headers: string[];
+
+        if (isCsv) {
+            const text = buffer.toString('utf-8');
+            const result = parseCsv(text);
+            rows = result.rows;
+            headers = result.headers;
+        } else {
+            const result = parseExcel(buffer);
+            rows = result.rows;
+            headers = result.headers;
+        }
+
+        if (rows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: MSG.LEAD_IMPORT_FILE_EMPTY },
+                { status: 400 }
+            );
+        }
+
+        // Validate required columns
+        const headerLower = headers.map((h) => h.toLowerCase().trim());
+        const hasNameColumn = headerLower.some(
+            (h) => h === 'name' || h === 'nama'
+        );
+
+        if (!hasNameColumn) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.LEAD_IMPORT_COLUMNS_REQUIRED,
+                },
+                { status: 400 }
+            );
+        }
+
+        // Column mapping â€” normalize header names
+        const columnMap: Record<string, string> = {};
+        for (const header of headers) {
+            const lower = header.toLowerCase().trim();
+            if (lower === 'name' || lower === 'nama') columnMap[header] = 'name';
+            else if (lower === 'email') columnMap[header] = 'email';
+            else if (lower === 'phone' || lower === 'telepon' || lower === 'telp') columnMap[header] = 'phone';
+            else if (lower === 'company' || lower === 'perusahaan') columnMap[header] = 'company';
+            else if (lower === 'source' || lower === 'sumber') columnMap[header] = 'source';
+            else if (lower === 'value' || lower === 'nilai') columnMap[header] = 'value';
+            else if (lower === 'notes' || lower === 'catatan') columnMap[header] = 'notes';
+            else if (lower === 'status') columnMap[header] = 'status';
+        }
+
+        // Map and validate rows
+        const validRows: Record<string, string>[] = [];
+        const errors: ImportError[] = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const rawRow = rows[i];
+            const mappedRow: Record<string, string> = {};
+
+            for (const [originalHeader, mappedField] of Object.entries(columnMap)) {
+                const value = rawRow[originalHeader];
+                if (value !== undefined && value !== '') {
+                    mappedRow[mappedField] = value;
+                }
+            }
+
+            // Validate with Zod
+            const validation = importLeadRowSchema.safeParse(mappedRow);
+            if (!validation.success) {
+                for (const issue of validation.error.issues) {
+                    errors.push({
+                        row: i + 2, // +2 because row 1 is header, and 0-indexed
+                        field: issue.path.join('.'),
+                        message: issue.message,
+                    });
+                }
+            } else {
+                validRows.push(validation.data as Record<string, string>);
+            }
+        }
+
+        // Batch insert ke database
+        let importedCount = 0;
+
+        if (validRows.length > 0) {
+            // Process in batches
+            for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+                const batch = validRows.slice(i, i + BATCH_SIZE);
+
+                const createData = batch.map((row) => {
+                    const sanitized = sanitizeObject(row);
+
+                    // Parse value â€” bisa "1000000" atau "Rp 1.000.000" atau "1,000,000"
+                    let numericValue = 0;
+                    if (sanitized.value) {
+                        const raw = String(sanitized.value)
+                            .replace(/[Rp\s.]/g, '') // Remove "Rp", spaces, dots
+                            .replace(/,/g, '');      // Remove commas
+                        const parsed = parseFloat(raw);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                            numericValue = parsed;
+                        }
+                    }
+
+                    return {
+                        tenantId,
+                        name: sanitized.name as string,
+                        email: (sanitized.email as string) || null,
+                        phone: (sanitized.phone as string) || null,
+                        company: (sanitized.company as string) || null,
+                        source: (sanitized.source as string) || null,
+                        status: (sanitized.status as string || 'NEW').toUpperCase(),
+                        value: numericValue,
+                        notes: (sanitized.notes as string) || null,
+                    };
+                });
+
+                const result = await prisma.lead.createMany({
+                    data: createData,
+                    skipDuplicates: false,
+                });
+
+                importedCount += result.count;
+            }
+
+            // Log audit trail
+            void logAudit({
+                userId,
+                tenantId,
+                action: 'CREATE',
+                entity: 'Lead',
+                newValues: {
+                    import: true,
+                    fileName: file.name,
+                    importedCount,
+                    errorCount: errors.length,
+                },
+                request,
+            });
+        }
+
+        return NextResponse.json({
+            success: true,
             data: {
-                ...(typeof validation.data.name === 'string' && { name: validation.data.name }),
-                ...(typeof validation.data.email === 'string' && { email: validation.data.email }),
-                ...(typeof validation.data.phone === 'string' && { phone: validation.data.phone }),
-                ...(typeof validation.data.company === 'string' && { company: validation.data.company }),
-                ...(typeof validation.data.source === 'string' && { source: validation.data.source }),
-                ...(typeof validation.data.status === 'string' && { status: validation.data.status.toUpperCase() }),
-                ...(typeof validation.data.value === 'number' && { value: validation.data.value }),
-                ...(typeof validation.data.notes === 'string' && { notes: validation.data.notes }),
-                ...(typeof validation.data.contactId === 'string' && { contactId: validation.data.contactId }),
+                imported: importedCount,
+                errors: errors.length,
+                totalRows: rows.length,
+                errorDetails: errors.slice(0, 50), // Limit error details to 50
             },
         });
-
-        // Audit logging non-blocking
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Lead', entityId: id, newValues: body as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: lead });
     } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
-
-        const existing = await prisma.lead.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.LEAD_NOT_FOUND }, { status: 404 });
-        }
-
-        await prisma.lead.delete({ where: { id } });
-
-        // Audit logging non-blocking
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Lead', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: null });
-    } catch (error) {
-        return handleApiError(error);
+        return handleApiError(error) as NextResponse<ImportResult>;
     }
 }

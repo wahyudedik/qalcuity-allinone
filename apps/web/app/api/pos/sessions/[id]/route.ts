@@ -1,104 +1,75 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { closePosSessionSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { openPosSessionSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rl = checkRateLimit(`pos:sessions:[id]:${ip}`, 60, 60_000);
-        if (!rl.success) {
-            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
+        const rateLimitResult = checkRateLimit(`api:pos:sessions:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
         }
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
 
-        const session = await prisma.posSession.findFirst({
-            where: { id, tenantId },
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const terminalId = searchParams.get('terminalId');
+
+        const where: Record<string, unknown> = { tenantId };
+
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+
+        if (terminalId) {
+            where.terminalId = terminalId;
+        }
+
+        const sessions = await prisma.posSession.findMany({
+            where,
             include: {
                 terminal: { select: { id: true, name: true, code: true } },
                 transactions: {
-                    include: {
-                        items: true,
-                        payments: true,
-                        refunds: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
+                    select: { id: true, totalAmount: true, status: true },
                 },
             },
+            orderBy: { openedAt: 'desc' },
         });
 
-        if (!session) {
-            return NextResponse.json(
-                { success: false, error: MSG.SESSION_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        const completedTransactions = session.transactions.filter((t) => t.status === 'COMPLETED');
-        const totalSales = completedTransactions.reduce((sum, t) => sum + Number(t.totalAmount), 0);
-        const cashSales = completedTransactions
-            .filter((t) => t.paymentMethod === 'CASH')
-            .reduce((sum, t) => sum + Number(t.totalAmount), 0);
-        const nonCashSales = totalSales - cashSales;
-
-        const data = {
-            id: session.id,
-            terminalId: session.terminalId,
-            terminalName: session.terminal.name,
-            terminalCode: session.terminal.code,
-            cashierId: session.cashierId,
-            cashierName: session.cashierName,
-            status: session.status,
-            openingCash: Number(session.openingCash),
-            closingCash: session.closingCash ? Number(session.closingCash) : null,
-            expectedCash: session.expectedCash ? Number(session.expectedCash) : null,
-            variance: session.variance ? Number(session.variance) : null,
-            transactionCount: session.transactions.length,
-            completedTransactionCount: completedTransactions.length,
-            totalSales,
-            cashSales,
-            nonCashSales,
-            openedAt: session.openedAt.toISOString(),
-            closedAt: session.closedAt?.toISOString() || null,
-            createdAt: session.createdAt.toISOString(),
-            transactions: session.transactions.map((t) => ({
-                id: t.id,
-                transactionNo: t.transactionNo,
-                customerName: t.customerName,
-                totalAmount: Number(t.totalAmount),
-                paidAmount: Number(t.paidAmount),
-                changeAmount: Number(t.changeAmount),
-                paymentMethod: t.paymentMethod,
-                status: t.status,
-                items: t.items.map((item) => ({
-                    id: item.id,
-                    productName: item.productName,
-                    quantity: Number(item.quantity),
-                    unitPrice: Number(item.unitPrice),
-                    subtotal: Number(item.subtotal),
-                })),
-                payments: t.payments.map((p) => ({
-                    id: p.id,
-                    method: p.method,
-                    amount: Number(p.amount),
-                    reference: p.reference,
-                    status: p.status,
-                })),
-                createdAt: t.createdAt.toISOString(),
-            })),
-        };
+        const data = sessions.map((s) => ({
+            id: s.id,
+            terminalId: s.terminalId,
+            terminalName: s.terminal.name,
+            terminalCode: s.terminal.code,
+            cashierId: s.cashierId,
+            cashierName: s.cashierName,
+            status: s.status,
+            openingCash: Number(s.openingCash),
+            closingCash: s.closingCash ? Number(s.closingCash) : null,
+            expectedCash: s.expectedCash ? Number(s.expectedCash) : null,
+            variance: s.variance ? Number(s.variance) : null,
+            transactionCount: s.transactions.length,
+            totalSales: s.transactions
+                .filter((t) => t.status === 'COMPLETED')
+                .reduce((sum, t) => sum + Number(t.totalAmount), 0),
+            openedAt: s.openedAt.toISOString(),
+            closedAt: s.closedAt?.toISOString() || null,
+            createdAt: s.createdAt.toISOString(),
+        }));
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
@@ -106,24 +77,24 @@ export async function GET(
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rl = checkRateLimit(`pos:sessions:[id]:PUT:${ip}`, 30, 60_000);
-        if (!rl.success) {
-            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
+        const rateLimitResult = checkRateLimit(`api:pos:sessions:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
         }
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
+
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const validation = closePosSessionSchema.safeParse(sanitizedBody);
+        const validation = openPosSessionSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -133,62 +104,64 @@ export async function PUT(
 
         const validatedData = validation.data;
 
-        const existing = await prisma.posSession.findFirst({ where: { id, tenantId } });
-        if (!existing) {
+        // Verify terminal exists and belongs to tenant
+        const terminal = await prisma.posTerminal.findFirst({
+            where: { id: validatedData.terminalId, tenantId },
+        });
+        if (!terminal) {
             return NextResponse.json(
-                { success: false, error: MSG.SESSION_NOT_FOUND },
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
                 { status: 404 }
             );
         }
 
-        if (existing.status !== 'OPEN') {
+        if (terminal.status !== 'ACTIVE') {
             return NextResponse.json(
-                { success: false, error: MSG.SESSION_ONLY_OPEN_CAN_CLOSE },
+                { success: false, error: MSG.TERMINAL_NOT_ACTIVE },
                 { status: 400 }
             );
         }
 
-        // Calculate expected cash from completed transactions
-        const completedTransactions = await prisma.posTransaction.findMany({
-            where: { sessionId: id, status: 'COMPLETED' },
+        // Check if terminal already has an active session
+        const existingOpenSession = await prisma.posSession.findFirst({
+            where: { terminalId: validatedData.terminalId, status: 'OPEN' },
+        });
+        if (existingOpenSession) {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_HAS_ACTIVE_SESSION },
+                { status: 400 }
+            );
+        }
+
+        // Get user name from session
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true },
         });
 
-        const cashTransactions = completedTransactions.filter((t) => t.paymentMethod === 'CASH');
-        const totalCashSales = cashTransactions.reduce((sum, t) => sum + Number(t.totalAmount), 0);
-        const totalCashRefunds = await prisma.posRefund.aggregate({
-            where: {
-                transactionId: { in: completedTransactions.map((t) => t.id) },
-                status: { in: ['APPROVED', 'PENDING'] },
-            },
-            _sum: { amount: true },
-        });
-        const refundAmount = totalCashRefunds._sum.amount ? Number(totalCashRefunds._sum.amount) : 0;
-        const expectedCash = Number(existing.openingCash) + totalCashSales - refundAmount;
-        const variance = validatedData.closingCash - expectedCash;
-
-        const updatedSession = await prisma.posSession.update({
-            where: { id },
+        const session = await prisma.posSession.create({
             data: {
-                status: 'CLOSED',
-                closingCash: validatedData.closingCash,
-                expectedCash,
-                variance,
-                closedAt: new Date(),
+                tenantId,
+                terminalId: validatedData.terminalId,
+                cashierId: userId,
+                cashierName: user?.name || 'Unknown',
+                openingCash: validatedData.openingCash,
+            },
+            include: {
+                terminal: { select: { name: true, code: true } },
             },
         });
 
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'PosSession',
-            entityId: id,
-            oldValues: { status: 'OPEN', closingCash: null },
+            entityId: session.id,
             newValues: {
-                status: 'CLOSED',
-                closingCash: validatedData.closingCash,
-                expectedCash,
-                variance,
+                terminalId: validatedData.terminalId,
+                openingCash: validatedData.openingCash,
+                cashierName: user?.name || 'Unknown',
             },
             request,
         });
@@ -196,14 +169,16 @@ export async function PUT(
         return NextResponse.json({
             success: true,
             data: {
-                id: updatedSession.id,
-                status: updatedSession.status,
-                closingCash: Number(updatedSession.closingCash),
-                expectedCash: Number(updatedSession.expectedCash),
-                variance: Number(updatedSession.variance),
-                closedAt: updatedSession.closedAt?.toISOString(),
+                id: session.id,
+                terminalId: session.terminalId,
+                terminalName: session.terminal.name,
+                terminalCode: session.terminal.code,
+                cashierName: session.cashierName,
+                status: session.status,
+                openingCash: Number(session.openingCash),
+                openedAt: session.openedAt.toISOString(),
             },
-        });
+        }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

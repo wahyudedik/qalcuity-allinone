@@ -1,11 +1,13 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { runAnomalyScan } from '@/lib/ai/anomaly-detection';
 import { handleApiError } from '@/lib/api-error';
 
-// ─── GET: Cron endpoint for external cron service ────────────────────────────
+// â”€â”€â”€ GET: Cron endpoint for external cron service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Authenticates via CRON_SECRET Bearer token (not session auth).
-// Scans ALL active tenants for anomalies — designed for cron-job.org, Vercel Cron, etc.
+// Scans ALL active tenants for anomalies â€” designed for cron-job.org, Vercel Cron, etc.
 
 export async function GET(req: Request) {
     try {

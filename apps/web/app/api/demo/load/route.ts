@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
@@ -12,7 +14,7 @@ import { handleApiError } from "@/lib/api-error";
  * Requires authenticated user with ADMIN or SUPERADMIN role.
  *
  * Request body (optional):
- * - force: boolean — skip the "already has data" check
+ * - force: boolean â€” skip the "already has data" check
  */
 export async function POST(req: Request) {
     try {

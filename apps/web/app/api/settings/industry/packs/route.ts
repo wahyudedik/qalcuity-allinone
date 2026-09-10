@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -9,7 +11,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError, apiForbidden } from '@/lib/api-error';
 
-// ─── GET /api/settings/industry/packs ────────────────────────────────────────
+// â”€â”€â”€ GET /api/settings/industry/packs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Dapatkan daftar semua industry packs yang tersedia.
@@ -51,7 +53,7 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── POST /api/settings/industry/packs ───────────────────────────────────────
+// â”€â”€â”€ POST /api/settings/industry/packs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Apply industry pack ke tenant saat ini.
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Build config dari pack — gunakan pack sebagai base config
+        // Build config dari pack â€” gunakan pack sebagai base config
         const packConfig: Record<string, unknown> = {
             modules: pack.modules,
             customFields: pack.customFields,

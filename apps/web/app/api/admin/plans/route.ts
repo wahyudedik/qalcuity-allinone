@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic';
+
 /**
- * GET /api/admin/plans — List all plans
- * POST /api/admin/plans — Create a new plan (SUPERADMIN only)
+ * GET /api/admin/plans â€” List all plans
+ * POST /api/admin/plans â€” Create a new plan (SUPERADMIN only)
  */
 
 import { NextResponse } from 'next/server';

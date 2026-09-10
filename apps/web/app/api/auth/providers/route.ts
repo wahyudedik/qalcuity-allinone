@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 
@@ -80,7 +82,7 @@ export async function GET() {
                         );
                     }
                 } catch (error) {
-                    // Network error, timeout, or DNS failure — Google OAuth is not reachable
+                    // Network error, timeout, or DNS failure â€” Google OAuth is not reachable
                     console.warn(
                         `[Auth Providers] Cannot reach Google OAuth endpoint. ` +
                         `Google login is disabled. Error: ${error instanceof Error ? error.message : 'Unknown'}`,

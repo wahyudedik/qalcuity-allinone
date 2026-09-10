@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -12,10 +14,10 @@ import { handleApiError } from '@/lib/api-error';
  * Execute workflow transition untuk entity tertentu.
  *
  * Body:
- * - entityType: string (required) — 'INVOICE', 'QUOTATION', etc.
- * - entityId: string (required) — ID entity
- * - action: string (required) — nama aksi (e.g., 'send', 'pay', 'approve')
- * - notes: string (optional) — catatan tambahan
+ * - entityType: string (required) â€” 'INVOICE', 'QUOTATION', etc.
+ * - entityId: string (required) â€” ID entity
+ * - action: string (required) â€” nama aksi (e.g., 'send', 'pay', 'approve')
+ * - notes: string (optional) â€” catatan tambahan
  */
 export async function POST(request: Request) {
     try {
@@ -114,7 +116,7 @@ export async function POST(request: Request) {
     }
 }
 
-// ─── Helper Functions ──────────────────────────────────────────────────────
+// â”€â”€â”€ Helper Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Dapatkan current state dari entity berdasarkan entity type.

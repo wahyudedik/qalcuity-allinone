@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -6,164 +8,127 @@ import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 
 /**
- * GET /api/workflow/definitions/[id]
- * Dapatkan detail workflow definition.
+ * GET /api/workflow/definitions
+ * List semua workflow definitions untuk tenant.
  */
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
         const { tenantId } = auth;
-        const { id } = params;
 
-        const definition = await prisma.workflowDefinition.findFirst({
-            where: { id, tenantId },
+        const definitions = await prisma.workflowDefinition.findMany({
+            where: { tenantId },
+            orderBy: { entityType: 'asc' },
         });
 
-        if (!definition) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_DEFINITION_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        return NextResponse.json({ success: true, data: definition });
+        return NextResponse.json({ success: true, data: definitions });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
 /**
- * PUT /api/workflow/definitions/[id]
- * Update workflow definition.
+ * POST /api/workflow/definitions
+ * Buat atau update workflow definition.
+ * Jika entityType sudah ada untuk tenant, update config-nya.
  */
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
 
+        const { entityType, name, description, config } = body;
+
+        if (!entityType || !name || !config) {
+            return NextResponse.json(
+                { success: false, error: MSG.WORKFLOW_DEFINITION_FIELDS_REQUIRED },
+                { status: 400 }
+            );
+        }
+
+        // Validate config structure
+        if (!config.states || !Array.isArray(config.states) || config.states.length === 0) {
+            return NextResponse.json(
+                { success: false, error: MSG.WORKFLOW_CONFIG_STATES_ARRAY },
+                { status: 400 }
+            );
+        }
+
+        if (!config.transitions || !Array.isArray(config.transitions)) {
+            return NextResponse.json(
+                { success: false, error: MSG.WORKFLOW_CONFIG_TRANSITIONS_ARRAY },
+                { status: 400 }
+            );
+        }
+
+        if (!config.initialState) {
+            return NextResponse.json(
+                { success: false, error: MSG.WORKFLOW_CONFIG_INITIAL_STATE_REQUIRED },
+                { status: 400 }
+            );
+        }
+
+        if (!config.finalStates || !Array.isArray(config.finalStates)) {
+            return NextResponse.json(
+                { success: false, error: MSG.WORKFLOW_CONFIG_FINAL_STATES_ARRAY },
+                { status: 400 }
+            );
+        }
+
+        // Upsert: update jika sudah ada, create jika belum
         const existing = await prisma.workflowDefinition.findFirst({
-            where: { id, tenantId },
+            where: { tenantId, entityType: entityType.toUpperCase() },
         });
 
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_DEFINITION_NOT_FOUND },
-                { status: 404 }
-            );
-        }
+        let definition;
 
-        if (existing.isSystem) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_SYSTEM_CANNOT_MODIFY },
-                { status: 403 }
-            );
-        }
-
-        const { name, description, config, isActive } = body;
-
-        const updateData: Record<string, unknown> = {};
-        if (name !== undefined) updateData.name = name;
-        if (description !== undefined) updateData.description = description;
-        if (config !== undefined) {
-            // Validate config structure
-            if (!config.states || !Array.isArray(config.states) || config.states.length === 0) {
+        if (existing) {
+            if (existing.isSystem) {
                 return NextResponse.json(
-                    { success: false, error: MSG.WORKFLOW_CONFIG_STATES_ARRAY },
-                    { status: 400 }
+                    { success: false, error: MSG.WORKFLOW_SYSTEM_CANNOT_MODIFY },
+                    { status: 403 }
                 );
             }
-            if (!config.transitions || !Array.isArray(config.transitions)) {
-                return NextResponse.json(
-                    { success: false, error: MSG.WORKFLOW_CONFIG_TRANSITIONS_ARRAY },
-                    { status: 400 }
-                );
-            }
-            updateData.config = config;
-        }
-        if (isActive !== undefined) updateData.isActive = isActive;
 
-        const updated = await prisma.workflowDefinition.update({
-            where: { id },
-            data: updateData,
-        });
+            definition = await prisma.workflowDefinition.update({
+                where: { id: existing.id },
+                data: {
+                    name,
+                    description: description || null,
+                    config,
+                },
+            });
+        } else {
+            definition = await prisma.workflowDefinition.create({
+                data: {
+                    tenantId,
+                    entityType: entityType.toUpperCase(),
+                    name,
+                    description: description || null,
+                    config,
+                    isSystem: false,
+                },
+            });
+        }
 
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: existing ? 'UPDATE' : 'CREATE',
             entity: 'WorkflowDefinition',
-            entityId: id,
-            newValues: updateData as Record<string, unknown>,
+            entityId: definition.id,
+            newValues: { entityType: definition.entityType, name: definition.name },
             request,
         });
 
-        return NextResponse.json({ success: true, data: updated });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-/**
- * DELETE /api/workflow/definitions/[id]
- * Hapus custom workflow definition (bukan system workflow).
- */
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) {
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
-        }
-        const { userId, tenantId } = auth;
-        const { id } = params;
-
-        const existing = await prisma.workflowDefinition.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_DEFINITION_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        if (existing.isSystem) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_SYSTEM_CANNOT_DELETE },
-                { status: 403 }
-            );
-        }
-
-        await prisma.workflowDefinition.delete({ where: { id } });
-
-        void logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'WorkflowDefinition',
-            entityId: id,
-            oldValues: existing as unknown as Record<string, unknown>,
-            request,
-        });
-
-        return NextResponse.json({ success: true, data: null });
+        return NextResponse.json({ success: true, data: definition });
     } catch (error) {
         return handleApiError(error);
     }

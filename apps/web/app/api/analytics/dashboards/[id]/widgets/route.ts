@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Dashboard Widgets API — GET (list), POST (create)
-// Widgets for a specific dashboard
+// Dashboards API â€” GET (list), POST (create)
+// CRUD for Analytics Dashboards
 // ============================================
 
 import { NextResponse } from 'next/server'
@@ -9,41 +11,16 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { createDashboardSchema } from '@/lib/validation-schemas'
 
 // ============================================
-// TYPES
+// GET â€” List all dashboards for tenant
 // ============================================
 
-interface CreateWidgetBody {
-    title: string
-    type: string
-    chartType?: string
-    size?: string
-    gridX?: number
-    gridY?: number
-    gridW?: number
-    gridH?: number
-    dataSource?: string
-    metricId?: string
-    chartId?: string
-    queryId?: string
-    sql?: string
-    staticData?: string
-    config?: string
-    refreshInterval?: number
-}
-
-// ============================================
-// GET — List widgets for dashboard
-// ============================================
-
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request)
-        const rateLimitResult = checkRateLimit(`api:analytics:dashboards:[id]:widgets:route:GET:${ip}`, 60, 60000)
+        const rateLimitResult = checkRateLimit(`api:analytics:dashboards:route:GET:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
             return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
@@ -53,48 +30,66 @@ export async function GET(
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { tenantId } = auth
-        const { id: dashboardId } = params
+        const { searchParams } = new URL(request.url)
+        const isActive = searchParams.get('isActive')
+        const isDefault = searchParams.get('isDefault')
+        const isTemplate = searchParams.get('isTemplate')
+        const visibility = searchParams.get('visibility')
 
-        // Verify dashboard exists and belongs to tenant
-        const dashboard = await prisma.analyticsDashboard.findFirst({
-            where: { id: dashboardId, tenantId, deletedAt: null },
-        })
+        const where: Record<string, unknown> = { tenantId, deletedAt: null }
 
-        if (!dashboard) {
-            return NextResponse.json(
-                { success: false, error: MSG.ANALYTICS_DASHBOARD_NOT_FOUND },
-                { status: 404 }
-            )
+        if (isActive !== null && isActive !== undefined) {
+            where.isActive = isActive === 'true'
         }
 
-        const widgets = await prisma.analyticsDashboardWidget.findMany({
-            where: { dashboardId, tenantId },
-            orderBy: [{ gridY: 'asc' }, { gridX: 'asc' }],
+        if (isDefault !== null && isDefault !== undefined) {
+            where.isDefault = isDefault === 'true'
+        }
+
+        if (isTemplate !== null && isTemplate !== undefined) {
+            where.isTemplate = isTemplate === 'true'
+        }
+
+        if (visibility) {
+            where.visibility = visibility
+        }
+
+        const dashboards = await prisma.analyticsDashboard.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                widgets: {
+                    select: { id: true },
+                },
+            },
         })
 
-        const enrichedWidgets = widgets.map(widget => ({
-            id: widget.id,
-            title: widget.title,
-            type: widget.type,
-            chartType: widget.chartType,
-            size: widget.size,
-            gridX: widget.gridX,
-            gridY: widget.gridY,
-            gridW: widget.gridW,
-            gridH: widget.gridH,
-            dataSource: widget.dataSource,
-            metricId: widget.metricId,
-            chartId: widget.chartId,
-            queryId: widget.queryId,
-            sql: widget.sql,
-            staticData: widget.staticData,
-            config: widget.config,
-            refreshInterval: widget.refreshInterval,
-            createdAt: widget.createdAt.toISOString(),
-            updatedAt: widget.updatedAt.toISOString(),
+        const enrichedDashboards = dashboards.map(dashboard => ({
+            id: dashboard.id,
+            name: dashboard.name,
+            description: dashboard.description,
+            slug: dashboard.slug,
+            layout: dashboard.layout,
+            theme: dashboard.theme,
+            visibility: dashboard.visibility,
+            ownerId: dashboard.ownerId,
+            ownerName: dashboard.ownerName,
+            department: dashboard.department,
+            allowedRoles: dashboard.allowedRoles,
+            allowedUsers: dashboard.allowedUsers,
+            isDefault: dashboard.isDefault,
+            isTemplate: dashboard.isTemplate,
+            tags: dashboard.tags,
+            viewCount: dashboard.viewCount,
+            lastViewedAt: dashboard.lastViewedAt?.toISOString() ?? null,
+            refreshAll: dashboard.refreshAll,
+            isActive: dashboard.isActive,
+            widgetCount: dashboard.widgets.length,
+            createdAt: dashboard.createdAt.toISOString(),
+            updatedAt: dashboard.updatedAt.toISOString(),
         }))
 
-        return NextResponse.json({ success: true, data: enrichedWidgets })
+        return NextResponse.json({ success: true, data: enrichedDashboards })
     } catch (error) {
         console.error('[ERROR]', error)
         return handleApiError(error)
@@ -102,16 +97,13 @@ export async function GET(
 }
 
 // ============================================
-// POST — Add widget to dashboard
+// POST â€” Create new dashboard
 // ============================================
 
-export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const ip = getClientIp(request)
-        const rateLimitResult = checkRateLimit(`api:analytics:dashboards:[id]:widgets:route:POST:${ip}`, 60, 60000)
+        const rateLimitResult = checkRateLimit(`api:analytics:dashboards:route:POST:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
             return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
@@ -120,80 +112,37 @@ export async function POST(
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
-        const { tenantId } = auth
-        const { id: dashboardId } = params
-        const body: CreateWidgetBody = await request.json()
+        const { userId, tenantId } = auth
 
-        // Verify dashboard exists and belongs to tenant
-        const dashboard = await prisma.analyticsDashboard.findFirst({
-            where: { id: dashboardId, tenantId, deletedAt: null },
-        })
-
-        if (!dashboard) {
+        // Validasi input dengan Zod schema
+        const body = await request.json()
+        const validated = createDashboardSchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: MSG.ANALYTICS_DASHBOARD_NOT_FOUND },
-                { status: 404 }
-            )
-        }
-
-        // Validate required fields
-        if (!body.title || !body.type) {
-            return NextResponse.json(
-                { success: false, error: 'Missing required fields: title, type' },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             )
         }
 
-        // Validate widget type
-        const validWidgetTypes = ['CHART', 'KPI_CARD', 'TABLE', 'TEXT', 'IMAGE', 'METRIC_COMPARISON']
-        if (!validWidgetTypes.includes(body.type)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid type. Must be one of: ${validWidgetTypes.join(', ')}` },
-                { status: 400 }
-            )
-        }
+        const visibility = validated.data.visibility || 'PRIVATE'
 
-        // Validate size if provided
-        if (body.size) {
-            const validSizes = ['SMALL', 'MEDIUM', 'LARGE', 'FULL_WIDTH']
-            if (!validSizes.includes(body.size)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid size. Must be one of: ${validSizes.join(', ')}` },
-                    { status: 400 }
-                )
-            }
-        }
-
-        // Validate dataSource if provided
-        if (body.dataSource) {
-            const validDataSources = ['METRIC', 'CHART', 'QUERY', 'SQL', 'STATIC']
-            if (!validDataSources.includes(body.dataSource)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid dataSource. Must be one of: ${validDataSources.join(', ')}` },
-                    { status: 400 }
-                )
-            }
-        }
-
-        const widget = await prisma.analyticsDashboardWidget.create({
+        const dashboard = await prisma.analyticsDashboard.create({
             data: {
-                title: body.title,
-                type: body.type,
-                chartType: body.chartType || null,
-                size: body.size || 'MEDIUM',
-                gridX: body.gridX ?? 0,
-                gridY: body.gridY ?? 0,
-                gridW: body.gridW ?? 6,
-                gridH: body.gridH ?? 4,
-                dataSource: body.dataSource || 'METRIC',
-                metricId: body.metricId || null,
-                chartId: body.chartId || null,
-                queryId: body.queryId || null,
-                sql: body.sql || null,
-                staticData: body.staticData || null,
-                config: body.config || '{}',
-                refreshInterval: body.refreshInterval ?? null,
-                dashboardId,
+                name: validated.data.name,
+                description: validated.data.description,
+                slug: validated.data.slug,
+                layout: validated.data.layout || '{}',
+                theme: validated.data.theme || null,
+                visibility,
+                ownerId: userId,
+                ownerName: null,
+                department: validated.data.department || null,
+                allowedRoles: validated.data.allowedRoles || null,
+                allowedUsers: validated.data.allowedUsers || null,
+                isDefault: validated.data.isDefault ?? false,
+                isTemplate: validated.data.isTemplate ?? false,
+                tags: validated.data.tags || null,
+                refreshAll: validated.data.refreshAll ?? null,
                 tenantId,
             },
         })
@@ -201,25 +150,22 @@ export async function POST(
         return NextResponse.json({
             success: true,
             data: {
-                id: widget.id,
-                title: widget.title,
-                type: widget.type,
-                chartType: widget.chartType,
-                size: widget.size,
-                gridX: widget.gridX,
-                gridY: widget.gridY,
-                gridW: widget.gridW,
-                gridH: widget.gridH,
-                dataSource: widget.dataSource,
-                metricId: widget.metricId,
-                chartId: widget.chartId,
-                queryId: widget.queryId,
-                sql: widget.sql,
-                staticData: widget.staticData,
-                config: widget.config,
-                refreshInterval: widget.refreshInterval,
-                createdAt: widget.createdAt.toISOString(),
-                updatedAt: widget.updatedAt.toISOString(),
+                id: dashboard.id,
+                name: dashboard.name,
+                description: dashboard.description,
+                slug: dashboard.slug,
+                layout: dashboard.layout,
+                theme: dashboard.theme,
+                visibility: dashboard.visibility,
+                ownerId: dashboard.ownerId,
+                department: dashboard.department,
+                isDefault: dashboard.isDefault,
+                isTemplate: dashboard.isTemplate,
+                tags: dashboard.tags,
+                refreshAll: dashboard.refreshAll,
+                isActive: dashboard.isActive,
+                createdAt: dashboard.createdAt.toISOString(),
+                updatedAt: dashboard.updatedAt.toISOString(),
             },
         }, { status: 201 })
     } catch (error) {

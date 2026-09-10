@@ -1,69 +1,195 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateDealSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { sanitizeObject } from '@/lib/sanitize';
+import { createDealSchema, updateDealSchema, formatZodError } from '@/lib/validation-schemas';
+import { WorkflowEngine } from '@qalcuity/workflow';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:deals:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const stage = searchParams.get('stage');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        const deal = await prisma.deal.findFirst({
-            where: { id, tenantId },
-            include: {
-                contact: { select: { id: true, name: true, company: true, email: true, phone: true, address: true } },
-                lead: { select: { id: true, name: true, company: true, email: true, phone: true } },
-            },
-        });
+        const where: Record<string, unknown> = { tenantId };
 
-        if (!deal) {
-            return NextResponse.json({ success: false, error: MSG.DEAL_NOT_FOUND }, { status: 404 });
+        if (stage) {
+            where.stage = stage.toUpperCase().replace(' ', '_');
         }
 
-        // Map to frontend-compatible format
-        const data = {
+        if (search) {
+            where.OR = [
+                { title: { contains: search } },
+                { contact: { name: { contains: search } } },
+            ];
+        }
+
+        const [deals, total] = await Promise.all([
+            prisma.deal.findMany({
+                where,
+                include: {
+                    contact: { select: { id: true, name: true, email: true } },
+                    lead: { select: { id: true, name: true, company: true } },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.deal.count({ where }),
+        ]);
+
+        const data = deals.map((deal) => ({
             id: deal.id,
+            title: deal.title,
             name: deal.title,
-            company: (deal.contact as Record<string, unknown>)?.company || deal.lead?.company || '-',
-            contactName: deal.contact?.name || '-',
-            contactEmail: deal.contact?.email || '',
-            contactPhone: deal.contact?.phone || '',
             value: deal.value,
-            currency: 'IDR',
             stage: deal.stage,
             probability: deal.probability,
-            expectedCloseDate: deal.closeDate?.toISOString().split('T')[0] || '',
+            closeDate: deal.closeDate?.toISOString() || null,
+            expectedCloseDate: deal.closeDate?.toISOString() || null,
+            notes: deal.notes,
+            contactId: deal.contactId,
+            contactName: deal.contact?.name || null,
+            company: deal.lead?.company || deal.contact?.name || null,
+            leadId: deal.leadId,
+            leadCompany: deal.lead?.company || null,
+            assignedTo: null,
             createdAt: deal.createdAt.toISOString(),
-            notes: deal.notes || '',
-            activities: [],
-        };
+        }));
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:deals:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const body = await request.json();
+
+        // Sanitize text inputs before validation
+        const sanitizedBody = sanitizeObject(body);
+
+        const validation = createDealSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        // Tentukan initial stage dari workflow definition
+        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'LEAD';
+        const dealStage = (validatedData.stage || initialStage).toUpperCase().replace(' ', '_');
+
+        // Validasi bahwa stage yang diberikan adalah valid dalam workflow
+        const validStages = WorkflowEngine.getStates('DEAL', tenantId);
+        if (validStages.length > 0 && !validStages.includes(dealStage)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.DEAL_STAGE_INVALID,
+                },
+                { status: 400 }
+            );
+        }
+
+        const deal = await prisma.deal.create({
+            data: {
+                tenantId: tenantId,
+                title: validatedData.title,
+                value: validatedData.value || 0,
+                stage: dealStage,
+                probability: validatedData.probability || 0,
+                closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null,
+                notes: validatedData.notes || null,
+                contactId: validatedData.contactId || null,
+                leadId: validatedData.leadId || null,
+            },
+            include: {
+                contact: { select: { id: true, name: true } },
+            },
+        });
+
+        // Catat workflow history untuk deal baru
+        await prisma.workflowHistory.create({
+            data: {
+                tenantId,
+                entityType: 'DEAL',
+                entityId: deal.id,
+                fromState: '',
+                toState: dealStage,
+                action: 'create',
+                userId,
+                notes: `Deal "${deal.title}" dibuat dengan stage "${dealStage}"`,
+            },
+        });
+
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Deal', entityId: deal.id, newValues: { title: deal.title, value: deal.value, stage: deal.stage } as Record<string, unknown>, request });
+        return NextResponse.json({ success: true, data: deal }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
+        const { id, ...updateData } = body;
 
-        const validation = updateDealSchema.safeParse(body);
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: MSG.ID_REQUIRED },
+                { status: 400 }
+            );
+        }
+
+        const validation = updateDealSchema.safeParse(updateData);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -74,11 +200,14 @@ export async function PUT(
         const validatedData = validation.data;
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId },
+            where: { id, tenantId: tenantId },
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.DEAL_NOT_FOUND }, { status: 404 });
+            return NextResponse.json(
+                { success: false, error: MSG.DEAL_NOT_FOUND },
+                { status: 404 }
+            );
         }
 
         // Validasi workflow transition jika stage berubah
@@ -87,26 +216,20 @@ export async function PUT(
             : undefined;
 
         if (newStage && newStage !== existing.stage) {
-            try {
-                const { validateWorkflowTransitionSafe, logWorkflowHistory } = await import('@/lib/workflow');
-                const transitionValidation = await validateWorkflowTransitionSafe(
-                    tenantId,
-                    'DEAL',
-                    existing.stage,
-                    newStage,
-                    'MEMBER'
-                );
+            const { validateWorkflowTransition } = await import('@/lib/workflow');
+            const validation = await validateWorkflowTransition(
+                tenantId,
+                'DEAL',
+                existing.stage,
+                newStage,
+                'MEMBER'
+            );
 
-                if (!transitionValidation.valid) {
-                    return NextResponse.json(
-                        { success: false, error: transitionValidation.error },
-                        { status: 400 }
-                    );
-                }
-            } catch (workflowError: unknown) {
-                // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan stage
-                const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                console.warn(`[Workflow] Deal workflow validation gagal, mengizinkan transisi: ${msg}`);
+            if (!validation.valid) {
+                return NextResponse.json(
+                    { success: false, error: validation.error },
+                    { status: 400 }
+                );
             }
         }
 
@@ -126,9 +249,8 @@ export async function PUT(
 
         // Catat workflow history jika stage berubah
         if (newStage && newStage !== existing.stage) {
-            try {
-                const { logWorkflowHistory } = await import('@/lib/workflow');
-                await logWorkflowHistory({
+            await prisma.workflowHistory.create({
+                data: {
                     tenantId,
                     entityType: 'DEAL',
                     entityId: id,
@@ -137,45 +259,46 @@ export async function PUT(
                     action: 'stage_change',
                     userId,
                     notes: `Stage diubah dari "${existing.stage}" ke "${newStage}"`,
-                });
-            } catch (workflowError: unknown) {
-                const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                console.warn(`[Workflow] Deal workflow history gagal ditulis: ${msg}`);
-            }
+                },
+            });
         }
 
-        // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: validatedData as Record<string, unknown>, request });
-
         return NextResponse.json({ success: true, data: deal });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId },
+            where: { id, tenantId: tenantId },
         });
 
         if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.DEAL_NOT_FOUND }, { status: 404 });
+            return NextResponse.json(
+                { success: false, error: 'Deal not found' },
+                { status: 404 }
+            );
         }
 
         await prisma.deal.delete({ where: { id } });
 
-        // Audit logging non-blocking
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Deal', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
-
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Deal', entityId: id, oldValues: { title: existing.title, value: existing.value, stage: existing.stage } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: null });
     } catch (error) {
         return handleApiError(error);

@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Scheduled Queries API — GET (list), POST (create)
+// Scheduled Queries API â€” GET (list), POST (create)
 // Scheduled query management
 // ============================================
 
@@ -29,7 +31,7 @@ interface CreateScheduledQueryBody {
 }
 
 // ============================================
-// GET — List scheduled queries for tenant
+// GET â€” List scheduled queries for tenant
 // ============================================
 
 export async function GET(request: Request) {
@@ -95,7 +97,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create scheduled query
+// POST â€” Create scheduled query
 // ============================================
 
 export async function POST(request: Request) {
