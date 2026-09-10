@@ -36,9 +36,47 @@ export async function GET(request: Request) {
         }
 
         if (lowStock === 'true') {
-            // Filter products where stock <= minStock using raw comparison
-            // Prisma doesn't support field-to-field comparison directly
-            // We'll filter in post-processing below
+            // Prisma can't compare fields (stock <= minStock), so we fetch ALL
+            // matching products, filter in memory, then paginate the result.
+            const allProducts = await prisma.product.findMany({
+                where,
+                include: {
+                    category: { select: { id: true, name: true } },
+                    _count: { select: { stockMovements: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            const mapped = allProducts
+                .map((p) => ({
+                    id: p.id,
+                    sku: p.sku,
+                    name: p.name,
+                    description: p.description,
+                    unit: p.unit,
+                    price: p.price,
+                    cost: p.cost,
+                    stock: p.stock,
+                    minStock: p.minStock,
+                    isActive: p.isActive,
+                    categoryId: p.categoryId,
+                    categoryName: p.category?.name || null,
+                    isLowStock: p.stock <= p.minStock,
+                    createdAt: p.createdAt.toISOString(),
+                }))
+                .filter((p) => p.isLowStock);
+
+            const filteredTotal = mapped.length;
+            const data = mapped.slice(skip, skip + limit);
+
+            return NextResponse.json({
+                success: true,
+                data,
+                total: filteredTotal,
+                page,
+                limit,
+                totalPages: Math.ceil(filteredTotal / limit),
+            });
         }
 
         const [products, total] = await Promise.all([
@@ -55,7 +93,7 @@ export async function GET(request: Request) {
             prisma.product.count({ where }),
         ]);
 
-        const allData = products.map((p) => ({
+        const data = products.map((p) => ({
             id: p.id,
             sku: p.sku,
             name: p.name,
@@ -72,18 +110,13 @@ export async function GET(request: Request) {
             createdAt: p.createdAt.toISOString(),
         }));
 
-        // Post-process: filter lowStock in memory (Prisma can't compare fields)
-        const data = lowStock === 'true' ? allData.filter((p) => p.isLowStock) : allData;
-
-        const filteredTotal = lowStock === 'true' ? data.length : total;
-
         return NextResponse.json({
             success: true,
             data,
-            total: filteredTotal,
+            total,
             page,
             limit,
-            totalPages: Math.ceil(filteredTotal / limit),
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         if (error instanceof Error && error.message === 'Unauthorized') {

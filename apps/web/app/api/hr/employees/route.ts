@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { sanitizeInput } from '@/lib/sanitize';
+import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { logAudit } from '@/lib/audit';
 import { createEmployeeSchema, updateEmployeeSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -161,7 +161,8 @@ export async function PUT(request: Request) {
         if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
-        const { id, ...updateData } = body;
+        const sanitizedBody = sanitizeObject(body);
+        const { id, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(

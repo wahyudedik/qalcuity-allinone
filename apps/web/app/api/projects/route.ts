@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { sanitizeObject } from '@/lib/sanitize';
 import { createProjectSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
@@ -115,8 +116,11 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
 
+        // Sanitize text inputs before validation
+        const sanitizedBody = sanitizeObject(body);
+
         // Validasi input dengan Zod
-        const validation = createProjectSchema.safeParse(body);
+        const validation = createProjectSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
