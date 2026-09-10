@@ -178,11 +178,18 @@ export async function POST(request: Request) {
         // Handle tandai selisih (discrepancy)
         if (action === 'discrepancy' && bankTransactionId) {
             // Validasi input
-            const validated = reconcileTransactionSchema.parse({ bankTransactionId });
+            const validated = reconcileTransactionSchema.safeParse({ bankTransactionId });
+            if (!validated.success) {
+                return NextResponse.json(
+                    { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                    { status: 400 }
+                );
+            }
+            const reconcileData = validated.data;
 
             // Cek transaksi bank ada dan milik tenant ini
             const bankTx = await prisma.bankTransaction.findFirst({
-                where: { id: validated.bankTransactionId, tenantId },
+                where: { id: reconcileData.bankTransactionId, tenantId },
             });
             if (!bankTx) {
                 return NextResponse.json(
@@ -192,7 +199,7 @@ export async function POST(request: Request) {
             }
 
             const updated = await prisma.bankTransaction.update({
-                where: { id: validated.bankTransactionId },
+                where: { id: reconcileData.bankTransactionId },
                 data: {
                     status: 'discrepancy',
                     discrepancyNote: body.note || 'Marked as discrepancy',
@@ -227,14 +234,21 @@ export async function POST(request: Request) {
         }
 
         // Validasi input
-        const validated = reconcileTransactionSchema.parse({
+        const validated = reconcileTransactionSchema.safeParse({
             bankTransactionId,
             bookTransactionId,
         });
+        if (!validated.success) {
+            return NextResponse.json(
+                { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
+            );
+        }
+        const matchData = validated.data;
 
         // Cek transaksi bank ada dan milik tenant ini
         const bankTx = await prisma.bankTransaction.findFirst({
-            where: { id: validated.bankTransactionId, tenantId },
+            where: { id: matchData.bankTransactionId, tenantId },
         });
         if (!bankTx) {
             return NextResponse.json(
@@ -245,7 +259,7 @@ export async function POST(request: Request) {
 
         // Cek akun buku ada dan milik tenant ini
         const bookAccount = await prisma.coAAccount.findFirst({
-            where: { id: validated.bookTransactionId!, tenantId },
+            where: { id: matchData.bookTransactionId!, tenantId },
         });
         if (!bookAccount) {
             return NextResponse.json(
@@ -255,10 +269,10 @@ export async function POST(request: Request) {
         }
 
         const updated = await prisma.bankTransaction.update({
-            where: { id: validated.bankTransactionId },
+            where: { id: matchData.bankTransactionId },
             data: {
                 status: 'matched',
-                matchedAccountId: validated.bookTransactionId,
+                matchedAccountId: matchData.bookTransactionId,
             },
         });
 
@@ -278,8 +292,8 @@ export async function POST(request: Request) {
             success: true,
             message: 'Transactions matched successfully',
             data: {
-                bankTransactionId: validated.bankTransactionId,
-                bookTransactionId: validated.bookTransactionId,
+                bankTransactionId: matchData.bankTransactionId,
+                bookTransactionId: matchData.bookTransactionId,
                 matchedAt: new Date().toISOString(),
             },
         });
@@ -305,11 +319,18 @@ export async function PUT(request: Request) {
         }
 
         // Validasi input
-        const validated = unreconcileTransactionSchema.parse({ bankTransactionId });
+        const validated = unreconcileTransactionSchema.safeParse({ bankTransactionId });
+        if (!validated.success) {
+            return NextResponse.json(
+                { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
+            );
+        }
+        const unreconcileData = validated.data;
 
         // Cek transaksi bank ada dan milik tenant ini
         const bankTx = await prisma.bankTransaction.findFirst({
-            where: { id: validated.bankTransactionId, tenantId },
+            where: { id: unreconcileData.bankTransactionId, tenantId },
         });
         if (!bankTx) {
             return NextResponse.json(
@@ -319,7 +340,7 @@ export async function PUT(request: Request) {
         }
 
         const updated = await prisma.bankTransaction.update({
-            where: { id: validated.bankTransactionId },
+            where: { id: unreconcileData.bankTransactionId },
             data: {
                 status: 'unmatched',
                 matchedAccountId: null,
@@ -341,7 +362,7 @@ export async function PUT(request: Request) {
         return NextResponse.json({
             success: true,
             message: 'Pencocokan transaksi dibatalkan',
-            data: { bankTransactionId: validated.bankTransactionId },
+            data: { bankTransactionId: unreconcileData.bankTransactionId },
         });
     } catch (error) {
         return handleApiError(error);

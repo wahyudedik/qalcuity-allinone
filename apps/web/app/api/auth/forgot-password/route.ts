@@ -20,13 +20,20 @@ const forgotPasswordSchema = z.object({
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const validated = forgotPasswordSchema.parse(body);
+        const validated = forgotPasswordSchema.safeParse(body);
+        if (!validated.success) {
+            return NextResponse.json(
+                { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
+            );
+        }
+        const { email } = validated.data;
 
         // Find user by email (case-insensitive)
         const user = await prisma.user.findFirst({
             where: {
                 email: {
-                    equals: validated.email,
+                    equals: email,
                     mode: "insensitive",
                 },
             },
@@ -62,7 +69,7 @@ export async function POST(req: Request) {
 
         // Send email
         const emailResult = await sendEmail({
-            to: validated.email,
+            to: email,
             subject: "Reset Password - Qalcuity",
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
