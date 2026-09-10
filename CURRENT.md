@@ -1,6 +1,49 @@
-> **Last Updated:** 10 September 2026 (Critical Bug Fixes — MSG Constants, Approval Routes, Migration SQL + AnomalyDetection Fix)
-> **Version:** v9.8.1
-> **Status:** ⚠️ PARTIAL — 503 errors on /api/tasks, /api/projects, /api/timesheet due to pending migration `20260905209000_add_operations_module`. Migration fix pushed (commit `504bc52`), needs pull + re-run on VPS. **503 on /api/ai/anomalies** fixed — AnomalyDetection migration pushed (commit `8515c2d`). All code fixes deployed to main. Health score: ~99/100.
+> **Last Updated:** 10 September 2026 (Critical Fix — NextAuth 405 Error + Previous Bug Fixes)
+> **Version:** v9.8.2
+> **Status:** ⚠️ PARTIAL — 503 errors on /api/tasks, /api/projects, /api/timesheet due to pending migration `20260905209000_add_operations_module`. Migration fix pushed (commit `504bc52`), needs pull + re-run on VPS. **503 on /api/ai/anomalies** fixed — AnomalyDetection migration pushed (commit `8515c2d`). **NextAuth 405 error fixed** — catch-all handler restored (commit `8f0ab91`). All code fixes deployed to main. Health score: ~99/100.
+
+---
+
+## 🔴 Critical Fix — NextAuth 405 Error (10 September 2026)
+
+> **Severity:** 🔴 CRITICAL — All auth endpoints returning 405 (Method Not Allowed)
+> **Commit:** `8f0ab91`
+> **File:** [`apps/web/app/api/auth/[...nextauth]/route.ts`](apps/web/app/api/auth/[...nextauth]/route.ts)
+
+### Problem
+
+All NextAuth authentication endpoints (`/api/auth/session`, `/api/auth/csrf`, `/api/auth/signin`, `/api/auth/signout`, `/api/auth/callback`) returning **405 Method Not Allowed**. This caused:
+- Users unable to sign in
+- Session checks failing
+- All auth-dependent features broken
+
+### Root Cause
+
+File [`apps/web/app/api/auth/[...nextauth]/route.ts`](apps/web/app/api/auth/[...nextauth]/route.ts) was **overwritten with registration code** (167 lines) instead of the NextAuth catch-all handler (3 lines). The file contained a custom `POST` handler for user registration but was **missing the `GET` export** that NextAuth requires for session/CSRF endpoints.
+
+### Fix
+
+Restored the file to the correct NextAuth catch-all handler:
+
+```typescript
+import NextAuth from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
+```
+
+**Key points:**
+- Registration logic lives at: `app/api/auth/register/route.ts` (separate file)
+- This file MUST export both `GET` and `POST` handlers
+- Removing either causes 405 errors
+
+### Deployment
+
+```bash
+# On VPS
+cd /www/wwwroot/qalcuity && sudo bash update.sh
+```
 
 ---
 
