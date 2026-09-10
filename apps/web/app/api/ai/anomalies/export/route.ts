@@ -1,8 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api-error';
 
@@ -11,24 +10,9 @@ import { handleApiError } from '@/lib/api-error';
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json(
-                { success: false, error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
-        // ADMIN+ required for export
-        const role = session.user.role;
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Forbidden' },
-                { status: 403 }
-            );
-        }
-
-        const tenantId = session.user.tenantId;
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const { searchParams } = new URL(req.url);
         const severity = searchParams.get('severity');
         const status = searchParams.get('status');
