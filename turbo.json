@@ -9,7 +9,8 @@
                 ".next/**",
                 "!.next/cache/**",
                 "dist/**",
-                "node_modules/.prisma/**"
+                "node_modules/.prisma/**",
+                "node_modules/@prisma/client/**"
             ]
         },
         "dev": {

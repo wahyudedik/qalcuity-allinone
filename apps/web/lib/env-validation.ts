@@ -43,9 +43,9 @@ export function validateEnv() {
         }
     }
 
-    // Warn about optional but recommended vars
+    // Debug-level log for optional vars (not a warning — these are expected to be unset in dev)
     const missingOptional = optionalEnvVars.filter(key => !process.env[key]);
     if (missingOptional.length > 0) {
-        console.warn(`⚠️ Optional env vars not set: ${missingOptional.join(', ')}`);
+        console.debug(`ℹ️ Optional env vars not set: ${missingOptional.join(', ')}`);
     }
 }
