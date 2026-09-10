@@ -1,13 +1,15 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Mobile Auth — Get Current User Endpoint
- * 
+ *
  * GET /api/mobile/auth/me
- * 
+ *
  * Returns current user data from JWT access token.
- * 
+ *
  * Headers: Authorization: Bearer <token>
  * Response: { success: boolean, user: MobileUser }
- * 
+ *
  * Security:
  * - JWT token verified
  * - User existence and active status checked

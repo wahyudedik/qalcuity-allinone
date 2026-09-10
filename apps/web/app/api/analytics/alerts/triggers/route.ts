@@ -3,6 +3,8 @@
 // List recent alert triggers
 // ============================================
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
