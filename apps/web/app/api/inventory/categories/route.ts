@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
@@ -7,7 +9,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-// GET /api/inventory/categories — List categories with product count and total value
+// GET /api/inventory/categories â€” List categories with product count and total value
 export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request)
@@ -54,7 +56,7 @@ export async function GET(request: Request) {
     }
 }
 
-// POST /api/inventory/categories — Create a new category
+// POST /api/inventory/categories â€” Create a new category
 export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request)
@@ -134,7 +136,7 @@ export async function POST(request: Request) {
     }
 }
 
-// DELETE /api/inventory/categories?id=xxx — Delete a category
+// DELETE /api/inventory/categories?id=xxx â€” Delete a category
 export async function DELETE(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request)

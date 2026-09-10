@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Data Dictionary API — GET (list/search), POST (create)
+// Data Dictionary API â€” GET (list/search), POST (create)
 // Data dictionary entries with search/filter
 // ============================================
 
@@ -35,7 +37,7 @@ interface CreateDictionaryEntryBody {
 }
 
 // ============================================
-// GET — List dictionary entries (with search)
+// GET â€” List dictionary entries (with search)
 // ============================================
 
 export async function GET(request: Request) {
@@ -121,7 +123,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create dictionary entry
+// POST â€” Create dictionary entry
 // ============================================
 
 export async function POST(request: Request) {

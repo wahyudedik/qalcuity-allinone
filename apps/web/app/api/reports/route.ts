@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -139,7 +141,7 @@ export async function GET(request: Request) {
         }
 
         // ============================================
-        // PARALLEL QUERIES — All 9 queries run simultaneously
+        // PARALLEL QUERIES â€” All 9 queries run simultaneously
         // Performance: ~60-70% faster than sequential execution
         // ============================================
         const [
@@ -153,7 +155,7 @@ export async function GET(request: Request) {
             payrollRecords,
             suppliers,
         ] = await Promise.all([
-            // 1. REVENUE DATA — from Invoice (group by month)
+            // 1. REVENUE DATA â€” from Invoice (group by month)
             prisma.invoice.findMany({
                 where: {
                     tenantId,
@@ -168,7 +170,7 @@ export async function GET(request: Request) {
                 orderBy: { createdAt: 'asc' },
             }),
 
-            // 2. EXPENSE DATA — from Payment (type=EXPENSE)
+            // 2. EXPENSE DATA â€” from Payment (type=EXPENSE)
             prisma.payment.findMany({
                 where: {
                     tenantId,
@@ -182,7 +184,7 @@ export async function GET(request: Request) {
                 },
             }),
 
-            // 3. SALES BY CUSTOMER — from Invoice grouped by contact
+            // 3. SALES BY CUSTOMER â€” from Invoice grouped by contact
             prisma.invoice.findMany({
                 where: {
                     tenantId,
@@ -198,7 +200,7 @@ export async function GET(request: Request) {
                 },
             }),
 
-            // 4. SALES BY PRODUCT — from InvoiceItem (group by description)
+            // 4. SALES BY PRODUCT â€” from InvoiceItem (group by description)
             prisma.invoiceItem.findMany({
                 where: {
                     invoice: {
@@ -213,7 +215,7 @@ export async function GET(request: Request) {
                 },
             }),
 
-            // 5. STOCK DATA — from Product
+            // 5. STOCK DATA â€” from Product
             prisma.product.findMany({
                 where: {
                     tenantId,
@@ -231,7 +233,7 @@ export async function GET(request: Request) {
                 orderBy: { name: 'asc' },
             }),
 
-            // 6. EMPLOYEE DATA — from Employee
+            // 6. EMPLOYEE DATA â€” from Employee
             prisma.employee.findMany({
                 where: {
                     tenantId,
@@ -248,7 +250,7 @@ export async function GET(request: Request) {
                 orderBy: { name: 'asc' },
             }),
 
-            // 7. ATTENDANCE DATA — from AttendanceRecord grouped by employee
+            // 7. ATTENDANCE DATA â€” from AttendanceRecord grouped by employee
             prisma.attendanceRecord.findMany({
                 where: {
                     tenantId,
@@ -260,7 +262,7 @@ export async function GET(request: Request) {
                 },
             }),
 
-            // 8. PAYROLL DATA — from PayrollRecord grouped by department
+            // 8. PAYROLL DATA â€” from PayrollRecord grouped by department
             prisma.payrollRecord.findMany({
                 where: { tenantId },
                 select: {
@@ -269,7 +271,7 @@ export async function GET(request: Request) {
                 },
             }),
 
-            // 9. SUPPLIER PERFORMANCE — from Supplier + PurchaseOrder
+            // 9. SUPPLIER PERFORMANCE â€” from Supplier + PurchaseOrder
             prisma.supplier.findMany({
                 where: {
                     tenantId,

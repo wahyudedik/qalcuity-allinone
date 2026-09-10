@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { requirePermissionForRoute } from '@/lib/session';
 import { writeFile, mkdir } from 'fs/promises';

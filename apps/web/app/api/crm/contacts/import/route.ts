@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -49,7 +51,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
             );
         }
 
-        // Auth check — VIEWER tidak boleh import
+        // Auth check â€” VIEWER tidak boleh import
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
@@ -127,7 +129,7 @@ export async function POST(request: Request): Promise<NextResponse<ImportResult>
             );
         }
 
-        // Column mapping — normalize header names
+        // Column mapping â€” normalize header names
         const columnMap: Record<string, string> = {};
         for (const header of headers) {
             const lower = header.toLowerCase().trim();

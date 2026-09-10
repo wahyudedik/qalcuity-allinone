@@ -1,10 +1,12 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { DEFAULT_INDUSTRY_CONFIGS, SUPPORTED_INDUSTRIES } from '@qalcuity/industry-config';
 import { handleApiError } from '@/lib/api-error';
 
-// ─── GET /api/settings/industry/defaults ─────────────────────────────────────
+// â”€â”€â”€ GET /api/settings/industry/defaults â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Dapatkan semua default industry configs.

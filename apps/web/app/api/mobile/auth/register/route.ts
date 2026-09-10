@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 /**
- * Mobile Auth — Register Endpoint
+ * Mobile Auth â€” Register Endpoint
  * 
  * POST /api/mobile/auth/register
  * 

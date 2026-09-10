@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 /**
- * Mobile Auth — Token Refresh Endpoint
+ * Mobile Auth â€” Token Refresh Endpoint
  * 
  * POST /api/mobile/auth/refresh
  * 

@@ -1,24 +1,23 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
-import { updateRoleSchema, formatZodError } from '@/lib/validation-schemas'
-import { PermissionEngine, SYSTEM_ROLE_PERMISSIONS } from '@qalcuity/permissions'
+import { createRoleSchema, formatZodError } from '@/lib/validation-schemas'
+import { SYSTEM_ROLE_PERMISSIONS, PermissionEngine, ALL_PERMISSIONS } from '@qalcuity/permissions'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-import { handleApiError, apiNotFound } from '@/lib/api-error'
+import { handleApiError } from '@/lib/api-error'
 
-// ─── GET /api/settings/roles/[id] ──────────────────────────────────────────────
-// Get role details.
+// â”€â”€â”€ GET /api/settings/roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// List semua roles (system + custom) untuk tenant ini.
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request)
-        const rl = checkRateLimit(`settings:roles:[id]:${ip}`, 60, 60_000)
+        const rl = checkRateLimit(`settings:roles:${ip}`, 60, 60_000)
         if (!rl.success) {
             return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
         }
@@ -28,86 +27,75 @@ export async function GET(
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { tenantId } = auth
-        const { id } = params
 
-        // Handle system roles
-        if (id.startsWith('system_')) {
-            const roleName = id.replace('system_', '').toUpperCase()
-            const systemPermissions = SYSTEM_ROLE_PERMISSIONS[roleName]
-            if (!systemPermissions) {
-                return NextResponse.json(
-                    { success: false, error: 'Role not found', code: 'ROLE_NOT_FOUND' },
-                    { status: 404 }
-                )
-            }
-
-            const descriptions: Record<string, string> = {
-                SUPERADMIN: 'Full access ke semua fitur dan pengaturan platform',
-                ADMIN: 'Akses penuh ke semua modul bisnis dan pengaturan',
-                MEMBER: 'Akses terbatas untuk operasi sehari-hari',
-                VIEWER: 'Hanya bisa melihat data, tidak bisa mengubah',
-            }
-
-            // Count users with this system role
-            const userCount = await prisma.user.count({
-                where: { tenantId, role: roleName, deletedAt: null },
-            })
-
-            return NextResponse.json({
-                success: true,
-                data: {
-                    id,
-                    name: roleName,
-                    description: descriptions[roleName] || '',
-                    isSystem: true,
-                    permissions: PermissionEngine.resolvePermissions(systemPermissions),
-                    userCount,
-                },
-            })
-        }
-
-        // Handle custom roles
-        const role = await prisma.role.findFirst({
-            where: { id, tenantId },
+        // Ambil custom roles dari database
+        const customRoles = await prisma.role.findMany({
+            where: { tenantId },
             include: {
                 _count: {
                     select: { users: true },
                 },
             },
+            orderBy: { createdAt: 'asc' },
         })
 
-        if (!role) {
-            return apiNotFound('Role')
+        // Bangun response dengan system roles + custom roles
+        const systemRoles = Object.entries(SYSTEM_ROLE_PERMISSIONS).map(([name, permissions]) => ({
+            id: `system_${name.toLowerCase()}`,
+            name,
+            description: getSystemRoleDescription(name),
+            isSystem: true,
+            permissions: PermissionEngine.resolvePermissions(permissions),
+            userCount: 0, // Will be counted separately if needed
+            createdAt: null,
+            updatedAt: null,
+        }))
+
+        // Hitung user count per system role
+        const usersByRole = await prisma.user.groupBy({
+            by: ['role'],
+            where: { tenantId, deletedAt: null },
+            _count: { id: true },
+        })
+
+        const roleCountMap: Record<string, number> = {}
+        for (const ur of usersByRole) {
+            roleCountMap[ur.role] = ur._count.id
         }
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                id: role.id,
-                name: role.name,
-                description: role.description,
-                isSystem: role.isSystem,
-                permissions: (role.permissions as string[]) || [],
-                userCount: role._count.users,
-                createdAt: role.createdAt.toISOString(),
-                updatedAt: role.updatedAt.toISOString(),
-            },
-        })
+        // Update system roles with user counts
+        const systemRolesWithCount = systemRoles.map(sr => ({
+            ...sr,
+            userCount: roleCountMap[sr.name] || 0,
+        }))
+
+        const data = [
+            ...systemRolesWithCount,
+            ...customRoles.map(cr => ({
+                id: cr.id,
+                name: cr.name,
+                description: cr.description ?? '',
+                isSystem: cr.isSystem,
+                permissions: (cr.permissions as string[]) || [],
+                userCount: cr._count.users,
+                createdAt: cr.createdAt.toISOString(),
+                updatedAt: cr.updatedAt.toISOString(),
+            })),
+        ]
+
+        return NextResponse.json({ success: true, data })
     } catch (error) {
         return handleApiError(error)
     }
 }
 
-// ─── PUT /api/settings/roles/[id] ──────────────────────────────────────────────
-// Update custom role.
+// â”€â”€â”€ POST /api/settings/roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Buat custom role baru.
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const ip = getClientIp(request)
-        const rl = checkRateLimit(`settings:roles:[id]:PUT:${ip}`, 30, 60_000)
+        const rl = checkRateLimit(`settings:roles:POST:${ip}`, 30, 60_000)
         if (!rl.success) {
             return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
         }
@@ -117,20 +105,11 @@ export async function PUT(
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const { id } = params
-
-        // System roles cannot be updated
-        if (id.startsWith('system_')) {
-            return NextResponse.json(
-                { success: false, error: 'System role tidak bisa diubah' },
-                { status: 400 }
-            )
-        }
 
         const body = await request.json()
         const sanitizedBody = sanitizeObject(body)
 
-        const validation = updateRoleSchema.safeParse(sanitizedBody)
+        const validation = createRoleSchema.safeParse(sanitizedBody)
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -138,68 +117,48 @@ export async function PUT(
             )
         }
 
-        // Find existing role
-        const existingRole = await prisma.role.findFirst({
-            where: { id, tenantId },
-        })
+        const { name, description, permissions } = validation.data
 
-        if (!existingRole) {
-            return apiNotFound('Role')
-        }
-
-        if (existingRole.isSystem) {
+        // Validate permissions
+        const { valid, invalid } = PermissionEngine.validatePermissions(permissions)
+        if (!valid) {
             return NextResponse.json(
-                { success: false, error: 'System role tidak bisa diubah' },
+                { success: false, error: `Permission tidak valid: ${invalid.join(', ')}` },
                 { status: 400 }
             )
         }
 
-        const { name, description, permissions } = validation.data
+        // Check if role name already exists in this tenant (case-insensitive)
+        const existingRole = await prisma.role.findFirst({
+            where: {
+                tenantId,
+                name: { equals: name, mode: 'insensitive' },
+            },
+        })
 
-        // Validate permissions if provided
-        if (permissions) {
-            const { valid, invalid } = PermissionEngine.validatePermissions(permissions)
-            if (!valid) {
-                return NextResponse.json(
-                    { success: false, error: `Permission tidak valid: ${invalid.join(', ')}` },
-                    { status: 400 }
-                )
-            }
+        if (existingRole) {
+            return NextResponse.json(
+                { success: false, error: 'Role dengan nama ini sudah ada' },
+                { status: 409 }
+            )
         }
 
-        // Check name uniqueness if changed
-        if (name && name !== existingRole.name) {
-            const nameExists = await prisma.role.findFirst({
-                where: {
-                    tenantId,
-                    name: { equals: name, mode: 'insensitive' },
-                    id: { not: id },
-                },
-            })
-
-            if (nameExists) {
-                return NextResponse.json(
-                    { success: false, error: 'Role dengan nama ini sudah ada' },
-                    { status: 409 }
-                )
-            }
-
-            // Check system role names
-            const systemRoleNames = ['SUPERADMIN', 'ADMIN', 'MEMBER', 'VIEWER']
-            if (systemRoleNames.includes(name.toUpperCase())) {
-                return NextResponse.json(
-                    { success: false, error: 'Nama role tidak boleh sama dengan system role' },
-                    { status: 400 }
-                )
-            }
+        // Check if name conflicts with system role names
+        const systemRoleNames = ['SUPERADMIN', 'ADMIN', 'MEMBER', 'VIEWER']
+        if (systemRoleNames.includes(name.toUpperCase())) {
+            return NextResponse.json(
+                { success: false, error: 'Nama role tidak boleh sama dengan system role' },
+                { status: 400 }
+            )
         }
 
-        const updatedRole = await prisma.role.update({
-            where: { id },
+        const newRole = await prisma.role.create({
             data: {
-                ...(name && { name }),
-                ...(description !== undefined && { description }),
-                ...(permissions && { permissions }),
+                tenantId,
+                name,
+                description: description || null,
+                isSystem: false,
+                permissions: permissions,
             },
         })
 
@@ -207,113 +166,38 @@ export async function PUT(
         await logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'Role',
-            entityId: id,
-            oldValues: {
-                name: existingRole.name,
-                permissions: existingRole.permissions,
-            },
-            newValues: {
-                name: updatedRole.name,
-                permissions: updatedRole.permissions,
-            } as Record<string, unknown>,
+            entityId: newRole.id,
+            newValues: { name, permissions } as Record<string, unknown>,
         })
 
         return NextResponse.json({
             success: true,
             data: {
-                id: updatedRole.id,
-                name: updatedRole.name,
-                description: updatedRole.description,
-                isSystem: updatedRole.isSystem,
-                permissions: updatedRole.permissions,
-                createdAt: updatedRole.createdAt.toISOString(),
-                updatedAt: updatedRole.updatedAt.toISOString(),
+                id: newRole.id,
+                name: newRole.name,
+                description: newRole.description,
+                isSystem: newRole.isSystem,
+                permissions: newRole.permissions,
+                userCount: 0,
+                createdAt: newRole.createdAt.toISOString(),
+                updatedAt: newRole.updatedAt.toISOString(),
             },
-        })
+        }, { status: 201 })
     } catch (error) {
         return handleApiError(error)
     }
 }
 
-// ─── DELETE /api/settings/roles/[id] ───────────────────────────────────────────
-// Delete custom role.
+// â”€â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const ip = getClientIp(request)
-        const rl = checkRateLimit(`settings:roles:[id]:DELETE:${ip}`, 30, 60_000)
-        if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
-        }
-
-        const auth = await requirePermissionForRoute(request)
-        if ('error' in auth) {
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
-        }
-        const { userId, tenantId } = auth
-        const { id } = params
-
-        // System roles cannot be deleted
-        if (id.startsWith('system_')) {
-            return NextResponse.json(
-                { success: false, error: 'System role tidak bisa dihapus' },
-                { status: 400 }
-            )
-        }
-
-        const existingRole = await prisma.role.findFirst({
-            where: { id, tenantId },
-            include: {
-                _count: {
-                    select: { users: true },
-                },
-            },
-        })
-
-        if (!existingRole) {
-            return apiNotFound('Role')
-        }
-
-        if (existingRole.isSystem) {
-            return NextResponse.json(
-                { success: false, error: 'System role tidak bisa dihapus' },
-                { status: 400 }
-            )
-        }
-
-        // Check if role is in use
-        if (existingRole._count.users > 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: `Role masih digunakan oleh ${existingRole._count.users} user. Ubah role user terlebih dahulu sebelum menghapus.`,
-                },
-                { status: 400 }
-            )
-        }
-
-        await prisma.role.delete({ where: { id } })
-
-        // Audit log
-        await logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'Role',
-            entityId: id,
-            oldValues: {
-                name: existingRole.name,
-                permissions: existingRole.permissions,
-            } as Record<string, unknown>,
-        })
-
-        return NextResponse.json({ success: true, message: 'Role berhasil dihapus' })
-    } catch (error) {
-        return handleApiError(error)
+function getSystemRoleDescription(roleName: string): string {
+    const descriptions: Record<string, string> = {
+        SUPERADMIN: 'Full access ke semua fitur dan pengaturan platform',
+        ADMIN: 'Akses penuh ke semua modul bisnis dan pengaturan',
+        MEMBER: 'Akses terbatas untuk operasi sehari-hari',
+        VIEWER: 'Hanya bisa melihat data, tidak bisa mengubah',
     }
+    return descriptions[roleName] || ''
 }

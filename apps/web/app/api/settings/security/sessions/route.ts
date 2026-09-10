@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -7,7 +9,7 @@ import { revokeSessionSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
 
 /**
- * GET /api/settings/security/sessions — List active sessions for the current user
+ * GET /api/settings/security/sessions â€” List active sessions for the current user
  * 
  * Returns all active sessions with device info, IP, and last active time.
  * The current session is highlighted.
@@ -58,7 +60,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST /api/settings/security/sessions — Create a new session (called on login)
+ * POST /api/settings/security/sessions â€” Create a new session (called on login)
  */
 export async function POST(request: Request) {
     try {
@@ -118,9 +120,9 @@ export async function POST(request: Request) {
 }
 
 /**
- * DELETE /api/settings/security/sessions — Revoke a specific session or all other sessions
+ * DELETE /api/settings/security/sessions â€” Revoke a specific session or all other sessions
  * 
- * Body: { sessionId?: string } — If provided, revoke that specific session.
+ * Body: { sessionId?: string } â€” If provided, revoke that specific session.
  *       If not provided, revoke ALL other sessions except the current one.
  */
 export async function DELETE(request: Request) {

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -8,7 +10,7 @@ import { changePasswordSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
 
 /**
- * POST /api/settings/security/password — Change user password
+ * POST /api/settings/security/password â€” Change user password
  * 
  * Validates current password, hashes new password, updates in database.
  * Includes audit logging and rate limiting considerations.

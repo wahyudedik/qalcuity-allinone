@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Midtrans Payment Callback / Webhook Handler
  *
@@ -25,7 +27,7 @@ import type { MidtransProvider } from '@/lib/payment/midtrans';
  * POST /api/billing/payments/midtrans/callback
  *
  * Webhook handler untuk Midtrans payment notification.
- * Tidak memerlukan auth — dipanggil langsung oleh Midtrans server.
+ * Tidak memerlukan auth â€” dipanggil langsung oleh Midtrans server.
  */
 export async function POST(request: Request) {
     try {

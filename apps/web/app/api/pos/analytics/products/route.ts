@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -8,7 +10,7 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/products
  *
- * Product analytics — top sellers, slow movers, category breakdown, profit margins.
+ * Product analytics â€” top sellers, slow movers, category breakdown, profit margins.
  *
  * Query params:
  *   - dateFrom: ISO date string (default: 30 days ago)
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // ─── Top selling products ───
+        // â”€â”€â”€ Top selling products â”€â”€â”€
         const topProducts = await prisma.$queryRawUnsafe<
             Array<{
                 product_id: string;
@@ -78,7 +80,7 @@ export async function GET(request: Request) {
             limit
         );
 
-        // ─── Slow movers (products with lowest sales) ───
+        // â”€â”€â”€ Slow movers (products with lowest sales) â”€â”€â”€
         // Products that exist but have few or no sales
         const slowMovers = await prisma.$queryRawUnsafe<
             Array<{
@@ -119,7 +121,7 @@ export async function GET(request: Request) {
             limit
         );
 
-        // ─── Category breakdown ───
+        // â”€â”€â”€ Category breakdown â”€â”€â”€
         const categoryBreakdown = await prisma.$queryRawUnsafe<
             Array<{
                 category_name: string;
@@ -148,7 +150,7 @@ export async function GET(request: Request) {
             endDate
         );
 
-        // ─── Product profit margins ───
+        // â”€â”€â”€ Product profit margins â”€â”€â”€
         const profitMargins = await prisma.$queryRawUnsafe<
             Array<{
                 product_id: string;

@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Charts API — GET (list), POST (create)
+// Charts API â€” GET (list), POST (create)
 // CRUD for Analytics Charts
 // ============================================
 
@@ -31,7 +33,7 @@ interface CreateChartBody {
 }
 
 // ============================================
-// GET — List all charts for tenant
+// GET â€” List all charts for tenant
 // ============================================
 
 export async function GET(request: Request) {
@@ -113,7 +115,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create new chart
+// POST â€” Create new chart
 // ============================================
 
 export async function POST(request: Request) {

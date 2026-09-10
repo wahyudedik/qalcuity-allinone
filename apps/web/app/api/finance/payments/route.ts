@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -182,7 +184,7 @@ export async function POST(request: Request) {
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Payment', entityId: payment.id, newValues: payment as unknown as Record<string, unknown>, request });
 
-        // Fire-and-forget email notification for completed payments (graceful — never crashes)
+        // Fire-and-forget email notification for completed payments (graceful â€” never crashes)
         if (status === 'COMPLETED') {
             const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, id: true } });
             if (tenant) {

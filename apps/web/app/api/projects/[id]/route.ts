@@ -1,85 +1,122 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateProjectSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createProjectSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const priority = searchParams.get('priority');
+        const managerId = searchParams.get('managerId');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        const project = await prisma.project.findFirst({
-            where: { id, tenantId },
-            include: {
-                members: {
-                    orderBy: { joinedAt: 'asc' },
-                },
-                _count: {
-                    select: {
-                        tasks: true,
-                    },
-                },
-            },
-        });
+        const where: Record<string, unknown> = { tenantId };
 
-        if (!project) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+        if (priority) {
+            where.priority = priority.toUpperCase();
+        }
+        if (managerId) {
+            where.managerId = managerId;
+        }
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
         }
 
-        // Get task summary by status
-        const taskStatusCounts = await prisma.task.groupBy({
-            by: ['status'],
-            where: { projectId: id, tenantId },
-            _count: true,
-        });
+        const [projects, total] = await Promise.all([
+            prisma.project.findMany({
+                where,
+                include: {
+                    _count: {
+                        select: {
+                            members: true,
+                            tasks: true,
+                        },
+                    },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.project.count({ where }),
+        ]);
 
-        const taskSummary = {
-            total: project._count.tasks,
-            byStatus: taskStatusCounts.reduce((acc, item) => {
-                acc[item.status] = item._count;
-                return acc;
-            }, {} as Record<string, number>),
-        };
+        const data = projects.map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            status: p.status,
+            priority: p.priority,
+            startDate: p.startDate?.toISOString() || null,
+            endDate: p.endDate?.toISOString() || null,
+            budget: p.budget ? Number(p.budget) : null,
+            spent: p.spent ? Number(p.spent) : 0,
+            progress: p.progress,
+            managerId: p.managerId,
+            memberCount: p._count.members,
+            taskCount: p._count.tasks,
+            createdAt: p.createdAt.toISOString(),
+            updatedAt: p.updatedAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
-            data: {
-                ...project,
-                budget: project.budget ? Number(project.budget) : null,
-                spent: project.spent ? Number(project.spent) : 0,
-                startDate: project.startDate?.toISOString() || null,
-                endDate: project.endDate?.toISOString() || null,
-                createdAt: project.createdAt.toISOString(),
-                updatedAt: project.updatedAt.toISOString(),
-                taskSummary,
-            },
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
 
         // Validasi input dengan Zod
-        const validation = updateProjectSchema.safeParse(body);
+        const validation = createProjectSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -87,28 +124,29 @@ export async function PATCH(
             );
         }
 
-        const existing = await prisma.project.findFirst({
-            where: { id, tenantId },
+        const { name, description, status, priority, startDate, endDate, budget, managerId } = validation.data;
+
+        const project = await prisma.project.create({
+            data: {
+                tenantId,
+                name: name.trim(),
+                description: description?.trim() || null,
+                status: status || 'PLANNING',
+                priority: priority || 'MEDIUM',
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
+                budget: budget || null,
+                managerId: managerId || null,
+            },
         });
 
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
-        }
-
-        const { name, description, status, priority, startDate, endDate, budget, progress, managerId } = validation.data;
-
-        const project = await prisma.project.update({
-            where: { id },
+        // Auto-add creator as MANAGER member
+        await prisma.projectMember.create({
             data: {
-                ...(typeof name === 'string' && { name: name.trim() }),
-                ...(typeof description !== 'undefined' && { description: description?.trim() || null }),
-                ...(typeof status === 'string' && { status }),
-                ...(typeof priority === 'string' && { priority }),
-                ...(typeof startDate !== 'undefined' && { startDate: startDate ? new Date(startDate) : null }),
-                ...(typeof endDate !== 'undefined' && { endDate: endDate ? new Date(endDate) : null }),
-                ...(typeof budget !== 'undefined' && { budget: budget || null }),
-                ...(typeof progress === 'number' && { progress }),
-                ...(typeof managerId !== 'undefined' && { managerId: managerId || null }),
+                tenantId,
+                projectId: project.id,
+                employeeId: userId,
+                role: 'MANAGER',
             },
         });
 
@@ -116,67 +154,14 @@ export async function PATCH(
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'Project',
-            entityId: id,
+            entityId: project.id,
             newValues: validation.data as unknown as Record<string, unknown>,
             request,
         });
 
-        return NextResponse.json({ success: true, data: project });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
-
-        const existing = await prisma.project.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
-        }
-
-        // Check for active tasks
-        const activeTasks = await prisma.task.count({
-            where: {
-                projectId: id,
-                tenantId,
-                status: { in: ['TODO', 'IN_PROGRESS', 'IN_REVIEW'] },
-            },
-        });
-
-        if (activeTasks > 0) {
-            return NextResponse.json(
-                { success: false, error: MSG.PROJECT_HAS_ACTIVE_TASKS },
-                { status: 400 }
-            );
-        }
-
-        await prisma.project.delete({ where: { id } });
-
-        // Audit logging non-blocking
-        void logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'Project',
-            entityId: id,
-            oldValues: existing as unknown as Record<string, unknown>,
-            request,
-        });
-
-        return NextResponse.json({ success: true, data: null });
+        return NextResponse.json({ success: true, data: project }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

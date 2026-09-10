@@ -1,45 +1,89 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
+import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateWarehouseSchema, formatZodError } from '@/lib/validation-schemas';
+import { createWarehouseSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
-import { MSG } from '@/lib/api-messages';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const activeOnly = searchParams.get('activeOnly');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        const warehouse = await prisma.warehouse.findFirst({
-            where: { id: params.id, tenantId: auth.tenantId },
-            include: {
-                products: {
-                    select: { id: true, name: true, sku: true, stock: true, unit: true },
-                    take: 50,
-                },
-                _count: { select: { products: true, stockOpnames: true } },
-            },
-        });
+        const where: Record<string, unknown> = { tenantId: auth.tenantId };
 
-        if (!warehouse) {
-            return NextResponse.json({ success: false, error: MSG.WAREHOUSE_NOT_FOUND, code: 'WAREHOUSE_NOT_FOUND' }, { status: 404 });
+        if (search) {
+            where.OR = [
+                { name: { contains: search } },
+                { code: { contains: search } },
+                { city: { contains: search } },
+            ];
         }
 
-        return NextResponse.json({ success: true, data: warehouse });
+        if (activeOnly === 'true') {
+            where.isActive = true;
+        }
+
+        const [warehouses, total] = await Promise.all([
+            prisma.warehouse.findMany({
+                where,
+                include: {
+                    _count: { select: { products: true, stockOpnames: true } },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.warehouse.count({ where }),
+        ]);
+
+        const data = warehouses.map((w) => ({
+            id: w.id,
+            name: w.name,
+            code: w.code,
+            address: w.address,
+            city: w.city,
+            phone: w.phone,
+            email: w.email,
+            manager: w.manager,
+            isActive: w.isActive,
+            isDefault: w.isDefault,
+            productCount: w._count.products,
+            opnameCount: w._count.stockOpnames,
+            createdAt: w.createdAt.toISOString(),
+            updatedAt: w.updatedAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
 
-        const validation = updateWarehouseSchema.safeParse(body);
+        const validation = createWarehouseSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -48,79 +92,31 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
         const validatedData = validation.data;
 
-        const existing = await prisma.warehouse.findFirst({
-            where: { id: params.id, tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.WAREHOUSE_NOT_FOUND, code: 'WAREHOUSE_NOT_FOUND' }, { status: 404 });
-        }
-
         // If isDefault, unset other defaults
         if (validatedData.isDefault) {
             await prisma.warehouse.updateMany({
-                where: { tenantId, isDefault: true, id: { not: params.id } },
+                where: { tenantId, isDefault: true },
                 data: { isDefault: false },
             });
         }
 
-        const warehouse = await prisma.warehouse.update({
-            where: { id: params.id },
+        const warehouse = await prisma.warehouse.create({
             data: {
-                ...(validatedData.name !== undefined && { name: validatedData.name }),
-                ...(validatedData.code !== undefined && { code: validatedData.code }),
-                ...(validatedData.address !== undefined && { address: validatedData.address }),
-                ...(validatedData.city !== undefined && { city: validatedData.city }),
-                ...(validatedData.phone !== undefined && { phone: validatedData.phone }),
-                ...(validatedData.email !== undefined && { email: validatedData.email }),
-                ...(validatedData.manager !== undefined && { manager: validatedData.manager }),
-                ...(validatedData.isDefault !== undefined && { isDefault: validatedData.isDefault }),
-                ...(validatedData.isActive !== undefined && { isActive: validatedData.isActive }),
+                tenantId,
+                name: validatedData.name,
+                code: validatedData.code,
+                address: validatedData.address || null,
+                city: validatedData.city || null,
+                phone: validatedData.phone || null,
+                email: validatedData.email || null,
+                manager: validatedData.manager || null,
+                isDefault: validatedData.isDefault || false,
             },
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Warehouse', entityId: warehouse.id, newValues: { name: warehouse.name } as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Warehouse', entityId: warehouse.id, newValues: { name: warehouse.name, code: warehouse.code } as Record<string, unknown>, request });
 
-        return NextResponse.json({ success: true, data: warehouse });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-
-        const existing = await prisma.warehouse.findFirst({
-            where: { id: params.id, tenantId },
-            include: { _count: { select: { products: true } } },
-        });
-
-        if (!existing) {
-            return NextResponse.json({ success: false, error: MSG.WAREHOUSE_NOT_FOUND, code: 'WAREHOUSE_NOT_FOUND' }, { status: 404 });
-        }
-
-        if (existing._count.products > 0) {
-            return NextResponse.json(
-                { success: false, error: 'Warehouse cannot be deleted because it still has products' },
-                { status: 400 }
-            );
-        }
-
-        if (existing.isDefault) {
-            return NextResponse.json(
-                { success: false, error: 'Default warehouse cannot be deleted' },
-                { status: 400 }
-            );
-        }
-
-        await prisma.warehouse.delete({ where: { id: params.id } });
-
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Warehouse', entityId: params.id, newValues: { name: existing.name } as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, message: MSG.WAREHOUSE_DELETED });
+        return NextResponse.json({ success: true, data: warehouse }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

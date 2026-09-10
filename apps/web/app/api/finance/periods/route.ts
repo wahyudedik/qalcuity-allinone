@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
@@ -23,7 +25,7 @@ const generatePeriodsSchema = z.object({
 });
 
 // ============================================
-// GET — List periods
+// GET â€” List periods
 // ============================================
 
 export async function GET(request: Request) {
@@ -76,7 +78,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create period or generate yearly periods
+// POST â€” Create period or generate yearly periods
 // ============================================
 
 export async function POST(request: Request) {

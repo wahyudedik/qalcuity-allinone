@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { getServerSession } from 'next-auth';
@@ -9,7 +11,7 @@ import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
 
-// ─── Zod Schema ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Zod Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const extractRequestSchema = z.object({
     fileBase64: z.string().min(1, 'MSG.FILE_CANNOT_BE_EMPTY'),
@@ -22,11 +24,11 @@ const extractRequestSchema = z.object({
     }),
 });
 
-// ─── API Route ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ API Route â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function POST(req: Request) {
     try {
-        // Auth check — MEMBER+ required for document extraction
+        // Auth check â€” MEMBER+ required for document extraction
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

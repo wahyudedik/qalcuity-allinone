@@ -1,152 +1,167 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { MSG } from '@/lib/api-messages';
+import { logAudit } from '@/lib/audit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createProjectSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { MSG } from '@/lib/api-messages';
 
-// =============================================================================
-// GET /api/projects/[id]/gantt — Gantt chart data (tasks + dependencies + timeline)
-// =============================================================================
-
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const priority = searchParams.get('priority');
+        const managerId = searchParams.get('managerId');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        // Verify project belongs to tenant
-        const project = await prisma.project.findFirst({
-            where: { id, tenantId },
-            select: {
-                id: true,
-                name: true,
-                startDate: true,
-                endDate: true,
-                progress: true,
-            },
-        });
+        const where: Record<string, unknown> = { tenantId };
 
-        if (!project) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
+        if (status) {
+            where.status = status.toUpperCase();
+        }
+        if (priority) {
+            where.priority = priority.toUpperCase();
+        }
+        if (managerId) {
+            where.managerId = managerId;
+        }
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
         }
 
-        // Fetch all tasks with dependencies
-        const tasks = await prisma.task.findMany({
-            where: { projectId: id, tenantId },
-            select: {
-                id: true,
-                title: true,
-                description: true,
-                status: true,
-                priority: true,
-                assigneeId: true,
-                startDate: true,
-                endDate: true,
-                dueDate: true,
-                progress: true,
-                dependsOnId: true,
-                estimatedHours: true,
-                actualHours: true,
-                sortOrder: true,
-            },
-            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-        });
+        const [projects, total] = await Promise.all([
+            prisma.project.findMany({
+                where,
+                include: {
+                    _count: {
+                        select: {
+                            members: true,
+                            tasks: true,
+                        },
+                    },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.project.count({ where }),
+        ]);
 
-        // Fetch resource allocations for the project
-        const resourceAllocations = await prisma.resourceAllocation.findMany({
-            where: { projectId: id, tenantId },
-            select: {
-                employeeId: true,
-                role: true,
-                allocationPct: true,
-                startDate: true,
-                endDate: true,
-            },
-        });
-
-        // Calculate project-level metrics
-        const totalTasks = tasks.length;
-        const completedTasks = tasks.filter((t) => t.status === 'DONE').length;
-        const autoProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-        // Find critical path (longest dependency chain)
-        const taskMap = new Map(tasks.map((t) => [t.id, t]));
-        const calculateEnd = (task: typeof tasks[0]): Date => {
-            return task.endDate || task.dueDate || new Date();
-        };
-
-        // Calculate earliest start based on dependencies
-        const earliestStart = new Map<string, Date>();
-        const visited = new Set<string>();
-
-        const resolveEarliest = (taskId: string): Date => {
-            if (earliestStart.has(taskId)) return earliestStart.get(taskId)!;
-            if (visited.has(taskId)) return new Date(); // prevent infinite loop
-            visited.add(taskId);
-
-            const task = taskMap.get(taskId);
-            if (!task) return new Date();
-
-            let earliest = task.startDate || new Date();
-
-            if (task.dependsOnId) {
-                const depEnd = resolveEarliest(task.dependsOnId);
-                if (depEnd > earliest) {
-                    earliest = depEnd;
-                }
-            }
-
-            earliestStart.set(taskId, earliest);
-            return earliest;
-        };
-
-        tasks.forEach((t) => resolveEarliest(t.id));
+        const data = projects.map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            status: p.status,
+            priority: p.priority,
+            startDate: p.startDate?.toISOString() || null,
+            endDate: p.endDate?.toISOString() || null,
+            budget: p.budget ? Number(p.budget) : null,
+            spent: p.spent ? Number(p.spent) : 0,
+            progress: p.progress,
+            managerId: p.managerId,
+            memberCount: p._count.members,
+            taskCount: p._count.tasks,
+            createdAt: p.createdAt.toISOString(),
+            updatedAt: p.updatedAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const body = await request.json();
+
+        // Validasi input dengan Zod
+        const validation = createProjectSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const { name, description, status, priority, startDate, endDate, budget, managerId } = validation.data;
+
+        const project = await prisma.project.create({
             data: {
-                project: {
-                    id: project.id,
-                    name: project.name,
-                    startDate: project.startDate?.toISOString() || null,
-                    endDate: project.endDate?.toISOString() || null,
-                    progress: project.progress,
-                    autoProgress,
-                },
-                tasks: tasks.map((t) => ({
-                    id: t.id,
-                    title: t.title,
-                    description: t.description,
-                    status: t.status,
-                    priority: t.priority,
-                    assigneeId: t.assigneeId,
-                    startDate: t.startDate?.toISOString() || null,
-                    endDate: t.endDate?.toISOString() || null,
-                    dueDate: t.dueDate?.toISOString() || null,
-                    progress: t.progress,
-                    dependsOnId: t.dependsOnId,
-                    estimatedHours: t.estimatedHours ? Number(t.estimatedHours) : null,
-                    actualHours: t.actualHours ? Number(t.actualHours) : 0,
-                    sortOrder: t.sortOrder,
-                })),
-                resourceAllocations: resourceAllocations.map((r) => ({
-                    employeeId: r.employeeId,
-                    role: r.role,
-                    allocationPct: r.allocationPct,
-                    startDate: r.startDate.toISOString(),
-                    endDate: r.endDate.toISOString(),
-                })),
-                summary: {
-                    totalTasks,
-                    completedTasks,
-                    autoProgress,
-                },
+                tenantId,
+                name: name.trim(),
+                description: description?.trim() || null,
+                status: status || 'PLANNING',
+                priority: priority || 'MEDIUM',
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
+                budget: budget || null,
+                managerId: managerId || null,
             },
         });
+
+        // Auto-add creator as MANAGER member
+        await prisma.projectMember.create({
+            data: {
+                tenantId,
+                projectId: project.id,
+                employeeId: userId,
+                role: 'MANAGER',
+            },
+        });
+
+        // Audit logging non-blocking
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'CREATE',
+            entity: 'Project',
+            entityId: project.id,
+            newValues: validation.data as unknown as Record<string, unknown>,
+            request,
+        });
+
+        return NextResponse.json({ success: true, data: project }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

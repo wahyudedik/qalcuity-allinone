@@ -1,18 +1,16 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { updateFieldJobSchema, formatZodError } from '@/lib/validation-schemas';
+import { createFieldJobSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request) {
     try {
-        const { id } = await params;
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
@@ -26,81 +24,115 @@ export async function GET(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
-        const job = await prisma.fieldJob.findFirst({
-            where: { id, tenantId },
-            include: {
-                assignments: true,
-                checklistResults: {
-                    include: {
-                        checklist: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                },
-                project: {
-                    select: { id: true, name: true },
-                },
-            },
-        });
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const priority = searchParams.get('priority');
+        const scheduledDate = searchParams.get('scheduledDate');
+        const employeeId = searchParams.get('employeeId');
+        const projectId = searchParams.get('projectId');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        if (!job) {
-            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
+        const where: Record<string, unknown> = { tenantId };
+
+        if (status) {
+            where.status = status.toUpperCase();
         }
+        if (priority) {
+            where.priority = priority.toUpperCase();
+        }
+        if (projectId) {
+            where.projectId = projectId;
+        }
+        if (scheduledDate) {
+            // Filter by date range for the given day
+            const date = new Date(scheduledDate);
+            const nextDay = new Date(date);
+            nextDay.setDate(nextDay.getDate() + 1);
+            where.scheduledDate = { gte: date, lt: nextDay };
+        }
+        if (employeeId) {
+            where.assignments = { some: { employeeId } };
+        }
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+                { customerName: { contains: search, mode: 'insensitive' } },
+                { location: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        const [jobs, total] = await Promise.all([
+            prisma.fieldJob.findMany({
+                where,
+                include: {
+                    assignments: true,
+                    _count: {
+                        select: {
+                            checklistResults: true,
+                        },
+                    },
+                },
+                skip,
+                take: limit,
+                orderBy: [
+                    { scheduledDate: 'asc' },
+                    { createdAt: 'desc' },
+                ],
+            }),
+            prisma.fieldJob.count({ where }),
+        ]);
+
+        const data = jobs.map((j) => ({
+            id: j.id,
+            title: j.title,
+            description: j.description,
+            location: j.location,
+            address: j.address,
+            latitude: j.latitude ? Number(j.latitude) : null,
+            longitude: j.longitude ? Number(j.longitude) : null,
+            scheduledDate: j.scheduledDate?.toISOString() || null,
+            scheduledTime: j.scheduledTime,
+            estimatedDuration: j.estimatedDuration,
+            status: j.status,
+            priority: j.priority,
+            customerName: j.customerName,
+            customerPhone: j.customerPhone,
+            customerEmail: j.customerEmail,
+            notes: j.notes,
+            projectId: j.projectId,
+            completedAt: j.completedAt?.toISOString() || null,
+            assignmentCount: j.assignments.length,
+            checklistCount: j._count.checklistResults,
+            assignments: j.assignments.map((a) => ({
+                id: a.id,
+                employeeId: a.employeeId,
+                role: a.role,
+                assignedAt: a.assignedAt.toISOString(),
+                notes: a.notes,
+            })),
+            createdAt: j.createdAt.toISOString(),
+            updatedAt: j.updatedAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
-            data: {
-                id: job.id,
-                title: job.title,
-                description: job.description,
-                location: job.location,
-                address: job.address,
-                latitude: job.latitude ? Number(job.latitude) : null,
-                longitude: job.longitude ? Number(job.longitude) : null,
-                scheduledDate: job.scheduledDate?.toISOString() || null,
-                scheduledTime: job.scheduledTime,
-                estimatedDuration: job.estimatedDuration,
-                status: job.status,
-                priority: job.priority,
-                customerName: job.customerName,
-                customerPhone: job.customerPhone,
-                customerEmail: job.customerEmail,
-                notes: job.notes,
-                projectId: job.projectId,
-                project: job.project,
-                completedAt: job.completedAt?.toISOString() || null,
-                assignments: job.assignments.map((a) => ({
-                    id: a.id,
-                    employeeId: a.employeeId,
-                    role: a.role,
-                    assignedAt: a.assignedAt.toISOString(),
-                    notes: a.notes,
-                })),
-                checklistResults: job.checklistResults.map((cr) => ({
-                    id: cr.id,
-                    checklistId: cr.checklistId,
-                    checklistName: cr.checklist.name,
-                    employeeId: cr.employeeId,
-                    answers: cr.answers,
-                    photos: cr.photos,
-                    notes: cr.notes,
-                    signedAt: cr.signedAt.toISOString(),
-                    createdAt: cr.createdAt.toISOString(),
-                })),
-                createdAt: job.createdAt.toISOString(),
-                updatedAt: job.updatedAt.toISOString(),
-            },
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PATCH(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request) {
     try {
-        const { id } = await params;
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
@@ -115,7 +147,7 @@ export async function PATCH(
         const { userId, tenantId } = auth;
         const body = await request.json();
 
-        const validation = updateFieldJobSchema.safeParse(body);
+        const validation = createFieldJobSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -123,96 +155,41 @@ export async function PATCH(
             );
         }
 
-        // Check ownership
-        const existing = await prisma.fieldJob.findFirst({ where: { id, tenantId } });
-        if (!existing) {
-            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
-        }
-
         const data = validation.data;
-        const updateData: Record<string, unknown> = {};
 
-        if (data.projectId !== undefined) updateData.projectId = data.projectId || null;
-        if (data.title !== undefined) updateData.title = data.title.trim();
-        if (data.description !== undefined) updateData.description = data.description?.trim() || null;
-        if (data.location !== undefined) updateData.location = data.location?.trim() || null;
-        if (data.address !== undefined) updateData.address = data.address?.trim() || null;
-        if (data.latitude !== undefined) updateData.latitude = data.latitude || null;
-        if (data.longitude !== undefined) updateData.longitude = data.longitude || null;
-        if (data.scheduledDate !== undefined) updateData.scheduledDate = data.scheduledDate ? new Date(data.scheduledDate) : null;
-        if (data.scheduledTime !== undefined) updateData.scheduledTime = data.scheduledTime || null;
-        if (data.estimatedDuration !== undefined) updateData.estimatedDuration = data.estimatedDuration || null;
-        if (data.status !== undefined) {
-            updateData.status = data.status;
-            if (data.status === 'COMPLETED') {
-                updateData.completedAt = new Date();
-            }
-        }
-        if (data.priority !== undefined) updateData.priority = data.priority;
-        if (data.customerName !== undefined) updateData.customerName = data.customerName?.trim() || null;
-        if (data.customerPhone !== undefined) updateData.customerPhone = data.customerPhone?.trim() || null;
-        if (data.customerEmail !== undefined) updateData.customerEmail = data.customerEmail?.trim() || null;
-        if (data.notes !== undefined) updateData.notes = data.notes?.trim() || null;
-
-        const job = await prisma.fieldJob.update({
-            where: { id },
-            data: updateData,
+        const job = await prisma.fieldJob.create({
+            data: {
+                tenantId,
+                projectId: data.projectId || null,
+                title: data.title.trim(),
+                description: data.description?.trim() || null,
+                location: data.location?.trim() || null,
+                address: data.address?.trim() || null,
+                latitude: data.latitude || null,
+                longitude: data.longitude || null,
+                scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
+                scheduledTime: data.scheduledTime || null,
+                estimatedDuration: data.estimatedDuration || null,
+                status: data.status || 'SCHEDULED',
+                priority: data.priority || 'MEDIUM',
+                customerName: data.customerName?.trim() || null,
+                customerPhone: data.customerPhone?.trim() || null,
+                customerEmail: data.customerEmail?.trim() || null,
+                notes: data.notes?.trim() || null,
+            },
         });
 
         await logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'FieldJob',
             entityId: job.id,
-            oldValues: { status: existing.status, priority: existing.priority },
-            newValues: { status: job.status, priority: job.priority },
+            newValues: { title: job.title, status: job.status, priority: job.priority },
             request,
         });
 
-        return NextResponse.json({ success: true, data: job });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const { id } = await params;
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:field-jobs:${ip}`, 10, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-
-        const existing = await prisma.fieldJob.findFirst({ where: { id, tenantId } });
-        if (!existing) {
-            return NextResponse.json({ success: false, error: 'MSG.JOB_NOT_FOUND' }, { status: 404 });
-        }
-
-        await prisma.fieldJob.delete({ where: { id } });
-
-        await logAudit({
-            userId,
-            tenantId,
-            action: 'DELETE',
-            entity: 'FieldJob',
-            entityId: id,
-            oldValues: { title: existing.title, status: existing.status },
-            request,
-        });
-
-        return NextResponse.json({ success: true, message: 'Pekerjaan berhasil dihapus' });
+        return NextResponse.json({ success: true, data: job }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

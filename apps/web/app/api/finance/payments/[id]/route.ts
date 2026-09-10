@@ -1,152 +1,177 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { getPaymentProvider } from '@/lib/payment/provider';
+import { processPaymentSchema, formatZodError } from '@/lib/validation-schemas';
+import { getPublicBaseUrl } from '@/lib/utils';
 import { handleApiError } from '@/lib/api-error';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
-        const { id } = params;
+// ============================================================
+// Payment Gateway Process API
+// Menggunakan Payment Provider abstraction layer.
+// Mendukung Midtrans, Xendit, dan Mock (development).
+// ============================================================
 
-        const payment = await prisma.payment.findFirst({
-            where: { id, tenantId },
-            include: {
-                invoice: {
-                    include: {
-                        contact: true,
-                    },
-                },
-            },
-        });
-
-        if (!payment) {
-            return NextResponse.json(
-                { success: false, error: 'Payment not found' },
-                { status: 404 }
-            );
-        }
-
-        const data = {
-            id: payment.id,
-            paymentNumber: payment.paymentNumber,
-            invoiceNumber: payment.invoice?.invoiceNumber || '-',
-            invoiceId: payment.invoiceId,
-            customerName: payment.invoice?.contact?.name || '-',
-            amount: payment.amount,
-            method: payment.method.toLowerCase().replace('_', '-'),
-            bank: '',
-            accountNumber: '',
-            status: payment.status.toLowerCase(),
-            paymentDate: payment.paymentDate.toISOString(),
-            reference: payment.reference || '',
-            notes: payment.notes || '',
-            type: payment.type,
-        };
-
-        return NextResponse.json({ success: true, data });
-    } catch (error) {
-        return handleApiError(error);
+export async function POST(request: Request) {
+  try {
+    // Rate limit check
+    const ip = getClientIp(request);
+    const rateLimitResult = checkRateLimit(`api:payments:process:${ip}`, 10, 60000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+      );
     }
-}
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
-        const body = await request.json();
+    // Auth check (permission-based with role fallback)
+    const auth = await requirePermissionForRoute(request);
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const { userId, tenantId } = auth;
+    const body = await request.json();
 
-        const validation = updatePaymentSchema.safeParse(body);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
-
-        const validatedData = validation.data;
-
-        const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Payment not found', code: 'NOT_FOUND' },
-                { status: 404 }
-            );
-        }
-
-        const updateData: Record<string, string | number | boolean | Date | null | undefined> = {};
-        if (validatedData.status) {
-            updateData.status = validatedData.status.toUpperCase();
-        }
-        if (validatedData.method) {
-            updateData.method = validatedData.method.toUpperCase().replace('-', '_');
-        }
-        if (validatedData.amount !== undefined) {
-            updateData.amount = validatedData.amount;
-        }
-        if (validatedData.type) {
-            updateData.type = validatedData.type.toUpperCase();
-        }
-        if (validatedData.reference !== undefined) {
-            updateData.reference = validatedData.reference;
-        }
-        if (validatedData.notes !== undefined) {
-            updateData.notes = validatedData.notes;
-        }
-        if (validatedData.date !== undefined) {
-            updateData.paymentDate = validatedData.date ? new Date(validatedData.date) : null;
-        }
-
-        const payment = await prisma.payment.update({
-            where: { id },
-            data: updateData,
-        });
-
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Payment', entityId: id, newValues: updateData as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: payment });
-    } catch (error) {
-        return handleApiError(error);
+    // Validasi input dengan Zod schema
+    const validation = processPaymentSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, ...formatZodError(validation.error) },
+        { status: 400 }
+      );
     }
-}
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { id } = params;
+    const validatedData = validation.data;
 
-        const existing = await prisma.payment.findFirst({ where: { id, tenantId } });
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Payment not found' },
-                { status: 404 }
-            );
-        }
+    // Verify invoice exists and belongs to tenant
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: validatedData.invoiceId, tenantId },
+      include: {
+        contact: { select: { name: true, email: true, phone: true } },
+        payments: { where: { status: 'COMPLETED' } },
+      },
+    });
 
-        await prisma.payment.delete({ where: { id } });
-
-        // Audit logging non-blocking
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Payment', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: null });
-    } catch (error) {
-        return handleApiError(error);
+    if (!invoice) {
+      return NextResponse.json(
+        { success: false, error: 'Invoice not found', code: 'NOT_FOUND' },
+        { status: 404 }
+      );
     }
+
+    // Calculate remaining amount
+    const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const remainingAmount = Number(invoice.total) - Number(totalPaid);
+
+    if (validatedData.amount > remainingAmount) {
+      return NextResponse.json(
+        { success: false, error: `Jumlah pembayaran melebihi sisa tagihan. Sisa: ${remainingAmount}` },
+        { status: 400 }
+      );
+    }
+
+    // Determine provider from request or env
+    const providerName = validatedData.provider || process.env.PAYMENT_PROVIDER || 'mock';
+
+    // Guard: reject mock provider in production
+    if (process.env.NODE_ENV === 'production' && providerName === 'mock') {
+      return NextResponse.json(
+        { success: false, error: 'Payment provider not configured. Please configure a real payment provider in production.' },
+        { status: 500 }
+      );
+    }
+
+    // Create order ID
+    const orderId = `ORD-${invoice.invoiceNumber}-${Date.now()}`;
+
+    // Use Payment Provider abstraction
+    const paymentProvider = getPaymentProvider();
+    const customerName = validatedData.customerName || invoice.contact?.name || 'Customer';
+    const customerEmail = validatedData.customerEmail || invoice.contact?.email || '';
+    const customerPhone = validatedData.customerPhone || invoice.contact?.phone || undefined;
+
+    const gatewayResult = await paymentProvider.createPayment({
+      orderId,
+      amount: validatedData.amount,
+      currency: 'IDR',
+      customerName,
+      customerEmail,
+      customerPhone,
+      items: [
+        {
+          name: `Payment for ${invoice.invoiceNumber}`,
+          price: validatedData.amount,
+          quantity: 1,
+        },
+      ],
+      callbackUrl: `${getPublicBaseUrl()}/dashboard/finance/invoices/${invoice.id}`,
+    });
+
+    if (!gatewayResult.success) {
+      return NextResponse.json(
+        { success: false, error: gatewayResult.error || 'Gagal memproses pembayaran ke gateway' },
+        { status: 500 }
+      );
+    }
+
+    // Create payment record in database
+    const payment = await prisma.payment.create({
+      data: {
+        paymentNumber: gatewayResult.paymentToken || `PAY-${Date.now()}`,
+        amount: validatedData.amount,
+        paymentDate: new Date(),
+        method: validatedData.method.toUpperCase().replace('-', '_'),
+        status: 'PENDING',
+        type: 'INCOME',
+        reference: gatewayResult.paymentUrl || gatewayResult.paymentToken || '',
+        notes: `Payment via ${providerName} - ${validatedData.method} | OrderID: ${orderId}`,
+        invoiceId: validatedData.invoiceId,
+        tenantId,
+      },
+      include: {
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            total: true,
+            contact: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // Audit trail
+    void logAudit({
+      userId,
+      tenantId,
+      action: 'CREATE',
+      entity: 'Payment',
+      entityId: payment.id,
+      newValues: {
+        ...payment as unknown as Record<string, unknown>,
+        gateway: providerName,
+        orderId,
+      },
+      request,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        paymentId: payment.id,
+        paymentNumber: payment.paymentNumber,
+        orderId,
+        status: 'PENDING',
+        paymentUrl: gatewayResult.paymentUrl,
+        paymentToken: gatewayResult.paymentToken,
+        amount: validatedData.amount,
+        method: validatedData.method,
+        provider: providerName,
+      },
+    }, { status: 201 });
+  } catch (error) {
+      return handleApiError(error);
+  }
 }

@@ -1,122 +1,122 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { createResourceAllocationSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createProjectSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-// =============================================================================
-// GET /api/projects/[id]/resources — List resource allocations
-// =============================================================================
-
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
-
-        // Verify project belongs to tenant
-        const project = await prisma.project.findFirst({
-            where: { id, tenantId },
-        });
-
-        if (!project) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
-        }
-
         const { searchParams } = new URL(request.url);
-        const employeeId = searchParams.get('employeeId');
-        const active = searchParams.get('active'); // 'true' to filter only active allocations
+        const status = searchParams.get('status');
+        const priority = searchParams.get('priority');
+        const managerId = searchParams.get('managerId');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { projectId: id, tenantId };
-        if (employeeId) {
-            where.employeeId = employeeId;
+        const where: Record<string, unknown> = { tenantId };
+
+        if (status) {
+            where.status = status.toUpperCase();
         }
-        if (active === 'true') {
-            const now = new Date();
-            where.startDate = { lte: now };
-            where.endDate = { gte: now };
+        if (priority) {
+            where.priority = priority.toUpperCase();
+        }
+        if (managerId) {
+            where.managerId = managerId;
+        }
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
         }
 
-        const allocations = await prisma.resourceAllocation.findMany({
-            where,
-            orderBy: { startDate: 'desc' },
-        });
+        const [projects, total] = await Promise.all([
+            prisma.project.findMany({
+                where,
+                include: {
+                    _count: {
+                        select: {
+                            members: true,
+                            tasks: true,
+                        },
+                    },
+                },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.project.count({ where }),
+        ]);
 
-        // Calculate summary
-        const totalAllocation = allocations.reduce((sum, a) => sum + a.allocationPct, 0);
-
-        // Group by employee
-        const byEmployee: Record<string, {
-            employeeId: string;
-            totalAllocation: number;
-            allocations: number;
-            roles: string[];
-        }> = {};
-        allocations.forEach((a) => {
-            if (!byEmployee[a.employeeId]) {
-                byEmployee[a.employeeId] = {
-                    employeeId: a.employeeId,
-                    totalAllocation: 0,
-                    allocations: 0,
-                    roles: [],
-                };
-            }
-            byEmployee[a.employeeId].totalAllocation += a.allocationPct;
-            byEmployee[a.employeeId].allocations += 1;
-            if (!byEmployee[a.employeeId].roles.includes(a.role)) {
-                byEmployee[a.employeeId].roles.push(a.role);
-            }
-        });
+        const data = projects.map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            status: p.status,
+            priority: p.priority,
+            startDate: p.startDate?.toISOString() || null,
+            endDate: p.endDate?.toISOString() || null,
+            budget: p.budget ? Number(p.budget) : null,
+            spent: p.spent ? Number(p.spent) : 0,
+            progress: p.progress,
+            managerId: p.managerId,
+            memberCount: p._count.members,
+            taskCount: p._count.tasks,
+            createdAt: p.createdAt.toISOString(),
+            updatedAt: p.updatedAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
-            data: allocations.map((a) => ({
-                id: a.id,
-                projectId: a.projectId,
-                employeeId: a.employeeId,
-                role: a.role,
-                allocationPct: a.allocationPct,
-                startDate: a.startDate.toISOString(),
-                endDate: a.endDate.toISOString(),
-                hourlyRate: a.hourlyRate ? Number(a.hourlyRate) : null,
-                notes: a.notes,
-                createdAt: a.createdAt.toISOString(),
-                updatedAt: a.updatedAt.toISOString(),
-            })),
-            summary: {
-                totalAllocations: allocations.length,
-                totalAllocationPct: totalAllocation,
-                uniqueEmployees: Object.keys(byEmployee).length,
-            },
-            byEmployee: Object.values(byEmployee),
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-// =============================================================================
-// POST /api/projects/[id]/resources — Create resource allocation
-// =============================================================================
-
-export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:projects:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
 
-        const validation = createResourceAllocationSchema.safeParse(body);
+        // Validasi input dengan Zod
+        const validation = createProjectSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -124,57 +124,29 @@ export async function POST(
             );
         }
 
-        // Verify project belongs to tenant
-        const project = await prisma.project.findFirst({
-            where: { id, tenantId },
-        });
+        const { name, description, status, priority, startDate, endDate, budget, managerId } = validation.data;
 
-        if (!project) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
-        }
-
-        const { employeeId, role, allocationPct, startDate, endDate, hourlyRate, notes } = validation.data;
-
-        // Validate date range
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        if (end < start) {
-            return NextResponse.json(
-                { success: false, error: MSG.PROJECT_RESOURCE_END_BEFORE_START },
-                { status: 400 }
-            );
-        }
-
-        // Check for overlapping allocations for the same employee
-        const overlapping = await prisma.resourceAllocation.findFirst({
-            where: {
+        const project = await prisma.project.create({
+            data: {
                 tenantId,
-                projectId: id,
-                employeeId,
-                OR: [
-                    { startDate: { lte: end }, endDate: { gte: start } },
-                ],
+                name: name.trim(),
+                description: description?.trim() || null,
+                status: status || 'PLANNING',
+                priority: priority || 'MEDIUM',
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
+                budget: budget || null,
+                managerId: managerId || null,
             },
         });
 
-        if (overlapping) {
-            return NextResponse.json(
-                { success: false, error: MSG.PROJECT_RESOURCE_OVERLAP },
-                { status: 409 }
-            );
-        }
-
-        const allocation = await prisma.resourceAllocation.create({
+        // Auto-add creator as MANAGER member
+        await prisma.projectMember.create({
             data: {
                 tenantId,
-                projectId: id,
-                employeeId: employeeId.trim(),
-                role: role || 'MEMBER',
-                allocationPct,
-                startDate: start,
-                endDate: end,
-                hourlyRate: hourlyRate || null,
-                notes: notes?.trim() || null,
+                projectId: project.id,
+                employeeId: userId,
+                role: 'MANAGER',
             },
         });
 
@@ -183,28 +155,13 @@ export async function POST(
             userId,
             tenantId,
             action: 'CREATE',
-            entity: 'ResourceAllocation',
-            entityId: allocation.id,
+            entity: 'Project',
+            entityId: project.id,
             newValues: validation.data as unknown as Record<string, unknown>,
             request,
         });
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                id: allocation.id,
-                projectId: allocation.projectId,
-                employeeId: allocation.employeeId,
-                role: allocation.role,
-                allocationPct: allocation.allocationPct,
-                startDate: allocation.startDate.toISOString(),
-                endDate: allocation.endDate.toISOString(),
-                hourlyRate: allocation.hourlyRate ? Number(allocation.hourlyRate) : null,
-                notes: allocation.notes,
-                createdAt: allocation.createdAt.toISOString(),
-                updatedAt: allocation.updatedAt.toISOString(),
-            },
-        }, { status: 201 });
+        return NextResponse.json({ success: true, data: project }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

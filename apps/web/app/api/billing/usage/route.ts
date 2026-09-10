@@ -1,8 +1,10 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/billing/usage
  *
  * Get usage statistics for the current tenant.
- * Query params: period (YYYY-MM, optional — defaults to current month)
+ * Query params: period (YYYY-MM, optional â€” defaults to current month)
  */
 
 import { NextResponse } from 'next/server';

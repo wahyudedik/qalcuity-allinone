@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Data Explorer API — POST
+// Data Explorer API â€” POST
 // Executes analytics queries from explorer config
 // ============================================
 
@@ -47,7 +49,7 @@ interface ExplorerColumn {
 }
 
 // ============================================
-// DATASET → PRISMA MODEL MAPPING
+// DATASET â†’ PRISMA MODEL MAPPING
 // ============================================
 
 const DATASET_MODEL_MAP: Record<string, string> = {

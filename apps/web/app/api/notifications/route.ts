@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { Prisma } from '@prisma/client'
@@ -12,7 +14,7 @@ import { handleApiError } from '@/lib/api-error'
  * the client-side notification centre degrades silently.
  */
 function tableNotFoundFallback(kind: 'list' | 'mark' | 'delete') {
-    console.warn('[Notifications API] InAppNotification table not found — returning empty fallback')
+    console.warn('[Notifications API] InAppNotification table not found â€” returning empty fallback')
     if (kind === 'list') {
         return NextResponse.json({ success: true, data: [], unreadCount: 0, total: 0 })
     }
@@ -101,8 +103,8 @@ export async function GET(request: Request) {
  *
  * Update notification status (mark as read).
  * Body:
- *   - ids: string[] — array of notification IDs to mark as read
- *   - markAll: boolean — mark all user notifications as read
+ *   - ids: string[] â€” array of notification IDs to mark as read
+ *   - markAll: boolean â€” mark all user notifications as read
  */
 export async function PUT(request: Request) {
     try {

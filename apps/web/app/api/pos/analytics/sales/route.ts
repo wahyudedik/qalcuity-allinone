@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -8,7 +10,7 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/sales
  *
- * Sales analytics — daily/weekly/monthly revenue, transaction count,
+ * Sales analytics â€” daily/weekly/monthly revenue, transaction count,
  * avg order value, growth %.
  *
  * Query params:
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // ─── Aggregate sales data using raw SQL for efficiency ───
+        // â”€â”€â”€ Aggregate sales data using raw SQL for efficiency â”€â”€â”€
         // We use raw queries for GROUP BY date truncation which Prisma doesn't support natively
         const dateFormat = period === 'monthly'
             ? 'YYYY-MM'
@@ -81,12 +83,12 @@ export async function GET(request: Request) {
             endDate
         );
 
-        // ─── Calculate summary stats ───
+        // â”€â”€â”€ Calculate summary stats â”€â”€â”€
         const totalRevenue = salesData.reduce((sum, d) => sum + (d.revenue || 0), 0);
         const totalTransactions = salesData.reduce((sum, d) => sum + (d.transaction_count || 0), 0);
         const avgOrderValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
-        // ─── Calculate growth (compare current period to previous period) ───
+        // â”€â”€â”€ Calculate growth (compare current period to previous period) â”€â”€â”€
         const periodMs = endDate.getTime() - dateFrom.getTime();
         const prevDateFrom = new Date(dateFrom.getTime() - periodMs);
         const prevEndDate = new Date(dateFrom.getTime() - 1);
@@ -116,7 +118,7 @@ export async function GET(request: Request) {
             ? ((totalTransactions - prevTransactions) / prevTransactions) * 100
             : 0;
 
-        // ─── Payment method breakdown ───
+        // â”€â”€â”€ Payment method breakdown â”€â”€â”€
         const paymentBreakdown = await prisma.$queryRawUnsafe<
             Array<{ method: string; count: number; total: number }>
         >(

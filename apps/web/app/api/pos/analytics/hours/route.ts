@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -8,8 +10,8 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/hours
  *
- * Hourly heatmap — transactions & revenue per hour per day of week.
- * Returns a 7×24 matrix (7 days × 24 hours) for heatmap visualization.
+ * Hourly heatmap â€” transactions & revenue per hour per day of week.
+ * Returns a 7Ã—24 matrix (7 days Ã— 24 hours) for heatmap visualization.
  *
  * Query params:
  *   - dateFrom: ISO date string (default: 30 days ago)
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // ─── Hourly heatmap data ───
+        // â”€â”€â”€ Hourly heatmap data â”€â”€â”€
         // Day of week: 0=Sunday, 1=Monday, ..., 6=Saturday
         const heatmapData = await prisma.$queryRawUnsafe<
             Array<{
@@ -69,7 +71,7 @@ export async function GET(request: Request) {
             endDate
         );
 
-        // ─── Build 7×24 matrix ───
+        // â”€â”€â”€ Build 7Ã—24 matrix â”€â”€â”€
         const transactionsByDayHour: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
         const revenueByDayHour: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
 
@@ -82,7 +84,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // ─── Find peak hours ───
+        // â”€â”€â”€ Find peak hours â”€â”€â”€
         let maxTransactions = 0;
         let peakDay = 0;
         let peakHour = 0;
@@ -97,7 +99,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // ─── Summary stats ───
+        // â”€â”€â”€ Summary stats â”€â”€â”€
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const totalTransactionsPerDay = transactionsByDayHour.map((day) =>
             day.reduce((sum, count) => sum + count, 0)

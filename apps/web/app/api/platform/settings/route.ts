@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
@@ -7,7 +9,7 @@ import { z } from "zod";
 import fs from "fs";
 import path from "path";
 
-// ─── Platform Settings Schema ──────────────────────────────────────────────
+// â”€â”€â”€ Platform Settings Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const platformSettingsSchema = z.object({
     platformName: z.string().min(1).max(100),
     supportEmail: z.string().email(),
@@ -21,7 +23,7 @@ const platformSettingsSchema = z.object({
 
 type PlatformSettings = z.infer<typeof platformSettingsSchema>;
 
-// ─── Default Settings ──────────────────────────────────────────────────────
+// â”€â”€â”€ Default Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const defaultSettings: PlatformSettings = {
     platformName: "Qalcuity",
     supportEmail: "support@qalcuity.com",
@@ -37,7 +39,7 @@ const defaultSettings: PlatformSettings = {
     securityAlerts: true,
 };
 
-// ─── File Storage ──────────────────────────────────────────────────────────
+// â”€â”€â”€ File Storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SETTINGS_FILE = path.join(process.cwd(), "data", "platform-settings.json");
 
 function getSettingsFilePath(): string {
@@ -67,7 +69,7 @@ function writeSettings(settings: PlatformSettings): void {
     fs.writeFileSync(filePath, JSON.stringify(settings, null, 2), "utf-8");
 }
 
-// ─── GET /api/platform/settings ────────────────────────────────────────────
+// â”€â”€â”€ GET /api/platform/settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns platform-wide settings. Only accessible by SUPERADMIN.
 export async function GET(request: Request) {
     // 1. Rate limiting
@@ -77,7 +79,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    // 2. Auth + RBAC check — SUPERADMIN only
+    // 2. Auth + RBAC check â€” SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -92,7 +94,7 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── PUT /api/platform/settings ────────────────────────────────────────────
+// â”€â”€â”€ PUT /api/platform/settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Update platform-wide settings. Only accessible by SUPERADMIN.
 export async function PUT(req: Request) {
     // 1. Rate limiting
@@ -102,7 +104,7 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    // 2. Auth + RBAC check — SUPERADMIN only
+    // 2. Auth + RBAC check â€” SUPERADMIN only
     const auth = await requirePermissionForRoute(req);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 

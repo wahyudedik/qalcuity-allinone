@@ -1,20 +1,24 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { updateLoyaltyMemberSchema, formatZodError } from '@/lib/validation-schemas';
+import { createLoyaltyMemberSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+async function generateMemberCode(tenantId: string): Promise<string> {
+    const count = await prisma.loyaltyMember.count({ where: { tenantId } });
+    return `LMS-${String(count + 1).padStart(5, '0')}`;
+}
+
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:pos:loyalty:members:GET:${ip}`, 60, 60000);
+        const rateLimitResult = checkRateLimit(`api:pos:loyalty:members:${ip}`, 60, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: MSG.TOO_MANY_REQUESTS },
@@ -26,59 +30,71 @@ export async function GET(
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
-        const member = await prisma.loyaltyMember.findFirst({
-            where: { id: params.id, tenantId },
-            include: {
-                transactions: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 50,
-                },
-            },
-        });
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const tier = searchParams.get('tier');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-        if (!member) {
-            return NextResponse.json(
-                { success: false, error: MSG.MEMBER_NOT_FOUND },
-                { status: 404 }
-            );
+        const where: Record<string, unknown> = { tenantId };
+
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search, mode: 'insensitive' } },
+                { memberCode: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+            ];
         }
+
+        if (tier) {
+            where.tier = tier.toUpperCase();
+        }
+
+        const [members, total] = await Promise.all([
+            prisma.loyaltyMember.findMany({
+                where,
+                include: {
+                    _count: { select: { transactions: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.loyaltyMember.count({ where }),
+        ]);
+
+        const data = members.map((m) => ({
+            id: m.id,
+            memberCode: m.memberCode,
+            name: m.name,
+            email: m.email,
+            phone: m.phone,
+            tier: m.tier,
+            points: m.points,
+            totalSpent: Number(m.totalSpent),
+            transactionCount: m._count.transactions,
+            createdAt: m.createdAt.toISOString(),
+        }));
 
         return NextResponse.json({
             success: true,
-            data: {
-                id: member.id,
-                memberCode: member.memberCode,
-                name: member.name,
-                email: member.email,
-                phone: member.phone,
-                contactId: member.contactId,
-                tier: member.tier,
-                points: member.points,
-                totalSpent: Number(member.totalSpent),
-                createdAt: member.createdAt.toISOString(),
-                updatedAt: member.updatedAt.toISOString(),
-                transactions: member.transactions.map((t) => ({
-                    id: t.id,
-                    type: t.type,
-                    points: t.points,
-                    description: t.description,
-                    transactionId: t.transactionId,
-                    createdAt: t.createdAt.toISOString(),
-                })),
-            },
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:pos:loyalty:members:PUT:${ip}`, 30, 60000);
+        const rateLimitResult = checkRateLimit(`api:pos:loyalty:members:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: MSG.TOO_MANY_REQUESTS },
@@ -92,7 +108,7 @@ export async function PUT(
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const validation = updateLoyaltyMemberSchema.safeParse(sanitizedBody);
+        const validation = createLoyaltyMemberSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -100,54 +116,44 @@ export async function PUT(
             );
         }
 
-        const existingMember = await prisma.loyaltyMember.findFirst({
-            where: { id: params.id, tenantId },
-        });
-
-        if (!existingMember) {
-            return NextResponse.json(
-                { success: false, error: MSG.MEMBER_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
         const validatedData = validation.data;
-        const updatedMember = await prisma.loyaltyMember.update({
-            where: { id: params.id },
+        const memberCode = await generateMemberCode(tenantId);
+
+        const member = await prisma.loyaltyMember.create({
             data: {
-                ...(validatedData.name !== undefined && { name: validatedData.name }),
-                ...(validatedData.email !== undefined && { email: validatedData.email || null }),
-                ...(validatedData.phone !== undefined && { phone: validatedData.phone || null }),
-                ...(validatedData.tier !== undefined && { tier: validatedData.tier }),
+                tenantId,
+                memberCode,
+                name: validatedData.name,
+                email: validatedData.email || null,
+                phone: validatedData.phone || null,
+                contactId: validatedData.contactId || null,
             },
         });
 
         void logAudit({
             userId,
             tenantId,
-            action: 'UPDATE',
+            action: 'CREATE',
             entity: 'LoyaltyMember',
-            entityId: params.id,
-            oldValues: { name: existingMember.name, tier: existingMember.tier },
-            newValues: validatedData,
+            entityId: member.id,
+            newValues: { memberCode, name: validatedData.name, email: validatedData.email },
             request,
         });
 
         return NextResponse.json({
             success: true,
             data: {
-                id: updatedMember.id,
-                memberCode: updatedMember.memberCode,
-                name: updatedMember.name,
-                email: updatedMember.email,
-                phone: updatedMember.phone,
-                tier: updatedMember.tier,
-                points: updatedMember.points,
-                totalSpent: Number(updatedMember.totalSpent),
-                createdAt: updatedMember.createdAt.toISOString(),
-                updatedAt: updatedMember.updatedAt.toISOString(),
+                id: member.id,
+                memberCode: member.memberCode,
+                name: member.name,
+                email: member.email,
+                phone: member.phone,
+                tier: member.tier,
+                points: member.points,
+                totalSpent: Number(member.totalSpent),
+                createdAt: member.createdAt.toISOString(),
             },
-        });
+        }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

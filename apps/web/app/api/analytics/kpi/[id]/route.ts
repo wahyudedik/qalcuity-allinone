@@ -1,44 +1,43 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// KPI Detail API — GET, PUT, DELETE
-// KPI by ID operations
+// KPI API â€” GET (list), POST (create)
+// CRUD for KPI definitions
 // ============================================
 
 import { NextResponse } from 'next/server'
-import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { handleApiError } from '@/lib/api-error'
+import { createKPISchema } from '@/lib/validation-schemas'
+import { MSG } from '@/lib/api-messages'
 
 // ============================================
 // TYPES
 // ============================================
 
-interface UpdateKPIBody {
-    name?: string
+interface CreateKPIBody {
+    name: string
     description?: string
-    category?: string
-    metricId?: string
+    category: string
+    metricId: string
     formula?: string
-    target?: number
+    target: number
     targetType?: string
     warningThreshold?: number
     criticalThreshold?: number
     period?: string
-    isActive?: boolean
 }
 
 // ============================================
-// GET — KPI detail
+// GET â€” List all KPIs for tenant
 // ============================================
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const ip = getClientIp(request)
-        const rateLimitResult = checkRateLimit(`api:analytics:kpi:[id]:route:GET:${ip}`, 60, 60000)
+        const rateLimitResult = checkRateLimit(`api:analytics:kpi:route:GET:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
             return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
@@ -48,28 +47,35 @@ export async function GET(
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { tenantId } = auth
-        const { id } = params
+        const { searchParams } = new URL(request.url)
+        const category = searchParams.get('category')
+        const isActive = searchParams.get('isActive')
 
-        const kpi = await prisma.kPI.findFirst({
-            where: { id, tenantId },
+        const where: Record<string, unknown> = { tenantId }
+
+        if (category) {
+            where.category = category
+        }
+
+        if (isActive !== null && isActive !== undefined) {
+            where.isActive = isActive === 'true'
+        }
+
+        const kpis = await prisma.kPI.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
             include: {
                 evaluations: {
                     orderBy: { evaluatedAt: 'desc' },
-                    take: 10,
+                    take: 1,
                 },
             },
         })
 
-        if (!kpi) {
-            return NextResponse.json(
-                { success: false, error: MSG.ANALYTICS_KPI_NOT_FOUND },
-                { status: 404 }
-            )
-        }
-
-        return NextResponse.json({
-            success: true,
-            data: {
+        // Enrich with latest evaluation
+        const enrichedKPIs = kpis.map(kpi => {
+            const latestEval = kpi.evaluations[0]
+            return {
                 id: kpi.id,
                 name: kpi.name,
                 description: kpi.description,
@@ -86,35 +92,32 @@ export async function GET(
                 isActive: kpi.isActive,
                 createdAt: kpi.createdAt.toISOString(),
                 updatedAt: kpi.updatedAt.toISOString(),
-                evaluations: kpi.evaluations.map(ev => ({
-                    id: ev.id,
-                    value: Number(ev.value),
-                    target: Number(ev.target),
-                    status: ev.status,
-                    changePercent: ev.changePercent ? Number(ev.changePercent) : null,
-                    previousValue: ev.previousValue ? Number(ev.previousValue) : null,
-                    period: ev.period,
-                    evaluatedAt: ev.evaluatedAt.toISOString(),
-                })),
-            },
+                latestEvaluation: latestEval
+                    ? {
+                        value: Number(latestEval.value),
+                        status: latestEval.status,
+                        changePercent: latestEval.changePercent ? Number(latestEval.changePercent) : null,
+                        evaluatedAt: latestEval.evaluatedAt.toISOString(),
+                    }
+                    : null,
+            }
         })
+
+        return NextResponse.json({ success: true, data: enrichedKPIs })
     } catch (error) {
-        console.error('[ERROR]', error)
+        console.error('[KPI List Error]', error)
         return handleApiError(error)
     }
 }
 
 // ============================================
-// PUT — Update KPI
+// POST â€” Create new KPI
 // ============================================
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const ip = getClientIp(request)
-        const rateLimitResult = checkRateLimit(`api:analytics:kpi:[id]:route:PUT:${ip}`, 60, 60000)
+        const rateLimitResult = checkRateLimit(`api:analytics:kpi:route:POST:${ip}`, 60, 60000)
         if (!rateLimitResult.success) {
             return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
@@ -123,138 +126,59 @@ export async function PUT(
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
-        const { tenantId } = auth
-        const { id } = params
-        const body: UpdateKPIBody = await request.json()
+        const { userId, tenantId } = auth
 
-        // Check KPI exists and belongs to tenant
-        const existing = await prisma.kPI.findFirst({
-            where: { id, tenantId },
-        })
-
-        if (!existing) {
+        // Validasi input dengan Zod schema
+        const body = await request.json()
+        const validated = createKPISchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: MSG.ANALYTICS_KPI_NOT_FOUND },
-                { status: 404 }
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
             )
         }
 
-        // Validate category if provided
-        if (body.category) {
-            const validCategories = ['finance', 'sales', 'inventory', 'hr', 'crm', 'cross_module']
-            if (!validCategories.includes(body.category)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid category. Must be one of: ${validCategories.join(', ')}` },
-                    { status: 400 }
-                )
-            }
-        }
+        const period = validated.data.period || 'monthly'
 
-        // Validate period if provided
-        if (body.period) {
-            const validPeriods = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']
-            if (!validPeriods.includes(body.period)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid period. Must be one of: ${validPeriods.join(', ')}` },
-                    { status: 400 }
-                )
-            }
-        }
-
-        const updateData: Record<string, unknown> = {}
-        if (body.name !== undefined) updateData.name = body.name
-        if (body.description !== undefined) updateData.description = body.description
-        if (body.category !== undefined) updateData.category = body.category
-        if (body.metricId !== undefined) updateData.metricId = body.metricId
-        if (body.formula !== undefined) updateData.formula = body.formula
-        if (body.target !== undefined) updateData.target = body.target
-        if (body.targetType !== undefined) updateData.targetType = body.targetType
-        if (body.warningThreshold !== undefined) updateData.warningThreshold = body.warningThreshold
-        if (body.criticalThreshold !== undefined) updateData.criticalThreshold = body.criticalThreshold
-        if (body.period !== undefined) updateData.period = body.period
-        if (body.isActive !== undefined) updateData.isActive = body.isActive
-
-        const updated = await prisma.kPI.update({
-            where: { id },
-            data: updateData,
+        const kpi = await prisma.kPI.create({
+            data: {
+                name: validated.data.name,
+                description: validated.data.description,
+                category: validated.data.category,
+                metricId: validated.data.metricId,
+                formula: validated.data.formula,
+                target: validated.data.target,
+                targetType: validated.data.targetType || 'gte',
+                warningThreshold: validated.data.warningThreshold ?? 10,
+                criticalThreshold: validated.data.criticalThreshold ?? 25,
+                period,
+                ownerId: userId,
+                tenantId,
+            },
         })
 
         return NextResponse.json({
             success: true,
             data: {
-                id: updated.id,
-                name: updated.name,
-                description: updated.description,
-                category: updated.category,
-                metricId: updated.metricId,
-                formula: updated.formula,
-                target: Number(updated.target),
-                targetType: updated.targetType,
-                warningThreshold: updated.warningThreshold ? Number(updated.warningThreshold) : null,
-                criticalThreshold: updated.criticalThreshold ? Number(updated.criticalThreshold) : null,
-                period: updated.period,
-                ownerId: updated.ownerId,
-                isActive: updated.isActive,
-                createdAt: updated.createdAt.toISOString(),
-                updatedAt: updated.updatedAt.toISOString(),
+                id: kpi.id,
+                name: kpi.name,
+                description: kpi.description,
+                category: kpi.category,
+                metricId: kpi.metricId,
+                formula: kpi.formula,
+                target: Number(kpi.target),
+                targetType: kpi.targetType,
+                warningThreshold: kpi.warningThreshold ? Number(kpi.warningThreshold) : null,
+                criticalThreshold: kpi.criticalThreshold ? Number(kpi.criticalThreshold) : null,
+                period: kpi.period,
+                ownerId: kpi.ownerId,
+                isActive: kpi.isActive,
+                createdAt: kpi.createdAt.toISOString(),
+                updatedAt: kpi.updatedAt.toISOString(),
             },
-        })
+        }, { status: 201 })
     } catch (error) {
-        console.error('[ERROR]', error)
-        return handleApiError(error)
-    }
-}
-
-// ============================================
-// DELETE — Delete KPI
-// ============================================
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const ip = getClientIp(request)
-        const rateLimitResult = checkRateLimit(`api:analytics:kpi:[id]:route:DELETE:${ip}`, 60, 60000)
-        if (!rateLimitResult.success) {
-            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
-        }
-
-        const auth = await requirePermissionForRoute(request)
-        if ('error' in auth) {
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
-        }
-        const { tenantId } = auth
-        const { id } = params
-
-        // Check KPI exists and belongs to tenant
-        const existing = await prisma.kPI.findFirst({
-            where: { id, tenantId },
-        })
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.ANALYTICS_KPI_NOT_FOUND },
-                { status: 404 }
-            )
-        }
-
-        // Delete associated evaluations first
-        await prisma.kPIEvaluation.deleteMany({
-            where: { kpiId: id },
-        })
-
-        // Delete KPI
-        await prisma.kPI.delete({
-            where: { id },
-        })
-
-        return NextResponse.json({
-            success: true,
-            data: { message: 'KPI deleted successfully' },
-        })
-    } catch (error) {
-        console.error('[ERROR]', error)
+        console.error('[KPI Create Error]', error)
         return handleApiError(error)
     }
 }

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -93,7 +95,7 @@ export async function GET(request: Request) {
     } catch (error) {
         // Graceful fallback: PosKitchenOrder table not yet available (migration pending)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
-            console.warn('[Kitchen Orders API] PosKitchenOrder table not found — returning empty fallback');
+            console.warn('[Kitchen Orders API] PosKitchenOrder table not found â€” returning empty fallback');
             return NextResponse.json({ success: true, data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
         }
         return handleApiError(error);

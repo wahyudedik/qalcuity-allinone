@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
@@ -5,11 +7,11 @@ import { prisma } from "@/lib/db";
 import { createTenantSchema } from "@/lib/validation-schemas";
 import { handleApiError } from "@/lib/api-error";
 
-// ─── GET /api/platform/tenants ────────────────────────────────────────────────
+// â”€â”€â”€ GET /api/platform/tenants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns paginated list of all tenants with stats.
 // Only accessible by SUPERADMIN role.
 export async function GET(request: Request) {
-    // 1. Auth + RBAC check — SUPERADMIN only
+    // 1. Auth + RBAC check â€” SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -89,11 +91,11 @@ export async function GET(request: Request) {
     }
 }
 
-// ─── POST /api/platform/tenants ───────────────────────────────────────────────
+// â”€â”€â”€ POST /api/platform/tenants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Creates a new tenant (provisioning).
 // Only accessible by SUPERADMIN role.
 export async function POST(request: Request) {
-    // 1. Auth + RBAC check — SUPERADMIN only
+    // 1. Auth + RBAC check â€” SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 

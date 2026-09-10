@@ -1,80 +1,151 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updateSupplierSchema, formatZodError } from '@/lib/validation-schemas';
-import { handleApiError } from '@/lib/api-error';
+import { createSupplierSchema, updateSupplierSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:suppliers:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const isActive = searchParams.get('isActive');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-        const supplier = await prisma.supplier.findFirst({
-            where: { id, tenantId },
-            include: {
-                _count: { select: { purchaseOrders: true } },
-                purchaseOrders: {
-                    select: { id: true, poNumber: true, status: true, total: true, orderDate: true },
-                    orderBy: { orderDate: 'desc' },
-                    take: 5,
+        const where: Record<string, unknown> = { tenantId };
+
+        if (isActive !== null && isActive !== undefined && isActive !== '') {
+            where.isActive = isActive === 'true';
+        }
+
+        if (search) {
+            where.OR = [
+                { name: { contains: search } },
+                { contactPerson: { contains: search } },
+                { email: { contains: search } },
+                { phone: { contains: search } },
+                { city: { contains: search } },
+            ];
+        }
+
+        const [suppliers, total] = await Promise.all([
+            prisma.supplier.findMany({
+                where,
+                include: {
+                    _count: { select: { purchaseOrders: true } },
                 },
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.supplier.count({ where }),
+        ]);
+
+        const data = suppliers.map((s) => ({
+            id: s.id,
+            name: s.name,
+            contactPerson: s.contactPerson || '',
+            email: s.email || '',
+            phone: s.phone || '',
+            address: s.address || '',
+            city: s.city || '',
+            rating: s.rating,
+            notes: s.notes || '',
+            isActive: s.isActive,
+            totalOrders: s._count.purchaseOrders,
+            createdAt: s.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message === 'Unauthorized') {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        return handleApiError(error);
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:suppliers:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+        const body = await request.json();
+
+        const validation = createSupplierSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+        const validatedData = validation.data;
+
+        const supplier = await prisma.supplier.create({
+            data: {
+                tenantId,
+                name: validatedData.name,
+                contactPerson: validatedData.contactPerson || null,
+                email: validatedData.email || null,
+                phone: validatedData.phone || null,
+                address: validatedData.address || null,
+                city: validatedData.city || null,
+                rating: validatedData.rating || 0,
+                notes: validatedData.notes || null,
             },
         });
 
-        if (!supplier) {
-            return NextResponse.json(
-                { success: false, error: 'Supplier not found' },
-                { status: 404 }
-            );
-        }
+        // Log audit create
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Supplier', entityId: supplier.id, newValues: { name: supplier.name } as Record<string, unknown>, request });
 
-        const data = {
-            id: supplier.id,
-            name: supplier.name,
-            contactPerson: supplier.contactPerson || '',
-            email: supplier.email || '',
-            phone: supplier.phone || '',
-            address: supplier.address || '',
-            city: supplier.city || '',
-            rating: supplier.rating,
-            notes: supplier.notes || '',
-            isActive: supplier.isActive,
-            totalOrders: supplier._count.purchaseOrders,
-            recentOrders: supplier.purchaseOrders.map((po) => ({
-                id: po.id,
-                poNumber: po.poNumber,
-                status: po.status.toLowerCase(),
-                total: po.total,
-                orderDate: po.orderDate.toISOString().split('T')[0],
-            })),
-            createdAt: supplier.createdAt.toISOString(),
-        };
-
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({ success: true, data: supplier }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
         const body = await request.json();
+        const { id, ...updateData } = body;
 
-        const validation = updateSupplierSchema.safeParse(body);
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
+                { status: 400 }
+            );
+        }
+
+        const validation = updateSupplierSchema.safeParse(updateData);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -104,7 +175,7 @@ export async function PUT(
         if (validatedData.notes !== undefined) data.notes = validatedData.notes;
         if (validatedData.isActive !== undefined) data.isActive = validatedData.isActive;
 
-        const updated = await prisma.supplier.update({
+        const supplier = await prisma.supplier.update({
             where: { id },
             data,
         });
@@ -112,21 +183,26 @@ export async function PUT(
         // Log audit update
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Supplier', entityId: id, newValues: data as Record<string, unknown>, request });
 
-        return NextResponse.json({ success: true, data: updated });
+        return NextResponse.json({ success: true, data: supplier });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
 
         const existing = await prisma.supplier.findFirst({
             where: { id, tenantId },
@@ -143,6 +219,7 @@ export async function DELETE(
             where: { supplierId: id },
         });
         if (poCount > 0) {
+            // Soft delete - deactivate instead
             await prisma.supplier.update({
                 where: { id },
                 data: { isActive: false },

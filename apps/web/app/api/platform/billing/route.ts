@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
@@ -5,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { handleApiError } from "@/lib/api-error";
 
-// ─── GET /api/platform/billing ───────────────────────────────────────────────
+// â”€â”€â”€ GET /api/platform/billing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns billing overview: MRR, ARR, churn rate, payment history, overdue alerts.
 // Only accessible by SUPERADMIN role.
 export async function GET(request: Request) {
@@ -16,7 +18,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    // 2. Auth + RBAC check — SUPERADMIN only
+    // 2. Auth + RBAC check â€” SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 

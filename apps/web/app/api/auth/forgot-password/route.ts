@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from "@/lib/api-error";
@@ -7,12 +9,12 @@ import { getBaseUrl } from "@/lib/utils";
 import crypto from "crypto";
 import { z } from "zod";
 
-// ─── Forgot Password Schema ────────────────────────────────────────────────
+// â”€â”€â”€ Forgot Password Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const forgotPasswordSchema = z.object({
     email: z.string().email("Invalid email format"),
 });
 
-// ─── POST /api/auth/forgot-password ─────────────────────────────────────────
+// â”€â”€â”€ POST /api/auth/forgot-password â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Generates a password reset token and sends a reset email.
 // Always returns success to prevent email enumeration attacks.
 export async function POST(req: Request) {

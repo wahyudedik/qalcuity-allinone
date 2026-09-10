@@ -1,8 +1,10 @@
+export const dynamic = 'force-dynamic';
+
 /**
- * Admin API — Rate Limit Monitoring Dashboard
+ * Admin API â€” Rate Limit Monitoring Dashboard
  *
- * GET  /api/admin/rate-limits          — Get rate limit statistics
- * POST /api/admin/rate-limits/cleanup  — Cleanup old logs
+ * GET  /api/admin/rate-limits          â€” Get rate limit statistics
+ * POST /api/admin/rate-limits/cleanup  â€” Cleanup old logs
  *
  * Hanya bisa diakses oleh SUPERADMIN.
  *
@@ -26,7 +28,7 @@ import { handleApiError } from '@/lib/api-error';
 
 export async function GET(req: Request) {
     try {
-        // 1. Auth check — SUPERADMIN only
+        // 1. Auth check â€” SUPERADMIN only
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -106,7 +108,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        // 1. Auth check — SUPERADMIN only
+        // 1. Auth check â€” SUPERADMIN only
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,52 +1,65 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
-import { updatePurchaseOrderSchema, formatZodError } from '@/lib/validation-schemas';
+import { createPurchaseOrderSchema, updatePurchaseOrderSchema, formatZodError } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { id } = params;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:purchase-orders:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-        const po = await prisma.purchaseOrder.findFirst({
-            where: { id, tenantId },
-            include: {
-                supplier: true,
-                items: true,
-            },
-        });
+        const where: Record<string, unknown> = { tenantId };
 
-        if (!po) {
-            return NextResponse.json(
-                { success: false, error: 'Purchase Order not found' },
-                { status: 404 }
-            );
+        if (status) {
+            where.status = status.toUpperCase();
         }
 
-        const data = {
+        if (search) {
+            where.OR = [
+                { poNumber: { contains: search } },
+                { supplier: { name: { contains: search } } },
+            ];
+        }
+
+        const [purchaseOrders, total] = await Promise.all([
+            prisma.purchaseOrder.findMany({
+                where,
+                include: {
+                    supplier: { select: { id: true, name: true, email: true, phone: true } },
+                    items: true,
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.purchaseOrder.count({ where }),
+        ]);
+
+        const data = purchaseOrders.map((po) => ({
             id: po.id,
             poNumber: po.poNumber,
             supplierName: po.supplier?.name || '-',
-            supplierAddress: po.supplier?.address || '',
-            supplierEmail: po.supplier?.email || '',
             supplierId: po.supplierId,
-            items: po.items.map((item) => ({
-                id: item.id,
-                name: item.description,
-                description: item.description,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.total,
-            })),
             subtotal: po.subtotal,
             tax: po.taxAmount,
             total: po.total,
@@ -55,28 +68,135 @@ export async function GET(
             expectedDelivery: po.deliveryDate?.toISOString().split('T')[0] || null,
             createdAt: po.createdAt.toISOString(),
             notes: po.notes || '',
-        };
+            items: po.items.map((item) => ({
+                id: item.id,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+            })),
+        }));
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:purchase-orders:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+        }
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
 
-        const { items, ...restBody } = sanitizedBody;
-        const validation = updatePurchaseOrderSchema.safeParse({ ...restBody, items });
+        const validation = createPurchaseOrderSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        // Generate unique PO number using timestamp + random suffix to prevent race condition
+        const poNumber = `PO-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+        const subtotal = validatedData.items.reduce(
+            (sum, item) => sum + item.quantity * item.unitPrice,
+            0
+        );
+        const taxRate = validatedData.taxRate || 11;
+        const taxAmount = subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+
+        let supplierId = validatedData.supplierId;
+        if (!supplierId && validatedData.supplierName) {
+            const supplier = await prisma.supplier.create({
+                data: {
+                    name: validatedData.supplierName,
+                    email: validatedData.supplierEmail || undefined,
+                    phone: validatedData.supplierPhone || undefined,
+                    address: validatedData.supplierAddress || undefined,
+                    tenantId,
+                },
+            });
+            supplierId = supplier.id;
+        }
+
+        const purchaseOrder = await prisma.purchaseOrder.create({
+            data: {
+                poNumber,
+                status: 'DRAFT',
+                orderDate: new Date(),
+                deliveryDate: validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : undefined,
+                notes: validatedData.notes || '',
+                subtotal,
+                taxRate,
+                taxAmount,
+                total,
+                tenantId,
+                supplierId,
+                items: {
+                    create: validatedData.items.map((item) => ({
+                        description: item.description,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        total: item.total || item.quantity * item.unitPrice,
+                    })),
+                },
+            },
+            include: { items: true, supplier: true },
+        });
+
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'PurchaseOrder', entityId: purchaseOrder.id, newValues: { poNumber: purchaseOrder.poNumber, total: purchaseOrder.total, status: purchaseOrder.status } as Record<string, unknown>, request });
+
+        // Approval Engine: trigger approval if levels are configured
+        void createApprovalRequest({
+            tenantId,
+            entityType: 'PURCHASE_ORDER',
+            entityId: purchaseOrder.id,
+            userId,
+            request,
+        });
+
+        return NextResponse.json({ success: true, data: purchaseOrder }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const { id, items, ...updateData } = sanitizedBody;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        const validation = updatePurchaseOrderSchema.safeParse({ ...updateData, items });
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -94,50 +214,31 @@ export async function PUT(
             );
         }
 
-        const updateData: Record<string, unknown> = {};
+        const data: Record<string, unknown> = {};
         if (validatedData.status) {
-            const newStatus = validatedData.status.toUpperCase();
-            const currentStatus = existing.status;
-            if (newStatus !== currentStatus) {
-                try {
-                    const { canTransitionSafe, logWorkflowHistory } = await import('@/lib/workflow');
-                    const isValid = canTransitionSafe('PURCHASE_ORDER', currentStatus, newStatus, tenantId);
-                    if (!isValid) {
-                        return NextResponse.json(
-                            { success: false, error: `Transisi status tidak valid: ${currentStatus} → ${newStatus}` },
-                            { status: 400 }
-                        );
-                    }
-                    // Log workflow history dengan backward compatibility
-                    await logWorkflowHistory({
-                        tenantId,
-                        entityType: 'PURCHASE_ORDER',
-                        entityId: id,
-                        fromState: currentStatus,
-                        toState: newStatus,
-                        action: newStatus.toLowerCase(),
-                        userId,
-                        notes: null,
-                    });
-                } catch (workflowError: unknown) {
-                    // Backward compatibility: jika workflow engine gagal, tetap izinkan perubahan status
-                    const msg = workflowError instanceof Error ? workflowError.message : 'Unknown error';
-                    console.warn(`[Workflow] Purchase Order workflow validation gagal, mengizinkan transisi: ${msg}`);
-                }
-            }
-            updateData.status = newStatus;
+            data.status = validatedData.status.toUpperCase();
         }
         if (validatedData.expectedDelivery !== undefined) {
-            updateData.deliveryDate = validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : null;
+            data.deliveryDate = validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : null;
         }
         if (validatedData.taxRate !== undefined) {
-            updateData.taxRate = validatedData.taxRate;
+            data.taxRate = validatedData.taxRate;
         }
         if (validatedData.notes !== undefined) {
-            updateData.notes = validatedData.notes;
+            data.notes = validatedData.notes;
         }
 
         if (validatedData.items && validatedData.items.length > 0) {
+            const subtotal = validatedData.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
+                0
+            );
+            const taxRate = Number(validatedData.taxRate || existing.taxRate);
+            const taxAmount = subtotal * (taxRate / 100);
+            data.subtotal = subtotal;
+            data.taxAmount = taxAmount;
+            data.total = subtotal + taxAmount;
+
             await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
             await prisma.purchaseOrderItem.createMany({
                 data: validatedData.items.map((item) => ({
@@ -148,41 +249,36 @@ export async function PUT(
                     total: item.total || item.quantity * item.unitPrice,
                 })),
             });
-
-            const subtotal = validatedData.items.reduce(
-                (sum, item) => sum + item.quantity * item.unitPrice,
-                0
-            );
-            const taxRate = Number(validatedData.taxRate || existing.taxRate);
-            const taxAmount = subtotal * (taxRate / 100);
-            updateData.subtotal = subtotal;
-            updateData.taxAmount = taxAmount;
-            updateData.total = subtotal + taxAmount;
         }
 
-        const po = await prisma.purchaseOrder.update({
+        const purchaseOrder = await prisma.purchaseOrder.update({
             where: { id },
-            data: updateData,
+            data,
             include: { items: true, supplier: true },
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PurchaseOrder', entityId: id, newValues: updateData as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PurchaseOrder', entityId: id, newValues: data as Record<string, unknown>, request });
 
-        return NextResponse.json({ success: true, data: po });
+        return NextResponse.json({ success: true, data: purchaseOrder });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
 
         const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
         if (!existing) {

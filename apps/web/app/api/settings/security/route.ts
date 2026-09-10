@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -7,7 +9,7 @@ import bcrypt from 'bcryptjs'
 import { changePasswordSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
 
-// GET /api/settings/security — Fetch user security info + login history
+// GET /api/settings/security â€” Fetch user security info + login history
 export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request)
@@ -81,7 +83,7 @@ export async function GET(request: Request) {
     }
 }
 
-// PUT /api/settings/security — Change password
+// PUT /api/settings/security â€” Change password
 export async function PUT(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request)

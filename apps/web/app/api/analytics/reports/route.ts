@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================
-// Saved Reports API — GET (list), POST (create)
+// Saved Reports API â€” GET (list), POST (create)
 // CRUD for saved analytics reports
 // ============================================
 
@@ -13,7 +15,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createReportSchema } from '@/lib/validation-schemas'
 
 // ============================================
-// GET — List saved reports for tenant
+// GET â€” List saved reports for tenant
 // ============================================
 
 export async function GET(request: Request) {
@@ -84,7 +86,7 @@ export async function GET(request: Request) {
 }
 
 // ============================================
-// POST — Create saved report
+// POST â€” Create saved report
 // ============================================
 
 export async function POST(request: Request) {

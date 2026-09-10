@@ -1,8 +1,10 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/billing/plan
  *
  * Get current tenant's plan details.
- * PUT /api/billing/plan — Change plan (upgrade/downgrade)
+ * PUT /api/billing/plan â€” Change plan (upgrade/downgrade)
  */
 
 import { NextResponse } from 'next/server';

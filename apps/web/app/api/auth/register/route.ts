@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import bcrypt from "bcryptjs";
@@ -100,7 +102,7 @@ export async function POST(request: Request) {
         // Return success tanpa password
         const { passwordHash: _, ...userWithoutPassword } = result.user;
 
-        // Fire-and-forget welcome email (graceful — never crashes)
+        // Fire-and-forget welcome email (graceful â€” never crashes)
         void sendWelcomeEmail(
             { name: result.user.name, email: result.user.email },
             { name: result.tenant.name, id: result.tenant.id }

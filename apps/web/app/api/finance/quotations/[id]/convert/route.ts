@@ -1,112 +1,304 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { createQuotationSchema, updateQuotationSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { handleApiError } from '@/lib/api-error';
+import { createApprovalRequest } from '@/lib/approval';
+import { sanitizeObject } from '@/lib/sanitize';
+import { handleApiError, apiNotFound } from '@/lib/api-error';
 
-export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
     try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:quotations:convert:${ip}`, 10, 60000);
+        const rateLimitResult = checkRateLimit(`api:quotations:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
+            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const search = searchParams.get('search');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
+
+        const where: Record<string, unknown> = { tenantId };
+
+        if (status) {
+            where.status = status.toUpperCase();
         }
 
+        if (search) {
+            where.OR = [
+                { quotationNumber: { contains: search } },
+                { contact: { name: { contains: search } } },
+            ];
+        }
+
+        const [quotations, total] = await Promise.all([
+            prisma.quotation.findMany({
+                where,
+                include: {
+                    contact: { select: { id: true, name: true, email: true, phone: true } },
+                    items: true,
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            prisma.quotation.count({ where }),
+        ]);
+
+        const data = quotations.map((q) => ({
+            id: q.id,
+            quotationNumber: q.quotationNumber,
+            customerName: q.contact?.name || '-',
+            contactId: q.contactId,
+            subtotal: q.subtotal,
+            tax: q.taxAmount,
+            total: q.total,
+            currency: 'IDR',
+            status: q.status.toLowerCase(),
+            validUntil: q.validUntil.toISOString().split('T')[0],
+            notes: q.notes || '',
+            terms: q.terms || '',
+            items: q.items.map((item) => ({
+                id: item.id,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+            })),
+            createdAt: q.createdAt.toISOString(),
+        }));
+
+        return NextResponse.json({
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function POST(request: Request) {
+    try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { id } = params;
-
-        // Fetch quotation with items and contact
-        const quotation = await prisma.quotation.findFirst({
-            where: { id, tenantId },
-            include: {
-                items: true,
-                contact: true,
-            },
-        });
-
-        if (!quotation) {
-            return NextResponse.json(
-                { success: false, error: 'Quotation not found', code: 'NOT_FOUND' },
-                { status: 404 }
-            );
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:quotations:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
         }
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
 
-        // Check if quotation can be converted (must be SENT or ACCEPTED)
-        const convertibleStatuses = ['SENT', 'ACCEPTED'];
-        if (!convertibleStatuses.includes(quotation.status)) {
+        const validation = createQuotationSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Only quotations with SENT or ACCEPTED status can be converted', code: 'VALIDATION_ERROR' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        // Create invoice from quotation data in a transaction
-        const invoice = await prisma.$transaction(async (tx) => {
-            // Generate unique invoice number
-            const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        const validatedData = validation.data;
 
-            // Create invoice
-            const newInvoice = await tx.invoice.create({
+        const count = await prisma.quotation.count({ where: { tenantId } });
+        const quotationNumber = `QT-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+
+        const subtotal = validatedData.items.reduce(
+            (sum, item) => sum + item.quantity * item.unitPrice,
+            0
+        );
+        const taxRate = validatedData.taxRate || 11;
+        const taxAmount = subtotal * (taxRate / 100);
+        const discount = validatedData.discount || 0;
+        const total = subtotal + taxAmount - discount;
+
+        let contactId = validatedData.contactId;
+        if (!contactId && validatedData.customerName) {
+            const contact = await prisma.contact.create({
                 data: {
-                    invoiceNumber,
-                    status: 'DRAFT',
-                    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-                    notes: quotation.notes || '',
-                    subtotal: quotation.subtotal,
-                    taxRate: quotation.taxRate,
-                    taxAmount: quotation.taxAmount,
-                    totalBeforeTax: quotation.subtotal,
-                    total: quotation.total,
+                    name: validatedData.customerName,
+                    type: 'CUSTOMER',
+                    email: validatedData.customerEmail || undefined,
+                    phone: validatedData.customerPhone || undefined,
+                    address: validatedData.customerAddress || undefined,
                     tenantId,
-                    contactId: quotation.contactId,
-                    items: {
-                        create: quotation.items.map((item) => ({
-                            description: item.description,
-                            quantity: item.quantity,
-                            unitPrice: item.unitPrice,
-                            total: item.total,
-                        })),
-                    },
                 },
-                include: { items: true, contact: true },
             });
+            contactId = contact.id;
+        }
 
-            // Update quotation status to CONVERTED (use DRAFT as there's no CONVERTED status in the enum)
-            await tx.quotation.update({
-                where: { id },
-                data: { status: 'ACCEPTED' },
-            });
-
-            return newInvoice;
+        const quotation = await prisma.quotation.create({
+            data: {
+                quotationNumber,
+                status: 'DRAFT',
+                validUntil: new Date(validatedData.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()),
+                notes: validatedData.notes || '',
+                terms: validatedData.terms || '',
+                subtotal,
+                taxRate,
+                taxAmount,
+                discount,
+                total,
+                tenantId,
+                contactId,
+                items: {
+                    create: validatedData.items.map((item) => ({
+                        description: item.description,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        total: item.total || item.quantity * item.unitPrice,
+                    })),
+                },
+            },
+            include: { items: true, contact: true },
         });
 
-        void logAudit({
-            userId,
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Quotation', entityId: quotation.id, newValues: { quotationNumber: quotation.quotationNumber, total: quotation.total, status: quotation.status } as Record<string, unknown>, request });
+
+        // Approval Engine: trigger approval if levels are configured
+        void createApprovalRequest({
             tenantId,
-            action: 'CONVERT',
-            entity: 'Quotation',
-            entityId: id,
-            newValues: { convertedToInvoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber } as Record<string, unknown>,
+            entityType: 'QUOTATION',
+            entityId: quotation.id,
+            userId,
             request,
         });
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                invoiceId: invoice.id,
-                invoiceNumber: invoice.invoiceNumber,
-            },
+        return NextResponse.json({ success: true, data: quotation }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const { id, items, ...updateData } = sanitizedBody;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        const validation = updateQuotationSchema.safeParse({ ...updateData, items });
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
+        if (!existing) {
+            return apiNotFound('Quotation');
+        }
+
+        const data: Record<string, unknown> = {};
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
+        }
+        if (validatedData.validUntil !== undefined) {
+            data.validUntil = validatedData.validUntil ? new Date(validatedData.validUntil) : null;
+        }
+        if (validatedData.taxRate !== undefined) {
+            data.taxRate = validatedData.taxRate;
+        }
+        if (validatedData.discount !== undefined) {
+            data.discount = validatedData.discount;
+        }
+        if (validatedData.notes !== undefined) {
+            data.notes = validatedData.notes;
+        }
+        if (validatedData.terms !== undefined) {
+            data.terms = validatedData.terms;
+        }
+
+        if (validatedData.items && validatedData.items.length > 0) {
+            const subtotal = validatedData.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
+                0
+            );
+            const taxRate = Number(validatedData.taxRate || existing.taxRate);
+            const taxAmount = subtotal * (taxRate / 100);
+            const discount = Number(validatedData.discount || existing.discount);
+            data.subtotal = subtotal;
+            data.taxAmount = taxAmount;
+            data.total = subtotal + taxAmount - discount;
+
+            await prisma.quotationItem.deleteMany({ where: { quotationId: id } });
+            await prisma.quotationItem.createMany({
+                data: validatedData.items.map((item) => ({
+                    quotationId: id,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    total: item.total || item.quantity * item.unitPrice,
+                })),
+            });
+        }
+
+        const quotation = await prisma.quotation.update({
+            where: { id },
+            data,
+            include: { items: true, contact: true },
         });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Quotation', entityId: id, newValues: data as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: quotation });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
+        if (!existing) {
+            return apiNotFound('Quotation');
+        }
+
+        await prisma.quotation.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Quotation', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+
+        return NextResponse.json({ success: true, data: null });
     } catch (error) {
         return handleApiError(error);
     }

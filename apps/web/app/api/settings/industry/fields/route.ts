@@ -1,10 +1,12 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from '@/lib/session';
 import { getTenantCustomFields } from '@/lib/industry-config';
 import { handleApiError } from '@/lib/api-error';
 
-// ─── GET /api/settings/industry/fields?entity=product ────────────────────────
+// â”€â”€â”€ GET /api/settings/industry/fields?entity=product â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Dapatkan custom fields untuk entity tertentu.

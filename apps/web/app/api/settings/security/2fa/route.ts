@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
@@ -17,7 +19,7 @@ import {
 import { enable2faSchema, disable2faSchema, verify2faSchema, formatZodError } from '@/lib/validation-schemas'
 
 /**
- * GET /api/settings/security/2fa — Get 2FA status
+ * GET /api/settings/security/2fa â€” Get 2FA status
  * 
  * Returns whether 2FA is enabled and the setup URI if not yet enabled.
  */
@@ -61,7 +63,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST /api/settings/security/2fa — Enable 2FA
+ * POST /api/settings/security/2fa â€” Enable 2FA
  * 
  * Step 1: Generate secret + QR code URL (when code is not provided)
  * Step 2: Verify code and activate 2FA (when code is provided)
@@ -152,7 +154,7 @@ export async function POST(request: Request) {
                 success: true,
                 message: '2FA has been enabled successfully',
                 data: {
-                    backupCodes, // Plain text — only shown once
+                    backupCodes, // Plain text â€” only shown once
                     backupCodesCount: backupCodes.length,
                 },
             })
@@ -176,7 +178,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * DELETE /api/settings/security/2fa — Disable 2FA
+ * DELETE /api/settings/security/2fa â€” Disable 2FA
  * 
  * Requires password verification before disabling.
  * 
