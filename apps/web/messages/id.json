@@ -1741,6 +1741,8 @@
                 "overview": "Ringkasan",
                 "products": "Produk",
                 "stock": "Stok",
+                "warehouses": "Gudang",
+                "stockOpname": "Stok Opname",
                 "categories": "Kategori",
                 "suppliers": "Supplier"
             }

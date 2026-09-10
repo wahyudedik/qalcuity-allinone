@@ -1741,6 +1741,8 @@
                 "overview": "Overview",
                 "products": "Products",
                 "stock": "Stock",
+                "warehouses": "Warehouses",
+                "stockOpname": "Stock Opname",
                 "categories": "Categories",
                 "suppliers": "Suppliers"
             }
