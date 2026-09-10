@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
         if (!orderId || !status) {
             return NextResponse.json(
-                { success: false, error: 'MSG.ORDER_ID_AND_STATUS_REQUIRED' },
+                { success: false, error: MSG.ORDER_ID_AND_STATUS_REQUIRED },
                 { status: 400 }
             );
         }

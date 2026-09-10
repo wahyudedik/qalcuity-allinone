@@ -153,7 +153,7 @@ export async function DELETE(request: Request) {
 
             if (!session) {
                 return NextResponse.json(
-                    { success: false, error: 'MSG.SESSION_NOT_FOUND_OR_DISABLED' },
+                    { success: false, error: MSG.SESSION_NOT_FOUND_OR_DISABLED },
                     { status: 404 }
                 )
             }

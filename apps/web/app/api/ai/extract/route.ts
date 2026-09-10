@@ -14,8 +14,8 @@ import { handleApiError } from '@/lib/api-error';
 // â”€â”€â”€ Zod Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const extractRequestSchema = z.object({
-    fileBase64: z.string().min(1, 'MSG.FILE_CANNOT_BE_EMPTY'),
-    fileName: z.string().min(1, 'MSG.FILE_NAME_REQUIRED').max(255),
+    fileBase64: z.string().min(1, MSG.FILE_CANNOT_BE_EMPTY),
+    fileName: z.string().min(1, MSG.FILE_NAME_REQUIRED).max(255),
     documentType: z.enum(['INVOICE', 'PURCHASE_ORDER', 'RECEIPT', 'KTP', 'NPWP'], {
         message: 'Tipe dokumen tidak valid',
     }),
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:extract:${tenantId}:${ip}`, 10, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

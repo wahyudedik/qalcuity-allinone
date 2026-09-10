@@ -143,7 +143,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:income-statement:${ip}`, 60, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

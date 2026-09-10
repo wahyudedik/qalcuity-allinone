@@ -34,7 +34,7 @@ export async function POST(req: Request) {
         const rateLimitResult = checkRateLimit(`api:ai:chat:${tenantId}:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

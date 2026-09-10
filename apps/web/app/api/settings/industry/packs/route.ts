@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`settings:industry:packs:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`settings:industry:packs:POST:${ip}`, 10, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);

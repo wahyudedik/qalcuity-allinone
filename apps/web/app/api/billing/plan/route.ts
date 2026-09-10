@@ -18,7 +18,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 
 const changePlanSchema = z.object({
-    planSlug: z.string().min(1, 'MSG.PLAN_SLUG_REQUIRED'),
+    planSlug: z.string().min(1, MSG.PLAN_SLUG_REQUIRED),
     billingCycle: z.enum(['monthly', 'yearly']).default('monthly'),
 });
 
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:plan:${ip}`, 60, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);
@@ -76,7 +76,7 @@ export async function PUT(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:plan:PUT:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);

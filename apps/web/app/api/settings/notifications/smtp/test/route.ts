@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         // Validate required fields
         if (!smtpHost || !smtpPort || !smtpEmail) {
             return NextResponse.json(
-                { success: false, error: 'MSG.SMTP_HOST_PORT_EMAIL_REQUIRED_FOR_TEST' },
+                { success: false, error: MSG.SMTP_HOST_PORT_EMAIL_REQUIRED_FOR_TEST },
                 { status: 400 }
             )
         }

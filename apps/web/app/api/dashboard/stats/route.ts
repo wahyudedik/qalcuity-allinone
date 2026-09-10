@@ -19,7 +19,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:dashboard-stats:${auth.tenantId}:${ip}`, 20, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429 }
             );
         }

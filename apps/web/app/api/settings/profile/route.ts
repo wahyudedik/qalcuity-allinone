@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
         const rateLimitResult = checkRateLimit(`api:settings:profile:${auth.userId}`, 100, 60000)
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 })
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
 
         const user = await prisma.user.findUnique({
@@ -81,7 +81,7 @@ export async function PUT(request: Request) {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:settings:profile:PUT:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
-            return NextResponse.json({ error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
         const body = await request.json();
 
