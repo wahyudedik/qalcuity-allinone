@@ -50,11 +50,11 @@ export async function GET(req: Request) {
 
         // Parse query params
         const queryResult = querySchema.safeParse({
-            severity: searchParams.get('severity'),
-            status: searchParams.get('status'),
-            entityType: searchParams.get('entityType'),
-            limit: searchParams.get('limit'),
-            offset: searchParams.get('offset'),
+            severity: searchParams.get('severity') ?? undefined,
+            status: searchParams.get('status') ?? undefined,
+            entityType: searchParams.get('entityType') ?? undefined,
+            limit: searchParams.get('limit') ?? undefined,
+            offset: searchParams.get('offset') ?? undefined,
         });
 
         if (!queryResult.success) {

@@ -87,6 +87,7 @@ export async function GET(request: Request) {
         if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
+        console.error('[API Error] GET /api/inventory/products:', error);
         return handleApiError(error);
     }
 }
