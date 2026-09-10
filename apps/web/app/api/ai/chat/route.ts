@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import { getAIProvider, type AIChatMessage } from '@/lib/ai/provider';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
@@ -22,15 +21,12 @@ const chatRequestSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        // Auth check
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId, userId } = auth;
 
         // Rate limiting
         const ip = getClientIp(req);
-        const tenantId = session.user.tenantId;
         const rateLimitResult = checkRateLimit(`api:ai:chat:${tenantId}:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
@@ -67,7 +63,7 @@ export async function POST(req: Request) {
 
         // Audit logging
         void logAudit({
-            userId: session.user.id || 'unknown',
+            userId,
             tenantId,
             action: 'CREATE',
             entity: 'AIChat',

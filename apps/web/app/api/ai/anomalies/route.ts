@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { runAnomalyScan } from '@/lib/ai/anomaly-detection';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -11,7 +10,7 @@ import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
 
-// â”€â”€â”€ Zod Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Zod Schema ---
 
 const scanRequestSchema = z.object({
     force: z.boolean().optional(),
@@ -25,29 +24,17 @@ const querySchema = z.object({
     offset: z.coerce.number().int().min(0).optional(),
 });
 
-// â”€â”€â”€ Valid statuses constant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Valid statuses constant ---
 
 const VALID_STATUSES = ['OPEN', 'INVESTIGATING', 'DISMISSED', 'BLOCKED'] as const;
 
-// â”€â”€â”€ GET: List anomalies (DB-first, fallback to scan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- GET: List anomalies (DB-first, fallback to scan) ---
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json({ error: MSG.UNAUTHORIZED }, { status: 401 });
-        }
-
-        // ADMIN+ required for anomaly management
-        const role = session.user.role;
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { error: MSG.ANOMALY_ADMIN_ONLY },
-                { status: 403 }
-            );
-        }
-
-        const tenantId = session.user.tenantId;
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId, userId } = auth;
         const { searchParams } = new URL(req.url);
 
         // Parse query params
@@ -68,13 +55,13 @@ export async function GET(req: Request) {
 
         const { severity, status, entityType, limit = 50, offset = 0 } = queryResult.data;
 
-        // â”€â”€ Build Prisma where clause with tenant isolation â”€â”€
+        // --- Build Prisma where clause with tenant isolation ---
         const where: Record<string, unknown> = { tenantId };
         if (severity) where.severity = severity;
         if (status) where.status = status;
         if (entityType) where.entityType = entityType;
 
-        // â”€â”€ Load from database first â”€â”€
+        // --- Load from database first ---
         const [allDbAnomalies, total] = await Promise.all([
             prisma.anomalyDetection.findMany({
                 where,
@@ -94,17 +81,17 @@ export async function GET(req: Request) {
             return new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime();
         });
 
-        // â”€â”€ Auto-trigger scan if last scan is older than 1 hour (fire-and-forget) â”€â”€
+        // --- Auto-trigger scan if last scan is older than 1 hour (fire-and-forget) ---
         const ONE_HOUR_MS = 60 * 60 * 1000;
         if (total > 0 && dbAnomalies.length > 0) {
             const lastScanTime = dbAnomalies[0]?.detectedAt;
             if (!lastScanTime || (Date.now() - new Date(lastScanTime).getTime()) > ONE_HOUR_MS) {
-                // Fire-and-forget â€” don't await, don't block the response
+                // Fire-and-forget -- don't await, don't block the response
                 runAnomalyScan(tenantId).catch(console.error);
             }
         }
 
-        // â”€â”€ If DB has data, return from DB â”€â”€
+        // --- If DB has data, return from DB ---
         if (total > 0) {
             // Compute summary from DB
             const summaryResult = await prisma.anomalyDetection.groupBy({
@@ -130,7 +117,7 @@ export async function GET(req: Request) {
                     })),
                     total,
                     summary: {
-                        total: summaryResult.reduce((sum, r) => sum + r._count, 0),
+                        total: summaryResult.reduce((sum: number, r: { severity: string; _count: number }) => sum + r._count, 0),
                         critical: summaryMap['CRITICAL'] || 0,
                         high: summaryMap['HIGH'] || 0,
                         medium: summaryMap['MEDIUM'] || 0,
@@ -143,7 +130,7 @@ export async function GET(req: Request) {
             });
         }
 
-        // â”€â”€ Fallback: no DB data â†’ trigger scan â”€â”€
+        // --- Fallback: no DB data -> trigger scan ---
         const scanResult = await runAnomalyScan(tenantId);
 
         let filtered = scanResult.anomalies;
@@ -170,27 +157,16 @@ export async function GET(req: Request) {
     }
 }
 
-// â”€â”€â”€ POST: Trigger manual scan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- POST: Trigger manual scan ---
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json({ error: MSG.UNAUTHORIZED }, { status: 401 });
-        }
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId, userId } = auth;
 
-        // ADMIN+ required for manual scan
-        const role = session.user.role;
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { error: MSG.ANOMALY_ADMIN_ONLY },
-                { status: 403 }
-            );
-        }
-
-        // Rate limiting (lower limit for scan â€” heavier operation)
+        // Rate limiting (lower limit for scan -- heavier operation)
         const ip = getClientIp(req);
-        const tenantId = session.user.tenantId;
         const rateLimitResult = checkRateLimit(`api:ai:anomalies:scan:${tenantId}:${ip}`, 5, 300000); // 5 per 5 min
         if (!rateLimitResult.success) {
             return NextResponse.json(
@@ -210,7 +186,7 @@ export async function POST(req: Request) {
 
         // Audit logging
         void logAudit({
-            userId: session.user.id || 'unknown',
+            userId,
             tenantId,
             action: 'CREATE',
             entity: 'AnomalyScan',
@@ -218,7 +194,7 @@ export async function POST(req: Request) {
             request: req,
         });
 
-        // Run scan â€” runAnomalyScan() internally persists to DB via persistAnomalies()
+        // Run scan -- runAnomalyScan() internally persists to DB via persistAnomalies()
         const scanResult = await runAnomalyScan(tenantId);
 
         // Count how many anomalies were persisted (deduplicated by entityId+ruleId)

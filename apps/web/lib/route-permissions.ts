@@ -97,7 +97,9 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── AI Features ───────────────────────────────────────────────────────
     '/api/ai/query': { permission: 'ai.query', fallbackRole: 'MEMBER' },
+    '/api/ai/chat': { permission: 'ai.query', fallbackRole: 'MEMBER' },
     '/api/ai/extract': { permission: 'ai.extract', fallbackRole: 'MEMBER' },
+    '/api/ai/extraction-history': { permission: 'ai.extract', fallbackRole: 'MEMBER' },
     '/api/ai/anomalies': { permission: 'ai.anomaly', fallbackRole: 'ADMIN' },
     '/api/ai/health': { permission: 'ai.read', fallbackRole: 'MEMBER' },
 
