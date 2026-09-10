@@ -15,9 +15,9 @@ import { handleApiError } from '@/lib/api-error';
 // ============================================
 
 const createPeriodSchema = z.object({
-    name: z.string().min(1, 'MSG.PERIOD_NAME_REQUIRED').max(100),
-    startDate: z.string().min(1, 'MSG.START_DATE_REQUIRED'),
-    endDate: z.string().min(1, 'MSG.END_DATE_REQUIRED'),
+    name: z.string().min(1, MSG.PERIOD_NAME_REQUIRED).max(100),
+    startDate: z.string().min(1, MSG.START_DATE_REQUIRED),
+    endDate: z.string().min(1, MSG.END_DATE_REQUIRED),
 });
 
 const generatePeriodsSchema = z.object({
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:periods:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:periods:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }

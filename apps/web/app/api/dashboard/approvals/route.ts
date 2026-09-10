@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         );
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429 }
             );
         }

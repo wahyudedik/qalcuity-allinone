@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const featureCheckSchema = z.object({
-    featureKey: z.string().min(1, 'MSG.FEATURE_KEY_REQUIRED'),
+    featureKey: z.string().min(1, MSG.FEATURE_KEY_REQUIRED),
     checkLimit: z.boolean().optional().default(false),
 });
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         const ip = getClientIp(request);
         const rl = checkRateLimit(`billing:feature-check:${ip}`, 30, 60_000);
         if (!rl.success) {
-            return NextResponse.json({ success: false, error: 'MSG.TOO_MANY_REQUESTS' }, { status: 429 });
+            return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 });
         }
 
         const auth = await requirePermissionForRoute(request);

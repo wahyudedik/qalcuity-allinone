@@ -313,7 +313,7 @@ export async function PUT(request: Request) {
         });
         if (!bankTx) {
             return NextResponse.json(
-                { success: false, message: 'MSG.BANK_TRANSACTION_NOT_FOUND' },
+                { success: false, message: MSG.BANK_TRANSACTION_NOT_FOUND },
                 { status: 404 }
             );
         }

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         const rateLimitResult = checkRateLimit(`api:approval:requests:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
         // For non-admin users, only show requests where user can approve
         // (based on eligible approval levels)
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN' && role !== 'SUPERADMIN') {
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             const eligibleLevels = await getApprovalLevels(tenantId, where.entityType as string || '');
             const ROLE_HIERARCHY: Record<string, number> = { VIEWER: 0, MEMBER: 1, ADMIN: 2, SUPERADMIN: 3 };
             const userLevel = ROLE_HIERARCHY[role] ?? 0;
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:approval:requests:POST:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'MSG.TOO_MANY_REQUESTS' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
                 { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
