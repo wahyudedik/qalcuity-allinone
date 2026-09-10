@@ -111,14 +111,20 @@ export async function PUT(req: Request) {
     try {
         // 3. Validate input
         const body = await req.json();
-        const validated = platformSettingsSchema.parse(body);
+        const validated = platformSettingsSchema.safeParse(body);
+        if (!validated.success) {
+            return NextResponse.json(
+                { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
+            );
+        }
 
         // 4. Save settings
-        writeSettings(validated);
+        writeSettings(validated.data);
 
         return NextResponse.json({
             success: true,
-            data: validated,
+            data: validated.data,
             message: "Platform settings berhasil disimpan",
         });
     } catch (error) {

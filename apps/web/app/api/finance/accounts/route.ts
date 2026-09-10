@@ -79,23 +79,30 @@ export async function POST(request: Request) {
         const sanitizedBody = sanitizeObject(body);
 
         // Validasi input dengan Zod
-        const validated = createCoAAccountSchema.parse(sanitizedBody);
+        const validated = createCoAAccountSchema.safeParse(sanitizedBody);
+        if (!validated.success) {
+            return NextResponse.json(
+                { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
+            );
+        }
+        const accountData = validated.data;
 
         // Cek duplikat kode dalam scope tenant
         const existing = await prisma.coAAccount.findUnique({
-            where: { tenantId_code: { tenantId, code: validated.code } },
+            where: { tenantId_code: { tenantId, code: accountData.code } },
         });
         if (existing) {
             return NextResponse.json(
-                { success: false, message: `Account code ${validated.code} already in use`, code: 'DUPLICATE_DATA' },
+                { success: false, message: `Account code ${accountData.code} already in use`, code: 'DUPLICATE_DATA' },
                 { status: 409 }
             );
         }
 
         // Cek parent jika ada
-        if (validated.parentId) {
+        if (accountData.parentId) {
             const parent = await prisma.coAAccount.findFirst({
-                where: { id: validated.parentId, tenantId },
+                where: { id: accountData.parentId, tenantId },
             });
             if (!parent) {
                 return NextResponse.json(
@@ -108,12 +115,12 @@ export async function POST(request: Request) {
         const newAccount = await prisma.coAAccount.create({
             data: {
                 tenantId,
-                code: validated.code,
-                name: validated.name,
-                type: validated.type,
-                description: validated.description || '',
-                parentId: validated.parentId || null,
-                balance: validated.balance || 0,
+                code: accountData.code,
+                name: accountData.name,
+                type: accountData.type,
+                description: accountData.description || '',
+                parentId: accountData.parentId || null,
+                balance: accountData.balance || 0,
                 isActive: true,
             },
         });
@@ -158,7 +165,14 @@ export async function PUT(request: Request) {
         }
 
         // Validasi input dengan Zod
-        const validated = updateCoAAccountSchema.parse(updateData);
+        const validated = updateCoAAccountSchema.safeParse(updateData);
+        if (!validated.success) {
+            return NextResponse.json(
+                { error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
+                { status: 400 }
+            );
+        }
+        const updateValidated = validated.data;
 
         // Cek akun ada dan milik tenant ini
         const existing = await prisma.coAAccount.findFirst({
@@ -172,33 +186,33 @@ export async function PUT(request: Request) {
         }
 
         // Cek duplikat kode (kecuali akun sendiri)
-        if (validated.code) {
+        if (updateValidated.code) {
             const duplicate = await prisma.coAAccount.findFirst({
                 where: {
                     tenantId,
-                    code: validated.code,
+                    code: updateValidated.code,
                     id: { not: id },
                 },
             });
             if (duplicate) {
                 return NextResponse.json(
-                    { success: false, message: `Account code ${validated.code} already in use`, code: 'DUPLICATE_DATA' },
+                    { success: false, message: `Account code ${updateValidated.code} already in use`, code: 'DUPLICATE_DATA' },
                     { status: 409 }
                 );
             }
         }
 
         // Cek parent jika diubah
-        if (validated.parentId) {
+        if (updateValidated.parentId) {
             // Pastikan tidak menjadikan diri sendiri sebagai parent
-            if (validated.parentId === id) {
+            if (updateValidated.parentId === id) {
                 return NextResponse.json(
                     { success: false, message: 'Account cannot be its own parent', code: 'VALIDATION_ERROR' },
                     { status: 400 }
                 );
             }
             const parent = await prisma.coAAccount.findFirst({
-                where: { id: validated.parentId, tenantId },
+                where: { id: updateValidated.parentId, tenantId },
             });
             if (!parent) {
                 return NextResponse.json(
@@ -211,13 +225,13 @@ export async function PUT(request: Request) {
         const updated = await prisma.coAAccount.update({
             where: { id },
             data: {
-                ...(validated.code && { code: validated.code }),
-                ...(validated.name && { name: validated.name }),
-                ...(validated.type && { type: validated.type }),
-                ...(validated.description !== undefined && { description: validated.description }),
-                ...(validated.parentId !== undefined && { parentId: validated.parentId }),
-                ...(validated.balance !== undefined && { balance: validated.balance }),
-                ...(validated.isActive !== undefined && { isActive: validated.isActive }),
+                ...(updateValidated.code && { code: updateValidated.code }),
+                ...(updateValidated.name && { name: updateValidated.name }),
+                ...(updateValidated.type && { type: updateValidated.type }),
+                ...(updateValidated.description !== undefined && { description: updateValidated.description }),
+                ...(updateValidated.parentId !== undefined && { parentId: updateValidated.parentId }),
+                ...(updateValidated.balance !== undefined && { balance: updateValidated.balance }),
+                ...(updateValidated.isActive !== undefined && { isActive: updateValidated.isActive }),
             },
         });
 
