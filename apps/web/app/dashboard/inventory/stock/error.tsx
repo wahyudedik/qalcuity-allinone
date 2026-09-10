@@ -1,22 +1,22 @@
-'use client';
+'use client'
 
-import { ModuleError } from '@/components/ui/error-boundary';
-import { useTranslation } from '@/lib/i18n';
+import { ModuleError } from '@/components/ui/error-boundary'
+import { useTranslation } from '@/lib/i18n'
 
-export default function InventoryStockError({
+export default function StockError({
     error,
     reset,
 }: {
-    error: Error & { digest?: string };
-    reset: () => void;
+    error: Error & { digest?: string }
+    reset: () => void
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation()
     return (
         <ModuleError
             error={error}
             reset={reset}
-            title={t('errors.inventory.title') || 'Gagal Memuat Stok Inventaris'}
-            description={t('errors.inventory.description') || 'Terjadi kesalahan saat memuat data stok inventaris. Silakan coba lagi.'}
+            title={t('errors.inventoryStock.title') || 'Gagal Memuat Stok'}
+            description={t('errors.inventoryStock.description') || 'Terjadi kesalahan saat memuat data stok. Silakan coba lagi.'}
         />
-    );
+    )
 }
