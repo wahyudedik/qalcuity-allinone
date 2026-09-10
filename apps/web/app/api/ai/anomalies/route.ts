@@ -75,18 +75,24 @@ export async function GET(req: Request) {
         if (entityType) where.entityType = entityType;
 
         // â”€â”€ Load from database first â”€â”€
-        const [dbAnomalies, total] = await Promise.all([
+        const [allDbAnomalies, total] = await Promise.all([
             prisma.anomalyDetection.findMany({
                 where,
-                orderBy: [
-                    { severity: 'asc' }, // CRITICAL first (alphabetical: CRITICAL < HIGH < LOW < MEDIUM)
-                    { detectedAt: 'desc' },
-                ],
+                orderBy: { detectedAt: 'desc' },
                 skip: offset,
                 take: limit,
             }),
             prisma.anomalyDetection.count({ where }),
         ]);
+
+        // Sort by custom severity order: CRITICAL=1, HIGH=2, MEDIUM=3, LOW=4
+        const severityOrder: Record<string, number> = { CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 };
+        const dbAnomalies = [...allDbAnomalies].sort((a, b) => {
+            const orderA = severityOrder[a.severity] ?? 99;
+            const orderB = severityOrder[b.severity] ?? 99;
+            if (orderA !== orderB) return orderA - orderB;
+            return new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime();
+        });
 
         // â”€â”€ Auto-trigger scan if last scan is older than 1 hour (fire-and-forget) â”€â”€
         const ONE_HOUR_MS = 60 * 60 * 1000;

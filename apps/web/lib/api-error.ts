@@ -100,7 +100,7 @@ export function handleApiError(error: unknown): NextResponse {
 
         console.error('[API Error] Unhandled Error:', error.name, error.message);
         return NextResponse.json(
-            { success: false, error: message },
+            { success: false, error: MSG.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
             { status: 500 }
         );
     }
