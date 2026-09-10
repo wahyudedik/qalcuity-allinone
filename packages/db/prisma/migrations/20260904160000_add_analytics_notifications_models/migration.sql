@@ -47,7 +47,7 @@ CREATE TABLE "AlertRule" (
     "threshold" DECIMAL(19,4) NOT NULL,
     "severity" TEXT NOT NULL DEFAULT 'medium',
     "notificationChannels" TEXT[] DEFAULT ARRAY['in_app'],
-    "recipients" TEXT[] DEFAULT ARRAY[],
+    "recipients" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "cooldownMinutes" INTEGER NOT NULL DEFAULT 60,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "lastTriggeredAt" TIMESTAMP(3),
