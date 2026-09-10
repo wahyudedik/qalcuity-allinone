@@ -61,6 +61,25 @@ export function handleApiError(error: unknown): NextResponse {
 
     // Prisma unknown request errors
     if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+        console.error('[API Error] PrismaClientUnknownRequestError:', error.message);
+        return NextResponse.json(
+            { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
+            { status: 500 }
+        );
+    }
+
+    // Prisma initialization errors (DB connection failure)
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+        console.error('[API Error] PrismaClientInitializationError:', error.message);
+        return NextResponse.json(
+            { success: false, error: 'Service temporarily unavailable. Database connection failed.', code: 'SERVICE_UNAVAILABLE' },
+            { status: 503 }
+        );
+    }
+
+    // Prisma Rust panic errors (internal engine failure)
+    if (error instanceof Prisma.PrismaClientRustPanicError) {
+        console.error('[API Error] PrismaClientRustPanicError:', error.message);
         return NextResponse.json(
             { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
             { status: 500 }
@@ -79,6 +98,7 @@ export function handleApiError(error: unknown): NextResponse {
             );
         }
 
+        console.error('[API Error] Unhandled Error:', error.name, error.message);
         return NextResponse.json(
             { success: false, error: message },
             { status: 500 }
