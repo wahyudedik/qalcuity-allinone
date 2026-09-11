@@ -88,6 +88,30 @@
         "fieldChecklists": {
             "title": "Kesalahan Checklist",
             "description": "Terjadi kesalahan pada modul checklist. Silakan coba lagi."
+        },
+        "financeReports": {
+            "title": "Kesalahan Laporan Keuangan",
+            "description": "Terjadi kesalahan saat memuat laporan keuangan. Silakan coba lagi."
+        },
+        "balanceSheet": {
+            "title": "Kesalahan Neraca",
+            "description": "Terjadi kesalahan saat memuat neraca. Silakan coba lagi."
+        },
+        "incomeStatement": {
+            "title": "Kesalahan Laba Rugi",
+            "description": "Terjadi kesalahan saat memuat laporan laba rugi. Silakan coba lagi."
+        },
+        "trialBalance": {
+            "title": "Kesalahan Neraca Saldo",
+            "description": "Terjadi kesalahan saat memuat neraca saldo. Silakan coba lagi."
+        },
+        "crmActivities": {
+            "title": "Kesalahan Aktivitas CRM",
+            "description": "Terjadi kesalahan saat memuat data aktivitas. Silakan coba lagi."
+        },
+        "activityDetail": {
+            "title": "Kesalahan Detail Aktivitas",
+            "description": "Terjadi kesalahan saat memuat detail aktivitas. Silakan coba lagi."
         }
     },
     "nav": {
@@ -105,6 +129,7 @@
         "leads": "Prospek",
         "contacts": "Kontak",
         "deals": "Deal",
+        "activities": "Aktivitas",
         "inventory": "Persediaan",
         "products": "Produk",
         "stock": "Stok",
@@ -112,6 +137,7 @@
         "suppliers": "Supplier",
         "hrPeople": "HR & Karyawan",
         "employees": "Karyawan",
+        "departments": "Departemen",
         "attendance": "Absensi",
         "leaves": "Cuti",
         "payroll": "Penggajian",
@@ -155,12 +181,17 @@
         "posReports": "Laporan POS",
         "posLoyalty": "Loyalty",
         "posMonitor": "Monitor",
+        "kitchenDisplay": "Kitchen Display",
+        "tablesManagement": "Manajemen Meja",
+        "recurringInvoices": "Faktur Berulang",
+        "loyaltyMembers": "Anggota Loyalty",
         "fieldService": "Layanan Lapangan",
         "fieldJobs": "Pekerjaan Lapangan",
         "fieldChecklists": "Checklist",
         "aiFeatures": "Fitur AI",
         "documentExtraction": "Ekstraksi Dokumen",
-        "anomalyDetection": "Deteksi Anomali"
+        "anomalyDetection": "Deteksi Anomali",
+        "financialReports": "Laporan Keuangan"
     },
     "dashboard": {
         "welcome": "Selamat datang kembali! Berikut ringkasan bisnis Anda hari ini.",
@@ -271,6 +302,16 @@
                 "MEMBER": "Anggota",
                 "VIEWER": "Pengamat"
             },
+            "progress": "Progres",
+            "taskCount": "task",
+            "members": "anggota",
+            "title": "Proyek",
+            "subtitle": "Kelola semua proyek tim Anda",
+            "newProject": "Proyek Baru",
+            "searchPlaceholder": "Cari proyek...",
+            "emptyTitle": "Belum ada proyek",
+            "emptyDescription": "Mulai buat proyek pertama untuk mengelola tugas dan waktu tim Anda.",
+            "createProject": "Buat Proyek",
             "board": {
                 "title": "Task Board",
                 "moveTo": "Pindah ke",
@@ -981,6 +1022,22 @@
                 "activate": "Aktifkan"
             }
         },
+        "reports": {
+            "title": "Laporan Keuangan",
+            "subtitle": "Lihat laporan keuangan bisnis Anda",
+            "balanceSheet": {
+                "title": "Neraca",
+                "description": "Posisi keuangan per tanggal tertentu — aset, kewajiban, dan ekuitas"
+            },
+            "incomeStatement": {
+                "title": "Laba Rugi",
+                "description": "Pendapatan, beban, dan laba bersih periode tertentu"
+            },
+            "trialBalance": {
+                "title": "Neraca Saldo",
+                "description": "Daftar saldo semua akun buku besar — debit dan kredit"
+            }
+        },
         "invoice": {
             "status": {
                 "draft": "Draft",
@@ -1251,6 +1308,82 @@
                 "contacts": "Kontak",
                 "deals": "Deal"
             }
+        },
+        "activities": {
+            "title": "Aktivitas",
+            "subtitle": "aktivitas tercatat",
+            "addActivity": "Tambah Aktivitas",
+            "fetchError": "Gagal memuat aktivitas",
+            "searchPlaceholder": "Cari aktivitas...",
+            "filterAllTypes": "Semua Tipe",
+            "filterAllStatus": "Semua Status",
+            "typeCall": "Telepon",
+            "typeEmail": "Email",
+            "typeMeeting": "Rapat",
+            "typeNote": "Catatan",
+            "typeTask": "Tugas",
+            "statusPending": "Tertunda",
+            "statusCompleted": "Selesai",
+            "statusCancelled": "Dibatalkan",
+            "totalLabel": "Total",
+            "empty": "Belum ada aktivitas",
+            "emptyDescription": "Mulai dengan menambahkan aktivitas pertama Anda",
+            "createSuccess": "Aktivitas berhasil dibuat",
+            "createFailed": "Gagal membuat aktivitas",
+            "deleteSuccess": "Aktivitas berhasil dihapus",
+            "deleteFailed": "Gagal menghapus aktivitas",
+            "table": {
+                "type": "Tipe",
+                "subject": "Subjek",
+                "entity": "Entitas",
+                "dueDate": "Jatuh Tempo",
+                "status": "Status",
+                "created": "Dibuat"
+            },
+            "form": {
+                "title": "Tambah Aktivitas Baru",
+                "entityTypeLabel": "Tipe Entitas",
+                "typeLabel": "Tipe Aktivitas",
+                "entityIdLabel": "ID Entitas",
+                "entityIdPlaceholder": "Masukkan ID entitas",
+                "subjectLabel": "Subjek",
+                "subjectPlaceholder": "Masukkan subjek aktivitas",
+                "descriptionLabel": "Deskripsi",
+                "descriptionPlaceholder": "Masukkan deskripsi aktivitas",
+                "dueDateLabel": "Tanggal Jatuh Tempo"
+            }
+        },
+        "activityDetail": {
+            "backToActivities": "Kembali ke Aktivitas",
+            "title": "Detail Aktivitas",
+            "type": "Tipe",
+            "subject": "Subjek",
+            "entityType": "Tipe Entitas",
+            "entityId": "ID Entitas",
+            "status": "Status",
+            "completed": "Selesai",
+            "pending": "Tertunda",
+            "dueDate": "Jatuh Tempo",
+            "completedAt": "Diselesaikan pada",
+            "description": "Deskripsi",
+            "relatedEntity": "Entitas Terkait",
+            "viewEntity": "Lihat Entitas",
+            "info": "Informasi",
+            "createdAt": "Dibuat pada",
+            "updatedAt": "Diperbarui pada",
+            "edit": "Edit",
+            "editTitle": "Edit Aktivitas",
+            "markComplete": "Tandai Selesai",
+            "delete": "Hapus",
+            "error": "Aktivitas tidak ditemukan",
+            "errorLoad": "Gagal memuat data aktivitas",
+            "deleteSuccess": "Aktivitas berhasil dihapus",
+            "deleteError": "Gagal menghapus aktivitas",
+            "updateSuccess": "Aktivitas berhasil diperbarui",
+            "updateError": "Gagal memperbarui aktivitas",
+            "markedComplete": "Aktivitas ditandai selesai",
+            "confirmDelete": "Konfirmasi Hapus",
+            "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus aktivitas ini?"
         },
         "contactDetail": {
             "backToContacts": "Kembali ke Kontak",

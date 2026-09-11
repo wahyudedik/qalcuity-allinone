@@ -30,7 +30,7 @@ function getTasks(): CronTask[] {
         {
             id: 'payment-reminder',
             name: 'Payment Reminder',
-            schedule: { type: 'daily', hour: 1, minute: 0 }, // 08:00 WIB = 01:00 UTC
+            schedule: { type: 'daily', hour: 8, minute: 0 }, // 08:00 WIB (local timezone)
             handler: runPaymentReminder,
             enabled: true,
         },
@@ -44,14 +44,14 @@ function getTasks(): CronTask[] {
         {
             id: 'recurring-invoice',
             name: 'Recurring Invoice Generation',
-            schedule: { type: 'daily', hour: 0, minute: 0 }, // 07:00 WIB = 00:00 UTC
+            schedule: { type: 'daily', hour: 7, minute: 0 }, // 07:00 WIB (local timezone)
             handler: runRecurringInvoice,
             enabled: true,
         },
         {
             id: 'anomaly-scan',
             name: 'Anomaly Detection Scan',
-            schedule: { type: 'daily', hour: 19, minute: 0 }, // 02:00 WIB = 19:00 UTC (previous day)
+            schedule: { type: 'daily', hour: 2, minute: 0 }, // 02:00 WIB (local timezone)
             handler: runAnomalyScanCron,
             enabled: true,
         },

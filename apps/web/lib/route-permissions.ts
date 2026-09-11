@@ -28,6 +28,8 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/crm/contacts': { permission: 'crm.contact', fallbackRole: 'ADMIN' },
     '/api/crm/leads': { permission: 'crm.lead', fallbackRole: 'ADMIN' },
     '/api/crm/deals': { permission: 'crm.deal', fallbackRole: 'ADMIN' },
+    '/api/crm/activities': { permission: 'crm.contact', fallbackRole: 'ADMIN' },
+    '/api/crm/pipeline': { permission: 'crm.deal', fallbackRole: 'ADMIN' },
 
     // ─── HR ───────────────────────────────────────────────────────────────────
     '/api/hr/employees': { permission: 'hr.employee', fallbackRole: 'ADMIN' },

@@ -1154,7 +1154,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Refunds** | ✅ `implemented` | 2026-09-04 | Refunds page + 2 API routes (create, list) — Phase 3 |
 | **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
 | **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
-| **POS Products** | ✅ `implemented` | 2026-09-04 | Products API for POS product lookup (Phase 2) |
+| **POS Products** | 🚀 `production_ready` | 2026-09-11 | Products full CRUD — GET list, GET by ID, POST, PUT, DELETE (Phase 2 Batch 1) |
 | **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
 | **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
 | **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
@@ -1480,6 +1480,7 @@ Electron-based desktop application.
 > **Phase 4 Batch 2 Impact (8 Sep):** +2 production_ready (Error Handling Consolidation, Backend i18n), +70 i18n keys, 27 API routes refactored → Net: production_ready 65→67, total 289→289
 > **Phase 4 Impact (8 Sep):** +1 production_ready (Deploy Scripts aaPanel), +13 error.tsx, +4 loading.tsx, dead code removed → Net: production_ready 64→65, total 288→289
 > **Quality Sprint Impact (6 Sep):** +2 production_ready (Error Boundaries, Loading States updated with new counts), +281 i18n keys → Net: production_ready 62→64, total 286→288
+> **Phase 2 Batch 1 (11 Sep):** POS Module Enhancement — 1 new file (products/[id]), 7 modified files, 6 MSG constants, 1 validation schema. All 6 POS entities now have full CRUD (PUT/DELETE). Products: production_ready. TypeScript: 0 errors.
 > **Mega Sprint Impact (5 Sep):** +3 implemented (F&B Pack, AI Chat real, AI Provider real), -3 planned → Net: implemented 45→48, planned 144→141, total 286→286
 > **POS Phase 7 Impact (Table Management):** +8 implemented (Table Management, Database, API Routes, UI Page, Table Card, Reservation Form, Custom Hook, Status Machine), -8 planned → Net: implemented 37→45, planned 152→144, total 289→289 (adjusted for new features)
 > **POS Phase 6 Impact (Kitchen Display):** +9 implemented (KDS Display, Order Card, Station Filter, Timer, Stats Bar, API Routes, Custom Hook, Database Models, Kitchen Display System), -9 planned → Net: implemented 36→45, planned 153→144, total 277→286

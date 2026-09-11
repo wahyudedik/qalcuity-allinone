@@ -136,38 +136,19 @@ const USP_ITEMS = [
 
 const PRICING_PLANS = [
     {
-        name: 'Free',
-        price: 'Rp 0',
-        period: '/bulan',
-        description: 'Untuk mulai',
-        maxUsers: 3,
-        maxStorage: '500 MB',
-        cta: 'Daftar Gratis',
-        popular: false,
-        features: [
-            'Invoice & Pembayaran (50/bulan)',
-            'Kontak (100) & Leads (20)',
-            'Produk (50) & Stok',
-            'Kategori (10)',
-            '3 pengguna',
-            '500 MB storage',
-        ],
-    },
-    {
-        name: 'Pro',
+        name: 'Starter',
         price: 'Rp 299K',
         period: '/bulan',
-        description: 'Untuk tumbuh',
+        description: 'Untuk bisnis kecil yang baru mulai',
         maxUsers: 20,
         maxStorage: '5 GB',
         cta: 'Mulai Trial',
-        popular: true,
+        popular: false,
         features: [
-            'Semua fitur Free',
             'Invoice & Pembayaran unlimited',
             'Purchase Order & Jurnal',
-            'Laporan & Rekonsiliasi',
-            'Deals, Pipeline & Supplier',
+            'Kontak, Leads & Deals',
+            'Produk, Stok & Supplier',
             'HR (Karyawan, Absensi, Cuti)',
             'AI Chat (100/bulan) & Extraction',
             'WhatsApp & Email integration',
@@ -175,23 +156,43 @@ const PRICING_PLANS = [
         ],
     },
     {
-        name: 'Enterprise',
-        price: 'Rp 999K',
+        name: 'Growth',
+        price: 'Rp 799K',
         period: '/bulan',
-        description: 'Untuk scale',
+        description: 'Untuk bisnis yang berkembang',
+        maxUsers: 50,
+        maxStorage: '20 GB',
+        cta: 'Mulai Trial',
+        popular: true,
+        features: [
+            'Semua fitur Starter',
+            'Laporan & Rekonsiliasi',
+            'Payroll & Advanced HR',
+            'Pipeline & Analitik CRM',
+            'AI unlimited (chat, extraction)',
+            'Payment Gateway integration',
+            'Platform Admin & Monitoring',
+            '50 pengguna · 20 GB storage',
+        ],
+    },
+    {
+        name: 'Business',
+        price: 'Rp 1.999K',
+        period: '/bulan',
+        description: 'Untuk bisnis skala besar',
         maxUsers: -1,
         maxStorage: 'Unlimited',
         cta: 'Hubungi Kami',
         popular: false,
         features: [
-            'Semua fitur Pro',
-            'Payroll & Advanced HR',
-            'AI unlimited (chat, extraction)',
+            'Semua fitur Growth',
             'Predictions & Anomaly Detection',
-            'Payment Gateway integration',
-            'Platform Admin & Monitoring',
+            'Custom Workflow & Approvals',
+            'Advanced Analytics & Dashboard',
             'Unlimited pengguna & storage',
             'Dedicated support & SLA',
+            'Industry-specific configuration',
+            'Priority onboarding & training',
         ],
     },
 ] as const;
@@ -199,7 +200,7 @@ const PRICING_PLANS = [
 const FAQ_ITEMS = [
     {
         q: 'Apakah ada free trial?',
-        a: 'Ya, kami menyediakan 14 hari free trial untuk plan Pro. Anda bisa menikmati semua fitur Pro tanpa batasan selama masa trial.',
+        a: 'Ya, kami menyediakan 14 hari free trial untuk plan Growth. Anda bisa menikmati semua fitur Growth tanpa batasan selama masa trial.',
     },
     {
         q: 'Bagaimana dengan keamanan data?',
@@ -211,15 +212,15 @@ const FAQ_ITEMS = [
     },
     {
         q: 'Apakah ada integrasi payment gateway?',
-        a: 'Ya, kami terintegrasi dengan Midtrans dan Xendit. Integrasi ini tersedia di plan Enterprise.',
+        a: 'Ya, kami terintegrasi dengan Midtrans dan Xendit. Integrasi ini tersedia di plan Business.',
     },
     {
         q: 'Bagaimana dengan support?',
-        a: 'Kami menyediakan email support untuk semua plan, documentation lengkap, dan knowledge base. Plan Enterprise mendapatkan dedicated support dan SLA guarantee.',
+        a: 'Kami menyediakan email support untuk semua plan, documentation lengkap, dan knowledge base. Plan Business mendapatkan dedicated support dan SLA guarantee.',
     },
     {
         q: 'Bisakah migrate dari software lain?',
-        a: 'Ya! Anda bisa mengimpor data dari CSV/Excel. Tim kami siap membantu proses migrasi untuk plan Enterprise.',
+        a: 'Ya! Anda bisa mengimpor data dari CSV/Excel. Tim kami siap membantu proses migrasi untuk plan Business.',
     },
 ];
 
@@ -472,8 +473,8 @@ export default function HomePage() {
                             <div
                                 key={plan.name}
                                 className={`relative rounded-xl border-2 p-6 transition ${plan.popular
-                                        ? 'border-blue-600 shadow-lg'
-                                        : 'border-gray-200 bg-white shadow-sm hover:shadow-md'
+                                    ? 'border-blue-600 shadow-lg'
+                                    : 'border-gray-200 bg-white shadow-sm hover:shadow-md'
                                     }`}
                             >
                                 {plan.popular && (
@@ -501,8 +502,8 @@ export default function HomePage() {
                                 <Link
                                     href="/register"
                                     className={`mt-6 block w-full rounded-lg py-2.5 text-center text-sm font-semibold transition ${plan.popular
-                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                            : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
                                         }`}
                                 >
                                     {plan.cta}
@@ -620,7 +621,10 @@ export default function HomePage() {
                                     </Link>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">Mobile App</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        Mobile App
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                             </ul>
                         </div>
@@ -628,16 +632,26 @@ export default function HomePage() {
                             <h3 className="mb-4 text-sm font-semibold text-gray-900">Company</h3>
                             <ul className="space-y-2 text-sm text-gray-500">
                                 <li>
-                                    <span className="text-gray-400">Tentang Kami</span>
+                                    <Link href="#features" className="hover:text-gray-700 transition-colors">
+                                        Tentang Kami
+                                    </Link>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">Blog</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        Blog
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">Karir</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        Karir
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">Kontak</span>
+                                    <a href="mailto:hello@qalcuity.com" className="hover:text-gray-700 transition-colors">
+                                        Kontak
+                                    </a>
                                 </li>
                             </ul>
                         </div>
@@ -645,16 +659,28 @@ export default function HomePage() {
                             <h3 className="mb-4 text-sm font-semibold text-gray-900">Resources</h3>
                             <ul className="space-y-2 text-sm text-gray-500">
                                 <li>
-                                    <span className="text-gray-400">Dokumentasi</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        Dokumentasi
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">API Reference</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        API Reference
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">Changelog</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        Changelog
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                                 <li>
-                                    <span className="text-gray-400">Status</span>
+                                    <span className="inline-flex items-center gap-1.5 text-gray-400">
+                                        Status
+                                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500">Segera Hadir</span>
+                                    </span>
                                 </li>
                             </ul>
                         </div>

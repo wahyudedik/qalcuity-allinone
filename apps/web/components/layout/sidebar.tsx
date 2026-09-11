@@ -25,6 +25,12 @@ import {
     FolderKanban,
     Wrench,
     Sparkles,
+    CookingPot,
+    LayoutGrid,
+    Repeat,
+    Heart,
+    FileBarChart,
+    ClipboardList,
     type LucideIcon,
 } from "lucide-react";
 
@@ -57,6 +63,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.contacts") || "Contacts", href: "/dashboard/crm/contacts" },
                 { label: t("nav.leads") || "Leads", href: "/dashboard/crm/leads" },
                 { label: t("nav.deals") || "Deals", href: "/dashboard/crm/deals" },
+                { label: t("nav.activities") || "Activities", href: "/dashboard/crm/activities" },
                 { label: t("nav.pipeline") || "Pipeline", href: "/dashboard/crm/pipeline" },
             ],
         },
@@ -68,6 +75,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             children: [
                 { label: t("nav.overview") || "Overview", href: "/dashboard/finance" },
                 { label: t("nav.invoices") || "Invoices", href: "/dashboard/finance/invoices" },
+                { label: t("nav.recurringInvoices") || "Recurring Invoices", href: "/dashboard/finance/recurring-invoices" },
                 { label: t("nav.payments") || "Payments", href: "/dashboard/finance/payments" },
                 { label: t("nav.purchaseOrders") || "Purchase Orders", href: "/dashboard/finance/purchase-orders" },
                 { label: t("nav.quotations") || "Quotations", href: "/dashboard/finance/quotations" },
@@ -76,6 +84,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.reconciliation") || "Rekonsiliasi", href: "/dashboard/finance/reconciliation" },
                 { label: t("nav.taxRates") || "Pajak", href: "/dashboard/finance/tax-rates" },
                 { label: t("nav.periods") || "Periode", href: "/dashboard/finance/periods" },
+                { label: t("nav.financialReports") || "Laporan Keuangan", href: "/dashboard/finance/reports" },
             ],
         },
         // 4. HR — ADMIN, MEMBER, VIEWER (read-only)
@@ -86,6 +95,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             children: [
                 { label: t("nav.overview") || "Overview", href: "/dashboard/hr" },
                 { label: t("nav.employees") || "Employees", href: "/dashboard/hr/employees" },
+                { label: t("nav.departments") || "Departemen", href: "/dashboard/hr/departments" },
                 { label: t("nav.attendance") || "Attendance", href: "/dashboard/hr/attendance" },
                 { label: t("nav.leaves") || "Leaves", href: "/dashboard/hr/leaves" },
                 { label: t("nav.payroll") || "Payroll", href: "/dashboard/hr/payroll" },
@@ -111,12 +121,15 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
             icon: Monitor,
             children: [
                 { label: t("nav.posTerminal") || "Terminal (Cashier)", href: "/dashboard/pos/terminal" },
+                { label: t("nav.kitchenDisplay") || "Kitchen Display", href: "/dashboard/pos/kitchen" },
+                { label: t("nav.tablesManagement") || "Tables", href: "/dashboard/pos/tables" },
                 { label: t("nav.posSessions") || "Sessions", href: "/dashboard/pos/sessions" },
                 { label: t("nav.posTransactions") || "Transactions", href: "/dashboard/pos/transactions" },
                 { label: t("nav.posRefunds") || "Refunds", href: "/dashboard/pos/refunds" },
                 { label: t("nav.posReports") || "Reports", href: "/dashboard/pos/reports" },
                 { label: t("nav.posTerminals") || "Terminals (Management)", href: "/dashboard/pos/terminals" },
                 { label: t("nav.posLoyalty") || "Loyalty", href: "/dashboard/pos/loyalty" },
+                { label: t("nav.loyaltyMembers") || "Loyalty Members", href: "/dashboard/pos/loyalty/members" },
                 { label: t("nav.posMonitor") || "Monitor", href: "/dashboard/pos/terminals-monitor" },
             ],
         },

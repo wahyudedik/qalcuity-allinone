@@ -24,16 +24,17 @@ import {
 import { useProjects, type Project, type ProjectStatus } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const STATUS_TABS: { key: ProjectStatus | 'ALL'; label: string }[] = [
-    { key: 'ALL', label: 'Semua' },
-    { key: 'ACTIVE', label: 'Aktif' },
-    { key: 'PLANNING', label: 'Perencanaan' },
-    { key: 'COMPLETED', label: 'Selesai' },
+const STATUS_TAB_KEYS: { key: ProjectStatus | 'ALL'; i18nKey: string }[] = [
+    { key: 'ALL', i18nKey: 'common.all' },
+    { key: 'ACTIVE', i18nKey: 'dashboard.projects.status.ACTIVE' },
+    { key: 'PLANNING', i18nKey: 'dashboard.projects.status.PLANNING' },
+    { key: 'COMPLETED', i18nKey: 'dashboard.projects.status.COMPLETED' },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -51,46 +52,46 @@ const PRIORITY_COLORS: Record<string, string> = {
     URGENT: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-    PLANNING: 'Perencanaan',
-    ACTIVE: 'Aktif',
-    ON_HOLD: 'Ditangguhkan',
-    COMPLETED: 'Selesai',
-    CANCELLED: 'Dibatalkan',
+const STATUS_I18N_KEYS: Record<string, string> = {
+    PLANNING: 'dashboard.projects.status.PLANNING',
+    ACTIVE: 'dashboard.projects.status.ACTIVE',
+    ON_HOLD: 'dashboard.projects.status.ON_HOLD',
+    COMPLETED: 'dashboard.projects.status.COMPLETED',
+    CANCELLED: 'dashboard.projects.status.CANCELLED',
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-    LOW: 'Rendah',
-    MEDIUM: 'Sedang',
-    HIGH: 'Tinggi',
-    URGENT: 'Mendesak',
+const PRIORITY_I18N_KEYS: Record<string, string> = {
+    LOW: 'dashboard.projects.priority.LOW',
+    MEDIUM: 'dashboard.projects.priority.MEDIUM',
+    HIGH: 'dashboard.projects.priority.HIGH',
+    URGENT: 'dashboard.projects.priority.URGENT',
 };
 
 // =============================================================================
 // Sub-components
 // =============================================================================
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-600'}`}>
-            {STATUS_LABELS[status] || status}
+            {STATUS_I18N_KEYS[status] ? t(STATUS_I18N_KEYS[status]) : status}
         </span>
     );
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
+function PriorityBadge({ priority, t }: { priority: string; t: (key: string) => string }) {
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[priority] || 'bg-gray-100 text-gray-600'}`}>
-            {PRIORITY_LABELS[priority] || priority}
+            {PRIORITY_I18N_KEYS[priority] ? t(PRIORITY_I18N_KEYS[priority]) : priority}
         </span>
     );
 }
 
-function ProgressBar({ value }: { value: number }) {
+function ProgressBar({ value, t }: { value: number; t: (key: string) => string }) {
     return (
         <div className="w-full">
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>Progres</span>
+                <span>{t('dashboard.projects.progress')}</span>
                 <span>{value}%</span>
             </div>
             <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
@@ -103,7 +104,7 @@ function ProgressBar({ value }: { value: number }) {
     );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ project, t }: { project: Project; t: (key: string) => string }) {
     const router = useRouter();
 
     const formatDate = (dateStr: string | null) => {
@@ -121,17 +122,17 @@ function ProjectCard({ project }: { project: Project }) {
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
                     {project.name}
                 </h3>
-                <StatusBadge status={project.status} />
+                <StatusBadge status={project.status} t={t} />
             </div>
 
             {/* Priority */}
             <div className="mb-3">
-                <PriorityBadge priority={project.priority} />
+                <PriorityBadge priority={project.priority} t={t} />
             </div>
 
             {/* Progress */}
             <div className="mb-3">
-                <ProgressBar value={project.progress} />
+                <ProgressBar value={project.progress} t={t} />
             </div>
 
             {/* Budget */}
@@ -145,13 +146,13 @@ function ProjectCard({ project }: { project: Project }) {
             {/* Task Count */}
             <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-2">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>{project.taskCount} task</span>
+                <span>{project.taskCount} {t('dashboard.projects.taskCount')}</span>
             </div>
 
             {/* Members */}
             <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-3">
                 <Users className="h-3.5 w-3.5" />
-                <span>{project.memberCount} anggota</span>
+                <span>{project.memberCount} {t('dashboard.projects.members')}</span>
             </div>
 
             {/* Dates */}
@@ -185,6 +186,7 @@ function ProjectCardSkeleton() {
 // =============================================================================
 
 export default function ProjectsPage() {
+    const { t } = useTranslation();
     const router = useRouter();
     const {
         projects,
@@ -250,10 +252,10 @@ export default function ProjectsPage() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Proyek
+                            {t('dashboard.projects.title')}
                         </h1>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Kelola semua proyek tim Anda
+                            {t('dashboard.projects.subtitle')}
                         </p>
                     </div>
                 </div>
@@ -263,7 +265,7 @@ export default function ProjectsPage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                     <Plus className="h-4 w-4" />
-                    Proyek Baru
+                    {t('dashboard.projects.newProject')}
                 </button>
             </div>
 
@@ -271,7 +273,7 @@ export default function ProjectsPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {/* Status tabs */}
                 <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
-                    {STATUS_TABS.map((tab) => {
+                    {STATUS_TAB_KEYS.map((tab) => {
                         const isActive = filter.status === tab.key;
                         const count = tab.key === 'ALL' ? projects.length : (statusCounts[tab.key] || 0);
                         return (
@@ -279,16 +281,16 @@ export default function ProjectsPage() {
                                 key={tab.key}
                                 onClick={() => setFilter({ ...filter, status: tab.key })}
                                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                                     }`}
                             >
-                                <span>{tab.label}</span>
+                                <span>{t(tab.i18nKey)}</span>
                                 {count > 0 && (
                                     <span
                                         className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ${isActive
-                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                                                : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                                            : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                                             }`}
                                     >
                                         {count}
@@ -304,7 +306,7 @@ export default function ProjectsPage() {
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Cari proyek..."
+                        placeholder={t('dashboard.projects.searchPlaceholder')}
                         value={filter.search}
                         onChange={(e) => setFilter({ ...filter, search: e.target.value })}
                         className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
@@ -335,9 +337,9 @@ export default function ProjectsPage() {
             {!loading && filteredProjects.length === 0 && (
                 <EmptyState
                     icon={FolderKanban}
-                    title="Belum ada proyek"
-                    description="Mulai buat proyek pertama untuk mengelola tugas dan waktu tim Anda."
-                    actionLabel="Buat Proyek"
+                    title={t('dashboard.projects.emptyTitle')}
+                    description={t('dashboard.projects.emptyDescription')}
+                    actionLabel={t('dashboard.projects.createProject')}
                     onAction={() => router.push('/dashboard/projects/new')}
                 />
             )}
@@ -346,7 +348,7 @@ export default function ProjectsPage() {
             {!loading && filteredProjects.length > 0 && (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredProjects.map((project) => (
-                        <ProjectCard key={project.id} project={project} />
+                        <ProjectCard key={project.id} project={project} t={t} />
                     ))}
                 </div>
             )}

@@ -84,13 +84,18 @@ export async function runPaymentReminder(): Promise<CronTaskResult> {
                 tenantInfo
             );
 
+            // Count previous reminders for this invoice
+            const previousReminders = await prisma.paymentReminderLog.count({
+                where: { tenantId: tenant.id, invoiceId: invoice.id },
+            });
+
             // Create reminder log
             await prisma.paymentReminderLog.create({
                 data: {
                     tenantId: tenant.id,
                     invoiceId: invoice.id,
                     channel: 'email',
-                    reminderCount: 1,
+                    reminderCount: previousReminders + 1,
                     daysOverdue,
                 },
             });

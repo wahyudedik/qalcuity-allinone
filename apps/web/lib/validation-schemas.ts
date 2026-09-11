@@ -258,6 +258,19 @@ export const updateEmployeeSchema = z.object({
     status: z.string().max(50).optional(),
 });
 
+// Department Schemas
+export const createDepartmentSchema = z.object({
+    name: z.string().min(1, 'Nama departemen wajib diisi').max(255, 'Nama departemen maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    isActive: z.boolean().optional(),
+});
+
+export const updateDepartmentSchema = z.object({
+    name: z.string().min(1, 'Nama departemen wajib diisi').max(255, 'Nama departemen maksimal 255 karakter').optional(),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    isActive: z.boolean().optional(),
+});
+
 export const createLeaveSchema = z.object({
     employeeId: z.string().min(1, 'ID karyawan wajib diisi'),
     type: z.string().min(1, 'Tipe cuti wajib diisi').max(50),
@@ -996,6 +1009,18 @@ export const createLoyaltyRewardSchema = z.object({
     stock: z.number().int().optional().default(-1),
 });
 
+export const updateLoyaltyRewardSchema = z.object({
+    name: z.string().min(1, 'Nama reward wajib diisi').max(255, 'Nama maksimal 255 karakter').optional(),
+    description: z.string().optional().nullable(),
+    pointsCost: z.number().int().min(1, 'Minimal 1 point').optional(),
+    rewardType: z.enum(['DISCOUNT_PERCENT', 'DISCOUNT_FIXED', 'FREE_ITEM', 'VOUCHER']).optional(),
+    rewardValue: z.number().min(0, 'Nilai reward tidak boleh negatif').optional(),
+    isActive: z.boolean().optional(),
+    stock: z.number().int().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Minimal satu field harus di-update',
+});
+
 export const redeemLoyaltyPointsSchema = z.object({
     memberId: z.string().min(1, 'Member wajib dipilih'),
     rewardId: z.string().min(1, 'Reward wajib dipilih'),
@@ -1576,4 +1601,25 @@ export const createRecurringInvoiceSchema = z.object({
         unitPrice: z.number().min(0, 'Harga satuan tidak boleh negatif'),
         productId: z.string().optional().nullable(),
     })).min(1, 'Minimal 1 item harus ditambahkan'),
+});
+
+// ============================================
+// Recurring Invoice Update Schema
+// ============================================
+
+export const updateRecurringInvoiceSchema = z.object({
+    status: z.enum(['ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED'], {
+        message: 'Status harus ACTIVE, PAUSED, COMPLETED, atau CANCELLED',
+    }).optional(),
+    frequency: z.enum(['WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'], {
+        message: 'Frekuensi tidak valid',
+    }).optional(),
+    dayOfMonth: z.number().int().min(1, 'Tanggal minimal 1').max(31, 'Tanggal maksimal 31').optional().nullable(),
+    dayOfWeek: z.number().int().min(0, 'Hari minimal 0 (Minggu)').max(6, 'Hari maksimal 6 (Sabtu)').optional().nullable(),
+    nextRunDate: z.string().optional().nullable(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    invoiceNumber: z.string().max(50).optional().nullable(),
+    taxRate: z.number().min(0).max(100, 'Pajak maksimal 100%').optional(),
 });
