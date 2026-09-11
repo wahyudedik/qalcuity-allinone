@@ -17,6 +17,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/journal-entries': { permission: 'finance.journal_entry', fallbackRole: 'ADMIN' },
     '/api/finance/tax-rates': { permission: 'finance.tax_rate', fallbackRole: 'ADMIN' },
     '/api/finance/periods': { permission: 'finance.period', fallbackRole: 'ADMIN' },
+    '/api/finance/recurring-invoices': { permission: 'finance.invoice', fallbackRole: 'ADMIN' },
 
     // ─── Finance Reports ──────────────────────────────────────────────────────
     '/api/finance/reports/balance-sheet': { permission: 'finance.report', fallbackRole: 'ADMIN' },
@@ -103,6 +104,9 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/ai/anomalies': { permission: 'ai.anomaly', fallbackRole: 'ADMIN' },
     '/api/ai/health': { permission: 'ai.read', fallbackRole: 'MEMBER' },
 
+    // ─── Admin Plans (SUPERADMIN) ───────────────────────────────────────
+    '/api/admin/plans': { permission: 'platform.plan', fallbackRole: 'SUPERADMIN' },
+
     // ─── Platform Admin ──────────────────────────────────────────────────
     '/api/platform/tenants': { permission: 'platform.tenant', fallbackRole: 'SUPERADMIN' },
     '/api/platform/stats': { permission: 'platform.stats', fallbackRole: 'SUPERADMIN' },
@@ -112,6 +116,13 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/platform/billing': { permission: 'platform.billing', fallbackRole: 'SUPERADMIN' },
     '/api/platform/support': { permission: 'platform.support', fallbackRole: 'SUPERADMIN' },
     '/api/platform/security': { permission: 'platform.security', fallbackRole: 'SUPERADMIN' },
+
+    // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ──────
+    '/api/cron/payment-reminder': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/cron/stock-alert': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/cron/recurring-invoice': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/ai/anomalies/scan': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/ai/anomalies/[id]': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
 };
 
 /**

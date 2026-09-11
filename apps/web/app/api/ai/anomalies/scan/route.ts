@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { runAnomalyScan } from '@/lib/ai/anomaly-detection';
-import { handleApiError } from '@/lib/api-error';
+import { verifyCronAuth, cronSuccess, cronError } from '@/lib/cron';
 
 // â”€â”€â”€ GET: Cron endpoint for external cron service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Authenticates via CRON_SECRET Bearer token (not session auth).
@@ -11,22 +10,9 @@ import { handleApiError } from '@/lib/api-error';
 
 export async function GET(req: Request) {
     try {
-        // API key authentication (for cron service)
-        const authHeader = req.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
-
-        if (!cronSecret) {
-            return NextResponse.json(
-                { success: false, error: 'CRON_SECRET not configured' },
-                { status: 503 }
-            );
-        }
-
-        if (authHeader !== `Bearer ${cronSecret}`) {
-            return NextResponse.json(
-                { success: false, error: 'Unauthorized' },
-                { status: 401 }
-            );
+        // Cron auth (CRON_SECRET Bearer token)
+        if (!verifyCronAuth(req)) {
+            return cronError('Unauthorized', 401);
         }
 
         // Get all active tenants (exclude soft-deleted)
@@ -63,15 +49,13 @@ export async function GET(req: Request) {
             }
         }
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                tenantsScanned: tenants.length,
-                results,
-                scannedAt: new Date().toISOString(),
-            },
+        return cronSuccess({
+            tenantsScanned: tenants.length,
+            results,
+            scannedAt: new Date().toISOString(),
         });
     } catch (error) {
-        return handleApiError(error);
+        console.error('[Cron Scan] Anomaly scan failed:', error);
+        return cronError(error instanceof Error ? error.message : 'Internal server error', 500);
     }
 }

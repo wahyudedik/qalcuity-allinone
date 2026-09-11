@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle, CreditCard, Smartphone, QrCode, Building2, Download, Loader2 } from 'lucide-react'
+import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle, CreditCard, Smartphone, QrCode, Building2, Download, Loader2, Bell } from 'lucide-react'
 
 interface InvoiceDetail {
     id: string
@@ -37,6 +37,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
     const router = useRouter()
     const [showSendModal, setShowSendModal] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [sendingReminder, setSendingReminder] = useState(false)
     const [invoice, setInvoice] = useState<InvoiceDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -149,6 +150,26 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
             setToast({ message: t('finance.invoiceDetail.toastCancelFailed'), type: 'error' })
         } finally {
             setCancelling(false)
+        }
+    }
+
+    const handleSendReminder = async () => {
+        try {
+            setSendingReminder(true)
+            const res = await fetch(`/api/finance/invoices/${params.id}/remind`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: 'Reminder berhasil dikirim', type: 'success' })
+            } else {
+                setToast({ message: data.error || 'Gagal mengirim reminder', type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal mengirim reminder', type: 'error' })
+        } finally {
+            setSendingReminder(false)
         }
     }
 
@@ -456,6 +477,16 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                 <Download className="h-4 w-4" />
                                 {t('finance.invoiceDetail.downloadPDF')}
                             </button>
+                            {(invoice.status === 'sent' || invoice.status === 'overdue') && (
+                                <button
+                                    onClick={handleSendReminder}
+                                    disabled={sendingReminder}
+                                    className="w-full px-4 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                                    {sendingReminder ? 'Mengirim...' : 'Kirim Reminder'}
+                                </button>
+                            )}
                             {invoice.status !== 'cancelled' && invoice.status !== 'paid' && (
                                 <button
                                     onClick={() => setShowCancelConfirm(true)}

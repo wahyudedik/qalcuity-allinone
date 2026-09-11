@@ -10,6 +10,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { createPaymentSchema, updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
 import { sendPaymentReceivedEmail } from '@/lib/email';
 import { handleApiError } from '@/lib/api-error';
+import { generatePaymentJournalEntry } from '@/lib/auto-journal';
 
 export async function GET(request: Request) {
     try {
@@ -184,7 +185,25 @@ export async function POST(request: Request) {
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Payment', entityId: payment.id, newValues: payment as unknown as Record<string, unknown>, request });
 
-        // Fire-and-forget email notification for completed payments (graceful â€” never crashes)
+        // Auto Journal Entry: when payment status is COMPLETED
+        if (status === 'COMPLETED') {
+            void generatePaymentJournalEntry(
+                {
+                    id: payment.id,
+                    paymentNumber: payment.paymentNumber,
+                    amount: Number(payment.amount),
+                    type: (payment as Record<string, unknown>).type as string || 'INCOME',
+                    method: payment.method || '',
+                    tenantId,
+                    invoiceId: (payment as Record<string, unknown>).invoiceId as string | null,
+                },
+                tenantId,
+                userId,
+                request
+            );
+        }
+
+        // Fire-and-forget email notification for completed payments (graceful â€" never crashes)
         if (status === 'COMPLETED') {
             const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, id: true } });
             if (tenant) {

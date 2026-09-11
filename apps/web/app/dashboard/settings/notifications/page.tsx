@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
-import { MessageCircle, Mail, Settings, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, X, Bell, MessageSquare } from 'lucide-react'
+import { MessageCircle, Mail, Settings, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, X, Bell, MessageSquare, Clock } from 'lucide-react'
 
 type NotificationSettings = {
     emailInvoice: boolean
@@ -245,6 +245,88 @@ export default function NotificationsSettingsPage() {
                     <button onClick={() => setError(null)} className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"><X className="w-4 h-4" /></button>
                 </div>
             )}
+
+            {/* Payment Reminder Configuration */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                        <h3 className="font-medium text-gray-900 dark:text-white">Payment Reminder</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Konfigurasi pengiriman reminder untuk invoice overdue</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between py-2">
+                        <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">Auto Reminder (Cron)</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Kirim reminder otomatis setiap jam 9 pagi untuk invoice overdue</div>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Aktif
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                        <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">Manual Reminder Button</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Tombol "Kirim Reminder" tersedia di detail invoice untuk status sent/overdue</div>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Tersedia
+                        </span>
+                    </div>
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                        <p className="text-xs text-orange-700 dark:text-orange-400">
+                            Reminder hanya dikirim maksimal 1x per 24 jam per invoice untuk mencegah spam. Endpoint cron: <code className="bg-orange-100 dark:bg-orange-900/40 px-1 rounded">/api/cron/payment-reminder</code>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Stock Alert Configuration */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    </div>
+                    <div>
+                        <h3 className="font-medium text-gray-900 dark:text-white">Stock Alert</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Notifikasi otomatis saat stok produk menipis di bawah batas minimum</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between py-2">
+                        <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">Auto Stock Alert (Cron)</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Scan semua produk & kirim alert ke admin jika stok ≤ minStock</div>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Aktif
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                        <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">Real-time Alert on Stock Change</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Alert langsung dikirim saat stok berubah di bawah batas minimum</div>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Aktif
+                        </span>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                        <p className="text-xs text-red-700 dark:text-red-400">
+                            Alert hanya dikirim maksimal 1x per 24 jam per produk. Konfigurasi minStock per produk di halaman detail produk. Endpoint cron: <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">/api/cron/stock-alert</code>
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {/* Email Notifications */}
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">

@@ -10,6 +10,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
+import { generatePurchaseOrderJournalEntry } from '@/lib/auto-journal';
 
 export async function GET(request: Request) {
     try {
@@ -258,6 +259,39 @@ export async function PUT(request: Request) {
         });
 
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PurchaseOrder', entityId: id, newValues: data as Record<string, unknown>, request });
+
+        // Auto Journal Entry + Stock Update: when PO status changes to PAID or RECEIVED
+        if (data.status === 'PAID' || data.status === 'RECEIVED') {
+            const fullPO = await prisma.purchaseOrder.findUnique({
+                where: { id },
+                include: { items: true },
+            });
+            if (fullPO) {
+                void generatePurchaseOrderJournalEntry(
+                    {
+                        id: fullPO.id,
+                        poNumber: fullPO.poNumber,
+                        total: Number(fullPO.total),
+                        subtotal: Number(fullPO.subtotal),
+                        taxAmount: Number(fullPO.taxAmount),
+                        tenantId,
+                        supplierId: fullPO.supplierId,
+                        items: fullPO.items.map((item) => ({
+                            id: item.id,
+                            description: item.description,
+                            quantity: Number(item.quantity),
+                            unitPrice: Number(item.unitPrice),
+                            total: Number(item.total),
+                            productId: (item as Record<string, unknown>).productId as string | null,
+                        })),
+                    },
+                    tenantId,
+                    userId,
+                    data.status as string,
+                    request
+                );
+            }
+        }
 
         return NextResponse.json({ success: true, data: purchaseOrder });
     } catch (error) {

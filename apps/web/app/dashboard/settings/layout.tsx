@@ -98,6 +98,11 @@ export default function SettingsLayout({
             href: '/dashboard/settings/security',
             description: t('settings.securityDesc') || 'Password dan keamanan akun',
         },
+        {
+            name: t('settings.audit.title') || 'Audit Log',
+            href: '/dashboard/settings/audit',
+            description: t('settings.audit.desc') || 'Catatan aktivitas perubahan data',
+        },
     ]
 
     return (

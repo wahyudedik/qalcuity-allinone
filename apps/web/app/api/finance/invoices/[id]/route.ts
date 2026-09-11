@@ -11,6 +11,7 @@ import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/
 import { sendInvoiceCreatedEmail } from '@/lib/email';
 import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
+import { generateInvoiceJournalEntry } from '@/lib/auto-journal';
 
 export async function GET(request: Request) {
     try {
@@ -311,10 +312,45 @@ export async function PUT(request: Request) {
         const invoice = await prisma.invoice.update({
             where: { id },
             data,
-            include: { items: true, contact: true },
+            include: {
+                items: true,
+                contact: true,
+            },
         });
 
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: data as Record<string, unknown>, request });
+
+        // Auto Journal Entry + Stock Update: when invoice status changes to PAID
+        if (data.status === 'PAID') {
+            const fullInvoice = await prisma.invoice.findUnique({
+                where: { id },
+                include: { items: true },
+            });
+            if (fullInvoice) {
+                void generateInvoiceJournalEntry(
+                    {
+                        id: fullInvoice.id,
+                        invoiceNumber: fullInvoice.invoiceNumber,
+                        total: Number(fullInvoice.total),
+                        subtotal: Number(fullInvoice.subtotal),
+                        taxAmount: Number(fullInvoice.taxAmount),
+                        tenantId,
+                        contactId: fullInvoice.contactId,
+                        items: fullInvoice.items.map((item) => ({
+                            id: item.id,
+                            description: item.description,
+                            quantity: Number(item.quantity),
+                            unitPrice: Number(item.unitPrice),
+                            total: Number(item.total),
+                            productId: (item as Record<string, unknown>).productId as string | null,
+                        })),
+                    },
+                    tenantId,
+                    userId,
+                    request
+                );
+            }
+        }
 
         return NextResponse.json({ success: true, data: invoice });
     } catch (error) {

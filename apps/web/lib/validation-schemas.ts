@@ -1553,3 +1553,27 @@ export const workflowTransitionSchema = z.object({
     action: z.string().min(1, 'Aksi wajib diisi').max(100, 'Aksi maksimal 100 karakter'),
     notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
 });
+
+// ============================================
+// Recurring Invoice Schemas
+// ============================================
+
+export const createRecurringInvoiceSchema = z.object({
+    contactId: z.string().min(1, 'Contact wajib dipilih'),
+    invoiceNumber: z.string().max(100, 'Invoice number maksimal 100 karakter').optional().nullable(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+    taxRate: z.number().min(0, 'Tax rate tidak boleh negatif').max(100, 'Tax rate maksimal 100%').optional().nullable(),
+    frequency: z.enum(['WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'], {
+        message: 'Frequency tidak valid',
+    }),
+    dayOfMonth: z.number().int().min(1, 'Day of month minimal 1').max(28, 'Day of month maksimal 28').optional().nullable(),
+    dayOfWeek: z.number().int().min(0, 'Day of week minimal 0 (Minggu)').max(6, 'Day of week maksimal 6 (Sabtu)').optional().nullable(),
+    startDate: z.string().min(1, 'Tanggal mulai wajib diisi'),
+    endDate: z.string().optional().nullable(),
+    items: z.array(z.object({
+        description: z.string().min(1, 'Deskripsi item wajib diisi').max(500, 'Deskripsi maksimal 500 karakter'),
+        quantity: z.number().positive('Quantity harus lebih dari 0'),
+        unitPrice: z.number().min(0, 'Harga satuan tidak boleh negatif'),
+        productId: z.string().optional().nullable(),
+    })).min(1, 'Minimal 1 item harus ditambahkan'),
+});
