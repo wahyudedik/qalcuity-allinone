@@ -874,6 +874,14 @@ postgresql://postgres@localhost:5432/qalcuity?schema=public
 | **packages/db/.env** | [`packages/db/.env`](packages/db/.env) — Prisma schema config |
 | **apps/web/.env** | [`apps/web/.env`](apps/web/.env) — Next.js app config |
 
+#### APP_TIMEZONE
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| **APP_TIMEZONE** | `Asia/Jakarta` | IANA timezone for cron schedule calculations & date formatting |
+
+> **Catatan:** `APP_TIMEZONE` digunakan oleh [`cron-scheduler.ts`](apps/web/lib/cron-scheduler.ts) untuk menentukan waktu lokal saat menjalankan scheduled tasks. Format IANA timezone (e.g., `Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`).
+
 #### Common Commands
 
 ```bash
@@ -921,36 +929,101 @@ cd apps/web && npx tsx __tests__/e2e-test.ts
 
 ## 15. Cron Jobs & Scheduled Tasks
 
-> **Qalcuity menggunakan external cron service untuk scheduled tasks. Tidak ada internal scheduler (node-cron).**
+> **Qalcuity menggunakan Unified Cron Scheduler — 1 endpoint dispatcher dengan schedule config di code.**
 
-### Cron Architecture
-- External service (cron-job.org / aaPanel Task Scheduler) trigger ke API endpoints
-- Semua cron endpoints auth via `CRON_SECRET` Bearer token
-- Utility library: [`apps/web/lib/cron.ts`](apps/web/lib/cron.ts) — `verifyCronAuth()`, `cronSuccess()`, `cronError()`
+### Unified Scheduler Architecture
 
-### Active Cron Endpoints
+Arsitektur cron mengikuti pola **Laravel-style scheduler**: cukup 1 cron entry di aaPanel yang trigger ke 1 dispatcher endpoint. Dispatcher akan mengecek schedule setiap task dan menjalankan hanya task yang sudah due.
 
-| Endpoint | Function | Schedule | Auth |
-|----------|----------|----------|------|
-| `GET /api/cron/recurring-invoice` | Generate invoices dari recurring templates | Daily 07:00 | CRON_SECRET |
-| `GET /api/cron/payment-reminder` | Kirim reminder untuk overdue invoices | Daily 08:00 | CRON_SECRET |
-| `GET /api/cron/stock-alert` | Alert produk stok menipis | 4x daily | CRON_SECRET |
-| `GET /api/ai/anomalies/scan` | Scan anomali transaksi | Daily 02:00 | CRON_SECRET |
+```
+aaPanel Task Scheduler (*/5 * * * *)
+  → GET /api/cron/run
+    → Dispatcher checks schedule per task
+      → payment-reminder (daily 08:00 WIB)
+      → stock-alert (interval 6 jam)
+      → recurring-invoice (daily 07:00 WIB)
+      → anomaly-scan (daily 02:00 WIB)
+```
+
+| Komponen | File | Fungsi |
+|----------|------|--------|
+| **Dispatcher Endpoint** | [`apps/web/app/api/cron/run/route.ts`](apps/web/app/api/cron/run/route.ts) | `GET /api/cron/run` — menjalankan semua task yang due |
+| **Scheduler Config** | [`apps/web/lib/cron-scheduler.ts`](apps/web/lib/cron-scheduler.ts) | Schedule logic, task registry, last-run tracking |
+| **Utility Library** | [`apps/web/lib/cron.ts`](apps/web/lib/cron.ts) | `verifyCronAuth()`, `cronSuccess()`, `cronError()` |
+| **Log Table** | `CronRunLog` (Prisma model) | Persistent log setiap eksekusi task |
+
+### Query Parameters
+
+| Param | Default | Deskripsi |
+|-------|---------|-----------|
+| *(none)* | — | Jalankan semua task yang due |
+| `?task=<id>` | — | Jalankan task tertentu saja (e.g., `?task=payment-reminder`) |
+| `?task=all` | — | Jalankan semua task (explicit) |
+| `?status` | — | Return status semua task tanpa menjalankan apapun |
+
+### Task Schedule Types
+
+| Type | Config | Contoh |
+|------|--------|--------|
+| `daily` | `{ type: 'daily', hour: <UTC>, minute: <UTC> }` | `payment-reminder`: hour=1, minute=0 (08:00 WIB) |
+| `hourly` | `{ type: 'hourly', minute: <UTC> }` | Run setiap jam di menit tertentu |
+| `interval` | `{ type: 'interval', intervalHours: <N> }` | `stock-alert`: setiap 6 jam (4x daily) |
+
+> **Catatan:** Semua waktu schedule dalam **UTC**. Konversi WIB (UTC+7) dilakukan di config level.
+
+### Active Cron Tasks
+
+| Task ID | Nama | Schedule (UTC) | Schedule (WIB) | Handler Route |
+|---------|------|----------------|-----------------|---------------|
+| `payment-reminder` | Payment Reminder | Daily 01:00 | Daily 08:00 | [`apps/web/app/api/cron/payment-reminder/route.ts`](apps/web/app/api/cron/payment-reminder/route.ts) |
+| `stock-alert` | Stock Alert | Interval 6 jam | 4x daily | [`apps/web/app/api/cron/stock-alert/route.ts`](apps/web/app/api/cron/stock-alert/route.ts) |
+| `recurring-invoice` | Recurring Invoice | Daily 00:00 | Daily 07:00 | [`apps/web/app/api/cron/recurring-invoice/route.ts`](apps/web/app/api/cron/recurring-invoice/route.ts) |
+| `anomaly-scan` | Anomaly Detection | Daily 19:00 | Daily 02:00 | [`apps/web/app/api/ai/anomalies/scan/route.ts`](apps/web/app/api/ai/anomalies/scan/route.ts) |
 
 ### Adding New Cron Jobs
 
-Ketika menambah cron endpoint baru:
-1. Buat route di `apps/web/app/api/cron/[name]/route.ts`
-2. Gunakan `verifyCronAuth(req)` dari `apps/web/lib/cron.ts` untuk auth
-3. Register di `apps/web/lib/route-permissions.ts` dengan permission `system.admin`
-4. Update dokumentasi di `docs/CRON-JOBS.md`
-5. Tambahkan schedule recommendation
+Ketika menambah cron job baru:
+
+1. **Buat handler function** di route file existing atau buat route baru di `apps/web/app/api/cron/[name]/route.ts`
+   - Export function async yang return `{ success: boolean, message: string }`
+   - Contoh: `export async function runMyTask(): Promise<CronTaskResult> { ... }`
+2. **Register task** di [`apps/web/app/api/cron/run/route.ts`](apps/web/app/api/cron/run/route.ts) — tambahkan entry di array `_tasks`:
+   ```typescript
+   {
+       id: 'my-task',
+       name: 'My Task Name',
+       schedule: { type: 'daily', hour: <UTC>, minute: <UTC> },
+       handler: runMyTask,
+       enabled: true,
+   }
+   ```
+3. **Register di route-permissions** [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) dengan permission `system.admin`
+4. **Update dokumentasi** di [`docs/CRON-JOBS.md`](docs/CRON-JOBS.md)
+
+> **Pattern:** Export handler function dari route file → import di dispatcher → register dengan schedule config.
+
+### aaPanel Configuration
+
+Cukup **1 cron entry** di aaPanel Task Scheduler:
+
+```
+*/5 * * * * curl -s -H "Authorization: Bearer $CRON_SECRET" https://qalcuity.com/api/cron/run
+```
+
+Atau menggunakan wget:
+```
+*/5 * * * * wget -q --header="Authorization: Bearer $CRON_SECRET" -O - https://qalcuity.com/api/cron/run
+```
+
+> **Tips:** Interval 5 menit sudah cukup untuk semua task saat ini. Jika diperlukan ketepatan lebih tinggi, gunakan `*/1 * * * *` (setiap menit). Dispatcher sudah handle dedup sendiri — task tidak akan jalan 2x karena schedule logic di `shouldRun()`.
 
 ### Cron Rules
-- **JANGAN** gunakan user session auth untuk cron endpoints — gunakan CRON_SECRET
-- **JANGAN** lupa dedup check — hindari duplicate execution
+- **JANGAN** gunakan user session auth untuk cron endpoints — gunakan `CRON_SECRET` via `verifyCronAuth()`
+- **JANGAN** lupa dedup check — dispatcher handle otomatis via `shouldRun()` + `CronRunLog`
 - **SELALU** handle error gracefully — lanjut ke next item jika 1 gagal
-- **SELALU** return summary response — `{ processed, success, failed }`
+- **SELALU** return `{ success: boolean, message: string }` dari handler
+- **LOG** setiap eksekusi ke `CronRunLog` — dilakukan otomatis oleh dispatcher
+- **TIME** semua schedule dalam UTC — konversi WIB di config level
 
 ### Dokumentasi Lengkap
 Lihat [`docs/CRON-JOBS.md`](docs/CRON-JOBS.md) untuk dokumentasi lengkap semua cron jobs.
@@ -995,6 +1068,6 @@ Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap a
 
 ---
 
-**Last Updated:** September 10, 2026 (Phase 2: ERP Strengthening)
+**Last Updated:** September 11, 2026 (Unified Cron Scheduler)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.3 — Phase 2: Cron Jobs documentation, scheduled tasks reference
+**Document Version:** 6.4 — Unified Cron Scheduler architecture documentation
