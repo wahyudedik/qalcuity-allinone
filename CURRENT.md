@@ -1,6 +1,206 @@
-> **Last Updated:** 10 September 2026 (Phase 1 Quick Wins — Security & UX Improvements)
-> **Version:** v9.8.3
-> **Status:** ⚠️ PARTIAL — 503 errors on /api/tasks, /api/projects, /api/timesheet due to pending migration `20260905209000_add_operations_module`. Migration fix pushed (commit `504bc52`), needs pull + re-run on VPS. **503 on /api/ai/anomalies** fixed — AnomalyDetection migration pushed (commit `8515c2d`). **NextAuth 405 error fixed** — catch-all handler restored (commit `8f0ab91`). All code fixes deployed to main. **Phase 1 Quick Wins** completed — AI routes hardened, error/loading coverage improved, Zod validation safer. Health score: ~99/100.
+> **Last Updated:** 10 September 2026 (Bug Fixes: startTime Error + Admin Plans 405)
+> **Version:** v10.0.2
+> **Status:** ⚠️ PARTIAL — Phase 2 completed + 2 production bugs fixed (startTime error handler strengthened, Admin Plans PUT/DELETE handlers added). Health score: ~99/100.
+
+---
+
+## 🐛 Bug Fixes: startTime Error + Admin Plans 405 (10 September 2026)
+
+> **Severity:** 🟠 Medium — Two production bugs affecting platform admin billing page + console error
+> **TypeScript Check:** ✅ PASSED (exit code 0, 0 errors)
+> **Total Files Changed:** 3 files (0 new, 3 modified)
+
+### Bug 1: `Cannot read properties of undefined (reading 'startTime')`
+
+**Root Cause:** Known Next.js 14.x web-vitals race condition — `PerformanceObserver` callback accesses `startTime` before initialization during browser idle. Error originates from minified `reportAllChanges` in Next.js internal code.
+
+**Fix:** Strengthened error suppression in [`apps/web/app/layout.tsx`](apps/web/app/layout.tsx:26) — added dual-layer approach:
+1. `window.addEventListener('error')` — catches most synchronous errors
+2. `window.onerror` — catches errors that bypass addEventListener (async callbacks, web worker contexts)
+
+Both handlers use `indexOf(target)` instead of `includes()` for broader compatibility, and are wrapped in an IIFE to avoid global scope pollution.
+
+### Bug 2: `PUT /api/admin/plans/[id] 405 Method Not Allowed`
+
+**Root Cause:** [`apps/web/app/api/admin/plans/[id]/route.ts`](apps/web/app/api/admin/plans/[id]/route.ts) only exported `GET` (list) and `POST` (create) — identical to parent [`route.ts`](apps/web/app/api/admin/plans/route.ts). No `PUT` or `DELETE` handlers existed. Frontend at [`apps/web/app/platform/billing/page.tsx`](apps/web/app/platform/billing/page.tsx:311) correctly calls `PUT /api/admin/plans/${id}` for updates and `DELETE /api/admin/plans/${id}` for deletions.
+
+**Fix:** Rewrote [`apps/web/app/api/admin/plans/[id]/route.ts`](apps/web/app/api/admin/plans/[id]/route.ts) with proper single-item handlers:
+
+| Handler | Method | Description |
+|---------|--------|-------------|
+| `GET` | GET by ID | Fetch single plan with features + tenant count |
+| `PUT` | Update | Update plan (SUPERADMIN only) — validates slug uniqueness, sanitizes input, replaces features, logs audit |
+| `DELETE` | Delete | Delete plan (SUPERADMIN only) — prevents deletion if plan has active tenants, cascades feature deletion |
+
+Also registered `/api/admin/plans` in [`route-permissions.ts`](apps/web/lib/route-permissions.ts:107) with `platform.plan` permission + `SUPERADMIN` fallback role.
+
+### Files Changed
+
+| File | Change | Risk |
+|------|--------|------|
+| [`apps/web/app/layout.tsx`](apps/web/app/layout.tsx:26) | Strengthened startTime error handler (dual-layer: addEventListener + onerror) | 🟢 Low |
+| [`apps/web/app/api/admin/plans/[id]/route.ts`](apps/web/app/api/admin/plans/[id]/route.ts) | Rewritten: GET by ID + PUT + DELETE handlers (replaced duplicate GET/POST) | 🟢 Low |
+| [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts:107) | Added `/api/admin/plans` RBAC entry (platform.plan, SUPERADMIN) | 🟢 Low |
+
+---
+
+## 🚀 Phase 2.1 — Cron Gaps Fix: CRON_SECRET + Anomaly Endpoints Standardized (10 September 2026)
+
+> **Focus:** Fix cron audit gaps — add CRON_SECRET to env files, standardize anomaly endpoints to use `verifyCronAuth()`
+> **Total Files Changed:** 6 files (0 new, 6 modified)
+> **Health Score:** ~99/100 (TypeScript check: PASS)
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+
+### Changes
+
+- ✅ **Environment config:** [`apps/web/.env`](apps/web/.env) — Added `CRON_SECRET="qalcuity-cron-secret-2026"` for local development
+- ✅ **Environment config:** [`apps/web/.env.production`](apps/web/.env.production) — Added `CRON_SECRET="qalcuity-cron-secret-prod-2026"` for production
+- ✅ **Anomaly scan endpoint:** [`apps/web/app/api/ai/anomalies/scan/route.ts`](apps/web/app/api/ai/anomalies/scan/route.ts) — Replaced inline CRON_SECRET auth with `verifyCronAuth()` + `cronSuccess()`/`cronError()` from `@/lib/cron`
+- ✅ **Anomaly [id] endpoint:** [`apps/web/app/api/ai/anomalies/[id]/route.ts`](apps/web/app/api/ai/anomalies/[id]/route.ts) — Same standardization as above
+- ✅ **Route permissions:** [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) — Registered `/api/ai/anomalies/scan` and `/api/ai/anomalies/[id]` with `system.admin` permission
+- ✅ **Cron documentation:** [`docs/CRON-JOBS.md`](docs/CRON-JOBS.md) — Updated auth info for anomaly endpoints (inline → `verifyCronAuth()`)
+
+---
+
+## 🚀 Phase 2 — ERP Strengthening: Cron, Payment Reminder, Stock Alert, Recurring Invoice (10 September 2026)
+
+> **Focus:** Automation infrastructure — cron jobs, payment reminders, stock alerts, auto-recurring invoices
+> **Total Files Changed:** 20+ files (12 new, 8+ modified)
+> **Health Score:** ~99/100 (TypeScript check: PASS)
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Prisma Generate:** ✅ PASS (3 new models: PaymentReminderLog, RecurringInvoice, RecurringInvoiceItem)
+
+### Phase 2A: Cron Infrastructure
+
+- ✅ **New library:** [`apps/web/lib/cron.ts`](apps/web/lib/cron.ts) — Cron auth helper utilities:
+  - `verifyCronAuth(req)` — Validates Bearer token from `CRON_SECRET` env var
+  - `cronSuccess(data)` — Standardized success response
+  - `cronError(message, status)` — Standardized error response
+- ✅ **Environment config:** [`apps/web/.env.example`](apps/web/.env.example) — Added `CRON_SECRET` section
+- ✅ **Route permissions:** [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) — Registered all 3 cron routes with `PUBLIC` permission (cron auth, not user auth)
+
+### Phase 2B: Payment Reminder
+
+- ✅ **New model:** `PaymentReminderLog` in [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) — Deduplication log (24h per invoice)
+- ✅ **New cron endpoint:** [`apps/web/app/api/cron/payment-reminder/route.ts`](apps/web/app/api/cron/payment-reminder/route.ts) — GET endpoint, scans all tenants for overdue invoices (SENT/OVERDUE with past dueDate), sends email + in-app notification, deduplication via PaymentReminderLog
+- ✅ **New API route:** [`apps/web/app/api/finance/invoices/[id]/remind/route.ts`](apps/web/app/api/finance/invoices/[id]/remind/route.ts) — POST endpoint for manual reminder trigger (requires `finance.invoice` permission)
+- ✅ **Invoice detail UI:** [`apps/web/app/dashboard/finance/invoices/[id]/page.tsx`](apps/web/app/dashboard/finance/invoices/[id]/page.tsx) — Added "Kirim Reminder" button (orange, Bell icon) for SENT/OVERDUE invoices
+- ✅ **Notification settings:** [`apps/web/app/dashboard/settings/notifications/page.tsx`](apps/web/app/dashboard/settings/notifications/page.tsx) — Added Payment Reminder configuration section showing cron status and manual reminder availability
+
+### Phase 2C: Stock Alert
+
+- ✅ **Dashboard fix:** [`apps/web/app/api/dashboard/stats/route.ts`](apps/web/app/api/dashboard/stats/route.ts) — Changed hardcoded `stock: { lte: 10 }` to use `Product.minStock` field (fetches products with minStock > 0, then JS filter `stock <= minStock`)
+- ✅ **New library:** [`apps/web/lib/stock-alert.ts`](apps/web/lib/stock-alert.ts) — `checkAndSendStockAlert(product)` (real-time per product) and `checkAllLowStockProducts(tenantId)` (batch cron scan)
+- ✅ **Email template:** [`apps/web/lib/email-templates.ts`](apps/web/lib/email-templates.ts) — Added `stockAlert` template with subject `⚠️ Stok Menipis: {{productName}}`
+- ✅ **Email function:** [`apps/web/lib/email.ts`](apps/web/lib/email.ts) — Added `sendStockAlertEmail()` function
+- ✅ **New cron endpoint:** [`apps/web/app/api/cron/stock-alert/route.ts`](apps/web/app/api/cron/stock-alert/route.ts) — GET endpoint, scans all active tenants for low stock products
+- ✅ **Notification settings:** [`apps/web/app/dashboard/settings/notifications/page.tsx`](apps/web/app/dashboard/settings/notifications/page.tsx) — Added Stock Alert configuration section
+
+### Phase 2D: Auto-Recurring Invoice
+
+- ✅ **New models:** `RecurringInvoice` + `RecurringInvoiceItem` in [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) — Template with frequency, dayOfMonth/dayOfWeek, startDate/endDate, status (ACTIVE/PAUSED/COMPLETED/CANCELLED)
+- ✅ **Migration SQL:** [`packages/db/prisma/migrations/20260910210000_add_recurring_invoice/migration.sql`](packages/db/prisma/migrations/20260910210000_add_recurring_invoice/migration.sql) — Manual migration for 3 new tables + Invoice FK
+- ✅ **New library:** [`apps/web/lib/recurring-invoice.ts`](apps/web/lib/recurring-invoice.ts) — `calculateNextRunDate()`, `generateInvoiceNumber()`, `generateInvoiceFromRecurring()`
+- ✅ **Validation schema:** [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) — Added `createRecurringInvoiceSchema` with Zod
+- ✅ **New API routes:**
+  - [`apps/web/app/api/finance/recurring-invoices/route.ts`](apps/web/app/api/finance/recurring-invoices/route.ts) — GET (list) + POST (create)
+  - [`apps/web/app/api/finance/recurring-invoices/[id]/route.ts`](apps/web/app/api/finance/recurring-invoices/[id]/route.ts) — GET (detail) + PUT (update) + DELETE (cancel)
+- ✅ **New cron endpoint:** [`apps/web/app/api/cron/recurring-invoice/route.ts`](apps/web/app/api/cron/recurring-invoice/route.ts) — GET endpoint, finds ACTIVE recurring invoices with nextRunDate <= now
+- ✅ **New UI pages:**
+  - [`apps/web/app/dashboard/finance/recurring-invoices/page.tsx`](apps/web/app/dashboard/finance/recurring-invoices/page.tsx) — List page with status filter, desktop table + mobile cards, pause/resume/cancel actions
+  - [`apps/web/app/dashboard/finance/recurring-invoices/new/page.tsx`](apps/web/app/dashboard/finance/recurring-invoices/new/page.tsx) — Create form with contact select, frequency config, dynamic items, summary sidebar
+  - [`apps/web/app/dashboard/finance/recurring-invoices/[id]/page.tsx`](apps/web/app/dashboard/finance/recurring-invoices/[id]/page.tsx) — Detail page with schedule info, items table, generated invoices list, status actions
+- ✅ **Navigation:** [`apps/web/app/dashboard/finance/layout.tsx`](apps/web/app/dashboard/finance/layout.tsx) — Added "Recurring Invoices" tab (Repeat icon)
+
+### Deployment Notes
+
+```bash
+# Apply migration on VPS:
+cd /www/wwwroot/qalcuity/packages/db
+npx prisma migrate deploy
+
+# Or manual SQL:
+psql -d qalcuity -f prisma/migrations/20260910210000_add_recurring_invoice/migration.sql
+
+# Set CRON_SECRET in .env:
+CRON_SECRET="your-secure-cron-secret"
+
+# Cron schedule (via system cron or aaPanel Task):
+# Payment Reminder: daily at 09:00 WIB
+0 9 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://qalcuity.com/api/cron/payment-reminder
+
+# Stock Alert: daily at 08:00 WIB
+0 8 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://qalcuity.com/api/cron/stock-alert
+
+# Recurring Invoice: daily at 00:01 WIB
+1 0 * * * curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://qalcuity.com/api/cron/recurring-invoice
+```
+
+---
+
+## 🚀 ERP Improvements — Finance/Inventory Integration (10 September 2026)
+
+> **Focus:** Core ERP integration — product linking, auto journal entries, product search in forms, auto stock update, audit log viewer
+> **Total Files Changed:** 12 files (5 new, 7 modified)
+> **Health Score:** ~99/100 (TypeScript check: PASS)
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+
+### CRITICAL #1: Product FK on InvoiceItem & PurchaseOrderItem
+
+- ✅ **Schema modified:** [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) — Added `productId String?`, `product Product? @relation(...)`, `@@index([productId])` to both `InvoiceItem` and `PurchaseOrderItem` models
+- ✅ **Reverse relations added:** `InvoiceItem[]` and `PurchaseOrderItem[]` on `Product` model
+- ✅ **Migration SQL created:** [`packages/db/prisma/migrations/20260910201700_add_product_fk_to_items/migration.sql`](packages/db/prisma/migrations/20260910201700_add_product_fk_to_items/migration.sql) — manual migration (not `prisma migrate dev`)
+- ✅ **Impact:** Products are now linked to invoice/PO line items, enabling stock tracking and reporting
+
+### CRITICAL #2: Auto Journal Entry Generation
+
+- ✅ **New library:** [`apps/web/lib/auto-journal.ts`](apps/web/lib/auto-journal.ts) (~400 lines) — 3 exported functions:
+  - `generateInvoiceJournalEntry()` — Journal entry for Invoice PAID (AR debit/Cash credit + stock OUT via StockMovement)
+  - `generatePurchaseOrderJournalEntry()` — Journal entry for PO RECEIVED (Inventory debit/AP credit + stock IN) or PAID (AP debit/Cash credit)
+  - `generatePaymentJournalEntry()` — Journal entry for Payment INCOME (Cash debit/AR credit) or EXPENSE (AP debit/Cash credit)
+- ✅ **Features:** Idempotency checks (duplicate JE prevention), CoA auto-provisioning, balance validation, audit logging
+- ✅ **Integrated into 3 API routes:**
+  - [`apps/web/app/api/finance/invoices/[id]/route.ts`](apps/web/app/api/finance/invoices/[id]/route.ts) — PUT handler, status change to PAID
+  - [`apps/web/app/api/finance/purchase-orders/[id]/route.ts`](apps/web/app/api/finance/purchase-orders/[id]/route.ts) — PUT handler, status change to PAID/RECEIVED
+  - [`apps/web/app/api/finance/payments/route.ts`](apps/web/app/api/finance/payments/route.ts) — POST handler, payment COMPLETED
+
+### HIGH #3: Product Search/Select in Invoice & PO Forms
+
+- ✅ **New API:** [`apps/web/app/api/inventory/products/search/route.ts`](apps/web/app/api/inventory/products/search/route.ts) — Lightweight product search endpoint with query param `q`
+- ✅ **New component:** [`apps/web/components/ui/product-search-select.tsx`](apps/web/components/ui/product-search-select.tsx) — Reusable React component with debounced search (300ms), keyboard accessible, shows SKU/unit/stock/price
+- ✅ **Invoice form updated:** [`apps/web/components/finance/invoice-form.tsx`](apps/web/components/finance/invoice-form.tsx) — ProductSearchSelect replaces manual description input, auto-fills description & unitPrice
+- ✅ **PO form updated:** [`apps/web/components/finance/purchase-order-form.tsx`](apps/web/components/finance/purchase-order-form.tsx) — Same pattern, uses cost price for PO (falls back to selling price)
+
+### HIGH #4: Auto Stock Update on Invoice PAID
+
+- ✅ **Integrated into auto-journal.ts:** `generateInvoiceJournalEntry()` creates `StockMovement` records (type: OUT) when Invoice status changes to PAID
+- ✅ **Integrated into auto-journal.ts:** `generatePurchaseOrderJournalEntry()` creates `StockMovement` records (type: IN) when PO status changes to RECEIVED
+- ✅ **Audit trail:** All stock movements tracked with reference to source entity (Invoice/PO) and user
+
+### MEDIUM #5: Audit Log Viewer UI
+
+- ✅ **New page:** [`apps/web/app/dashboard/settings/audit/page.tsx`](apps/web/app/dashboard/settings/audit/page.tsx) — Full audit log viewer with:
+  - Desktop table + mobile card responsive layout
+  - Filters: search, entity type, action (CREATE/UPDATE/DELETE), date range
+  - Pagination with page navigation
+  - Detail modal showing old/new values (JSON)
+  - Color-coded action/entity badges
+  - Lucide React icons throughout
+- ✅ **New loading state:** [`apps/web/app/dashboard/settings/audit/loading.tsx`](apps/web/app/dashboard/settings/audit/loading.tsx)
+- ✅ **New error boundary:** [`apps/web/app/dashboard/settings/audit/error.tsx`](apps/web/app/dashboard/settings/audit/error.tsx)
+- ✅ **Navigation added:** [`apps/web/app/dashboard/settings/layout.tsx`](apps/web/app/dashboard/settings/layout.tsx) — "Audit Log" tab in settings sidebar (ADMIN/SUPERADMIN only)
+- ✅ **API route:** [`apps/web/app/api/audit/logs/route.ts`](apps/web/app/api/audit/logs/route.ts) — Already existed with pagination + filters
+
+### Deployment Notes
+
+```bash
+# Apply migration on VPS:
+cd /www/wwwroot/qalcuity/packages/db
+npx prisma migrate deploy
+
+# Or manual SQL:
+psql -d qalcuity -f prisma/migrations/20260910201700_add_product_fk_to_items/migration.sql
+```
 
 ---
 

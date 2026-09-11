@@ -21,6 +21,8 @@
 12. [AI Agent Types (Product)](#12-ai-agent-types-product)
 13. [AI Features Overview](#13-ai-features-overview)
 14. [Local Development Setup](#14-local-development-setup)
+15. [Cron Jobs & Scheduled Tasks](#15-cron-jobs--scheduled-tasks)
+16. [Architecture Philosophy](#16-architecture-philosophy)
 
 ---
 
@@ -917,17 +919,55 @@ cd apps/web && npx tsx __tests__/e2e-test.ts
 
 ---
 
-## 15. Architecture Philosophy
+## 15. Cron Jobs & Scheduled Tasks
+
+> **Qalcuity menggunakan external cron service untuk scheduled tasks. Tidak ada internal scheduler (node-cron).**
+
+### Cron Architecture
+- External service (cron-job.org / aaPanel Task Scheduler) trigger ke API endpoints
+- Semua cron endpoints auth via `CRON_SECRET` Bearer token
+- Utility library: [`apps/web/lib/cron.ts`](apps/web/lib/cron.ts) — `verifyCronAuth()`, `cronSuccess()`, `cronError()`
+
+### Active Cron Endpoints
+
+| Endpoint | Function | Schedule | Auth |
+|----------|----------|----------|------|
+| `GET /api/cron/recurring-invoice` | Generate invoices dari recurring templates | Daily 07:00 | CRON_SECRET |
+| `GET /api/cron/payment-reminder` | Kirim reminder untuk overdue invoices | Daily 08:00 | CRON_SECRET |
+| `GET /api/cron/stock-alert` | Alert produk stok menipis | 4x daily | CRON_SECRET |
+| `GET /api/ai/anomalies/scan` | Scan anomali transaksi | Daily 02:00 | CRON_SECRET |
+
+### Adding New Cron Jobs
+
+Ketika menambah cron endpoint baru:
+1. Buat route di `apps/web/app/api/cron/[name]/route.ts`
+2. Gunakan `verifyCronAuth(req)` dari `apps/web/lib/cron.ts` untuk auth
+3. Register di `apps/web/lib/route-permissions.ts` dengan permission `system.admin`
+4. Update dokumentasi di `docs/CRON-JOBS.md`
+5. Tambahkan schedule recommendation
+
+### Cron Rules
+- **JANGAN** gunakan user session auth untuk cron endpoints — gunakan CRON_SECRET
+- **JANGAN** lupa dedup check — hindari duplicate execution
+- **SELALU** handle error gracefully — lanjut ke next item jika 1 gagal
+- **SELALU** return summary response — `{ processed, success, failed }`
+
+### Dokumentasi Lengkap
+Lihat [`docs/CRON-JOBS.md`](docs/CRON-JOBS.md) untuk dokumentasi lengkap semua cron jobs.
+
+---
+
+## 16. Architecture Philosophy
 
 > **"Qalcuity — Business Operating System yang dapat dikonfigurasi untuk berbagai jenis industri."**
 
-### 15.1 Core Philosophy
+### 16.1 Core Philosophy
 
 Qalcuity dibangun dengan filosofi **"Core + Configuration"**:
 - **Core** menyediakan kemampuan bisnis universal (Finance, CRM, HR, Inventory, dll.)
 - **Configuration** memungkinkan setiap industri menyesuaikan workflow, approval, fields, dan dashboard sesuai kebutuhan mereka
 
-### 15.2 Three Foundation Engines
+### 16.2 Three Foundation Engines
 
 | Engine | Responsibility | Package |
 |--------|---------------|---------|
@@ -935,11 +975,11 @@ Qalcuity dibangun dengan filosofi **"Core + Configuration"**:
 | **Workflow Engine** | Configurable transaction lifecycle | `@qalcuity/workflow` |
 | **Industry Configuration Engine** | Industry packs + custom fields/documents/reports | `@qalcuity/industry-config` |
 
-### 15.3 Key Principle
+### 16.3 Key Principle
 
 > **"Never design a feature for only one industry unless the feature is inherently industry-specific. Prefer reusable core capabilities, configurable workflows, configurable fields, configurable permissions, configurable approval rules, and industry-specific extensions over hardcoded industry logic."**
 
-### 15.4 Anti-patterns (HARD RULES)
+### 16.4 Anti-patterns (HARD RULES)
 
 | ❌ Anti-pattern | ✅ Correct Approach |
 |----------------|-------------------|
@@ -949,12 +989,12 @@ Qalcuity dibangun dengan filosofi **"Core + Configuration"**:
 | Schema Prisma dengan field tambahan tanpa engine | Gunakan custom fields engine |
 | Dashboard widgets yang fixed per module | Gunakan dashboard configuration |
 
-### 15.5 Reference
+### 16.5 Reference
 
 Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap arsitektur Business Operating System.
 
 ---
 
-**Last Updated:** September 8, 2026 (Phase 4 Batch 2: Error Handling, i18n, Build Config)
+**Last Updated:** September 10, 2026 (Phase 2: ERP Strengthening)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.2 — Phase 4 Batch 2: api-messages.ts pattern, error handling consolidation, codebase stats update
+**Document Version:** 6.3 — Phase 2: Cron Jobs documentation, scheduled tasks reference

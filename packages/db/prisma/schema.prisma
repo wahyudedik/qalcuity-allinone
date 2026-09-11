@@ -147,6 +147,12 @@ model Tenant {
   // AI
   anomalyDetections    AnomalyDetection[]
   extractionHistories  ExtractionHistory[]
+
+  // Phase 2: Payment Reminder Logs
+  paymentReminderLogs  PaymentReminderLog[]
+
+  // Phase 2: Recurring Invoices
+  recurringInvoiceTemplates RecurringInvoice[]
 }
 
 model User {
@@ -293,6 +299,7 @@ model Contact {
   leads       Lead[]
   deals       Deal[]
   quotations  Quotation[]
+  recurringInvoiceTemplates RecurringInvoice[]
 
   @@index([tenantId])
   @@index([type])
@@ -325,6 +332,13 @@ model Invoice {
   items           InvoiceItem[]
   payments        Payment[]
 
+  // Phase 2: Recurring Invoice reference
+  recurringInvoiceId  String?
+  recurringInvoice    RecurringInvoice? @relation(fields: [recurringInvoiceId], references: [id], onDelete: SetNull)
+
+  // Phase 2: Payment Reminder Logs
+  paymentReminderLogs PaymentReminderLog[]
+
   @@index([tenantId])
   @@index([status])
   @@index([contactId])
@@ -332,16 +346,20 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   description String
-  quantity    Decimal @default(1) @db.Decimal(10, 2)
-  unitPrice   Decimal @default(0) @db.Decimal(19, 4)
-  total       Decimal @default(0) @db.Decimal(19, 4)
+  quantity    Decimal  @default(1) @db.Decimal(10, 2)
+  unitPrice   Decimal  @default(0) @db.Decimal(19, 4)
+  total       Decimal  @default(0) @db.Decimal(19, 4)
 
   invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
 
   @@index([invoiceId])
+  @@index([productId])
 }
 
 // ============================================
@@ -425,7 +443,11 @@ model PurchaseOrderItem {
   purchaseOrderId String
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
+  productId       String?
+  product         Product?  @relation(fields: [productId], references: [id])
+
   @@index([purchaseOrderId])
+  @@index([productId])
 }
 
 model Quotation {
@@ -587,6 +609,9 @@ model Product {
 
   stockMovements    StockMovement[]
   stockOpnameItems  StockOpnameItem[]
+  invoiceItems      InvoiceItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  recurringInvoiceItems RecurringInvoiceItem[]
 
   preparationMinutes Int?    // Estimasi waktu persiapan (menit)
   isPreparedItem     Boolean @default(false) // Apakah produk ini perlu diproses di dapur?
@@ -2482,4 +2507,83 @@ model ExtractionHistory {
   @@index([tenantId])
   @@index([tenantId, documentType])
   @@index([extractedAt])
+}
+
+// ============================================
+// PHASE 2: PAYMENT REMINDER LOGS
+// ============================================
+
+model PaymentReminderLog {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceId     String
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sentAt        DateTime @default(now())
+  channel       String   @default("email") // email, whatsapp, sms
+  reminderCount Int      @default(1)
+  daysOverdue   Int
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([sentAt])
+}
+
+// ============================================
+// PHASE 2: RECURRING INVOICES
+// ============================================
+
+model RecurringInvoice {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contactId       String
+  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Restrict)
+
+  // Template data
+  invoiceNumber   String?
+  notes           String?
+  taxRate         Decimal? @db.Decimal(5, 2)
+
+  // Recurring config
+  frequency       String   // WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY
+  dayOfMonth      Int?     // untuk MONTHLY/QUARTERLY/YEARLY (1-28)
+  dayOfWeek       Int?     // untuk WEEKLY/BIWEEKLY (0=Sunday, 6=Saturday)
+  startDate       DateTime
+  endDate         DateTime?
+  nextRunDate     DateTime
+  lastRunDate     DateTime?
+
+  // Status
+  status          String   @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED, CANCELLED
+
+  // Relations
+  items           RecurringInvoiceItem[]
+  generatedInvoices Invoice[]
+
+  // Audit
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([nextRunDate])
+  @@index([status])
+}
+
+model RecurringInvoiceItem {
+  id                  String           @id @default(cuid())
+  recurringInvoiceId  String
+  recurringInvoice    RecurringInvoice @relation(fields: [recurringInvoiceId], references: [id], onDelete: Cascade)
+
+  description         String
+  quantity            Decimal          @db.Decimal(10, 2)
+  unitPrice           Decimal          @db.Decimal(15, 2)
+  productId           String?
+  product             Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime         @default(now())
+
+  @@index([recurringInvoiceId])
 }
