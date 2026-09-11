@@ -10,8 +10,9 @@ import {
 } from '@/lib/cron-scheduler';
 
 // ─── Lazy-loaded task registry ───────────────────────────────────────────────
-// Import handlers directly to avoid circular dependency issues.
-// Each handler is imported from its own route module.
+// Import handlers from dedicated handler files in lib/ to avoid circular
+// dependency issues and comply with Next.js App Router export rules
+// (routes may only export HTTP method handlers like GET, POST, etc.).
 
 let _tasks: CronTask[] | null = null;
 
@@ -20,10 +21,10 @@ function getTasks(): CronTask[] {
 
     // Lazy import to avoid circular dependencies
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { runPaymentReminder } = require('@/app/api/cron/payment-reminder/route');
-    const { runStockAlert } = require('@/app/api/cron/stock-alert/route');
-    const { runRecurringInvoice } = require('@/app/api/cron/recurring-invoice/route');
-    const { runAnomalyScanCron } = require('@/app/api/ai/anomalies/scan/route');
+    const { runPaymentReminder } = require('@/lib/payment-reminder-handler');
+    const { runStockAlert } = require('@/lib/stock-alert-handler');
+    const { runRecurringInvoice } = require('@/lib/recurring-invoice-handler');
+    const { runAnomalyScanCron } = require('@/lib/ai/anomaly-scan-handler');
 
     _tasks = [
         {
