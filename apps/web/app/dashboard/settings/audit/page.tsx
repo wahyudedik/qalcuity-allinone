@@ -141,6 +141,9 @@ export default function AuditLogPage() {
         setActionFilter('all')
         setDateFrom('')
         setDateTo('')
+        // Re-fetch data with reset filters after state update
+        // Using setTimeout to ensure state is cleared before re-fetching
+        setTimeout(() => fetchLogs(1), 0)
     }
 
     const handlePageChange = (newPage: number) => {
@@ -438,8 +441,8 @@ export default function AuditLogPage() {
                                             key={pageNum}
                                             onClick={() => handlePageChange(pageNum)}
                                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${pageNum === pagination.page
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-50 border border-gray-300'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-600 hover:bg-gray-50 border border-gray-300'
                                                 }`}
                                         >
                                             {pageNum}

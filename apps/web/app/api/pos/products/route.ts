@@ -3,8 +3,11 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { createProductSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
 
 export async function GET(request: Request) {
@@ -76,6 +79,103 @@ export async function GET(request: Request) {
         }));
 
         return NextResponse.json({ success: true, data });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:products:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId, role } = auth;
+
+        // Only ADMIN+ can create products
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: MSG.PRODUCT_ADMIN_ONLY_CREATE },
+                { status: 403 }
+            );
+        }
+
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const validation = createProductSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        // Check for duplicate SKU within tenant
+        const existingProduct = await prisma.product.findFirst({
+            where: { tenantId, sku: validatedData.sku },
+        });
+        if (existingProduct) {
+            return NextResponse.json(
+                { success: false, error: MSG.PRODUCT_SKU_DUPLICATE },
+                { status: 400 }
+            );
+        }
+
+        const product = await prisma.product.create({
+            data: {
+                tenantId,
+                sku: validatedData.sku,
+                name: validatedData.name,
+                description: validatedData.description || null,
+                unit: validatedData.unit || 'pcs',
+                price: validatedData.price ?? 0,
+                cost: validatedData.cost ?? 0,
+                stock: validatedData.stock ?? 0,
+                minStock: validatedData.minStock ?? 0,
+                categoryId: validatedData.categoryId || null,
+            },
+            include: {
+                category: { select: { id: true, name: true } },
+            },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'CREATE',
+            entity: 'Product',
+            entityId: product.id,
+            newValues: { sku: product.sku, name: product.name, price: Number(product.price) },
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: product.id,
+                sku: product.sku,
+                name: product.name,
+                description: product.description,
+                unit: product.unit,
+                price: Number(product.price),
+                cost: Number(product.cost),
+                stock: product.stock,
+                minStock: product.minStock,
+                isActive: product.isActive,
+                categoryId: product.category?.id || null,
+                categoryName: product.category?.name || null,
+                createdAt: product.createdAt.toISOString(),
+            },
+        }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

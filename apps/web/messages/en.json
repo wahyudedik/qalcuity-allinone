@@ -88,6 +88,30 @@
         "fieldChecklists": {
             "title": "Checklists Error",
             "description": "An error occurred in the checklists module. Please try again."
+        },
+        "financeReports": {
+            "title": "Financial Reports Error",
+            "description": "An error occurred while loading financial reports. Please try again."
+        },
+        "balanceSheet": {
+            "title": "Balance Sheet Error",
+            "description": "An error occurred while loading the balance sheet. Please try again."
+        },
+        "incomeStatement": {
+            "title": "Income Statement Error",
+            "description": "An error occurred while loading the income statement. Please try again."
+        },
+        "trialBalance": {
+            "title": "Trial Balance Error",
+            "description": "An error occurred while loading the trial balance. Please try again."
+        },
+        "crmActivities": {
+            "title": "CRM Activities Error",
+            "description": "An error occurred while loading activities. Please try again."
+        },
+        "activityDetail": {
+            "title": "Activity Detail Error",
+            "description": "An error occurred while loading activity detail. Please try again."
         }
     },
     "nav": {
@@ -105,6 +129,7 @@
         "leads": "Leads",
         "contacts": "Contacts",
         "deals": "Deals",
+        "activities": "Activities",
         "inventory": "Inventory",
         "products": "Products",
         "stock": "Stock",
@@ -112,6 +137,7 @@
         "suppliers": "Suppliers",
         "hrPeople": "HR & People",
         "employees": "Employees",
+        "departments": "Departments",
         "attendance": "Attendance",
         "leaves": "Leaves",
         "payroll": "Payroll",
@@ -155,12 +181,17 @@
         "posReports": "POS Reports",
         "posLoyalty": "Loyalty",
         "posMonitor": "Monitor",
+        "kitchenDisplay": "Kitchen Display",
+        "tablesManagement": "Tables Management",
+        "recurringInvoices": "Recurring Invoices",
+        "loyaltyMembers": "Loyalty Members",
         "fieldService": "Field Service",
         "fieldJobs": "Field Jobs",
         "fieldChecklists": "Checklists",
         "aiFeatures": "AI Features",
         "documentExtraction": "Document Extraction",
-        "anomalyDetection": "Anomaly Detection"
+        "anomalyDetection": "Anomaly Detection",
+        "financialReports": "Financial Reports"
     },
     "dashboard": {
         "welcome": "Welcome back! Here's a summary of your business today.",
@@ -271,6 +302,16 @@
                 "MEMBER": "Member",
                 "VIEWER": "Viewer"
             },
+            "progress": "Progress",
+            "taskCount": "tasks",
+            "members": "members",
+            "title": "Projects",
+            "subtitle": "Manage all your team projects",
+            "newProject": "New Project",
+            "searchPlaceholder": "Search projects...",
+            "emptyTitle": "No projects yet",
+            "emptyDescription": "Start creating your first project to manage your team's tasks and time.",
+            "createProject": "Create Project",
             "board": {
                 "title": "Task Board",
                 "moveTo": "Move to",
@@ -981,6 +1022,22 @@
                 "activate": "Activate"
             }
         },
+        "reports": {
+            "title": "Financial Reports",
+            "subtitle": "View your business financial reports",
+            "balanceSheet": {
+                "title": "Balance Sheet",
+                "description": "Financial position as of a specific date — assets, liabilities, and equity"
+            },
+            "incomeStatement": {
+                "title": "Income Statement",
+                "description": "Revenue, expenses, and net income for a specific period"
+            },
+            "trialBalance": {
+                "title": "Trial Balance",
+                "description": "List of all general ledger account balances — debit and credit"
+            }
+        },
         "invoice": {
             "status": {
                 "draft": "Draft",
@@ -1251,6 +1308,82 @@
                 "contacts": "Contacts",
                 "deals": "Deals"
             }
+        },
+        "activities": {
+            "title": "Activities",
+            "subtitle": "activities recorded",
+            "addActivity": "Add Activity",
+            "fetchError": "Failed to load activities",
+            "searchPlaceholder": "Search activities...",
+            "filterAllTypes": "All Types",
+            "filterAllStatus": "All Status",
+            "typeCall": "Call",
+            "typeEmail": "Email",
+            "typeMeeting": "Meeting",
+            "typeNote": "Note",
+            "typeTask": "Task",
+            "statusPending": "Pending",
+            "statusCompleted": "Completed",
+            "statusCancelled": "Cancelled",
+            "totalLabel": "Total",
+            "empty": "No activities yet",
+            "emptyDescription": "Get started by adding your first activity",
+            "createSuccess": "Activity created successfully",
+            "createFailed": "Failed to create activity",
+            "deleteSuccess": "Activity deleted successfully",
+            "deleteFailed": "Failed to delete activity",
+            "table": {
+                "type": "Type",
+                "subject": "Subject",
+                "entity": "Entity",
+                "dueDate": "Due Date",
+                "status": "Status",
+                "created": "Created"
+            },
+            "form": {
+                "title": "Add New Activity",
+                "entityTypeLabel": "Entity Type",
+                "typeLabel": "Activity Type",
+                "entityIdLabel": "Entity ID",
+                "entityIdPlaceholder": "Enter entity ID",
+                "subjectLabel": "Subject",
+                "subjectPlaceholder": "Enter activity subject",
+                "descriptionLabel": "Description",
+                "descriptionPlaceholder": "Enter activity description",
+                "dueDateLabel": "Due Date"
+            }
+        },
+        "activityDetail": {
+            "backToActivities": "Back to Activities",
+            "title": "Activity Details",
+            "type": "Type",
+            "subject": "Subject",
+            "entityType": "Entity Type",
+            "entityId": "Entity ID",
+            "status": "Status",
+            "completed": "Completed",
+            "pending": "Pending",
+            "dueDate": "Due Date",
+            "completedAt": "Completed on",
+            "description": "Description",
+            "relatedEntity": "Related Entity",
+            "viewEntity": "View Entity",
+            "info": "Information",
+            "createdAt": "Created on",
+            "updatedAt": "Updated on",
+            "edit": "Edit",
+            "editTitle": "Edit Activity",
+            "markComplete": "Mark Complete",
+            "delete": "Delete",
+            "error": "Activity not found",
+            "errorLoad": "Failed to load activity data",
+            "deleteSuccess": "Activity deleted successfully",
+            "deleteError": "Failed to delete activity",
+            "updateSuccess": "Activity updated successfully",
+            "updateError": "Failed to update activity",
+            "markedComplete": "Activity marked as complete",
+            "confirmDelete": "Confirm Delete",
+            "confirmDeleteMessage": "Are you sure you want to delete this activity?"
         },
         "contactDetail": {
             "backToContacts": "Back to Contacts",

@@ -3,14 +3,20 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { updatePosTerminalSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(request: Request) {
+export async function GET(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:pos:terminals:status:${ip}`, 60, 60000);
+        const rateLimitResult = checkRateLimit(`api:pos:terminals:GET:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: MSG.TOO_MANY_REQUESTS },
@@ -22,76 +28,203 @@ export async function GET(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Fetch all terminals with their latest session and today's stats
-        const terminals = await prisma.posTerminal.findMany({
-            where: { tenantId },
+        const terminal = await prisma.posTerminal.findFirst({
+            where: { id: params.id, tenantId },
             include: {
                 sessions: {
-                    where: { tenantId },
                     orderBy: { createdAt: 'desc' },
                     take: 1,
-                    include: {
-                        transactions: {
-                            where: {
-                                status: 'COMPLETED',
-                                createdAt: { gte: today, lt: tomorrow },
-                            },
-                            select: {
-                                totalAmount: true,
-                            },
-                        },
-                    },
                 },
             },
-            orderBy: { name: 'asc' },
         });
 
-        const terminalsData = terminals.map((terminal) => {
-            const latestSession = terminal.sessions[0];
-            const isActive = latestSession?.status === 'OPEN';
-            const todayTransactions = latestSession?.transactions || [];
-            const todaySales = todayTransactions.reduce(
-                (sum, tx) => sum + Number(tx.totalAmount),
-                0
+        if (!terminal) {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
+                { status: 404 }
             );
+        }
 
-            return {
-                id: terminal.id,
-                name: terminal.name,
-                code: terminal.code,
-                location: terminal.location,
-                terminalStatus: terminal.status,
-                runtimeStatus: isActive ? 'ACTIVE' : 'IDLE',
-                currentCashier: isActive ? latestSession?.cashierName || null : null,
-                currentSessionId: isActive ? latestSession?.id || null : null,
-                todayTransactions: todayTransactions.length,
-                todaySales,
-                lastActivity: latestSession?.updatedAt?.toISOString() || null,
-                lastOpenedAt: latestSession?.openedAt?.toISOString() || null,
-            };
-        });
-
-        // Summary counts
-        const activeCount = terminalsData.filter((t) => t.runtimeStatus === 'ACTIVE').length;
-        const idleCount = terminalsData.filter((t) => t.runtimeStatus === 'IDLE' && t.terminalStatus === 'ACTIVE').length;
-        const offlineCount = terminalsData.filter((t) => t.terminalStatus !== 'ACTIVE').length;
+        const latestSession = terminal.sessions[0];
+        const isActive = latestSession?.status === 'OPEN';
 
         return NextResponse.json({
             success: true,
             data: {
-                terminals: terminalsData,
-                summary: {
-                    total: terminalsData.length,
-                    active: activeCount,
-                    idle: idleCount,
-                    offline: offlineCount,
-                },
+                id: terminal.id,
+                name: terminal.name,
+                code: terminal.code,
+                location: terminal.location,
+                status: terminal.status,
+                runtimeStatus: isActive ? 'ACTIVE' : 'IDLE',
+                currentCashier: isActive ? latestSession?.cashierName || null : null,
+                currentSessionId: isActive ? latestSession?.id || null : null,
+                lastActivity: latestSession?.updatedAt?.toISOString() || null,
+                lastOpenedAt: latestSession?.openedAt?.toISOString() || null,
+                createdAt: terminal.createdAt.toISOString(),
+                updatedAt: terminal.updatedAt.toISOString(),
             },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:terminals:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId, role } = auth;
+
+        // Only ADMIN+ can update terminals
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_ADMIN_ONLY_UPDATE },
+                { status: 403 }
+            );
+        }
+
+        // Check terminal exists
+        const existingTerminal = await prisma.posTerminal.findFirst({
+            where: { id: params.id, tenantId },
+        });
+        if (!existingTerminal) {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const validation = updatePosTerminalSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        const terminal = await prisma.posTerminal.update({
+            where: { id: params.id },
+            data: {
+                ...(validatedData.name !== undefined && { name: validatedData.name }),
+                ...(validatedData.location !== undefined && { location: validatedData.location }),
+                ...(validatedData.status !== undefined && { status: validatedData.status }),
+            },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'PosTerminal',
+            entityId: terminal.id,
+            newValues: validatedData,
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: terminal.id,
+                name: terminal.name,
+                code: terminal.code,
+                location: terminal.location,
+                status: terminal.status,
+                createdAt: terminal.createdAt.toISOString(),
+                updatedAt: terminal.updatedAt.toISOString(),
+            },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:terminals:DELETE:${ip}`, 10, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId, role } = auth;
+
+        // Only ADMIN+ can delete terminals
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_ADMIN_ONLY_DELETE },
+                { status: 403 }
+            );
+        }
+
+        // Check terminal exists
+        const existingTerminal = await prisma.posTerminal.findFirst({
+            where: { id: params.id, tenantId },
+        });
+        if (!existingTerminal) {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Check for active session
+        const activeSession = await prisma.posSession.findFirst({
+            where: {
+                tenantId,
+                terminalId: params.id,
+                status: 'OPEN',
+            },
+        });
+        if (activeSession) {
+            return NextResponse.json(
+                { success: false, error: MSG.TERMINAL_CANNOT_DELETE_ACTIVE_SESSION },
+                { status: 400 }
+            );
+        }
+
+        // Delete terminal (hard delete since it has no cascade dependencies)
+        await prisma.posTerminal.delete({
+            where: { id: params.id },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'DELETE',
+            entity: 'PosTerminal',
+            entityId: params.id,
+            newValues: { name: existingTerminal.name, code: existingTerminal.code },
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            message: MSG.TERMINAL_DELETED,
         });
     } catch (error) {
         return handleApiError(error);

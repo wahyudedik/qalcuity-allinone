@@ -63,6 +63,62 @@ interface PayrollCalculationResult {
     netSalary: number;
 }
 
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:payroll:${ip}`, 100, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
+        }
+
+        const record = await prisma.payrollRecord.findFirst({
+            where: { id: params.id, tenantId },
+            include: {
+                employee: {
+                    select: {
+                        id: true,
+                        employeeId: true,
+                        name: true,
+                        email: true,
+                        position: true,
+                        department: true,
+                    },
+                },
+            },
+        });
+
+        if (!record) {
+            return NextResponse.json(
+                { success: false, error: MSG.PAYROLL_RECORD_NOT_FOUND, code: 'PAYROLL_RECORD_NOT_FOUND' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: record.id,
+            period: record.period,
+            baseSalary: record.baseSalary,
+            allowances: record.allowances,
+            deductions: record.deductions,
+            bonus: record.bonus,
+            netSalary: record.netSalary,
+            status: record.status,
+            paidAt: record.paidAt?.toISOString() || null,
+            notes: record.notes || '',
+            employee: record.employee,
+            createdAt: record.createdAt.toISOString(),
+            updatedAt: record.updatedAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
 export async function POST(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);

@@ -6,9 +6,9 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { createJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
+import { createJournalEntrySchema, updateJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
-import { handleApiError } from '@/lib/api-error';
+import { handleApiError, apiForbidden } from '@/lib/api-error';
 
 // Helper: generate sequential entry number JE-YYYYMMDD-XXXX
 async function generateEntryNumber(tenantId: string): Promise<string> {
@@ -238,6 +238,213 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: completeEntry }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:journal-entries:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        // Hanya ADMIN+ yang boleh update journal entry
+        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
+            return apiForbidden();
+        }
+
+        const { id } = params;
+
+        // Fetch existing entry
+        const existing = await prisma.journalEntry.findFirst({
+            where: { id, tenantId },
+            include: { items: true },
+        });
+        if (!existing) {
+            return NextResponse.json({ success: false, error: MSG.DATA_NOT_FOUND }, { status: 404 });
+        }
+
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const validation = updateJournalEntrySchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const { items, date, ...restData } = validation.data;
+
+        // Build update data
+        const updateData: Record<string, unknown> = {};
+        if (restData.description !== undefined) updateData.description = restData.description;
+        if (restData.reference !== undefined) updateData.reference = restData.reference;
+        if (restData.sourceType !== undefined) updateData.sourceType = restData.sourceType;
+        if (restData.sourceId !== undefined) updateData.sourceId = restData.sourceId;
+        if (restData.status !== undefined) updateData.status = restData.status;
+        if (date !== undefined) updateData.date = new Date(date);
+
+        // If items are provided, recalculate totals and replace items
+        let totalDebit = Number(existing.totalDebit);
+        let totalCredit = Number(existing.totalCredit);
+
+        if (items && items.length > 0) {
+            totalDebit = items.reduce((sum: number, item: { debit?: number; credit?: number }) => sum + (item.debit || 0), 0);
+            totalCredit = items.reduce((sum: number, item: { debit?: number; credit?: number }) => sum + (item.credit || 0), 0);
+
+            if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+                return NextResponse.json(
+                    { success: false, error: `Total debit (${totalDebit}) harus sama dengan total credit (${totalCredit})` },
+                    { status: 400 }
+                );
+            }
+
+            if (totalDebit <= 0 || totalCredit <= 0) {
+                return NextResponse.json(
+                    { success: false, error: 'Total debit dan total credit harus lebih dari 0' },
+                    { status: 400 }
+                );
+            }
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if ((item.debit || 0) > 0 && (item.credit || 0) > 0) {
+                    return NextResponse.json(
+                        { success: false, error: `Item ${i + 1}: hanya boleh memiliki debit ATAU credit, bukan keduanya` },
+                        { status: 400 }
+                    );
+                }
+                if ((item.debit || 0) === 0 && (item.credit || 0) === 0) {
+                    return NextResponse.json(
+                        { success: false, error: `Item ${i + 1}: harus memiliki minimal debit atau credit` },
+                        { status: 400 }
+                    );
+                }
+            }
+
+            updateData.totalDebit = totalDebit;
+            updateData.totalCredit = totalCredit;
+        }
+
+        // Update entry with items in a transaction
+        const updatedEntry = await prisma.$transaction(async (tx) => {
+            const entry = await tx.journalEntry.update({
+                where: { id },
+                data: updateData,
+            });
+
+            // If items provided, delete old items and create new ones
+            if (items && items.length > 0) {
+                await tx.journalEntryItem.deleteMany({ where: { journalEntryId: id } });
+                await tx.journalEntryItem.createMany({
+                    data: items.map((item: { accountId: string; debit?: number; credit?: number; description?: string | null }) => ({
+                        tenantId,
+                        journalEntryId: id,
+                        accountId: item.accountId,
+                        debit: item.debit || 0,
+                        credit: item.credit || 0,
+                        description: item.description || null,
+                    })),
+                });
+            }
+
+            return entry;
+        });
+
+        // Fetch complete entry with items
+        const completeEntry = await prisma.journalEntry.findUnique({
+            where: { id },
+            include: {
+                items: {
+                    include: {
+                        account: { select: { id: true, code: true, name: true, type: true } },
+                    },
+                },
+            },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'JournalEntry',
+            entityId: id,
+            oldValues: { description: existing.description, status: existing.status },
+            newValues: { description: updatedEntry.description, status: updatedEntry.status },
+            request,
+        });
+
+        return NextResponse.json({ success: true, data: completeEntry });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:journal-entries:DELETE:${ip}`, 20, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        // Hanya ADMIN+ yang boleh delete journal entry
+        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
+            return apiForbidden();
+        }
+
+        const { id } = params;
+
+        const existing = await prisma.journalEntry.findFirst({
+            where: { id, tenantId },
+        });
+        if (!existing) {
+            return NextResponse.json({ success: false, error: MSG.DATA_NOT_FOUND }, { status: 404 });
+        }
+
+        // Only allow delete if status is DRAFT
+        if (existing.status !== 'DRAFT') {
+            return NextResponse.json(
+                { success: false, error: 'Hanya jurnal dengan status DRAFT yang dapat dihapus' },
+                { status: 400 }
+            );
+        }
+
+        // Delete items first, then the entry
+        await prisma.$transaction(async (tx) => {
+            await tx.journalEntryItem.deleteMany({ where: { journalEntryId: id } });
+            await tx.journalEntry.delete({ where: { id } });
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'DELETE',
+            entity: 'JournalEntry',
+            entityId: id,
+            oldValues: { entryNumber: existing.entryNumber, description: existing.description },
+            request,
+        });
+
+        return NextResponse.json({ success: true, message: 'Jurnal berhasil dihapus' });
     } catch (error) {
         return handleApiError(error);
     }

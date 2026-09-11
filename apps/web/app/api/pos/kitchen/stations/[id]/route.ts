@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { createKitchenStationSchema, formatZodError } from '@/lib/validation-schemas';
+import { createKitchenStationSchema, updateKitchenStationSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
@@ -141,6 +141,185 @@ export async function POST(request: Request) {
                 createdAt: station.createdAt.toISOString(),
             },
         }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function PUT(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:kitchen:stations:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId, role } = auth;
+
+        // Only ADMIN+ can update kitchen stations
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_UPDATE },
+                { status: 403 }
+            );
+        }
+
+        // Check station exists
+        const existingStation = await prisma.posKitchenStation.findFirst({
+            where: { id: params.id, tenantId },
+        });
+        if (!existingStation) {
+            return NextResponse.json(
+                { success: false, error: MSG.KITCHEN_STATION_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const validation = updateKitchenStationSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
+
+        // Check for duplicate name within tenant (excluding current station)
+        if (validatedData.name) {
+            const duplicateName = await prisma.posKitchenStation.findFirst({
+                where: {
+                    tenantId,
+                    name: validatedData.name,
+                    id: { not: params.id },
+                },
+            });
+            if (duplicateName) {
+                return NextResponse.json(
+                    { success: false, error: MSG.KITCHEN_STATION_NAME_DUPLICATE },
+                    { status: 400 }
+                );
+            }
+        }
+
+        const station = await prisma.posKitchenStation.update({
+            where: { id: params.id },
+            data: {
+                ...(validatedData.name !== undefined && { name: validatedData.name }),
+                ...(validatedData.description !== undefined && { description: validatedData.description }),
+                ...(validatedData.sortOrder !== undefined && { sortOrder: validatedData.sortOrder }),
+                ...(validatedData.isActive !== undefined && { isActive: validatedData.isActive }),
+            },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'PosKitchenStation',
+            entityId: station.id,
+            newValues: validatedData,
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: station.id,
+                name: station.name,
+                description: station.description,
+                isActive: station.isActive,
+                sortOrder: station.sortOrder,
+                createdAt: station.createdAt.toISOString(),
+                updatedAt: station.updatedAt.toISOString(),
+            },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:kitchen:stations:DELETE:${ip}`, 10, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId, role } = auth;
+
+        // Only ADMIN+ can delete kitchen stations
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+            return NextResponse.json(
+                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_DELETE },
+                { status: 403 }
+            );
+        }
+
+        // Check station exists
+        const existingStation = await prisma.posKitchenStation.findFirst({
+            where: { id: params.id, tenantId },
+        });
+        if (!existingStation) {
+            return NextResponse.json(
+                { success: false, error: MSG.KITCHEN_STATION_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Check for active orders
+        const activeOrders = await prisma.posKitchenOrder.findFirst({
+            where: {
+                tenantId,
+                stationId: params.id,
+                status: { in: ['PENDING', 'PREPARING'] },
+            },
+        });
+        if (activeOrders) {
+            return NextResponse.json(
+                { success: false, error: MSG.KITCHEN_STATION_CANNOT_DELETE_ACTIVE_ORDERS },
+                { status: 400 }
+            );
+        }
+
+        // Delete station
+        await prisma.posKitchenStation.delete({
+            where: { id: params.id },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'DELETE',
+            entity: 'PosKitchenStation',
+            entityId: params.id,
+            newValues: { name: existingStation.name },
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            message: MSG.KITCHEN_STATION_DELETED,
+        });
     } catch (error) {
         return handleApiError(error);
     }

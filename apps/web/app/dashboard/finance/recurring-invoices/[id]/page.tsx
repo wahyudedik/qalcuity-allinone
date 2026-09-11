@@ -22,26 +22,26 @@ interface RecurringInvoiceDetail {
     createdAt: string
     contact: { id: string; name: string | null; email: string | null }
     items: Array<{ description: string; quantity: number; unitPrice: number }>
-    generatedInvoices: Array<{ id: string; invoiceNumber: string; status: string; total: number; createdAt: string }>
+    generatedInvoices: Array<{ id: string; invoiceNumber: string; status: string; total: string | number; createdAt: string }>
     _count: { generatedInvoices: number }
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    ACTIVE: { label: 'Aktif', color: 'bg-green-100 text-green-700' },
-    PAUSED: { label: 'Dijeda', color: 'bg-yellow-100 text-yellow-700' },
-    COMPLETED: { label: 'Selesai', color: 'bg-blue-100 text-blue-700' },
-    CANCELLED: { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-600' },
+    ACTIVE: { label: 'Active', color: 'bg-green-100 text-green-700' },
+    PAUSED: { label: 'Paused', color: 'bg-yellow-100 text-yellow-700' },
+    COMPLETED: { label: 'Completed', color: 'bg-blue-100 text-blue-700' },
+    CANCELLED: { label: 'Cancelled', color: 'bg-gray-100 text-gray-600' },
 }
 
 const FREQUENCY_LABELS: Record<string, string> = {
-    WEEKLY: 'Mingguan',
-    BIWEEKLY: '2 Mingguan',
-    MONTHLY: 'Bulanan',
+    WEEKLY: 'Weekly',
+    BIWEEKLY: 'Biweekly',
+    MONTHLY: 'Monthly',
     QUARTERLY: 'Quarterly',
-    YEARLY: 'Tahunan',
+    YEARLY: 'Yearly',
 }
 
-const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function RecurringInvoiceDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
@@ -70,10 +70,10 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
             if (json.success) {
                 setData(json.data)
             } else {
-                setToast({ message: 'Gagal memuat data', type: 'error' })
+                setToast({ message: 'Failed to load data', type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal memuat data', type: 'error' })
+            setToast({ message: 'Failed to load data', type: 'error' })
         } finally {
             setLoading(false)
         }
@@ -90,12 +90,12 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
             const json = await res.json()
             if (json.success) {
                 setData(prev => prev ? { ...prev, status: newStatus } : prev)
-                setToast({ message: `Status berhasil diubah ke ${STATUS_CONFIG[newStatus]?.label || newStatus}`, type: 'success' })
+                setToast({ message: `Status updated to ${STATUS_CONFIG[newStatus]?.label || newStatus}`, type: 'success' })
             } else {
-                setToast({ message: json.error || 'Gagal mengubah status', type: 'error' })
+                setToast({ message: json.error || 'Failed to update status', type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal mengubah status', type: 'error' })
+            setToast({ message: 'Failed to update status', type: 'error' })
         } finally {
             setActionLoading(false)
         }
@@ -113,9 +113,9 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
     if (!data) {
         return (
             <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-gray-500">Data tidak ditemukan</p>
+                <p className="text-gray-500">Data not found</p>
                 <Link href="/dashboard/finance/recurring-invoices" className="mt-4 text-blue-600 hover:underline">
-                    Kembali ke Daftar
+                    Back to List
                 </Link>
             </div>
         )
@@ -142,7 +142,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                     </Link>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Template Invoice Berulang</h1>
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recurring Invoice Template</h1>
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_CONFIG[data.status]?.color || 'bg-gray-100 text-gray-700'}`}>
                                 {STATUS_CONFIG[data.status]?.label || data.status}
                             </span>
@@ -158,7 +158,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                             className="px-4 py-2.5 border border-yellow-300 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-50 transition-colors flex items-center gap-2 disabled:opacity-50"
                         >
                             <Pause className="h-4 w-4" />
-                            Jeda
+                            Pause
                         </button>
                     )}
                     {data.status === 'PAUSED' && (
@@ -168,7 +168,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                             className="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
                         >
                             <Play className="h-4 w-4" />
-                            Aktifkan
+                            Resume
                         </button>
                     )}
                     {data.status !== 'CANCELLED' && data.status !== 'COMPLETED' && (
@@ -178,7 +178,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                             className="px-4 py-2.5 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-50"
                         >
                             <XCircle className="h-4 w-4" />
-                            Batalkan
+                            Cancel
                         </button>
                     )}
                     {actionLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
@@ -192,45 +192,45 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
                         <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-blue-600" />
-                            Jadwal
+                            Schedule
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
-                                <p className="text-xs text-gray-500">Frekuensi</p>
+                                <p className="text-xs text-gray-500">Frequency</p>
                                 <p className="text-sm font-medium text-gray-900">{FREQUENCY_LABELS[data.frequency] || data.frequency}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Tanggal Mulai</p>
+                                <p className="text-xs text-gray-500">Start Date</p>
                                 <p className="text-sm font-medium text-gray-900">{new Date(data.startDate).toLocaleDateString('id-ID')}</p>
                             </div>
                             {data.endDate && (
                                 <div>
-                                    <p className="text-xs text-gray-500">Tanggal Berakhir</p>
+                                    <p className="text-xs text-gray-500">End Date</p>
                                     <p className="text-sm font-medium text-gray-900">{new Date(data.endDate).toLocaleDateString('id-ID')}</p>
                                 </div>
                             )}
                             {data.nextRunDate && (
                                 <div>
-                                    <p className="text-xs text-gray-500">Jalankan Berikutnya</p>
+                                    <p className="text-xs text-gray-500">Next Run</p>
                                     <p className="text-sm font-medium text-blue-600">{new Date(data.nextRunDate).toLocaleDateString('id-ID')}</p>
                                 </div>
                             )}
                             {data.lastRunDate && (
                                 <div>
-                                    <p className="text-xs text-gray-500">Terakhir Dijalankan</p>
+                                    <p className="text-xs text-gray-500">Last Run</p>
                                     <p className="text-sm font-medium text-gray-900">{new Date(data.lastRunDate).toLocaleDateString('id-ID')}</p>
                                 </div>
                             )}
                             {['WEEKLY', 'BIWEEKLY'].includes(data.frequency) && data.dayOfWeek !== null && (
                                 <div>
-                                    <p className="text-xs text-gray-500">Hari</p>
+                                    <p className="text-xs text-gray-500">Day</p>
                                     <p className="text-sm font-medium text-gray-900">{DAY_NAMES[data.dayOfWeek]}</p>
                                 </div>
                             )}
                             {['MONTHLY', 'QUARTERLY', 'YEARLY'].includes(data.frequency) && data.dayOfMonth !== null && (
                                 <div>
-                                    <p className="text-xs text-gray-500">Tanggal</p>
-                                    <p className="text-sm font-medium text-gray-900">{data.dayOfMonth} per periode</p>
+                                    <p className="text-xs text-gray-500">Date</p>
+                                    <p className="text-sm font-medium text-gray-900">{data.dayOfMonth} per period</p>
                                 </div>
                             )}
                         </div>
@@ -241,16 +241,16 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h3 className="font-medium text-gray-900 flex items-center gap-2">
                                 <Hash className="h-4 w-4 text-blue-600" />
-                                Item Invoice
+                                Invoice Items
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-gray-50 border-b border-gray-200">
-                                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Deskripsi</th>
+                                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Description</th>
                                         <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">Qty</th>
-                                        <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Harga</th>
+                                        <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Price</th>
                                         <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Total</th>
                                     </tr>
                                 </thead>
@@ -274,7 +274,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                                         <span className="text-gray-900">Rp {subtotal.toLocaleString('id-ID')}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Pajak ({Number(data.taxRate || 0)}%)</span>
+                                        <span className="text-gray-600">Tax ({Number(data.taxRate || 0)}%)</span>
                                         <span className="text-gray-900">Rp {taxAmount.toLocaleString('id-ID')}</span>
                                     </div>
                                     <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
@@ -291,23 +291,23 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h3 className="font-medium text-gray-900 flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-blue-600" />
-                                Invoice yang Dihasilkan ({data._count.generatedInvoices})
+                                Generated Invoices ({data._count.generatedInvoices})
                             </h3>
                         </div>
                         {data.generatedInvoices.length === 0 ? (
                             <div className="px-6 py-8 text-center text-sm text-gray-500">
-                                Belum ada invoice yang dihasilkan
+                                No invoices generated yet
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-50 border-b border-gray-200">
-                                            <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Nomor</th>
+                                            <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Number</th>
                                             <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Status</th>
                                             <th className="text-right py-3 px-6 text-sm font-medium text-gray-600">Total</th>
-                                            <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Tanggal</th>
-                                            <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">Aksi</th>
+                                            <th className="text-left py-3 px-6 text-sm font-medium text-gray-600">Date</th>
+                                            <th className="text-center py-3 px-6 text-sm font-medium text-gray-600">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -324,7 +324,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                                                 <td className="py-3 px-6 text-center">
                                                     <Link href={`/dashboard/finance/invoices/${inv.id}`} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm">
                                                         <Eye className="h-3.5 w-3.5" />
-                                                        Lihat
+                                                        View
                                                     </Link>
                                                 </td>
                                             </tr>
@@ -338,7 +338,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                     {/* Notes */}
                     {data.notes && (
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="font-medium text-gray-900 mb-2">Catatan</h3>
+                            <h3 className="font-medium text-gray-900 mb-2">Notes</h3>
                             <p className="text-sm text-gray-600">{data.notes}</p>
                         </div>
                     )}
@@ -348,7 +348,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                 <div className="space-y-6">
                     {/* Summary Card */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-4">Ringkasan</h3>
+                        <h3 className="font-medium text-gray-900 mb-4">Summary</h3>
                         <div className="space-y-3">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -356,7 +356,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium text-gray-900">{data._count.generatedInvoices} Invoice</div>
-                                    <div className="text-xs text-gray-500">Telah dihasilkan</div>
+                                    <div className="text-xs text-gray-500">Generated</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -365,7 +365,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium text-gray-900">{FREQUENCY_LABELS[data.frequency] || data.frequency}</div>
-                                    <div className="text-xs text-gray-500">Frekuensi</div>
+                                    <div className="text-xs text-gray-500">Frequency</div>
                                 </div>
                             </div>
                         </div>
@@ -373,7 +373,7 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
 
                     {/* Contact */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-3">Kontak</h3>
+                        <h3 className="font-medium text-gray-900 mb-3">Contact</h3>
                         <div className="text-sm">
                             <p className="font-medium text-gray-900">{data.contact.name || 'N/A'}</p>
                             {data.contact.email && <p className="text-gray-600">{data.contact.email}</p>}
@@ -382,9 +382,9 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
 
                     {/* Created */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-3">Informasi</h3>
+                        <h3 className="font-medium text-gray-900 mb-3">Information</h3>
                         <div className="space-y-2 text-sm text-gray-600">
-                            <p>Dibuat: {new Date(data.createdAt).toLocaleDateString('id-ID')}</p>
+                            <p>Created: {new Date(data.createdAt).toLocaleDateString('en-US')}</p>
                             {data.invoiceNumber && <p>Prefix: {data.invoiceNumber}</p>}
                         </div>
                     </div>

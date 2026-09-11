@@ -965,20 +965,20 @@ aaPanel Task Scheduler (*/5 * * * *)
 
 | Type | Config | Contoh |
 |------|--------|--------|
-| `daily` | `{ type: 'daily', hour: <UTC>, minute: <UTC> }` | `payment-reminder`: hour=1, minute=0 (08:00 WIB) |
-| `hourly` | `{ type: 'hourly', minute: <UTC> }` | Run setiap jam di menit tertentu |
+| `daily` | `{ type: 'daily', hour: <N>, minute: <N> }` | `payment-reminder`: hour=8, minute=0 (08:00 WIB) |
+| `hourly` | `{ type: 'hourly', minute: <N> }` | Run setiap jam di menit tertentu |
 | `interval` | `{ type: 'interval', intervalHours: <N> }` | `stock-alert`: setiap 6 jam (4x daily) |
 
-> **Catatan:** Semua waktu schedule dalam **UTC**. Konversi WIB (UTC+7) dilakukan di config level.
+> **Catatan:** Semua waktu schedule dalam **local timezone** (APP_TIMEZONE, default Asia/Jakarta). `shouldRun()` membandingkan langsung dengan `getLocalHour()`/`getLocalMinute()`.
 
 ### Active Cron Tasks
 
-| Task ID | Nama | Schedule (UTC) | Schedule (WIB) | Handler Route |
-|---------|------|----------------|-----------------|---------------|
-| `payment-reminder` | Payment Reminder | Daily 01:00 | Daily 08:00 | [`apps/web/app/api/cron/payment-reminder/route.ts`](apps/web/app/api/cron/payment-reminder/route.ts) |
+| Task ID | Nama | Schedule (Local) | Schedule (WIB) | Handler Route |
+|---------|------|------------------|-----------------|---------------|
+| `payment-reminder` | Payment Reminder | Daily 08:00 | Daily 08:00 | [`apps/web/app/api/cron/payment-reminder/route.ts`](apps/web/app/api/cron/payment-reminder/route.ts) |
 | `stock-alert` | Stock Alert | Interval 6 jam | 4x daily | [`apps/web/app/api/cron/stock-alert/route.ts`](apps/web/app/api/cron/stock-alert/route.ts) |
-| `recurring-invoice` | Recurring Invoice | Daily 00:00 | Daily 07:00 | [`apps/web/app/api/cron/recurring-invoice/route.ts`](apps/web/app/api/cron/recurring-invoice/route.ts) |
-| `anomaly-scan` | Anomaly Detection | Daily 19:00 | Daily 02:00 | [`apps/web/app/api/ai/anomalies/scan/route.ts`](apps/web/app/api/ai/anomalies/scan/route.ts) |
+| `recurring-invoice` | Recurring Invoice | Daily 07:00 | Daily 07:00 | [`apps/web/app/api/cron/recurring-invoice/route.ts`](apps/web/app/api/cron/recurring-invoice/route.ts) |
+| `anomaly-scan` | Anomaly Detection | Daily 02:00 | Daily 02:00 | [`apps/web/app/api/ai/anomalies/scan/route.ts`](apps/web/app/api/ai/anomalies/scan/route.ts) |
 
 ### Adding New Cron Jobs
 
@@ -992,7 +992,7 @@ Ketika menambah cron job baru:
    {
        id: 'my-task',
        name: 'My Task Name',
-       schedule: { type: 'daily', hour: <UTC>, minute: <UTC> },
+       schedule: { type: 'daily', hour: <N>, minute: <N> },
        handler: runMyTask,
        enabled: true,
    }
@@ -1023,7 +1023,7 @@ Atau menggunakan wget:
 - **SELALU** handle error gracefully — lanjut ke next item jika 1 gagal
 - **SELALU** return `{ success: boolean, message: string }` dari handler
 - **LOG** setiap eksekusi ke `CronRunLog` — dilakukan otomatis oleh dispatcher
-- **TIME** semua schedule dalam UTC — konversi WIB di config level
+- **TIME** semua schedule dalam **local timezone** (APP_TIMEZONE) — `shouldRun()` langsung bandingkan dengan `getLocalHour()`/`getLocalMinute()`
 
 ### Dokumentasi Lengkap
 Lihat [`docs/CRON-JOBS.md`](docs/CRON-JOBS.md) untuk dokumentasi lengkap semua cron jobs.

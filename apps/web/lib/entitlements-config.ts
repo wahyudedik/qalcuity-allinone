@@ -170,13 +170,13 @@ export interface PlanDefinition {
 
 export const DEFAULT_PLANS: PlanDefinition[] = [
     {
-        name: 'Free',
-        slug: 'free',
-        description: 'Cocok untuk bisnis kecil yang baru memulai',
-        priceMonthly: 0,
-        priceYearly: 0,
-        maxUsers: 3,
-        maxStorage: 500, // 500 MB
+        name: 'Starter',
+        slug: 'starter',
+        description: 'Cocok untuk bisnis kecil yang baru mulai',
+        priceMonthly: 299000,
+        priceYearly: 2990000, // ~2 bulan gratis
+        maxUsers: 20,
+        maxStorage: 5000, // 5 GB
         sortOrder: 0,
         features: [
             // Finance (basic)
@@ -216,13 +216,13 @@ export const DEFAULT_PLANS: PlanDefinition[] = [
         ],
     },
     {
-        name: 'Pro',
-        slug: 'pro',
+        name: 'Growth',
+        slug: 'growth',
         description: 'Untuk bisnis yang berkembang dengan kebutuhan lengkap',
-        priceMonthly: 299000,
-        priceYearly: 2990000, // ~2 bulan gratis
-        maxUsers: 20,
-        maxStorage: 5000, // 5 GB
+        priceMonthly: 799000,
+        priceYearly: 7990000, // ~2 bulan gratis
+        maxUsers: 50,
+        maxStorage: 20000, // 20 GB
         sortOrder: 1,
         features: [
             // Finance (all)
@@ -262,11 +262,11 @@ export const DEFAULT_PLANS: PlanDefinition[] = [
         ],
     },
     {
-        name: 'Enterprise',
-        slug: 'enterprise',
-        description: 'Untuk bisnis besar dengan kebutuhan advanced',
-        priceMonthly: 999000,
-        priceYearly: 9990000, // ~2 bulan gratis
+        name: 'Business',
+        slug: 'business',
+        description: 'Untuk bisnis skala besar dengan kebutuhan advanced',
+        priceMonthly: 1999000,
+        priceYearly: 19990000, // ~2 bulan gratis
         maxUsers: -1, // unlimited
         maxStorage: null, // unlimited
         sortOrder: 2,

@@ -20,14 +20,14 @@ interface InvoiceItem {
 }
 
 const FREQUENCY_OPTIONS = [
-    { value: 'WEEKLY', label: 'Mingguan' },
-    { value: 'BIWEEKLY', label: '2 Mingguan' },
-    { value: 'MONTHLY', label: 'Bulanan' },
+    { value: 'WEEKLY', label: 'Weekly' },
+    { value: 'BIWEEKLY', label: 'Biweekly' },
+    { value: 'MONTHLY', label: 'Monthly' },
     { value: 'QUARTERLY', label: 'Quarterly' },
-    { value: 'YEARLY', label: 'Tahunan' },
+    { value: 'YEARLY', label: 'Yearly' },
 ]
 
-const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function NewRecurringInvoicePage() {
     const { t } = useTranslation()
@@ -104,11 +104,11 @@ export default function NewRecurringInvoicePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!form.contactId) {
-            setToast({ message: 'Pilih kontak terlebih dahulu', type: 'error' })
+            setToast({ message: 'Please select a contact first', type: 'error' })
             return
         }
         if (items.some(item => !item.description || item.quantity <= 0 || item.unitPrice <= 0)) {
-            setToast({ message: 'Lengkapi semua item dengan benar', type: 'error' })
+            setToast({ message: 'Please fill in all items correctly', type: 'error' })
             return
         }
 
@@ -136,13 +136,13 @@ export default function NewRecurringInvoicePage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Template invoice berulang berhasil dibuat', type: 'success' })
+                setToast({ message: 'Recurring invoice template created successfully', type: 'success' })
                 setTimeout(() => router.push('/dashboard/finance/recurring-invoices'), 1000)
             } else {
-                setToast({ message: data.error || 'Gagal membuat template', type: 'error' })
+                setToast({ message: data.error || 'Failed to create template', type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal menyimpan data', type: 'error' })
+            setToast({ message: 'Failed to save data', type: 'error' })
         } finally {
             setSaving(false)
         }
@@ -166,8 +166,8 @@ export default function NewRecurringInvoicePage() {
                     <ArrowLeft className="h-5 w-5 text-gray-600" />
                 </Link>
                 <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Buat Template Invoice Berulang</h1>
-                    <p className="text-gray-600 mt-1">Buat template untuk invoice yang dihasilkan secara otomatis</p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Create Recurring Invoice Template</h1>
+                    <p className="text-gray-600 mt-1">Create a template for automatically generated invoices</p>
                 </div>
             </div>
 
@@ -176,17 +176,17 @@ export default function NewRecurringInvoicePage() {
                 <div className="lg:col-span-2 space-y-6">
                     {/* Basic Info */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-4">Informasi Dasar</h3>
+                        <h3 className="font-medium text-gray-900 mb-4">Basic Information</h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontak / Customer *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Contact / Customer *</label>
                                 <select
                                     value={form.contactId}
                                     onChange={(e) => handleFormChange('contactId', e.target.value)}
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                     required
                                 >
-                                    <option value="">Pilih kontak...</option>
+                                    <option value="">Select a contact...</option>
                                     {contacts.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}{c.email ? ` (${c.email})` : ''}</option>
                                     ))}
@@ -195,7 +195,7 @@ export default function NewRecurringInvoicePage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Frekuensi *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Frequency *</label>
                                     <select
                                         value={form.frequency}
                                         onChange={(e) => handleFormChange('frequency', e.target.value)}
@@ -209,7 +209,7 @@ export default function NewRecurringInvoicePage() {
 
                                 {isWeekly && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Hari dalam Minggu</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Day of Week</label>
                                         <select
                                             value={form.dayOfWeek}
                                             onChange={(e) => handleFormChange('dayOfWeek', parseInt(e.target.value))}
@@ -224,7 +224,7 @@ export default function NewRecurringInvoicePage() {
 
                                 {isMonthlyPlus && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal dalam Periode</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Day of Month</label>
                                         <input
                                             type="number"
                                             min={1}
@@ -239,7 +239,7 @@ export default function NewRecurringInvoicePage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Mulai *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date *</label>
                                     <input
                                         type="date"
                                         value={form.startDate}
@@ -249,7 +249,7 @@ export default function NewRecurringInvoicePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Berakhir (Opsional)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date (Optional)</label>
                                     <input
                                         type="date"
                                         value={form.endDate}
@@ -264,14 +264,14 @@ export default function NewRecurringInvoicePage() {
                     {/* Items */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-medium text-gray-900">Item Invoice</h3>
+                            <h3 className="font-medium text-gray-900">Invoice Items</h3>
                             <button
                                 type="button"
                                 onClick={addItem}
                                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1.5"
                             >
                                 <Plus className="h-3.5 w-3.5" />
-                                Tambah Item
+                                Add Item
                             </button>
                         </div>
 
@@ -279,12 +279,12 @@ export default function NewRecurringInvoicePage() {
                             {items.map((item, idx) => (
                                 <div key={idx} className="grid grid-cols-12 gap-3 items-start p-3 bg-gray-50 rounded-lg">
                                     <div className="col-span-12 md:col-span-5">
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Deskripsi *</label>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Description *</label>
                                         <input
                                             type="text"
                                             value={item.description}
                                             onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                                            placeholder="Deskripsi item"
+                                            placeholder="Item description"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                             required
                                         />
@@ -301,7 +301,7 @@ export default function NewRecurringInvoicePage() {
                                         />
                                     </div>
                                     <div className="col-span-5 md:col-span-3">
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Harga Satuan *</label>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Unit Price *</label>
                                         <input
                                             type="number"
                                             min={0}
@@ -329,12 +329,12 @@ export default function NewRecurringInvoicePage() {
 
                     {/* Notes */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-4">Catatan</h3>
+                        <h3 className="font-medium text-gray-900 mb-4">Notes</h3>
                         <textarea
                             rows={3}
                             value={form.notes}
                             onChange={(e) => handleFormChange('notes', e.target.value)}
-                            placeholder="Catatan untuk invoice yang dihasilkan..."
+                            placeholder="Notes for generated invoices..."
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                         />
                     </div>
@@ -344,7 +344,7 @@ export default function NewRecurringInvoicePage() {
                 <div className="space-y-6">
                     {/* Summary */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-4">Ringkasan</h3>
+                        <h3 className="font-medium text-gray-900 mb-4">Summary</h3>
                         <div className="space-y-3">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Subtotal</span>
@@ -352,7 +352,7 @@ export default function NewRecurringInvoicePage() {
                             </div>
                             <div className="flex justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-gray-600">Pajak</span>
+                                    <span className="text-gray-600">Tax</span>
                                     <input
                                         type="number"
                                         min={0}
@@ -375,18 +375,18 @@ export default function NewRecurringInvoicePage() {
 
                     {/* Frequency Info */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h3 className="font-medium text-gray-900 mb-3">Info Frekuensi</h3>
+                        <h3 className="font-medium text-gray-900 mb-3">Frequency Info</h3>
                         <div className="space-y-2 text-sm text-gray-600">
-                            <p>Frekuensi: <span className="font-medium text-gray-900">{FREQUENCY_OPTIONS.find(o => o.value === form.frequency)?.label}</span></p>
+                            <p>Frequency: <span className="font-medium text-gray-900">{FREQUENCY_OPTIONS.find(o => o.value === form.frequency)?.label}</span></p>
                             {isWeekly && (
-                                <p>Hari: <span className="font-medium text-gray-900">{DAY_NAMES[form.dayOfWeek]}</span></p>
+                                <p>Day: <span className="font-medium text-gray-900">{DAY_NAMES[form.dayOfWeek]}</span></p>
                             )}
                             {isMonthlyPlus && (
-                                <p>Tanggal: <span className="font-medium text-gray-900">{form.dayOfMonth} per periode</span></p>
+                                <p>Date: <span className="font-medium text-gray-900">{form.dayOfMonth} per period</span></p>
                             )}
-                            <p>Mulai: <span className="font-medium text-gray-900">{form.startDate}</span></p>
+                            <p>Start: <span className="font-medium text-gray-900">{form.startDate}</span></p>
                             {form.endDate && (
-                                <p>Berakhir: <span className="font-medium text-gray-900">{form.endDate}</span></p>
+                                <p>End: <span className="font-medium text-gray-900">{form.endDate}</span></p>
                             )}
                         </div>
                     </div>
@@ -401,12 +401,12 @@ export default function NewRecurringInvoicePage() {
                             {saving ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Menyimpan...
+                                    Saving...
                                 </>
                             ) : (
                                 <>
                                     <Save className="h-4 w-4" />
-                                    Simpan Template
+                                    Save Template
                                 </>
                             )}
                         </button>
@@ -414,7 +414,7 @@ export default function NewRecurringInvoicePage() {
                             href="/dashboard/finance/recurring-invoices"
                             className="w-full mt-3 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                         >
-                            Batal
+                            Cancel
                         </Link>
                     </div>
                 </div>

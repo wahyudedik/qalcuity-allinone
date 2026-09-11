@@ -12,11 +12,15 @@ export async function runRecurringInvoice(): Promise<CronTaskResult> {
     let generated = 0;
     let failed = 0;
 
-    // Find all active recurring invoices that are due
+    // Find all active recurring invoices that are due (excluding expired ones)
     const dueRecurringInvoices = await prisma.recurringInvoice.findMany({
         where: {
             status: 'ACTIVE',
             nextRunDate: { lte: now },
+            OR: [
+                { endDate: null },
+                { endDate: { gte: now } },
+            ],
         },
         include: {
             items: true,

@@ -318,6 +318,14 @@ export default function RecurringInvoicesPage() {
                                             Resume
                                         </button>
                                     )}
+                                    {ri.status !== 'CANCELLED' && ri.status !== 'COMPLETED' && (
+                                        <button
+                                            onClick={() => handleCancel(ri.id)}
+                                            className="flex-1 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )

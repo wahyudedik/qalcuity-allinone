@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api-error';
 import { requirePermission, requireMutateAuth } from '@/lib/session';
 import { MSG } from '@/lib/api-messages';
+import { updateRecurringInvoiceSchema } from '@/lib/validation-schemas';
 
 // ─── GET: Detail recurring invoice ───────────────────────────────────────────
 
@@ -63,6 +64,9 @@ export async function PUT(
 
         const body = await req.json();
 
+        // Validate input with Zod schema
+        const validated = updateRecurringInvoiceSchema.parse(body);
+
         // Verify ownership
         const existing = await prisma.recurringInvoice.findFirst({
             where: { id: params.id, tenantId },
@@ -75,18 +79,18 @@ export async function PUT(
             );
         }
 
-        // Update fields
+        // Update fields from validated input
         const updateData: Record<string, unknown> = {};
 
-        if (body.status !== undefined) updateData.status = body.status;
-        if (body.frequency !== undefined) updateData.frequency = body.frequency;
-        if (body.dayOfMonth !== undefined) updateData.dayOfMonth = body.dayOfMonth;
-        if (body.dayOfWeek !== undefined) updateData.dayOfWeek = body.dayOfWeek;
-        if (body.startDate !== undefined) updateData.startDate = new Date(body.startDate);
-        if (body.endDate !== undefined) updateData.endDate = body.endDate ? new Date(body.endDate) : null;
-        if (body.notes !== undefined) updateData.notes = body.notes;
-        if (body.invoiceNumber !== undefined) updateData.invoiceNumber = body.invoiceNumber;
-        if (body.taxRate !== undefined) updateData.taxRate = body.taxRate;
+        if (validated.status !== undefined) updateData.status = validated.status;
+        if (validated.frequency !== undefined) updateData.frequency = validated.frequency;
+        if (validated.dayOfMonth !== undefined) updateData.dayOfMonth = validated.dayOfMonth;
+        if (validated.dayOfWeek !== undefined) updateData.dayOfWeek = validated.dayOfWeek;
+        if (validated.startDate !== undefined) updateData.startDate = new Date(validated.startDate);
+        if (validated.endDate !== undefined) updateData.endDate = validated.endDate ? new Date(validated.endDate) : null;
+        if (validated.notes !== undefined) updateData.notes = validated.notes;
+        if (validated.invoiceNumber !== undefined) updateData.invoiceNumber = validated.invoiceNumber;
+        if (validated.taxRate !== undefined) updateData.taxRate = validated.taxRate;
 
         const updated = await prisma.recurringInvoice.update({
             where: { id: params.id },

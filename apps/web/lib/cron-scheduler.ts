@@ -19,9 +19,9 @@ export interface CronTaskResult {
 
 export interface CronTaskSchedule {
     type: 'daily' | 'hourly' | 'interval';
-    /** Hour in UTC (0-23). Used for 'daily' schedule. */
+    /** Hour in local timezone (APP_TIMEZONE, 0-23). Used for 'daily' schedule. */
     hour?: number;
-    /** Minute in UTC (0-59). Used for 'daily' schedule. */
+    /** Minute in local timezone (APP_TIMEZONE, 0-59). Used for 'daily' schedule. */
     minute?: number;
     /** Interval in hours. Used for 'interval' schedule. */
     intervalHours?: number;

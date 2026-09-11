@@ -73,11 +73,20 @@ export const MSG = {
     LEAVE_END_DATE_BEFORE_START: 'End date must be after start date',
     PAYROLL_RECORD_NOT_FOUND: 'Payroll record not found',
     INVALID_STATUS_TRANSITION: 'Invalid status transition',
+    DEPARTMENT_NOT_FOUND: 'Department not found',
+    DEPARTMENT_NAME_DUPLICATE: 'A department with this name already exists',
+    DEPARTMENT_HAS_EMPLOYEES: 'Cannot delete department with active employees',
+    DEPARTMENT_ACCESS_DENIED: 'Department not found or access denied',
 
     // ---------------------------------------------------------------------------
     // Inventory
     // ---------------------------------------------------------------------------
     PRODUCT_NOT_FOUND: 'Product not found',
+    PRODUCT_DELETED: 'Product deleted successfully',
+    PRODUCT_SKU_DUPLICATE: 'A product with this SKU already exists',
+    PRODUCT_ADMIN_ONLY_CREATE: 'Only admin can create products',
+    PRODUCT_ADMIN_ONLY_UPDATE: 'Only admin can update products',
+    PRODUCT_ADMIN_ONLY_DELETE: 'Only admin can delete products',
     CATEGORY_NOT_FOUND: 'Category not found',
     CATEGORY_NAME_DUPLICATE: 'A category with this name already exists',
     CATEGORY_DELETED: 'Category deleted successfully',
