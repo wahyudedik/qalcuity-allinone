@@ -1,6 +1,6 @@
 // ─── Unified Cron Scheduler ──────────────────────────────────────────────────
 // Laravel-style scheduler: 1 cron entry → dispatcher checks each task's schedule.
-// All times in UTC. WIB = UTC+7 conversion done at config level.
+// Schedule calculations use APP_TIMEZONE for accurate local-time scheduling.
 //
 // Usage:
 //   - aaPanel: single cron entry every 5-10 minutes
@@ -46,6 +46,64 @@ export interface CronTaskStatus {
     nextRunAt: Date | null;
 }
 
+// ─── Timezone Helpers ────────────────────────────────────────────────────────
+
+/**
+ * Get the configured APP_TIMEZONE. Falls back to 'Asia/Jakarta' (WIB).
+ */
+export function getAppTimezone(): string {
+    return process.env.APP_TIMEZONE || 'Asia/Jakarta';
+}
+
+/**
+ * Get the current hour (0-23) in the configured timezone.
+ */
+export function getLocalHour(date: Date = new Date()): number {
+    const tz = getAppTimezone();
+    return parseInt(
+        date.toLocaleString('en-US', {
+            hour: 'numeric',
+            hour12: false,
+            timeZone: tz,
+        }),
+        10
+    );
+}
+
+/**
+ * Get the current minute (0-59) in the configured timezone.
+ */
+export function getLocalMinute(date: Date = new Date()): number {
+    const tz = getAppTimezone();
+    return parseInt(
+        date.toLocaleString('en-US', {
+            minute: 'numeric',
+            timeZone: tz,
+        }),
+        10
+    );
+}
+
+/**
+ * Get the current date components (year, month, day) in the configured timezone.
+ */
+export function getLocalDateComponents(date: Date = new Date()): {
+    year: number;
+    month: number;
+    day: number;
+} {
+    const tz = getAppTimezone();
+    const parts = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: tz,
+    }).formatToParts(date);
+
+    const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+    return { year: get('year'), month: get('month'), day: get('day') };
+}
+
 // ─── In-memory last-run tracker (backup for DB) ─────────────────────────────
 
 const lastRunMap = new Map<string, { at: Date; status: string; message: string }>();
@@ -55,13 +113,17 @@ const lastRunMap = new Map<string, { at: Date; status: string; message: string }
 /**
  * Check if a task should run based on its schedule config and last run time.
  *
- * For 'daily' tasks: runs once per day at the specified UTC hour/minute.
+ * For 'daily' tasks: runs once per day at the specified local hour/minute (via APP_TIMEZONE).
  * For 'hourly' tasks: runs once per hour at the specified minute.
  * For 'interval' tasks: runs every N hours since last run.
  */
 export function shouldRun(task: CronTask, lastRunAt: Date | null): boolean {
     const now = new Date();
     const schedule = task.schedule;
+
+    // Get current time in configured timezone
+    const currentHour = getLocalHour(now);
+    const currentMinute = getLocalMinute(now);
 
     if (!lastRunAt) {
         // Never run before → always run
@@ -76,27 +138,28 @@ export function shouldRun(task: CronTask, lastRunAt: Date | null): boolean {
             const hour = schedule.hour ?? 0;
             const minute = schedule.minute ?? 0;
 
-            // Calculate today's scheduled run time in UTC
-            const scheduledToday = new Date(now);
-            scheduledToday.setUTCHours(hour, minute, 0, 0);
+            // Compare local hour/minute in configured timezone
+            // Run if current local time >= scheduled time AND last run was before scheduled time today
+            if (currentHour > hour || (currentHour === hour && currentMinute >= minute)) {
+                if (!lastRunAt) return true;
 
-            // Calculate yesterday's scheduled run time
-            const scheduledYesterday = new Date(scheduledToday);
-            scheduledYesterday.setUTCDate(scheduledYesterday.getUTCDate() - 1);
+                // Check if last run was before today's scheduled time
+                const lastRunHour = getLocalHour(lastRunAt);
+                const lastRunMinute = getLocalMinute(lastRunAt);
+                const lastRunDate = getLocalDateComponents(lastRunAt);
+                const todayDate = getLocalDateComponents(now);
 
-            // Run if:
-            // 1. Today's scheduled time has passed AND last run was before today's scheduled time
-            //    OR last run was before yesterday's scheduled time (missed run)
-            if (now.getTime() >= scheduledToday.getTime()) {
-                if (lastRunAt.getTime() < scheduledToday.getTime()) {
+                // If last run was on a different day, definitely run
+                if (lastRunDate.year !== todayDate.year ||
+                    lastRunDate.month !== todayDate.month ||
+                    lastRunDate.day !== todayDate.day) {
                     return true;
                 }
-            }
 
-            // Also handle edge case: if we're within 1 minute of scheduled time
-            const diffToScheduled = Math.abs(now.getTime() - scheduledToday.getTime());
-            if (diffToScheduled <= ONE_MINUTE_MS && lastRunAt.getTime() < scheduledToday.getTime()) {
-                return true;
+                // If last run was before today's scheduled time, run
+                if (lastRunHour < hour || (lastRunHour === hour && lastRunMinute < minute)) {
+                    return true;
+                }
             }
 
             return false;
@@ -127,6 +190,7 @@ export function shouldRun(task: CronTask, lastRunAt: Date | null): boolean {
 
 /**
  * Calculate the next run time for a task based on its schedule.
+ * Uses APP_TIMEZONE for accurate local-time scheduling.
  */
 export function getNextRunTime(schedule: CronTaskSchedule, lastRunAt: Date | null): Date {
     const now = new Date();
@@ -136,14 +200,18 @@ export function getNextRunTime(schedule: CronTaskSchedule, lastRunAt: Date | nul
             const hour = schedule.hour ?? 0;
             const minute = schedule.minute ?? 0;
 
-            const next = new Date(now);
-            next.setUTCHours(hour, minute, 0, 0);
+            // Get current local time components
+            const currentHour = getLocalHour(now);
+            const currentMinute = getLocalMinute(now);
 
-            // If today's time has passed, schedule for tomorrow
-            if (next.getTime() <= now.getTime()) {
-                next.setUTCDate(next.getUTCDate() + 1);
+            // If current local time has not yet reached scheduled time, next run is today
+            if (currentHour < hour || (currentHour === hour && currentMinute < minute)) {
+                return now; // Will be picked up in the current window
             }
-            return next;
+            // Otherwise next run is tomorrow at the scheduled local time
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return tomorrow;
         }
 
         case 'hourly': {
@@ -261,8 +329,15 @@ export async function updateLastRun(
 
 /**
  * Get status of all registered tasks (for monitoring/debugging).
+ * Includes timezone information for debugging schedule accuracy.
  */
-export async function getSchedulerStatus(): Promise<CronTaskStatus[]> {
+export async function getSchedulerStatus(): Promise<{
+    tasks: CronTaskStatus[];
+    timezone: string;
+    localTime: string;
+    utcTime: string;
+}> {
+    const tz = getAppTimezone();
     const statuses: CronTaskStatus[] = [];
 
     for (const task of registeredTasks) {
@@ -281,5 +356,10 @@ export async function getSchedulerStatus(): Promise<CronTaskStatus[]> {
         });
     }
 
-    return statuses;
+    return {
+        tasks: statuses,
+        timezone: tz,
+        localTime: new Date().toLocaleString('en-US', { timeZone: tz }),
+        utcTime: new Date().toISOString(),
+    };
 }
