@@ -87,8 +87,8 @@ export async function GET(req: Request) {
         // ─── Status mode ──────────────────────────────────────────────
         if (statusOnly) {
             const { getSchedulerStatus } = await import('@/lib/cron-scheduler');
-            const statuses = await getSchedulerStatus();
-            return cronSuccess({ tasks: statuses });
+            const statusResult = await getSchedulerStatus();
+            return cronSuccess(statusResult);
         }
 
         // ─── Run mode ────────────────────────────────────────────────
