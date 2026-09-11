@@ -26,16 +26,29 @@ export default function RootLayout({
             <head>
                 {/* Suppress known Next.js 14.x web-vitals bug:
                     "Cannot read properties of undefined (reading 'startTime')"
-                    This is a race condition in PerformanceObserver callback during browser idle. */}
+                    This is a race condition in PerformanceObserver callback during browser idle.
+                    Both addEventListener('error') and window.onerror are used as belt-and-suspenders
+                    to ensure the error is caught regardless of how it propagates. */}
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `
-                            window.addEventListener('error', function(e) {
-                                if (e.message && e.message.includes("Cannot read properties of undefined (reading 'startTime')")) {
-                                    e.preventDefault();
-                                    return false;
-                                }
-                            });
+                            (function() {
+                                var target = "reading 'startTime'";
+                                // Layer 1: addEventListener — catches most synchronous errors
+                                window.addEventListener('error', function(e) {
+                                    if (e.message && e.message.indexOf(target) !== -1) {
+                                        e.preventDefault();
+                                        return false;
+                                    }
+                                });
+                                // Layer 2: window.onerror — catches errors that bypass addEventListener
+                                // (e.g., errors in certain async callbacks or web worker contexts)
+                                window.onerror = function(msg) {
+                                    if (msg && msg.indexOf(target) !== -1) {
+                                        return true; // suppress the error
+                                    }
+                                };
+                            })();
                         `
                     }}
                 />

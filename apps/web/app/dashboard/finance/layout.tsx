@@ -10,6 +10,7 @@ import {
     ShoppingCart,
     BookOpen,
     ArrowUpDown,
+    Repeat,
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
@@ -28,6 +29,7 @@ const financeTabs: TabItem[] = [
     { href: '/dashboard/finance/purchase-orders', labelKey: 'finance.layout.tabs.purchaseOrders', icon: ShoppingCart },
     { href: '/dashboard/finance/accounts', labelKey: 'finance.layout.tabs.accounts', icon: BookOpen },
     { href: '/dashboard/finance/reconciliation', labelKey: 'finance.layout.tabs.reconciliation', icon: ArrowUpDown },
+    { href: '/dashboard/finance/recurring-invoices', labelKey: 'finance.layout.tabs.recurringInvoices', icon: Repeat },
 ]
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {

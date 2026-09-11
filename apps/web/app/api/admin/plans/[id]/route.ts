@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/admin/plans â€” List all plans
- * POST /api/admin/plans â€” Create a new plan (SUPERADMIN only)
+ * GET    /api/admin/plans/[id] — Get a single plan by ID
+ * PUT    /api/admin/plans/[id] — Update a plan (SUPERADMIN only)
+ * DELETE /api/admin/plans/[id] — Delete a plan (SUPERADMIN only)
  */
 
 import { NextResponse } from 'next/server';
@@ -13,40 +14,17 @@ import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
-type PlanWithFeatures = {
-    id: string;
-    name: string;
-    slug: string;
-    description: string | null;
-    priceMonthly: number;
-    priceYearly: number | null;
-    maxUsers: number;
-    maxStorage: number | null;
-    isActive: boolean;
-    sortOrder: number;
-    createdAt: Date;
-    updatedAt: Date;
-    features: Array<{
-        id: string;
-        planId: string;
-        featureKey: string;
-        enabled: boolean;
-        limit: number | null;
-    }>;
-    _count: {
-        entitlements: number;
-    };
-};
 
-const createPlanSchema = z.object({
-    name: z.string().min(1, MSG.NAME_REQUIRED).max(100),
-    slug: z.string().min(1, MSG.SLUG_REQUIRED).max(50).regex(/^[a-z0-9-]+$/, MSG.SLUG_ONLY_LOWERCASE_HYPHEN),
+const updatePlanSchema = z.object({
+    name: z.string().min(1, MSG.NAME_REQUIRED).max(100).optional(),
+    slug: z.string().min(1, MSG.SLUG_REQUIRED).max(50).regex(/^[a-z0-9-]+$/, MSG.SLUG_ONLY_LOWERCASE_HYPHEN).optional(),
     description: z.string().max(500).optional(),
-    priceMonthly: z.number().min(0, 'Price must not be negative'),
+    priceMonthly: z.number().min(0, 'Price must not be negative').optional(),
     priceYearly: z.number().min(0).optional(),
-    maxUsers: z.number().int().min(-1, 'Max users must be at least -1 (unlimited)'),
+    maxUsers: z.number().int().min(-1, 'Max users must be at least -1 (unlimited)').optional(),
     maxStorage: z.number().int().min(0).optional(),
-    sortOrder: z.number().int().default(0),
+    isActive: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
     features: z.array(z.object({
         featureKey: z.string().min(1),
         enabled: z.boolean().default(true),
@@ -54,11 +32,16 @@ const createPlanSchema = z.object({
     })).optional(),
 });
 
-export async function GET() {
+// ─── GET /api/admin/plans/[id] ──────────────────────────────────────────────
+export async function GET(
+    _request: Request,
+    { params }: { params: { id: string } }
+) {
     try {
-        const auth = await requireAdminAuth();
+        await requireAdminAuth();
 
-        const plans = await prisma.plan.findMany({
+        const plan = await prisma.plan.findUnique({
+            where: { id: params.id },
             include: {
                 features: true,
                 _count: {
@@ -67,12 +50,18 @@ export async function GET() {
                     },
                 },
             },
-            orderBy: { sortOrder: 'asc' },
         });
+
+        if (!plan) {
+            return NextResponse.json(
+                { success: false, error: MSG.PLAN_NOT_FOUND },
+                { status: 404 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
-            data: plans.map((plan) => ({
+            data: {
                 id: plan.id,
                 name: plan.name,
                 slug: plan.slug,
@@ -87,7 +76,7 @@ export async function GET() {
                 tenantCount: plan._count.entitlements,
                 createdAt: plan.createdAt,
                 updatedAt: plan.updatedAt,
-            })),
+            },
         });
     } catch (error) {
         if (error instanceof Error && error.message.includes('Forbidden')) {
@@ -100,20 +89,36 @@ export async function GET() {
     }
 }
 
-export async function POST(request: Request) {
+// ─── PUT /api/admin/plans/[id] ──────────────────────────────────────────────
+export async function PUT(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
     try {
         const auth = await requireAdminAuth();
 
         if (!isSuperAdmin({ user: auth } as never)) {
             return NextResponse.json(
-                { success: false, error: 'Hanya SUPERADMIN yang dapat membuat paket' },
+                { success: false, error: 'Hanya SUPERADMIN yang dapat mengubah paket' },
                 { status: 403 }
+            );
+        }
+
+        // Verify plan exists
+        const existingPlan = await prisma.plan.findUnique({
+            where: { id: params.id },
+        });
+
+        if (!existingPlan) {
+            return NextResponse.json(
+                { success: false, error: MSG.PLAN_NOT_FOUND },
+                { status: 404 }
             );
         }
 
         const body = await request.json();
 
-        const validation = createPlanSchema.safeParse(body);
+        const validation = updatePlanSchema.safeParse(body);
         if (!validation.success) {
             return NextResponse.json(
                 {
@@ -130,33 +135,44 @@ export async function POST(request: Request) {
 
         const { features, ...planData } = validation.data;
 
-        // Check slug uniqueness
-        const existing = await prisma.plan.findUnique({
-            where: { slug: planData.slug },
-        });
+        // Check slug uniqueness if slug is being changed
+        if (planData.slug && planData.slug !== existingPlan.slug) {
+            const slugExists = await prisma.plan.findUnique({
+                where: { slug: planData.slug },
+            });
 
-        if (existing) {
-            return NextResponse.json(
-                { success: false, error: 'Slug sudah digunakan' },
-                { status: 409 }
-            );
+            if (slugExists) {
+                return NextResponse.json(
+                    { success: false, error: MSG.SLUG_IN_USE },
+                    { status: 409 }
+                );
+            }
         }
 
-        // Create plan with features
-        const plan = await prisma.plan.create({
+        // Build update data with sanitized fields
+        const updateData: Record<string, unknown> = { ...planData };
+        if (planData.name !== undefined) {
+            updateData.name = sanitizeInput(planData.name);
+        }
+        if (planData.description !== undefined) {
+            updateData.description = planData.description ? sanitizeInput(planData.description) : null;
+        }
+
+        // Update plan — if features are provided, replace them entirely
+        const updatedPlan = await prisma.plan.update({
+            where: { id: params.id },
             data: {
-                ...planData,
-                name: sanitizeInput(planData.name),
-                description: planData.description ? sanitizeInput(planData.description) : null,
-                features: features
-                    ? {
+                ...updateData,
+                ...(features !== undefined && {
+                    features: {
+                        deleteMany: {},
                         create: features.map((f) => ({
                             featureKey: f.featureKey,
                             enabled: f.enabled,
                             limit: f.limit ?? null,
                         })),
-                    }
-                    : undefined,
+                    },
+                }),
             },
             include: {
                 features: true,
@@ -167,22 +183,107 @@ export async function POST(request: Request) {
         void logAudit({
             userId: auth.userId,
             tenantId: auth.tenantId,
-            action: 'CREATE',
+            action: 'UPDATE',
             entity: 'Plan',
-            entityId: plan.id,
+            entityId: updatedPlan.id,
+            oldValues: {
+                name: existingPlan.name,
+                slug: existingPlan.slug,
+                priceMonthly: Number(existingPlan.priceMonthly),
+            },
             newValues: {
-                name: plan.name,
-                slug: plan.slug,
-                priceMonthly: plan.priceMonthly,
-                featureCount: plan.features.length,
+                name: updatedPlan.name,
+                slug: updatedPlan.slug,
+                priceMonthly: Number(updatedPlan.priceMonthly),
+                featureCount: updatedPlan.features.length,
             } as Record<string, unknown>,
             request,
         });
 
         return NextResponse.json({
             success: true,
-            data: plan,
-            message: `Paket "${plan.name}" berhasil dibuat`,
+            data: updatedPlan,
+            message: `Paket "${updatedPlan.name}" berhasil diperbarui`,
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('Forbidden')) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized' },
+                { status: 403 }
+            );
+        }
+        return handleApiError(error);
+    }
+}
+
+// ─── DELETE /api/admin/plans/[id] ───────────────────────────────────────────
+export async function DELETE(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const auth = await requireAdminAuth();
+
+        if (!isSuperAdmin({ user: auth } as never)) {
+            return NextResponse.json(
+                { success: false, error: 'Hanya SUPERADMIN yang dapat menghapus paket' },
+                { status: 403 }
+            );
+        }
+
+        // Verify plan exists
+        const existingPlan = await prisma.plan.findUnique({
+            where: { id: params.id },
+            include: {
+                _count: {
+                    select: {
+                        entitlements: true,
+                    },
+                },
+            },
+        });
+
+        if (!existingPlan) {
+            return NextResponse.json(
+                { success: false, error: MSG.PLAN_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Prevent deletion if plan has active tenants
+        if (existingPlan._count.entitlements > 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: `Paket "${existingPlan.name}" masih digunakan oleh ${existingPlan._count.entitlements} tenant. Nonaktifkan paket terlebih dahulu.`,
+                },
+                { status: 409 }
+            );
+        }
+
+        // Delete plan (features cascade delete via Prisma schema)
+        await prisma.plan.delete({
+            where: { id: params.id },
+        });
+
+        // Log audit
+        void logAudit({
+            userId: auth.userId,
+            tenantId: auth.tenantId,
+            action: 'DELETE',
+            entity: 'Plan',
+            entityId: params.id,
+            oldValues: {
+                name: existingPlan.name,
+                slug: existingPlan.slug,
+                priceMonthly: Number(existingPlan.priceMonthly),
+            } as Record<string, unknown>,
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            message: `Paket "${existingPlan.name}" berhasil dihapus`,
         });
     } catch (error) {
         if (error instanceof Error && error.message.includes('Forbidden')) {

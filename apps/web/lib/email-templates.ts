@@ -147,6 +147,29 @@ export const emailTemplates = {
       <p>Hormat kami,<br/>Qalcuity System</p>
     `,
   },
+  stockAlert: {
+    subject: '⚠️ Stok Menipis: {{productName}}',
+    body: `
+      <h2>Peringatan Stok Menipis</h2>
+      <p>Produk berikut memiliki stok di bawah batas minimum:</p>
+      <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Nama Produk</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">{{productName}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Stok Saat Ini</td>
+          <td style="padding: 8px; border: 1px solid #ddd; color: #dc2626; font-weight: bold;">{{currentStock}}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Minimum Stok</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">{{minStock}}</td>
+        </tr>
+      </table>
+      <p>Segera lakukan restock untuk menghindari kehabisan stok.</p>
+      <p>Hormat kami,<br/>{{companyName}}</p>
+    `,
+  },
 };
 
 export type EmailTemplateKey = keyof typeof emailTemplates;

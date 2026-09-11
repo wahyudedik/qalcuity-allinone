@@ -96,21 +96,29 @@ export async function GET(request: Request) {
                 },
                 take: 5,
             }),
-            // Low stock products
+            // Low stock products (using minStock field instead of hardcoded value)
             prisma.product.findMany({
                 where: {
                     tenantId,
-                    stock: { lte: 10 },
+                    isActive: true,
+                    deletedAt: null,
+                    minStock: { gt: 0 },
                 },
                 select: {
                     id: true,
                     name: true,
                     sku: true,
                     stock: true,
+                    minStock: true,
                 },
-                take: 5,
+                take: 50, // Fetch more to filter in JS
             }),
         ]);
+
+        // Filter low stock products in JS (Prisma can't compare two columns)
+        const filteredLowStockProducts = lowStockProducts
+            .filter((p) => p.stock <= p.minStock)
+            .slice(0, 5);
 
         // Calculate revenue
         const currentRevenue = Number(paidInvoices._sum.total || 0);
@@ -155,7 +163,7 @@ export async function GET(request: Request) {
             });
         });
 
-        lowStockProducts.forEach((prod) => {
+        filteredLowStockProducts.forEach((prod) => {
             alerts.push({
                 id: `lowstock-${prod.id}`,
                 type: 'warning',

@@ -7,11 +7,13 @@ import { Modal } from '@/components/ui/modal'
 import { Spinner } from '@qalcuity/ui'
 import { formatCurrency } from '@/lib/utils'
 import { createPurchaseOrderSchema } from '@/lib/validation-schemas'
+import { ProductSearchSelect, type ProductOption } from '@/components/ui/product-search-select'
 
 interface POItem {
     description: string
     quantity: number
     unitPrice: number
+    productId?: string | null
 }
 
 interface PurchaseOrderFormProps {
@@ -34,13 +36,13 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
         notes: '',
     })
     const [items, setItems] = useState<POItem[]>([
-        { description: '', quantity: 1, unitPrice: 0 },
+        { description: '', quantity: 1, unitPrice: 0, productId: null },
     ])
     const [formError, setFormError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const addItem = () => {
-        setItems([...items, { description: '', quantity: 1, unitPrice: 0 }])
+        setItems([...items, { description: '', quantity: 1, unitPrice: 0, productId: null }])
     }
 
     const removeItem = (index: number) => {
@@ -88,7 +90,7 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
         try {
             onSubmit({ ...formData, items })
             setFormData({ supplierName: '', supplierEmail: '', expectedDelivery: '', notes: '' })
-            setItems([{ description: '', quantity: 1, unitPrice: 0 }])
+            setItems([{ description: '', quantity: 1, unitPrice: 0, productId: null }])
             onClose()
         } finally {
             setIsSubmitting(false)
@@ -157,13 +159,26 @@ export function PurchaseOrderForm({ isOpen, onClose, onSubmit }: PurchaseOrderFo
                         {items.map((item, index) => (
                             <div key={index} className="flex items-start gap-3">
                                 <div className="flex-1">
-                                    <input
-                                        type="text"
-                                        required
-                                        value={item.description}
-                                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                        placeholder="Deskripsi item"
+                                    <ProductSearchSelect
+                                        value={item.productId || ''}
+                                        onSelect={(product: ProductOption) => {
+                                            const newItems = [...items]
+                                            newItems[index] = {
+                                                ...newItems[index],
+                                                description: product.name,
+                                                unitPrice: product.cost || product.price,
+                                                productId: product.id,
+                                            }
+                                            setItems(newItems)
+                                        }}
+                                        onClear={() => {
+                                            const newItems = [...items]
+                                            newItems[index] = {
+                                                ...newItems[index],
+                                                productId: null,
+                                            }
+                                            setItems(newItems)
+                                        }}
                                     />
                                 </div>
                                 <div className="w-24">

@@ -578,3 +578,45 @@ export async function sendPaymentReminderEmail(
         return { success: false, error: message };
     }
 }
+
+/**
+ * Send stock alert email when a product's stock falls below minimum threshold.
+ * Graceful — logs warning if SMTP is not configured, never throws.
+ */
+export async function sendStockAlertEmail(
+    to: string,
+    product: { name: string; stock: number; minStock: number; tenantId: string },
+    companyName: string
+): Promise<SendEmailResult> {
+    try {
+        if (!to) {
+            console.warn('[Email] sendStockAlertEmail: no recipient email, skipping');
+            return { success: false, error: 'No recipient email address' };
+        }
+
+        const template = emailTemplates.stockAlert;
+
+        const htmlBody = renderTemplate(template.body, {
+            productName: product.name,
+            currentStock: String(product.stock),
+            minStock: String(product.minStock),
+            companyName,
+        });
+
+        const html = generateEmailHtml(htmlBody, { companyName });
+
+        const result = await sendEmail({
+            to,
+            subject: renderTemplate(template.subject, {
+                productName: product.name,
+            }),
+            html,
+        });
+
+        return result;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Email] Failed to send stock alert email:', message);
+        return { success: false, error: message };
+    }
+}
