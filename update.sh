@@ -317,12 +317,14 @@ cd "$APP_DIR"
 # --- 7. Build aplikasi ---
 print_step "7/8 - Build aplikasi"
 
-# Bersihkan .next cache untuk memaksa fresh build
-# Ini mencegah crash karena middleware.js lama masih ter-cache
+# Bersihkan turbo cache + .next cache untuk memaksa fresh build
+# Turbo cache bisa menyimpan old Prisma types saat schema berubah
+rm -rf node_modules/.cache/turbo
+rm -rf .turbo
 rm -rf apps/web/.next
-print_success "Cache .next dibersihkan"
+print_success "Cache dibersihkan (turbo + .next)"
 
-pnpm build
+pnpm build --force
 print_success "Build berhasil"
 
 # --- 8. Restart Application ---
