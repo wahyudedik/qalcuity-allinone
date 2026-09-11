@@ -118,6 +118,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/platform/security': { permission: 'platform.security', fallbackRole: 'SUPERADMIN' },
 
     // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ──────
+    '/api/cron/run': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/payment-reminder': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/stock-alert': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
