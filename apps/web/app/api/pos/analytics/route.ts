@@ -9,6 +9,7 @@ import { MSG } from '@/lib/api-messages';
 import { Prisma } from '@prisma/client';
 import { getRedisClient } from '@/lib/redis';
 import { logger } from '@/lib/logger';
+import { posAnalyticsQuerySchema, formatZodError } from '@/lib/validation-schemas';
 
 /** TTL for analytics cache in seconds (5 minutes). */
 const ANALYTICS_CACHE_TTL = 300;
@@ -29,9 +30,16 @@ export async function GET(request: Request) {
         const { tenantId } = auth;
 
         const { searchParams } = new URL(request.url);
-        const period = searchParams.get('period') || 'daily';
-        const startDate = searchParams.get('startDate');
-        const endDate = searchParams.get('endDate');
+        const queryValidation = posAnalyticsQuerySchema.safeParse(
+            Object.fromEntries(searchParams.entries())
+        );
+        if (!queryValidation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(queryValidation.error) },
+                { status: 400 }
+            );
+        }
+        const { period, startDate, endDate } = queryValidation.data;
 
         // Build date filter
         const now = new Date();

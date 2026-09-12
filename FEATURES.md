@@ -108,7 +108,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-08 | Custom provider, 1170+ keys, all modules localized (Settings 135+, POS 130+, 70 new status label keys, backend api-messages.ts 310+ constants) |
 | **Responsive Design** | 🚀 `production_ready` | 2026-09-01 | Mobile-first, 44x44px touch targets, Reports page 12 sub-components |
 | **Responsive Tables** | 🚀 `production_ready` | 2026-09-01 | Dual layout: mobile cards + desktop tables (19 pages) |
-| **Zod Validation** | 🚀 `production_ready` | 2026-09-08 | 120+ schemas, all mutation routes validated |
+| **Zod Validation** | 🚀 `production_ready` | 2026-09-08 | 146 schemas, all mutation routes validated |
 | **RBAC Defense-in-depth** | 🚀 `production_ready` | 2026-08-30 | Middleware + API route + UI visibility |
 | **Lucide Icons** | 🚀 `production_ready` | 2026-08-30 | Consistent icon system across all modules |
 | **Empty States** | 🚀 `production_ready` | 2026-08-30 | All CRUD pages have empty state components |
@@ -120,7 +120,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Error Handling Consolidation** | 🚀 `production_ready` | 2026-09-08 | 27 API routes refactored with centralized `handleApiError()`, 35 catch blocks consolidated, ~95%+ error handling coverage |
 | **Backend i18n** | 🚀 `production_ready` | 2026-09-08 | [`api-messages.ts`](apps/web/lib/api-messages.ts) with 310+ English constants, 200+ API route files migrated from hardcoded strings |
 | **Inline Error Banners** | 🚀 `production_ready` | 2026-09-01 | Inline error display on form pages — replaces silent failures |
-| **Security Hardening** | 🚀 `production_ready` | 2026-09-12 | .gitignore hardened, .env removed from git history, 144 Zod schemas (all mutation routes), 100% rate limiting coverage |
+| **Security Hardening** | 🚀 `production_ready` | 2026-09-12 | .gitignore hardened, .env removed from git history, 146 Zod schemas (all mutation routes), 100% rate limiting coverage |
 | **.env.example Updated** | 🚀 `production_ready` | 2026-09-01 | Comprehensive env template with comments for all config vars |
 | **Deploy Scripts** | 🚀 `production_ready` | 2026-09-08 | aaPanel Node.js Project Manager, configurable port, robust db:push, update.sh |
 | **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |

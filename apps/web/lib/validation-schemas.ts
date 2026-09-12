@@ -1160,6 +1160,38 @@ export const updateReservationSchema = z.object({
 });
 
 // ============================================
+// POS Analytics Query Schemas (GET query params)
+// ============================================
+
+export const posAnalyticsQuerySchema = z.object({
+    period: z.enum(['daily', 'weekly', 'monthly'], {
+        message: 'Period harus daily, weekly, atau monthly',
+    }).default('daily'),
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+});
+
+export const posAnalyticsSalesQuerySchema = z.object({
+    period: z.enum(['daily', 'weekly', 'monthly'], {
+        message: 'Period harus daily, weekly, atau monthly',
+    }).default('daily'),
+    dateFrom: z.string().optional().nullable(),
+    dateTo: z.string().optional().nullable(),
+});
+
+export const posAnalyticsDateRangeQuerySchema = z.object({
+    dateFrom: z.string().optional().nullable(),
+    dateTo: z.string().optional().nullable(),
+    limit: z.coerce.number().int('Limit harus bilangan bulat').min(1, 'Limit minimal 1').max(100, 'Limit maksimal 100').default(10),
+});
+
+export const posAnalyticsCashiersQuerySchema = z.object({
+    period: z.enum(['daily', 'weekly', 'monthly'], {
+        message: 'Period harus daily, weekly, atau monthly',
+    }).default('monthly'),
+});
+
+// ============================================
 // Operations Module Schemas
 // ============================================
 

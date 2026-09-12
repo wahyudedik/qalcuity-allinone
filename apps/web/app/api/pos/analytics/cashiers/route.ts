@@ -6,6 +6,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
+import { posAnalyticsCashiersQuerySchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -23,7 +24,16 @@ export async function GET(request: Request) {
         const { tenantId } = auth;
 
         const { searchParams } = new URL(request.url);
-        const period = searchParams.get('period') || 'monthly';
+        const queryValidation = posAnalyticsCashiersQuerySchema.safeParse(
+            Object.fromEntries(searchParams.entries())
+        );
+        if (!queryValidation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(queryValidation.error) },
+                { status: 400 }
+            );
+        }
+        const { period } = queryValidation.data;
 
         // Build date filter
         const now = new Date();
