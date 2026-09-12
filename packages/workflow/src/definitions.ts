@@ -110,10 +110,10 @@ export const DEFAULT_WORKFLOWS: Record<string, {
         finalStates: ['APPROVED', 'REJECTED', 'CANCELLED'],
     },
     PAYROLL: {
-        states: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PROCESSED', 'PAID', 'CANCELLED'],
+        states: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'PROCESSED', 'PAID', 'CANCELLED'],
         transitions: PAYROLL_TRANSITIONS,
         initialState: 'DRAFT',
-        finalStates: ['PAID', 'CANCELLED'],
+        finalStates: ['PAID', 'REJECTED', 'CANCELLED'],
     },
     DEAL: {
         states: ['LEAD', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST'],

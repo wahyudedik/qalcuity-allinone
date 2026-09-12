@@ -7,6 +7,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
+import { posAnalyticsDateRangeQuerySchema, formatZodError } from '@/lib/validation-schemas';
 
 /**
  * GET /api/pos/analytics/products
@@ -34,14 +35,22 @@ export async function GET(request: Request) {
         const { tenantId } = auth;
 
         const { searchParams } = new URL(request.url);
+        const queryValidation = posAnalyticsDateRangeQuerySchema.safeParse(
+            Object.fromEntries(searchParams.entries())
+        );
+        if (!queryValidation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(queryValidation.error) },
+                { status: 400 }
+            );
+        }
+        const { dateFrom: dateFromStr, dateTo: dateToStr, limit } = queryValidation.data;
+
         const now = new Date();
-        const dateTo = searchParams.get('dateTo')
-            ? new Date(searchParams.get('dateTo')!)
-            : now;
-        const dateFrom = searchParams.get('dateFrom')
-            ? new Date(searchParams.get('dateFrom')!)
+        const dateTo = dateToStr ? new Date(dateToStr) : now;
+        const dateFrom = dateFromStr
+            ? new Date(dateFromStr)
             : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        const limit = parseInt(searchParams.get('limit') || '10');
 
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);

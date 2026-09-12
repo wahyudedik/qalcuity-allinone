@@ -206,10 +206,12 @@
 - [x] Permission engine berfungsi untuk SEMUA industri tanpa perubahan code
 - [x] Permission engine mendukung custom resources dari Industry Configuration Engine
 
-### Phase 10: Unified Control Engine 📋 PLANNED
+### Phase 10: Unified Control Engine 🔄 Partial
 
 > **Modul fundamental — Unified Control Engine dengan 14 sub-komponen: Policy Engine, Workflow, Approval, Escalation, SLA, Delegation, Notification, Locking, Audit Trail, SoD, Exception Center, Work Inbox, Period Closing, Emergency Access.**
 > Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](docs/DECISIONS.md#adr-023-control-dashboard-tiers).
+>
+> **Session 10 Progress:** Tax Engine MVP ~40% complete, Period Closing Wizard ~50% complete, Approval Engine ~40% complete. Core pipeline (10A) partially implemented — Approval Engine + Period Closing Wizard done, Policy Engine + Escalation + Locking still planned.
 
 #### 10A: Core Pipeline (Foundational)
 
@@ -403,7 +405,7 @@
 - [ ] SSO integration (SAML 2.0, OAuth 2.0)
 - [ ] SOC 2 Type II compliance
 
-### Phase 22: POS Module (Core) 🔄 IN PROGRESS
+### Phase 22: POS Module (Core) 🔄 ~95% Complete
 
 > **POS (Point of Sale) adalah Core Module — bukan produk terpisah.** POS terintegrasi langsung ke ERP: Inventory → Finance → Accounting → CRM → Audit. POS menggunakan Permission Engine, Workflow Engine, dan Audit Trail yang sama.
 > Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 22.
@@ -683,13 +685,13 @@
 |-------|----------|-------|------------------|--------|
 | **1-8** | Aug 2026 | Core SaaS + All modules + Basic AI | Foundation ready | ✅ `completed` |
 | **9** | Sep 2026 | Permission Engine Foundation | Granular permissions + Platform Admin (industry-agnostic) | ✅ `completed` |
-| **10** | Sep 2026 | Unified Control Engine | Approval Engine + Period Closing + Workflow Engine | 🔄 `in_progress` |
+| **10** | Sep 2026 | Unified Control Engine | Approval Engine ~40% + Period Closing ~50% + Tax Engine ~40% | 🔄 `partial` |
 | **11** | Oct 2026 | Industry Configuration Engine | Engine + 10 industry packs + Custom fields/documents/reports | 🔄 `in_progress` |
 | **12-13** | Oct-Nov 2026 | Integration, Security | Production-ready MVP + Zod 144 schemas + Rate limiting 100% | ✅ `completed` |
 | **14-16** | Dec '26-Feb '27 | Production + Mobile + Desktop | Multi-platform ready + Mobile Auth | ✅ `completed` (Phase 14 MVP) |
 | **17** | Mar-May '27 | Advanced Finance | GL + JE + TB + BS + IS + Tax Rate Mgmt | 🔄 `in_progress` |
 | **18** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
-| **22** | Sep-Nov '26 | POS Module (Core) | POS Core + Offline + Kitchen Display + Table Mgmt + Loyalty + Analytics | 🔄 `in_progress` |
+| **22** | Sep-Nov '26 | POS Module (Core) | POS Core + Offline + Kitchen Display + Table Mgmt + Loyalty + Analytics + KDS + Tables + Reports | 🔄 `~95% complete` |
 | **23** | Oct-Dec '26 | Platform Control Center (Core) | Tenant mgmt + Subscription + Billing + Entitlements + Usage | 📋 `planned` |
 | **24** | Jan-Mar '27 | Platform Monitoring & Error Center | System health + Error center + Logs + Background jobs | 📋 `planned` |
 | **25** | Apr-Jun '27 | Platform Support & Impersonation | Support tickets + Impersonation + Feature flags + Security center | 📋 `planned` |

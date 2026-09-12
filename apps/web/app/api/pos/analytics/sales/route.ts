@@ -7,6 +7,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
+import { posAnalyticsSalesQuerySchema, formatZodError } from '@/lib/validation-schemas';
 
 /**
  * GET /api/pos/analytics/sales
@@ -35,15 +36,22 @@ export async function GET(request: Request) {
         const { tenantId } = auth;
 
         const { searchParams } = new URL(request.url);
-        const period = searchParams.get('period') || 'daily';
+        const queryValidation = posAnalyticsSalesQuerySchema.safeParse(
+            Object.fromEntries(searchParams.entries())
+        );
+        if (!queryValidation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(queryValidation.error) },
+                { status: 400 }
+            );
+        }
+        const { period, dateFrom: dateFromStr, dateTo: dateToStr } = queryValidation.data;
 
         // Default date range: last 30 days
         const now = new Date();
-        const dateTo = searchParams.get('dateTo')
-            ? new Date(searchParams.get('dateTo')!)
-            : now;
-        const dateFrom = searchParams.get('dateFrom')
-            ? new Date(searchParams.get('dateFrom')!)
+        const dateTo = dateToStr ? new Date(dateToStr) : now;
+        const dateFrom = dateFromStr
+            ? new Date(dateFromStr)
             : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
         // Ensure dateTo includes the full day

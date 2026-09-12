@@ -143,8 +143,29 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/billing/usage': { permission: 'billing:view', fallbackRole: 'ADMIN' },
     '/api/billing/webhook': { permission: 'billing:view', fallbackRole: 'ADMIN' },
 
-    // ─── Analytics ────────────────────────────────────────────────────────────
+    // ─── Analytics Studio ──────────────────────────────────────────────────────
     '/api/analytics': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/alerts': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/alerts/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/alerts/triggers': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/alerts/triggers/[id]/acknowledge': { permission: 'analytics:edit', fallbackRole: 'ADMIN' },
+    '/api/analytics/charts': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/charts/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/dashboard': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/dashboards': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/dashboards/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/dashboards/[id]/widgets': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/dictionary': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/explorer': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/kpi': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/kpi/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/kpi/[id]/evaluate': { permission: 'analytics:edit', fallbackRole: 'ADMIN' },
+    '/api/analytics/metrics': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/query-history': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/reports': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/reports/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/reports/[id]/execute': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/scheduled': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
 
     // ─── Reports ──────────────────────────────────────────────────────────────
     '/api/reports': { permission: 'reports:view', fallbackRole: 'ADMIN' },
@@ -238,7 +259,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 //   - All /api/projects/* sub-routes → covered by /api/projects
 //   - All /api/tasks/* sub-routes → covered by /api/tasks
 //   - All /api/field/* sub-routes → covered by parent prefixes
-//   - All /api/analytics/* sub-routes → covered by /api/analytics
+//   - /api/analytics/* sub-routes → now have EXPLICIT entries (permission guard fix)
 //   - All /api/audit/* sub-routes → covered by /api/audit
 
 // ─── Permissions that don't exist in the permission engine ────────────────────
