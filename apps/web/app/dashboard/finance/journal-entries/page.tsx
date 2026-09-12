@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -77,7 +78,8 @@ const sourceTypeKeys: Record<string, string> = {
 export default function JournalEntriesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('finance')
 
     // State
     const [entries, setEntries] = useState<JournalEntry[]>([])

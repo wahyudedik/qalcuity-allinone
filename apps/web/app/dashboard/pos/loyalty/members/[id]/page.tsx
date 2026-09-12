@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -52,7 +53,8 @@ export default function LoyaltyMemberDetailPage({ params }: { params: { id: stri
     const { t } = useTranslation()
     const { data: session } = useSession()
     const router = useRouter()
-    const canAdjust = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { isAdmin } = usePermission()
+    const canAdjust = isAdmin()
 
     const [member, setMember] = useState<MemberDetail | null>(null)
     const [loading, setLoading] = useState(true)

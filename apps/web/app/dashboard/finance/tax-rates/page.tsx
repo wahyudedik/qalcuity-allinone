@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from '@/lib/i18n'
@@ -26,8 +27,9 @@ const typeColors: Record<string, string> = {
 export default function TaxRatesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
-    const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { canMutate: canMutateFn, isAdmin: isAdminFn } = usePermission()
+    const canMutate = canMutateFn('finance')
+    const isAdmin = isAdminFn()
     const getTypeLabel = (type: string) => t(`finance.taxRates.types.${type}`) || type
 
     const [taxRates, setTaxRates] = useState<TaxRate[]>([])

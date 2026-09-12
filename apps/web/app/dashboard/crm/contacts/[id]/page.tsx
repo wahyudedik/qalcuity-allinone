@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -40,7 +41,8 @@ function getTypeColor(type: string | undefined | null): string {
 export default function ContactDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('crm')
     const router = useRouter()
     const [contact, setContact] = useState<ContactDetail | null>(null)
     const [loading, setLoading] = useState(true)

@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -67,7 +68,8 @@ function getInitials(name: string): string {
 export default function EmployeeDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
     const router = useRouter()
     const [employee, setEmployee] = useState<EmployeeDetail | null>(null)
     const [loading, setLoading] = useState(true)

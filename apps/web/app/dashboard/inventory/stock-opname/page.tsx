@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { formatDateTime } from '@/lib/utils'
@@ -71,7 +72,8 @@ export default function StockOpnamePage() {
         CANCELLED: t('inventory.stockOpname.statusCancelled'),
     }
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
     const [opnames, setOpnames] = useState<StockOpnameItem[]>([])
     const [warehouses, setWarehouses] = useState<WarehouseOption[]>([])
     const [products, setProducts] = useState<ProductOption[]>([])

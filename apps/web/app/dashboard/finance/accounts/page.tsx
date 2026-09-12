@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { parseCsv } from '@/lib/csv-parser'
@@ -266,7 +267,8 @@ function AccountNode({
 export default function ChartOfAccountsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('finance')
 
     // State
     const [accounts, setAccounts] = useState<Account[]>([])

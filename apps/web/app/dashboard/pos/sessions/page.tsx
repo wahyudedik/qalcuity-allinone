@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -31,7 +32,8 @@ type Session = {
 export default function POSSessionsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { isAdmin } = usePermission()
+    const canManage = isAdmin()
 
     const [sessions, setSessions] = useState<Session[]>([])
     const [loading, setLoading] = useState(true)

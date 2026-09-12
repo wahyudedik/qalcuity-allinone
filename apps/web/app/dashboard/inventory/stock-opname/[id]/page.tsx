@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -80,7 +81,8 @@ export default function StockOpnameDetailPage({ params }: { params: { id: string
     const { t } = useTranslation()
     const router = useRouter()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
 
     const [opname, setOpname] = useState<StockOpnameDetail | null>(null)
     const [loading, setLoading] = useState(true)

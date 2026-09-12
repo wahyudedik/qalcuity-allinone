@@ -1,5 +1,6 @@
 'use client'
 
+import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -34,7 +35,8 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 export default function QuotationsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('finance')
     const [quotations, setQuotations] = useState<Quotation[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)

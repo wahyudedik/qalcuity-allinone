@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -38,7 +39,8 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
 export default function ActivitiesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('crm')
 
     const [activities, setActivities] = useState<Activity[]>([])
     const [loading, setLoading] = useState(true)

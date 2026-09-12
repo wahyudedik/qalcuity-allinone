@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
@@ -76,8 +77,9 @@ export default function ApprovalsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
     const { addToast } = useToast()
-    const canMutate = session?.user?.role !== 'VIEWER'
-    const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { canMutate: canMutateFn, isAdmin: isAdminFn } = usePermission()
+    const canMutate = canMutateFn('hr')
+    const isAdmin = isAdminFn()
 
     const [activeTab, setActiveTab] = useState<'pending' | 'levels'>('pending')
     const [requests, setRequests] = useState<ApprovalRequest[]>([])

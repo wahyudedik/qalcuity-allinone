@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
@@ -34,7 +35,8 @@ type TerminalDetail = Terminal & {
 export default function POSTerminalsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { isAdmin } = usePermission()
+    const canManage = isAdmin()
 
     const STATUS_LABELS: Record<string, string> = {
         ACTIVE: t('pos.terminals.active') || 'Aktif',
