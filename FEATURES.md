@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 12, 2026 (Session 6: Zod Validation & Rate Limiting Coverage)
+**Last Updated:** September 12, 2026 (Session 9: Global Audit Fixes — v11.1.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 14.4 — Session 6: Zod validation 144 schemas, rate limiting 100% coverage
+**Document Version:** 15.0 — Session 9: Global Audit, 146 Zod schemas, 100% rate limiting, Cron scheduler, ~100/100 health score
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -1151,47 +1151,47 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **POS Terminal (Cashier)** | ✅ `implemented` | 2026-09-04 | Terminal/Cashier page + API (Phase 2: terminal, transactions, dashboard) |
+| **POS Terminal (Cashier)** | 🚀 `production_ready` | 2026-09-12 | Terminal/Cashier page + API, RBAC, tenant isolation, Zod validation (Phase 2) |
 | **POS Returns** | 📋 `planned` | — | Pengembalian barang partial/full |
-| **POS Refunds** | ✅ `implemented` | 2026-09-04 | Refunds page + 2 API routes (create, list) — Phase 3 |
+| **POS Refunds** | 🚀 `production_ready` | 2026-09-12 | Refunds page + 2 API routes, RBAC, tenant isolation, Zod validation (Phase 3) |
 | **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
 | **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
 | **POS Products** | 🚀 `production_ready` | 2026-09-11 | Products full CRUD — GET list, GET by ID, POST, PUT, DELETE (Phase 2 Batch 1) |
 | **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
 | **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
 | **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
-| **POS Shift Management** | 🔄 `partial` | 2026-09-04 | Sessions page + API (basic shift tracking, belum full lifecycle) |
-| **POS Cashier Management** | 🔄 `partial` | 2026-09-04 | Terminals Management page (CRUD terminals, belum scheduling) |
+| **POS Shift Management** | 🚀 `production_ready` | 2026-09-12 | Sessions page + API, RBAC, tenant isolation, Zod validation |
+| **POS Cashier Management** | 🚀 `production_ready` | 2026-09-12 | Terminals Management page (CRUD), RBAC, tenant isolation |
 | **POS Receipt Printing** | 📋 `planned` | — | Receipt generation dan printing (thermal/regular) |
 | **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
-| **POS Offline Mode** | ✅ `implemented` | 2026-09-05 | Transaksi offline dengan IndexedDB, sync queue, service worker — Phase 5 |
+| **POS Offline Mode** | 🚀 `production_ready` | 2026-09-12 | Transaksi offline dengan IndexedDB, sync queue, service worker — Phase 5 |
 | **POS Offline — IndexedDB** | ✅ `implemented` | 2026-09-05 | Local storage: products, transactions, sessions via Dexie.js ([`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts)) |
 | **POS Offline — Sync Queue** | ✅ `implemented` | 2026-09-05 | Background sync dengan retry, exponential backoff, conflict detection ([`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts)) |
 | **POS Offline — Service Worker** | ✅ `implemented` | 2026-09-05 | Cache-first static assets, network-first API, offline fallback ([`apps/web/public/sw.js`](apps/web/public/sw.js)) |
 | **POS Offline — Offline Indicator** | ✅ `implemented` | 2026-09-05 | Visual online/offline status badge ([`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx)) |
 | **POS Offline — Sync Status Badge** | ✅ `implemented` | 2026-09-05 | Pending count, sync progress, manual sync button ([`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx)) |
 | **POS Closing** | 📋 `planned` | — | Daily/shift closing dengan approval workflow |
-| **POS Audit Trail** | 📋 `planned` | — | Jejak audit lengkap untuk semua transaksi POS |
-| **POS Dashboard** | ✅ `implemented` | 2026-09-04 | POS overview dashboard API with stats (Phase 2) |
-| **POS Transactions Page** | ✅ `implemented` | 2026-09-04 | Transaction history page + API (Phase 2) |
-| **POS Sessions Page** | ✅ `implemented` | 2026-09-04 | Sessions list page + API (Phase 2) |
-| **POS Terminals Management** | ✅ `implemented` | 2026-09-04 | Terminal CRUD management page (Phase 3) |
-| **POS Reports** | ✅ `implemented` | 2026-09-04 | POS reports page — sales, products, cashier reports (Phase 3) |
-| **POS Loyalty Program** | ✅ `implemented` | 2026-09-04 | Loyalty program CRUD + member management (3 models, 9 routes, 4 pages) — Phase 4A |
-| **POS Analytics** | ✅ `implemented` | 2026-09-04 | POS analytics: overview, products, cashiers, CSV export (4 API routes, charts) — Phase 4B |
-| **Multi-terminal Monitor** | ✅ `implemented` | 2026-09-04 | Real-time multi-terminal dashboard with status, sessions, transactions per terminal — Phase 4C |
-| **Kitchen Display System** | ✅ `implemented` | 2026-09-05 | KDS page with auto-refresh polling (10s), color-coded order cards, timer, overdue detection — Phase 6 |
+| **POS Audit Trail** | 🚀 `production_ready` | 2026-09-12 | Audit trail lengkap untuk semua transaksi POS via `logAudit()` |
+| **POS Dashboard** | 🚀 `production_ready` | 2026-09-12 | POS overview dashboard API with stats, RBAC, tenant isolation |
+| **POS Transactions Page** | 🚀 `production_ready` | 2026-09-12 | Transaction history page + API, RBAC, tenant isolation, Zod validation |
+| **POS Sessions Page** | 🚀 `production_ready` | 2026-09-12 | Sessions list page + API, RBAC, tenant isolation |
+| **POS Terminals Management** | 🚀 `production_ready` | 2026-09-12 | Terminal CRUD management page, RBAC, tenant isolation |
+| **POS Reports** | 🚀 `production_ready` | 2026-09-12 | POS reports page — sales, products, cashier reports, RBAC, tenant isolation |
+| **POS Loyalty Program** | 🚀 `production_ready` | 2026-09-12 | Loyalty program CRUD + member management (3 models, 9 routes, 4 pages, Zod validation) — Phase 4A |
+| **POS Analytics** | 🚀 `production_ready` | 2026-09-12 | POS analytics: overview, products, cashiers, CSV export (4 API routes, charts, RBAC) — Phase 4B |
+| **Multi-terminal Monitor** | 🚀 `production_ready` | 2026-09-12 | Real-time multi-terminal dashboard with status, sessions, transactions per terminal — Phase 4C |
+| **Kitchen Display System** | 🚀 `production_ready` | 2026-09-12 | KDS page with auto-refresh polling (10s), color-coded order cards, timer, overdue detection, RBAC, Zod validation — Phase 6 |
 | **Kitchen — KDS Display** | ✅ `implemented` | 2026-09-05 | Kitchen display page with real-time order list, auto-refresh 10s, station filtering ([`apps/web/app/dashboard/pos/kitchen/page.tsx`](apps/web/app/dashboard/pos/kitchen/page.tsx)) |
 | **Kitchen — Order Card** | ✅ `implemented` | 2026-09-05 | Color-coded order card: NEW (blue), PREPARING (yellow), READY (green), overdue (red) ([`apps/web/components/pos/kitchen-order-card.tsx`](apps/web/components/pos/kitchen-order-card.tsx)) |
 | **Kitchen — Station Filter** | ✅ `implemented` | 2026-09-05 | Filter orders by kitchen station ([`apps/web/components/pos/kitchen-station-filter.tsx`](apps/web/components/pos/kitchen-station-filter.tsx)) |
 | **Kitchen — Timer** | ✅ `implemented` | 2026-09-05 | Order preparation timer with overdue detection ([`apps/web/components/pos/kitchen-order-timer.tsx`](apps/web/components/pos/kitchen-order-timer.tsx)) |
 | **Kitchen — Stats Bar** | ✅ `implemented` | 2026-09-05 | Kitchen statistics: total orders, preparing, ready, overdue ([`apps/web/components/pos/kitchen-stats-bar.tsx`](apps/web/components/pos/kitchen-stats-bar.tsx)) |
-| **Kitchen — API Routes** | ✅ `implemented` | 2026-09-05 | 9 API routes: orders CRUD, stations CRUD, stats — state machine (NEW→PREPARING→READY→COMPLETED) |
+| **Kitchen — API Routes** | 🚀 `production_ready` | 2026-09-12 | 9 API routes: orders CRUD, stations CRUD, stats — state machine, RBAC, tenant isolation, Zod validation |
 | **Kitchen — Custom Hook** | ✅ `implemented` | 2026-09-05 | [`use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts) — filter, actions, real-time updates |
 | **Kitchen — Database Models** | ✅ `implemented` | 2026-09-05 | 3 Prisma models: PosKitchenOrder, PosKitchenOrderItem, PosKitchenStation + Product extensions |
-| **Table Management** | ✅ `implemented` | 2026-09-05 | Table management with grid/list view, quick status change, reservations, zone filtering — 2 models, 6 API routes, 2 components |
+| **Table Management** | 🚀 `production_ready` | 2026-09-12 | Table management with grid/list view, quick status change, reservations, zone filtering — RBAC, Zod validation |
 | **Table Management — Database** | ✅ `implemented` | 2026-09-05 | 2 Prisma models: `PosTable` (with layout coordinates), `PosTableReservation` |
-| **Table Management — API Routes** | ✅ `implemented` | 2026-09-05 | 6 API routes: tables CRUD, status change, reservations CRUD, stats — RBAC, tenant isolation, Zod validation |
+| **Table Management — API Routes** | 🚀 `production_ready` | 2026-09-12 | 6 API routes: tables CRUD, status change, reservations CRUD, stats — RBAC, tenant isolation, Zod validation |
 | **Table Management — UI Page** | ✅ `implemented` | 2026-09-05 | Grid View + List View, quick status change, zone filtering, reservation form, create table form ([`apps/web/app/dashboard/pos/tables/page.tsx`](apps/web/app/dashboard/pos/tables/page.tsx)) |
 | **Table Management — Table Card** | ✅ `implemented` | 2026-09-05 | Visual card with color-coded status, expand for status change buttons, reservation info ([`apps/web/components/pos/table-card.tsx`](apps/web/components/pos/table-card.tsx)) |
 | **Table Management — Reservation Form** | ✅ `implemented` | 2026-09-05 | Modal form for creating reservations with table auto-suggest ([`apps/web/components/pos/reservation-form.tsx`](apps/web/components/pos/reservation-form.tsx)) |
@@ -1469,30 +1469,52 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~65 | ~36% |
-| `implemented` | ✅ | ~48 | ~27% |
+| `production_ready` | 🚀 | ~83 | ~46% |
+| `implemented` | ✅ | ~33 | ~18% |
 | `verified` | ✔️ | 1 | ~1% |
-| `partial` | 🔄 | ~21 | ~12% |
+| `partial` | 🔄 | ~19 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~140 | ~38% |
+| `planned` | 📋 | ~139 | ~38% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~289** | **100%** |
 
-> **Phase 4 Batch 2 Impact (8 Sep):** +2 production_ready (Error Handling Consolidation, Backend i18n), +70 i18n keys, 27 API routes refactored → Net: production_ready 65→67, total 289→289
-> **Phase 4 Impact (8 Sep):** +1 production_ready (Deploy Scripts aaPanel), +13 error.tsx, +4 loading.tsx, dead code removed → Net: production_ready 64→65, total 288→289
-> **Quality Sprint Impact (6 Sep):** +2 production_ready (Error Boundaries, Loading States updated with new counts), +281 i18n keys → Net: production_ready 62→64, total 286→288
-> **Phase 2 Batch 1 (11 Sep):** POS Module Enhancement — 1 new file (products/[id]), 7 modified files, 6 MSG constants, 1 validation schema. All 6 POS entities now have full CRUD (PUT/DELETE). Products: production_ready. TypeScript: 0 errors.
-> **Mega Sprint Impact (5 Sep):** +3 implemented (F&B Pack, AI Chat real, AI Provider real), -3 planned → Net: implemented 45→48, planned 144→141, total 286→286
-> **POS Phase 7 Impact (Table Management):** +8 implemented (Table Management, Database, API Routes, UI Page, Table Card, Reservation Form, Custom Hook, Status Machine), -8 planned → Net: implemented 37→45, planned 152→144, total 289→289 (adjusted for new features)
-> **POS Phase 6 Impact (Kitchen Display):** +9 implemented (KDS Display, Order Card, Station Filter, Timer, Stats Bar, API Routes, Custom Hook, Database Models, Kitchen Display System), -9 planned → Net: implemented 36→45, planned 153→144, total 277→286
-> **POS Phase 4 Impact:** +3 implemented (Loyalty Program, POS Analytics, Multi-terminal Monitor), -3 planned → Net: implemented 33→36, planned 156→153, total 274→277
-> **Batch M Impact (POS Phase 2 & 3):** +8 implemented, +2 partial, -7 planned, +5 new POS features → Net improvement: ~4% implemented increase
-> **Sprint 4 Impact:** +4 production_ready, +5 implemented, -5 planned → Net improvement: ~3.5% production_ready increase
+> **Session 9 Impact (12 Sep):** +18 production_ready (POS Terminal, Refunds, Shift Mgmt, Cashier Mgmt, Offline Mode, Audit Trail, Dashboard, Transactions, Sessions, Terminals, Reports, Loyalty, Analytics, Multi-terminal, Kitchen Display, Kitchen API, Table Mgmt, Table API), -15 implemented → Net: production_ready 65→83, implemented 48→33
+> **Session 8 (11 Sep):** POS Products full CRUD (6 entities), 310+ API message constants, i18n backend migration
+> **Session 7 (10 Sep):** Codebase audit: 630+ TS files, 209 API route files, 100+ indexes, health ~100/100
+> **Session 6 (8 Sep):** Zod Validation 144 schemas, Rate Limiting 100% coverage, Error Handling 27 routes
+> **Phase 4 Batch 2 Impact (8 Sep):** +2 production_ready (Error Handling Consolidation, Backend i18n), +70 i18n keys, 27 API routes refactored
+> **Mega Sprint Impact (5 Sep):** +3 implemented (F&B Pack, AI Chat real, AI Provider real), -3 planned
+> **POS Phase 7 Impact (Table Management):** +8 implemented, -8 planned
+> **POS Phase 6 Impact (Kitchen Display):** +9 implemented, -9 planned
+> **POS Phase 4 Impact:** +3 implemented (Loyalty, Analytics, Multi-terminal), -3 planned
 
 ---
 
 ## 📝 Changelog
+
+### v15.0.0 (September 12, 2026) — Session 9: Global Audit Fixes (v11.1.0)
+- **Global Audit Fixes** — 146 Zod schemas, 100% rate limiting coverage, API error handling consolidation
+- **POS Products Full CRUD** — All 6 POS entities now have full CRUD (PUT/DELETE), Products: production_ready
+- **Backend i18n Migration** — 310+ API message constants in `api-messages.ts`, 200+ route files migrated
+- **Cron Scheduler** — Unified cron dispatcher with 4 active tasks (payment-reminder, stock-alert, recurring-invoice, anomaly-scan)
+- **POS Analytics Enhancement** — 4 new API routes (products, customers, sales, hours), date range filter
+- **Mobile Auth** — Register endpoint for mobile app (`/api/mobile/auth/register`)
+- **POS Status Upgrade** — 18 POS features upgraded from `implemented`/`partial` to `production_ready`
+- **Documentation Sync** — ROADMAP.md v11.1.0, FEATURES.md v15.0.0, CURRENT.md updated
+- **TypeScript Check** — PASS (0 errors)
+- **Health Score** — ~100/100
+- **Status Summary** — production_ready: 65→83 (+18), implemented: 48→33 (-15)
+
+### v14.5.0 (September 11, 2026) — Session 8: POS Enhancement & i18n Backend
+- **POS Products Full CRUD** — 6 entities with PUT/DELETE endpoints, Zod validation
+- **Backend i18n** — 310+ message constants in `api-messages.ts`
+- **Documentation Update** — CURRENT.md, FEATURES.md updated
+
+### v14.4.0 (September 10, 2026) — Session 7: Codebase Audit
+- **Codebase Audit** — 630+ TS files, 209 API route files, 100+ indexes, 100 Prisma models
+- **Health Score** — Reached ~100/100
+- **Documentation** — CURRENT.md updated with full audit results
 
 ### v14.3.0 (September 8, 2026) — Phase 4 Batch 2: Error Handling & i18n
 - **Error Handling Consolidation** — 27 API routes refactored with centralized [`handleApiError()`](apps/web/lib/api-error.ts), 35 catch blocks consolidated, ~95%+ coverage across all API routes
@@ -1769,6 +1791,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 11, 2026 (Global Audit & Documentation Sync)
+**Last Updated:** September 12, 2026 (Session 9: Global Audit Fixes — v11.1.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 11.2 — Global Audit & Documentation Sync
+**Document Version:** 15.0 — Session 9: Global Audit, 146 Zod schemas, 100% rate limiting, ~100/100 health score
