@@ -1,17 +1,11 @@
 import { prisma } from './db';
 import { logAudit } from './audit';
+import { ROLE_HIERARCHY } from '@qalcuity/config';
 
 // ============================================
 // Approval Engine Service
 // Multi-level approval workflow for transactions
 // ============================================
-
-const ROLE_HIERARCHY: Record<string, number> = {
-    VIEWER: 0,
-    MEMBER: 1,
-    ADMIN: 2,
-    SUPERADMIN: 3,
-};
 
 /**
  * Check if user's role meets the minimum required role for approval.

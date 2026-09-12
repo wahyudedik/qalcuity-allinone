@@ -11,6 +11,7 @@
 import { prisma } from './db';
 import { logAudit } from './audit';
 import { Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -345,7 +346,7 @@ export async function generateInvoiceJournalEntry(
         return { success: true, journalEntryId: result };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[AutoJournal] Failed for invoice:', message);
+        logger.error('[AutoJournal] Failed for invoice', error, { detail: message });
         return { success: false, error: message };
     }
 }
@@ -493,7 +494,7 @@ export async function generatePurchaseOrderJournalEntry(
         return { success: true, journalEntryId: result };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[AutoJournal] Failed for purchase order:', message);
+        logger.error('[AutoJournal] Failed for purchase order', error, { detail: message });
         return { success: false, error: message };
     }
 }
@@ -609,7 +610,7 @@ export async function generatePaymentJournalEntry(
         return { success: true, journalEntryId: result };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[AutoJournal] Failed for payment:', message);
+        logger.error('[AutoJournal] Failed for payment', error, { detail: message });
         return { success: false, error: message };
     }
 }

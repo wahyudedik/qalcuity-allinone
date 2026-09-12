@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/audit';
 import { createBillingPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
 
         // Notify superadmin via email (non-blocking)
         notifySuperadminPayment(payment.id).catch((err) => {
-            console.error('[Billing] Failed to notify superadmin:', err instanceof Error ? err.message : 'Unknown error');
+            logger.error('[Billing] Failed to notify superadmin:', err instanceof Error ? err.message : 'Unknown error');
         });
 
         // Log audit create

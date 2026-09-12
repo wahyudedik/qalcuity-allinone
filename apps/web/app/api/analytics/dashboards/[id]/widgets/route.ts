@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createDashboardSchema } from '@/lib/validation-schemas'
+import { logger } from '@/lib/logger'
 
 // ============================================
 // GET â€” List all dashboards for tenant
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedDashboards })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -169,7 +170,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

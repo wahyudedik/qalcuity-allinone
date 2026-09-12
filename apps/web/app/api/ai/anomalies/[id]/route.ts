@@ -1,8 +1,9 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { prisma } from '@/lib/db';
 import { runAnomalyScan } from '@/lib/ai/anomaly-detection';
 import { verifyCronAuth, cronSuccess, cronError } from '@/lib/cron';
+import { logger } from '@/lib/logger';
 
 // â”€â”€â”€ GET: Cron endpoint for external cron service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Authenticates via CRON_SECRET Bearer token (not session auth).
@@ -41,7 +42,7 @@ export async function GET(req: Request) {
                 });
             } catch (error) {
                 // Log error but continue scanning other tenants
-                console.error(`[Cron Scan] Tenant ${tenant.id} failed:`, error);
+                logger.error(`[Cron Scan] Tenant ${tenant.id} failed:`, error);
                 results.push({
                     tenantId: tenant.id,
                     error: error instanceof Error ? error.message : 'Unknown error',
@@ -55,7 +56,7 @@ export async function GET(req: Request) {
             scannedAt: new Date().toISOString(),
         });
     } catch (error) {
-        console.error('[Cron Scan] Anomaly scan failed:', error);
+        logger.error('[Cron Scan] Anomaly scan failed:', error);
         return cronError(error instanceof Error ? error.message : 'Internal server error', 500);
     }
 }

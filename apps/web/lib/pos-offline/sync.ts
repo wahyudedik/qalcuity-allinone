@@ -18,6 +18,7 @@ import {
     setConfig,
     getConfig,
 } from './db';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // Types
@@ -155,7 +156,7 @@ export class SyncEngine {
             void this.processQueue();
         }
 
-        console.log('[POS-Sync] Engine started');
+        logger.info('[POS-Sync] Engine started');
     }
 
     /**
@@ -183,7 +184,7 @@ export class SyncEngine {
         // Stop polling
         this.stopPolling();
 
-        console.log('[POS-Sync] Engine stopped');
+        logger.info('[POS-Sync] Engine stopped');
     }
 
     // -------------------------------------------------------------------------
@@ -200,13 +201,13 @@ export class SyncEngine {
     async processQueue(): Promise<SyncResult> {
         // Mutex lock — prevent concurrent sync
         if (this.isSyncing) {
-            console.log('[POS-Sync] Already syncing, skipping');
+            logger.debug('[POS-Sync] Already syncing, skipping');
             return { processed: 0, succeeded: 0, failed: 0, skipped: 1, errors: [] };
         }
 
         // Must be online to sync
         if (!this.isOnline()) {
-            console.log('[POS-Sync] Offline, skipping sync');
+            logger.debug('[POS-Sync] Offline, skipping sync');
             return { processed: 0, succeeded: 0, failed: 0, skipped: 1, errors: [] };
         }
 
@@ -259,7 +260,7 @@ export class SyncEngine {
                 result.processed++;
             }
         } catch (error) {
-            console.error('[POS-Sync] Queue processing error:', error);
+            logger.error('[POS-Sync] Queue processing error', error);
         } finally {
             this.isSyncing = false;
             this.currentSyncItem = null;
@@ -306,14 +307,14 @@ export class SyncEngine {
                 // Clear any pending retry timer
                 this.clearRetryTimer(op.id);
 
-                console.log(`[POS-Sync] Operation ${op.type} completed: ${op.entityId}`);
+                logger.info(`[POS-Sync] Operation ${op.type} completed`, { entityId: op.entityId });
                 return true;
             }
 
             // Handle specific error codes
             if (response.status === 409) {
                 // Conflict — resolve based on entity type
-                console.warn(`[POS-Sync] Conflict for ${op.type}:${op.entityId}`);
+                logger.warn(`[POS-Sync] Conflict for ${op.type}:${op.entityId}`);
                 await this.handleConflict(op, response);
                 await removeSyncOperation(op.id);
                 return true;
@@ -327,7 +328,7 @@ export class SyncEngine {
                     : `HTTP ${response.status}`;
 
                 await this.markOperationFailed(op, errorMsg);
-                console.error(`[POS-Sync] Client error for ${op.type}: ${errorMsg}`);
+                logger.error(`[POS-Sync] Client error for ${op.type}: ${errorMsg}`);
                 return false;
             }
 
@@ -342,7 +343,7 @@ export class SyncEngine {
         } catch (error) {
             // Network error — schedule retry
             const errorMsg = error instanceof Error ? error.message : 'Network error';
-            console.warn(`[POS-Sync] Network error for ${op.type}: ${errorMsg}`);
+            logger.warn(`[POS-Sync] Network error for ${op.type}: ${errorMsg}`);
             await this.scheduleRetry(op, errorMsg);
             return false;
         }
@@ -404,11 +405,11 @@ export class SyncEngine {
             case 'CLOSE_SESSION':
                 // Server-wins: Fetch fresh session from server
                 // The local cache will be updated on next data fetch
-                console.log(`[POS-Sync] Session conflict resolved (server-wins): ${op.entityId}`);
+                logger.info(`[POS-Sync] Session conflict resolved (server-wins)`, { entityId: op.entityId });
                 break;
 
             default:
-                console.warn(`[POS-Sync] Unknown conflict type: ${op.type}`);
+                logger.warn(`[POS-Sync] Unknown conflict type: ${op.type}`);
                 break;
         }
     }
@@ -456,7 +457,7 @@ export class SyncEngine {
         // Schedule the timer
         this.scheduleRetryTimer(op.id, delay);
 
-        console.log(
+        logger.info(
             `[POS-Sync] Retry #${newRetryCount} scheduled for ${op.type}:${op.entityId} in ${delay}ms`
         );
     }
@@ -570,7 +571,7 @@ export class SyncEngine {
      * Triggers immediate sync of pending operations.
      */
     private handleOnline(): void {
-        console.log('[POS-Sync] Network restored');
+        logger.info('[POS-Sync] Network restored');
         this.online = true;
         void setConfig(CONFIG_KEYS.LAST_MODE, 'online');
         this.notifyListeners();
@@ -582,7 +583,7 @@ export class SyncEngine {
      * Pauses sync and updates status.
      */
     private handleOffline(): void {
-        console.log('[POS-Sync] Network lost');
+        logger.info('[POS-Sync] Network lost');
         this.online = false;
         void setConfig(CONFIG_KEYS.LAST_MODE, 'offline');
         this.notifyListeners();
@@ -655,7 +656,7 @@ export class SyncEngine {
                 tx.onabort = () => reject(tx.error);
             });
         } catch (error) {
-            console.error(`[POS-Sync] Failed to update operation status: ${error}`);
+            logger.error(`[POS-Sync] Failed to update operation status: ${error}`);
         }
     }
 

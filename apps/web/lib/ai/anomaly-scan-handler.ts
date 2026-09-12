@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/db';
 import { runAnomalyScan } from './anomaly-detection';
 import type { CronTaskResult } from '@/lib/cron-scheduler';
+import { logger } from '@/lib/logger';
 
 export async function runAnomalyScanCron(): Promise<CronTaskResult> {
     // Get all active tenants (exclude soft-deleted)
@@ -33,7 +34,7 @@ export async function runAnomalyScanCron(): Promise<CronTaskResult> {
             });
         } catch (error) {
             // Log error but continue scanning other tenants
-            console.error(`[Cron Scan] Tenant ${tenant.id} failed:`, error);
+            logger.error(`[Cron Scan] Tenant ${tenant.id} failed`, error);
             results.push({
                 tenantId: tenant.id,
                 error: error instanceof Error ? error.message : 'Unknown error',
@@ -45,7 +46,7 @@ export async function runAnomalyScanCron(): Promise<CronTaskResult> {
         return sum + ('anomaliesFound' in r ? r.anomaliesFound : 0);
     }, 0);
 
-    console.log(`[Cron] Anomaly Scan: tenants=${tenants.length}, totalAnomalies=${totalAnomalies}`);
+    logger.info(`[Cron] Anomaly Scan: tenants=${tenants.length}, totalAnomalies=${totalAnomalies}`);
 
     return {
         success: true,

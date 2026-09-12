@@ -9,6 +9,7 @@ import { createPosRefundSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
+import { invalidatePosAnalyticsCache, invalidatePosDashboardCache } from '@/lib/pos-cache';
 
 export async function GET(request: Request) {
     try {
@@ -163,6 +164,10 @@ export async function POST(request: Request) {
             },
             request,
         });
+
+        // Fire-and-forget: invalidate POS analytics + dashboard cache (refunds affect revenue metrics)
+        invalidatePosAnalyticsCache(tenantId).catch(() => { });
+        invalidatePosDashboardCache(tenantId).catch(() => { });
 
         return NextResponse.json({ success: true, data: { id: refund.id, refundNo: refund.refundNo } }, { status: 201 });
     } catch (error) {

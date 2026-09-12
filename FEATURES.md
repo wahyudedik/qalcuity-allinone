@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 8, 2026 (Phase 4 Batch 2: Error Handling Consolidation, i18n Backend Migration, Status Labels)
+**Last Updated:** September 12, 2026 (Session 6: Zod Validation & Rate Limiting Coverage)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 14.3 — Phase 4 Batch 2: Error handling 95%+, backend i18n 310+ constants, frontend i18n 70+ keys, ignoreBuildErrors removed
+**Document Version:** 14.4 — Session 6: Zod validation 144 schemas, rate limiting 100% coverage
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -22,11 +22,13 @@
 | `planned` | 📋 | Belum ada kode sama sekali — baru direncanakan |
 | `in_progress` | 🔨 | Mulai ditulis tapi belum fungsional |
 | `partial` | 🔄 | Ada kode tapi tidak lengkap (placeholder/mock/incomplete) |
-| `implemented` | ✅ | Kode lengkap dan kompilasi, tapi belum verified secara menyeluruh |
-| `verified` | ✔️ | Sudah di-test dan berfungsi sesuai harapan |
-| `production_ready` | 🚀 | Sudah verified + security + audit + tenant isolation — siap deploy |
+| `implemented` | ✅ | Kode lengkap dan kompilasi, endpoint fungsional |
+| `verified` | ✔️ | Sudah di-test end-to-end dan berfungsi sesuai harapan |
+| `production_ready` | 🚀 | Sudah verified + RBAC + audit trail + tenant isolation + input validation — siap deploy ke production |
 | `blocked` | 🚫 | Ada dependency yang belum selesai / blocker |
 | `deprecated` | ⛔ | Sudah tidak digunakan, akan dihapus |
+
+> **Normalisasi Label:** Gunakan `production_ready` untuk semua fitur yang sudah memiliki RBAC (3 lapis), audit trail logging, tenant isolation (tenantId filter), dan Zod validation. Gunakan `verified` hanya untuk fitur yang sudah berfungsi tapi belum lengkap security-nya.
 
 ---
 
@@ -113,12 +115,12 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Toast Notifications** | 🚀 `production_ready` | 2026-09-01 | Centralized toast provider — toast.tsx + ToastProvider in layout |
 | **Confirmation Dialogs** | 🚀 `production_ready` | 2026-09-01 | ConfirmDialog component — 24 window.confirm calls replaced |
 | **Navigation Links** | 🚀 `production_ready` | 2026-08-30 | Cross-entity navigation (e.g., Invoice → Contact) |
-| **Loading States** | 🚀 `production_ready` | 2026-09-08 | 98 loading.tsx files — all detail, workspace, and module pages covered |
-| **Error Boundaries** | 🚀 `production_ready` | 2026-09-08 | 94 error.tsx files — all module sections + detail pages covered (HR, CRM, Inventory, Finance, POS, Settings, Analytics, Platform, Operations, Field Service) |
+| **Loading States** | 🚀 `production_ready` | 2026-09-08 | 117 loading.tsx files — all detail, workspace, and module pages covered |
+| **Error Boundaries** | 🚀 `production_ready` | 2026-09-08 | 115 error.tsx files — all module sections + detail pages covered (HR, CRM, Inventory, Finance, POS, Settings, Analytics, Platform, Operations, Field Service) |
 | **Error Handling Consolidation** | 🚀 `production_ready` | 2026-09-08 | 27 API routes refactored with centralized `handleApiError()`, 35 catch blocks consolidated, ~95%+ error handling coverage |
 | **Backend i18n** | 🚀 `production_ready` | 2026-09-08 | [`api-messages.ts`](apps/web/lib/api-messages.ts) with 310+ English constants, 200+ API route files migrated from hardcoded strings |
 | **Inline Error Banners** | 🚀 `production_ready` | 2026-09-01 | Inline error display on form pages — replaces silent failures |
-| **Security Hardening** | 🚀 `production_ready` | 2026-09-01 | .gitignore hardened, .env removed from git history |
+| **Security Hardening** | 🚀 `production_ready` | 2026-09-12 | .gitignore hardened, .env removed from git history, 144 Zod schemas (all mutation routes), 100% rate limiting coverage |
 | **.env.example Updated** | 🚀 `production_ready` | 2026-09-01 | Comprehensive env template with comments for all config vars |
 | **Deploy Scripts** | 🚀 `production_ready` | 2026-09-08 | aaPanel Node.js Project Manager, configurable port, robust db:push, update.sh |
 | **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |
@@ -1519,6 +1521,13 @@ Electron-based desktop application.
 - **Bug Fix** — `journal-entries/page.tsx`: `sourceTypeLabels` → `getSourceLabel()` for i18n consistency
 - **Status Summary** — production_ready: 62→64, total: 286→288
 
+### v14.4.0 (September 12, 2026) — Session 6: Zod Validation & Rate Limiting Coverage
+- **Zod Validation Complete** — 16 new schemas added (Project, Task, POS Terminal/Table/Session, Refund, Role, Team Member) — Total: 144 schemas in `validation-schemas.ts`
+- **Rate Limiting 100% Coverage** — 13 additional routes protected across Settings, Workflow, Search, Reports, and POS modules
+- **All Mutation Routes Secured** — Every POST/PUT/DELETE API route now has Zod input validation + rate limiting
+- **Documentation Updated** — AGENT.md, SECURITY.md, FEATURES.md, CURRENT.md all updated with accurate numbers
+- **Status Summary** — production_ready: 58→59, Security Hardening updated with comprehensive coverage
+
 ### v13.0.0 (September 5, 2026) — Mega Sprint Complete
 - **POS Offline Mode (Phase 5)** — Full offline capability: IndexedDB (Dexie.js), sync queue with exponential backoff, service worker (cache-first/network-first), React hooks, UI indicators, 10 files
 - **POS Kitchen Display System (KDS)** — 3 models, 9 API routes, state machine (NEW→PREPARING→READY→COMPLETED), auto-refresh polling, color-coded cards, timer, overdue detection, 19 files
@@ -1760,6 +1769,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 8, 2026 (Post-Audit Documentation Sync)
+**Last Updated:** September 11, 2026 (Global Audit & Documentation Sync)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 11.1 — Post-Audit Documentation Sync
+**Document Version:** 11.2 — Global Audit & Documentation Sync

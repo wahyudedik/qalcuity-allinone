@@ -900,13 +900,35 @@ export const revokeSessionSchema = z.object({
 // HR Attendance Schemas
 // ============================================
 
+export const createAttendanceSchema = z.object({
+    employeeId: z.string().min(1, 'ID karyawan wajib diisi'),
+    date: z.string().min(1, 'Tanggal wajib diisi'),
+    clockIn: z.string().max(10, 'Format jam masuk tidak valid').optional().nullable(),
+    clockOut: z.string().max(10, 'Format jam keluar tidak valid').optional().nullable(),
+    workHours: z.number().min(0, 'Jam kerja tidak boleh negatif').optional(),
+    status: z.enum(['PRESENT', 'LATE', 'ABSENT', 'LEAVE', 'WFH'], {
+        message: 'Status harus salah satu dari: PRESENT, LATE, ABSENT, LEAVE, WFH',
+    }).optional().default('PRESENT'),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});
+
 export const updateAttendanceSchema = z.object({
     date: z.string().optional(),
-    clockIn: z.string().optional(),
-    clockOut: z.string().optional(),
-    status: z.enum(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY']).optional(),
+    clockIn: z.string().max(10, 'Format jam masuk tidak valid').optional().nullable(),
+    clockOut: z.string().max(10, 'Format jam keluar tidak valid').optional().nullable(),
     workHours: z.number().min(0, 'Jam kerja tidak boleh negatif').optional(),
-    notes: z.string().optional().nullable(),
+    status: z.enum(['PRESENT', 'LATE', 'ABSENT', 'LEAVE', 'WFH'], {
+        message: 'Status harus salah satu dari: PRESENT, LATE, ABSENT, LEAVE, WFH',
+    }).optional(),
+    notes: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional().nullable(),
+});
+
+export const clockOutAttendanceSchema = z.object({
+    id: z.string().min(1, 'ID wajib diisi'),
+    clockOut: z.string().min(1, 'Jam keluar wajib diisi').max(10, 'Format jam keluar tidak valid'),
+    status: z.enum(['PRESENT', 'LATE', 'ABSENT', 'LEAVE', 'WFH'], {
+        message: 'Status harus salah satu dari: PRESENT, LATE, ABSENT, LEAVE, WFH',
+    }).optional(),
 });
 
 // ============================================
@@ -1622,4 +1644,238 @@ export const updateRecurringInvoiceSchema = z.object({
     notes: z.string().optional().nullable(),
     invoiceNumber: z.string().max(50).optional().nullable(),
     taxRate: z.number().min(0).max(100, 'Pajak maksimal 100%').optional(),
+});
+
+// ============================================
+// Accounting Period Schemas
+// ============================================
+
+export const createPeriodSchema = z.object({
+    name: z.string().min(1, 'Period name is required').max(100),
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().min(1, 'End date is required'),
+});
+
+export const generatePeriodsSchema = z.object({
+    year: z.number().int().min(2020).max(2099),
+});
+
+// ============================================
+// Analytics Chart Schemas
+// ============================================
+
+export const createAnalyticsChartSchema = z.object({
+    name: z.string().min(1, 'Nama chart wajib diisi').max(255, 'Nama chart maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    slug: z.string().min(1, 'Slug wajib diisi').max(255, 'Slug maksimal 255 karakter'),
+    chartType: z.enum(['bar', 'line', 'pie', 'donut', 'area', 'scatter', 'heatmap', 'kpi_card', 'table'], {
+        message: 'Tipe chart tidak valid',
+    }),
+    config: z.string().optional().nullable(),
+    dataSource: z.enum(['DATASET', 'QUERY', 'METRIC'], {
+        message: 'Data source tidak valid',
+    }).optional(),
+    datasetId: z.string().optional().nullable(),
+    queryId: z.string().optional().nullable(),
+    metricId: z.string().optional().nullable(),
+    queryConfig: z.string().optional().nullable(),
+    visibility: z.enum(['PRIVATE', 'TEAM', 'DEPARTMENT', 'ORGANIZATION'], {
+        message: 'Visibility tidak valid',
+    }).optional(),
+    isTemplate: z.boolean().optional(),
+    tags: z.string().optional().nullable(),
+});
+
+export const updateAnalyticsChartSchema = z.object({
+    name: z.string().min(1, 'Nama chart wajib diisi').max(255, 'Nama chart maksimal 255 karakter').optional(),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    slug: z.string().min(1, 'Slug wajib diisi').max(255, 'Slug maksimal 255 karakter').optional(),
+    chartType: z.enum(['bar', 'line', 'pie', 'donut', 'area', 'scatter', 'heatmap', 'kpi_card', 'table'], {
+        message: 'Tipe chart tidak valid',
+    }).optional(),
+    config: z.string().optional().nullable(),
+    dataSource: z.enum(['DATASET', 'QUERY', 'METRIC'], {
+        message: 'Data source tidak valid',
+    }).optional(),
+    datasetId: z.string().optional().nullable(),
+    queryId: z.string().optional().nullable(),
+    metricId: z.string().optional().nullable(),
+    queryConfig: z.string().optional().nullable(),
+    visibility: z.enum(['PRIVATE', 'TEAM', 'DEPARTMENT', 'ORGANIZATION'], {
+        message: 'Visibility tidak valid',
+    }).optional(),
+    isTemplate: z.boolean().optional(),
+    tags: z.string().optional().nullable(),
+});
+
+// ============================================
+// Scheduled Query Schema
+// ============================================
+
+export const createScheduledQuerySchema = z.object({
+    name: z.string().min(1, 'Nama scheduled query wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    queryHistoryId: z.string().min(1, 'Query History ID wajib diisi'),
+    datasetId: z.string().optional().nullable(),
+    cronExpression: z.string().min(1, 'Cron expression wajib diisi').max(100, 'Cron expression maksimal 100 karakter'),
+    frequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY'], {
+        message: 'Frekuensi tidak valid',
+    }),
+    timeOfDay: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format timeOfDay harus HH:MM (24 jam)').optional(),
+    outputFormat: z.enum(['EMAIL', 'PDF', 'EXCEL', 'CSV', 'SLACK'], {
+        message: 'Output format tidak valid',
+    }).optional(),
+    recipients: z.array(z.string().max(255)).max(50, 'Maksimal 50 penerima').optional(),
+    alertOnFailure: z.boolean().optional(),
+    alertOnAnomaly: z.boolean().optional(),
+});
+
+// ============================================
+// Alert Update Schema
+// ============================================
+
+export const updateAlertSchema = z.object({
+    name: z.string().min(1, 'Nama alert wajib diisi').max(255, 'Nama alert maksimal 255 karakter').optional(),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    metricId: z.string().min(1, 'Metric ID wajib diisi').max(255).optional(),
+    condition: z.enum(['below', 'above', 'equals', 'not_equals', 'changes_by'], {
+        message: 'Kondisi alert tidak valid',
+    }).optional(),
+    threshold: z.number({ message: 'Threshold harus berupa angka' }).optional(),
+    severity: z.enum(['low', 'medium', 'high', 'critical'], {
+        message: 'Severity tidak valid',
+    }).optional(),
+    notificationChannels: z.array(z.string().max(50)).max(10, 'Maksimal 10 channel').optional(),
+    recipients: z.array(z.string().max(255)).max(50, 'Maksimal 50 penerima').optional(),
+    cooldownMinutes: z.number().int().min(0).max(1440, 'Cooldown maksimal 1440 menit').optional(),
+    isActive: z.boolean().optional(),
+});
+
+// ============================================
+// Analytics Explorer Schema
+// ============================================
+
+export const analyticsExplorerRequestSchema = z.object({
+    dataset: z.string().min(1, 'Dataset wajib diisi'),
+    dimensions: z.array(z.string()).default([]),
+    measures: z.array(z.string()).default([]),
+    filters: z.array(z.object({
+        field: z.string(),
+        operator: z.string(),
+        value: z.unknown(),
+    })).default([]),
+    dateRange: z.object({
+        from: z.string().min(1, 'Tanggal from wajib diisi'),
+        to: z.string().min(1, 'Tanggal to wajib diisi'),
+        granularity: z.string().optional(),
+    }).optional(),
+    orderBy: z.array(z.object({
+        field: z.string(),
+        direction: z.enum(['asc', 'desc']),
+    })).optional(),
+    limit: z.number().int().min(1, 'Limit minimal 1').max(10000, 'Limit maksimal 10000').optional(),
+    offset: z.number().int().min(0, 'Offset tidak boleh negatif').optional(),
+});
+
+// ============================================
+// Data Dictionary Entry Schema
+// ============================================
+
+export const createDictionaryEntrySchema = z.object({
+    name: z.string().min(1, 'Nama entry wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    type: z.enum(['metric', 'dimension', 'measure', 'dataset', 'field'], {
+        message: 'Tipe entry tidak valid',
+    }),
+    category: z.enum(['finance', 'sales', 'inventory', 'hr', 'crm'], {
+        message: 'Kategori tidak valid',
+    }),
+    businessDef: z.string().min(1, 'Definisi bisnis wajib diisi').max(2000, 'Definisi bisnis maksimal 2000 karakter'),
+    technicalDef: z.string().max(2000, 'Definisi teknis maksimal 2000 karakter').optional().nullable(),
+    example: z.string().max(1000, 'Contoh maksimal 1000 karakter').optional().nullable(),
+    sourceModule: z.string().min(1, 'Source module wajib diisi').max(100, 'Source module maksimal 100 karakter'),
+    sourceModel: z.string().min(1, 'Source model wajib diisi').max(100, 'Source model maksimal 100 karakter'),
+    sourceField: z.string().max(100, 'Source field maksimal 100 karakter').optional().nullable(),
+    formula: z.string().max(1000, 'Formula maksimal 1000 karakter').optional().nullable(),
+    dependencies: z.string().max(1000, 'Dependencies maksimal 1000 karakter').optional().nullable(),
+    upstreamDeps: z.string().max(1000, 'Upstream deps maksimal 1000 karakter').optional().nullable(),
+    downstreamDeps: z.string().max(1000, 'Downstream deps maksimal 1000 karakter').optional().nullable(),
+    freshness: z.enum(['REALTIME', 'HOURLY', 'DAILY', 'WEEKLY'], {
+        message: 'Freshness tidak valid',
+    }).optional().nullable(),
+    reliability: z.enum(['HIGH', 'MEDIUM', 'LOW'], {
+        message: 'Reliability tidak valid',
+    }).optional().nullable(),
+    owner: z.string().max(255, 'Owner maksimal 255 karakter').optional().nullable(),
+    department: z.string().max(255, 'Department maksimal 255 karakter').optional().nullable(),
+});
+
+// ============================================
+// Query History Schema
+// ============================================
+
+export const createQueryHistorySchema = z.object({
+    queryType: z.enum(['SQL', 'VISUAL', 'AI', 'DASHBOARD', 'KPI'], {
+        message: 'Tipe query tidak valid',
+    }),
+    sql: z.string().min(1, 'SQL query wajib diisi').max(50000, 'SQL query maksimal 50000 karakter'),
+    visualConfig: z.string().optional().nullable(),
+    datasetId: z.string().optional().nullable(),
+    datasetName: z.string().max(255, 'Dataset name maksimal 255 karakter').optional().nullable(),
+    executionMs: z.number().int().min(0, 'Execution time tidak boleh negatif'),
+    rowsReturned: z.number().int().min(0, 'Rows returned tidak boleh negatif'),
+    rowsScanned: z.number().int().min(0).optional().nullable(),
+    status: z.enum(['SUCCESS', 'FAILED', 'TIMEOUT', 'BLOCKED'], {
+        message: 'Status tidak valid',
+    }),
+    errorMessage: z.string().max(5000, 'Error message maksimal 5000 karakter').optional().nullable(),
+    fromCache: z.boolean().optional(),
+    ipAddress: z.string().max(45, 'IP address maksimal 45 karakter').optional().nullable(),
+    userAgent: z.string().max(500, 'User agent maksimal 500 karakter').optional().nullable(),
+});
+
+// ============================================
+// SMTP Configuration Schema
+// ============================================
+
+export const updateSmtpConfigSchema = z.object({
+    smtpHost: z.string().min(1, 'SMTP host wajib diisi').max(255, 'SMTP host maksimal 255 karakter'),
+    smtpPort: z.string().regex(/^\d{1,5}$/, 'Port harus berupa angka 1-5 digit')
+        .refine((val) => {
+            const port = parseInt(val, 10);
+            return port >= 1 && port <= 65535;
+        }, 'Port harus antara 1-65535'),
+    smtpEmail: z.string().email('Format email tidak valid').max(255, 'Email maksimal 255 karakter'),
+    smtpPassword: z.string().max(255, 'Password maksimal 255 karakter').optional().nullable(),
+    useTLS: z.boolean().optional().default(true),
+});
+
+// ============================================
+// Workflow Definition Schema
+// ============================================
+
+const workflowConfigSchema = z.object({
+    states: z.array(z.string().min(1, 'State name tidak boleh kosong'))
+        .min(1, 'Minimal harus ada 1 state'),
+    transitions: z.array(z.object({
+        from: z.string().min(1, 'From state wajib diisi'),
+        to: z.string().min(1, 'To state wajib diisi'),
+        action: z.string().min(1, 'Action wajib diisi'),
+        requiredRole: z.string().optional(),
+    })),
+    initialState: z.string().min(1, 'Initial state wajib diisi'),
+    finalStates: z.array(z.string().min(1, 'Final state name tidak boleh kosong')),
+});
+
+export const createWorkflowDefinitionSchema = z.object({
+    entityType: z.string().min(1, 'Entity type wajib diisi').max(100, 'Entity type maksimal 100 karakter'),
+    name: z.string().min(1, 'Nama workflow wajib diisi').max(255, 'Nama workflow maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    config: workflowConfigSchema,
+});
+
+export const updateWorkflowDefinitionSchema = z.object({
+    entityType: z.string().min(1, 'Entity type wajib diisi').max(100, 'Entity type maksimal 100 karakter').optional(),
+    name: z.string().min(1, 'Nama workflow wajib diisi').max(255, 'Nama workflow maksimal 255 karakter').optional(),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    config: workflowConfigSchema.optional(),
 });

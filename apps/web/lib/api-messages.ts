@@ -42,6 +42,9 @@ export const MSG = {
     INVALID_INPUT_FORMAT: 'Invalid input format',
     INVALID_DATA_REFERENCE: 'Invalid data reference',
     TOKEN_NOT_FOUND: 'Token not found',
+    RESET_TOKEN_INVALID_OR_EXPIRED: 'Reset token is invalid or has expired.',
+    PASSWORD_RESET_SUCCESS: 'Password has been reset successfully.',
+    RESET_TOKEN_REQUIRED: 'Reset token and new password are required.',
 
     // ---------------------------------------------------------------------------
     // Users / Roles

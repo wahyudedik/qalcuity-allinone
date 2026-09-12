@@ -70,15 +70,7 @@ export async function POST(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can create rewards
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_CREATE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
@@ -149,15 +141,7 @@ export async function PUT(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can update rewards
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_UPDATE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         // Check reward exists
         const existingReward = await prisma.loyaltyReward.findFirst({
@@ -241,15 +225,7 @@ export async function DELETE(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can delete rewards
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_DELETE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         // Check reward exists
         const existingReward = await prisma.loyaltyReward.findFirst({

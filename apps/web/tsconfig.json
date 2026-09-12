@@ -43,6 +43,9 @@
             ],
             "@qalcuity/analytics": [
                 "../../packages/analytics/src"
+            ],
+            "@qalcuity/config": [
+                "../../packages/config/src"
             ]
         }
     },

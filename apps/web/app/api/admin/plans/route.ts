@@ -13,6 +13,7 @@ import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 type PlanWithFeatures = {
     id: string;
     name: string;
@@ -54,8 +55,17 @@ const createPlanSchema = z.object({
     })).optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:admin:plans:${ip}`, 60, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requireAdminAuth();
 
         const plans = await prisma.plan.findMany({
@@ -102,6 +112,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:admin:plans:POST:${ip}`, 10, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requireAdminAuth();
 
         if (!isSuperAdmin({ user: auth } as never)) {

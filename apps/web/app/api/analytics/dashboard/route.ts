@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
@@ -456,7 +457,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: response })
     } catch (error) {
-        console.error('[Analytics Dashboard Error]', error)
+        logger.error('[Analytics Dashboard Error]', error)
         return handleApiError(error)
     }
 }

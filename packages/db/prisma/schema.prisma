@@ -182,6 +182,10 @@ model User {
   twoFactorSecret      String?
   twoFactorBackupCodes String? // JSON array of hashed backup codes
 
+  // Password Reset
+  resetToken       String?
+  resetTokenExpiry DateTime?
+
   auditLogs      AuditLog[]
   savedReports   SavedReport[]
   userDashboards UserDashboard[]
@@ -202,6 +206,7 @@ model User {
 
   @@index([tenantId])
   @@index([roleId])
+  @@index([resetToken])
 }
 
 // ============================================

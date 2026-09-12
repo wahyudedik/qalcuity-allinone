@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import type { Prisma } from '@prisma/client'
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedRules })
     } catch (error) {
-        console.error('[Alert Rules List Error]', error)
+        logger.error('[Alert Rules List Error]', error)
         return handleApiError(error)
     }
 }
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[Alert Rule Create Error]', error)
+        logger.error('[Alert Rule Create Error]', error)
         return handleApiError(error)
     }
 }

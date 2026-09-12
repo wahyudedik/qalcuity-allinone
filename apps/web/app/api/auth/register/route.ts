@@ -7,6 +7,7 @@ import prisma from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeInput, isValidEmail } from "@/lib/sanitize";
 import { sendWelcomeEmail } from "@/lib/email";
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
     try {
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
             if (prismaError.code === 'P2002') {
                 const target = prismaError.meta?.target;
                 const field = Array.isArray(target) ? target[0] : 'field';
-                console.error(`[Register] Unique constraint violation on field: ${field}`);
+                logger.error(`[Register] Unique constraint violation on field: ${field}`);
                 return NextResponse.json(
                     { error: `Data already exists for ${String(field)}`, code: 'DUPLICATE_DATA' },
                     { status: 400 }
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
 
             // Foreign key constraint
             if (prismaError.code === 'P2003') {
-                console.error("[Register] Foreign key constraint violation");
+                logger.error("[Register] Foreign key constraint violation");
                 return NextResponse.json(
                     { error: "Invalid data reference", code: 'INVALID_REFERENCE' },
                     { status: 400 }
@@ -142,14 +143,14 @@ export async function POST(request: Request) {
 
             // Record not found
             if (prismaError.code === 'P2025') {
-                console.error("[Register] Record not found");
+                logger.error("[Register] Record not found");
                 return NextResponse.json(
                     { error: "Data not found", code: 'NOT_FOUND' },
                     { status: 404 }
                 );
             }
 
-            console.error("[Register] Prisma error:", prismaError.code);
+            logger.error("[Register] Prisma error:", prismaError.code);
             return NextResponse.json(
                 { error: "A database error occurred", code: 'DATABASE_ERROR' },
                 { status: 500 }
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
         }
 
         // Handle other errors
-        console.error("[Register] Unexpected error:", error instanceof Error ? error.message : 'Unknown error');
+        logger.error("[Register] Unexpected error:", error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { error: "An internal server error occurred", code: 'INTERNAL_SERVER_ERROR' },
             { status: 500 }

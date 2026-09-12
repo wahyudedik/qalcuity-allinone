@@ -97,15 +97,7 @@ export async function POST(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can create products
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.PRODUCT_ADMIN_ONLY_CREATE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);

@@ -8,6 +8,9 @@
     "build": "turbo build --filter=!qalcuity-desktop",
     "lint": "turbo lint",
     "clean": "turbo clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "pnpm --filter @qalcuity/db generate",
     "db:push": "pnpm --filter @qalcuity/db push",
     "db:seed": "pnpm --filter @qalcuity/db seed",
@@ -17,8 +20,10 @@
     "db:migrate:reset": "pnpm --filter @qalcuity/db exec prisma migrate reset --force"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.0",
     "turbo": "^2.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^5.0.0"
   },
   "engines": {
     "node": ">=18",

@@ -270,7 +270,7 @@ docs/UI_UX.md     ← Aturan UI/UX
                            │
 ┌──────────────────────────▼──────────────────────────────┐
 │                  DATA LAYER                              │
-│  Prisma 5.15 → PostgreSQL (75+ models, 65+ indexes)     │
+│  Prisma 5.15 → PostgreSQL (100 models, 100+ indexes)    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -286,21 +286,22 @@ docs/UI_UX.md     ← Aturan UI/UX
 | **Database** | PostgreSQL (DBngin local, aaPanel prod) | ✅ Active |
 | **Deployment** | aaPanel Node.js Project Manager (VPS) | ✅ Active |
 | **Auth** | NextAuth 4.24 (JWT) | ✅ Active |
-| **Validation** | Zod (14+ schemas) | ✅ Active |
+| **Validation** | Zod (128 schemas) | ✅ Active |
 | **Monorepo** | pnpm workspaces | ✅ Active |
 | **Desktop** | Electron | ⚠️ Placeholder |
 | **Mobile** | React Native / Expo | ✅ Active (JWT auth) |
 | **i18n** | Custom provider | ✅ Active |
+| **Testing** | Vitest 5.0.0 | ✅ Active |
 
 ### Shared Packages Status
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (75+ models) |
+| `@qalcuity/db` | ✅ Active | Prisma schema + migrations (100 models) |
 | `@qalcuity/types` | ✅ Active | Shared TypeScript types |
 | `@qalcuity/utils` | ✅ Active | Utility functions |
 | `@qalcuity/config` | ✅ Active | App constants + env config |
-| `@qalcuity/validation` | ✅ Active | Zod schemas (14+ schemas) |
+| `@qalcuity/validation` | ✅ Active | Zod schemas (144 schemas) |
 | `@qalcuity/i18n` | ✅ Active | i18n utilities |
 | `@qalcuity/ui` | ✅ Active | 11 React components + theme system |
 | `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with ~120 API routes |
@@ -308,7 +309,7 @@ docs/UI_UX.md     ← Aturan UI/UX
 | `@qalcuity/industry-config` | ✅ Active | Industry configuration engine |
 | `@qalcuity/redis` | ✅ Active | Redis client + rate limiter (production-ready) |
 
-### Codebase Stats (Audit: 8 September 2026 — Phase 4 Batch 2 Updated)
+### Codebase Stats (Audit: 12 September 2026 — Session 7 Updated)
 
 | Metric | Count |
 |--------|-------|
@@ -318,18 +319,19 @@ docs/UI_UX.md     ← Aturan UI/UX
 | API routes | 200+ |
 | RBAC route entries | 120+ |
 | Pages | 60+ |
-| Prisma models | 75+ |
-| Database indexes | 65+ |
-| Zod schemas | 120+ |
+| Prisma models | 100 |
+| Database indexes | 100+ |
+| Zod schemas | 144 |
 | i18n keys | 1170+ |
-| Error boundary files | 94 |
-| Loading state files | 98 |
+| Error boundary files | 115 |
+| Loading state files | 117 |
 | E2E tests | 63 (63 PASS) |
+| Unit tests | 189 (189 PASS) |
 | Shared packages | 12 (all active) |
 | Foundation engine packages | 3 |
 | UI components | 11 |
-| Validation schemas (apps/web) | 120+ |
-| Rate limit configs | 3 |
+| Validation schemas (apps/web) | 144 |
+| Rate limit configs | 3 (Redis-backed, 100% route coverage) |
 | Backend message constants (`api-messages.ts`) | 310+ |
 | API routes with centralized error handling | 27 (~95%+ coverage) |
 
@@ -1068,6 +1070,6 @@ Lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) untuk dokumentasi lengkap a
 
 ---
 
-**Last Updated:** September 11, 2026 (Unified Cron Scheduler)
+**Last Updated:** September 12, 2026 (Session 6: Zod Validation & Rate Limiting Coverage)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 6.4 — Unified Cron Scheduler architecture documentation
+**Document Version:** 6.6 — Zod Validation & Rate Limiting Coverage

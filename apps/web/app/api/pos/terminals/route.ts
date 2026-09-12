@@ -90,14 +90,6 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
-        // Only ADMIN+ can create terminals
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.TERMINAL_ADMIN_ONLY_CREATE },
-                { status: 403 }
-            );
-        }
-
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
         const validation = createPosTerminalSchema.safeParse(sanitizedBody);

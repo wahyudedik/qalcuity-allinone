@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/db';
 import { checkAllLowStockProducts } from '@/lib/stock-alert';
 import type { CronTaskResult } from '@/lib/cron-scheduler';
+import { logger } from '@/lib/logger';
 
 export async function runStockAlert(): Promise<CronTaskResult> {
     const tenants = await prisma.tenant.findMany({
@@ -28,7 +29,12 @@ export async function runStockAlert(): Promise<CronTaskResult> {
     const totalAlerted = results.reduce((sum, r) => sum + r.alerted, 0);
     const totalSkipped = results.reduce((sum, r) => sum + r.skipped, 0);
 
-    console.log(`[Cron] Stock Alert: tenants=${tenants.length}, checked=${totalChecked}, alerted=${totalAlerted}, skipped=${totalSkipped}`);
+    logger.info('[Cron] Stock Alert completed', {
+        tenants: tenants.length,
+        checked: totalChecked,
+        alerted: totalAlerted,
+        skipped: totalSkipped,
+    });
 
     return {
         success: true,

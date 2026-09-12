@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import type { Prisma } from '@prisma/client'
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedTriggers })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

@@ -14,6 +14,7 @@ import { logAudit } from '@/lib/audit';
 import { sanitizeInput } from '@/lib/sanitize';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const updatePlanSchema = z.object({
     name: z.string().min(1, MSG.NAME_REQUIRED).max(100).optional(),
@@ -38,6 +39,15 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
+        const ip = getClientIp(_request);
+        const rateLimitResult = checkRateLimit(`api:admin:plans:GET:${ip}`, 60, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         await requireAdminAuth();
 
         const plan = await prisma.plan.findUnique({
@@ -95,6 +105,15 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:admin:plans:PUT:${ip}`, 10, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requireAdminAuth();
 
         if (!isSuperAdmin({ user: auth } as never)) {
@@ -222,6 +241,15 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:admin:plans:DELETE:${ip}`, 5, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requireAdminAuth();
 
         if (!isSuperAdmin({ user: auth } as never)) {

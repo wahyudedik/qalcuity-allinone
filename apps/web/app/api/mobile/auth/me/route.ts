@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 /**
  * Mobile Auth — Get Current User Endpoint
@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { getMobileUserFromToken } from '@/lib/mobile-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
             status = 401;
         }
 
-        console.error('[MobileAuth] Get user error:', message);
+        logger.error('[MobileAuth] Get user error:', message);
 
         return NextResponse.json(
             { success: false, error: 'Token is invalid or has expired', code: 'INVALID_TOKEN' },

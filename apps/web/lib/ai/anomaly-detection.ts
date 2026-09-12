@@ -6,6 +6,7 @@
 import { Prisma } from '@prisma/client';
 import { getAIProvider, type AIChatMessage } from './provider';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -254,7 +255,7 @@ async function detectUnusualAmount(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Unusual amount check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Unusual amount check failed', error);
     }
 
     return anomalies;
@@ -330,7 +331,7 @@ async function detectDuplicateTransactions(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Duplicate check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Duplicate check failed', error);
     }
 
     return anomalies;
@@ -390,7 +391,7 @@ async function detectWeekendTransactions(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Weekend check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Weekend check failed', error);
     }
 
     return anomalies;
@@ -438,7 +439,7 @@ async function detectRoundNumbers(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Round number check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Round number check failed', error);
     }
 
     return anomalies;
@@ -505,7 +506,7 @@ async function detectNewVendorLargeAmount(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] New vendor check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] New vendor check failed', error);
     }
 
     return anomalies;
@@ -583,7 +584,7 @@ async function detectInvoiceNumberGap(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Invoice number gap check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Invoice number gap check failed', error);
     }
 
     return anomalies;
@@ -639,7 +640,7 @@ async function detectUnusualTime(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Unusual time check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Unusual time check failed', error);
     }
 
     return anomalies;
@@ -699,7 +700,7 @@ async function detectLargeExpense(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Large expense check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Large expense check failed', error);
     }
 
     return anomalies;
@@ -780,7 +781,7 @@ async function detectRapidSuccessiveTransactions(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Rapid successive transactions check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Rapid successive transactions check failed', error);
     }
 
     return anomalies;
@@ -858,7 +859,7 @@ async function detectTaxMismatch(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Tax mismatch check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Tax mismatch check failed', error);
     }
 
     return anomalies;
@@ -946,7 +947,7 @@ async function detectRoundTripTransactions(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Round-trip check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Round-trip check failed', error);
     }
 
     return anomalies;
@@ -1007,7 +1008,7 @@ async function detectBackdatedTransactions(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Backdated check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Backdated check failed', error);
     }
 
     return anomalies;
@@ -1107,7 +1108,7 @@ async function detectPaymentAnomalies(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Payment anomaly check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Payment anomaly check failed', error);
     }
 
     return anomalies;
@@ -1193,7 +1194,7 @@ async function detectPurchaseOrderAnomalies(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Purchase order anomaly check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Purchase order anomaly check failed', error);
     }
 
     return anomalies;
@@ -1276,7 +1277,7 @@ async function detectJournalEntryAnomalies(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Journal entry anomaly check failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Journal entry anomaly check failed', error);
     }
 
     return anomalies;
@@ -1359,13 +1360,13 @@ async function notifyCriticalAnomalies(
                 subject,
                 html,
             }).catch(err => {
-                console.error(`[AnomalyDetection] Failed to send email to ${admin.email}:`, err instanceof Error ? err.message : 'Unknown');
+                logger.error(`[AnomalyDetection] Failed to send email to ${admin.email}`, err);
             });
         }
 
-        console.log(`[AnomalyDetection] Sent anomaly notification to ${admins.length} admin(s)`);
+        logger.info(`[AnomalyDetection] Sent anomaly notification to ${admins.length} admin(s)`);
     } catch (error) {
-        console.error('[AnomalyDetection] Failed to send anomaly notifications:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Failed to send anomaly notifications', error);
         // Don't throw — notification failure shouldn't break the scan
     }
 }
@@ -1429,7 +1430,7 @@ async function persistAnomalies(
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] Failed to persist anomalies:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] Failed to persist anomalies', error);
         // Don't throw — persistence failure shouldn't break the scan
     }
 }
@@ -1513,7 +1514,7 @@ Return dalam format JSON:
             }
         }
     } catch (error) {
-        console.error('[AnomalyDetection] AI analysis failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AnomalyDetection] AI analysis failed', error);
         // Continue without AI enrichment
     }
 
@@ -1647,10 +1648,10 @@ export async function runAnomalyScan(tenantId: string): Promise<AnomalyScanResul
     const scannedEntities = invoices.length + payments.length + purchaseOrders.length + journalEntries.length;
 
     // Persist anomalies to DB (fire-and-forget — don't await)
-    persistAnomalies(tenantId, allAnomalies).catch(console.error);
+    persistAnomalies(tenantId, allAnomalies).catch((err) => logger.error('[AnomalyDetection] Failed to persist anomalies (async)', err));
 
     // Send email notifications for CRITICAL/HIGH anomalies (fire-and-forget)
-    notifyCriticalAnomalies(tenantId, allAnomalies).catch(console.error);
+    notifyCriticalAnomalies(tenantId, allAnomalies).catch((err) => logger.error('[AnomalyDetection] Failed to notify anomalies (async)', err));
 
     return {
         anomalies: allAnomalies,

@@ -1,4 +1,4 @@
-// ─── Environment Variable Validation ───────────────────────────────────────────
+﻿// ─── Environment Variable Validation ───────────────────────────────────────────
 // Validate required environment variables at startup.
 // Prevents cryptic runtime errors when critical config is missing.
 //
@@ -6,6 +6,8 @@
 // It is imported by db.ts which can be transitively included in client bundles
 // (e.g., via anomaly-list.tsx → anomaly-detection.ts → db.ts).
 // The guard below prevents env validation from running in the browser.
+
+import { logger } from '@/lib/logger';
 
 const requiredEnvVars = [
     'NEXTAUTH_SECRET',
@@ -35,8 +37,8 @@ export function validateEnv() {
 
     const missing = requiredEnvVars.filter(key => !process.env[key]);
     if (missing.length > 0) {
-        console.error(`❌ Missing required env vars: ${missing.join(', ')}`);
-        console.error('Please set these in .env.production');
+        logger.error(`❌ Missing required env vars: ${missing.join(', ')}`);
+        logger.error('Please set these in .env.production');
         // Don't throw in development, only in production
         if (process.env.NODE_ENV === 'production') {
             throw new Error(`Missing required environment variables: ${missing.join(', ')}`);

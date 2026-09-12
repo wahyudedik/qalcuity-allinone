@@ -7,6 +7,11 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 import { Prisma } from '@prisma/client';
+import { getRedisClient } from '@/lib/redis';
+import { logger } from '@/lib/logger';
+
+/** TTL for analytics cache in seconds (5 minutes). */
+const ANALYTICS_CACHE_TTL = 300;
 
 export async function GET(request: Request) {
     try {
@@ -58,112 +63,195 @@ export async function GET(request: Request) {
             }
         }
 
-        const whereClause: Prisma.PosTransactionWhereInput = {
-            tenantId,
-            status: 'COMPLETED',
-            createdAt: { gte: dateFrom, lte: dateTo },
-        };
+        // ──────────────────────────────────────────────────────────
+        // REDIS CACHE: Build deterministic cache key and check
+        // for a cached response before hitting the database.
+        // ──────────────────────────────────────────────────────────
+        const cacheKey = `pos:analytics:${tenantId}:${period}:${startDate || ''}:${endDate || ''}`;
+        let cached = false;
 
-        // Fetch all completed transactions with items for the period
-        const transactions = await prisma.posTransaction.findMany({
-            where: whereClause,
-            include: {
-                items: {
-                    select: {
-                        productName: true,
-                        quantity: true,
-                        unitPrice: true,
-                        subtotal: true,
+        try {
+            const redis = await getRedisClient();
+            if (redis) {
+                const cachedRaw = await redis.get(cacheKey);
+                if (cachedRaw) {
+                    const cachedData = JSON.parse(cachedRaw) as Record<string, unknown>;
+                    cached = true;
+                    logger.info(`[POS Analytics] Cache HIT for key: ${cacheKey}`);
+                    return NextResponse.json({
+                        ...cachedData,
+                        cached: true,
+                        cacheKey,
+                    });
+                }
+                logger.info(`[POS Analytics] Cache MISS for key: ${cacheKey}`);
+            }
+        } catch (cacheErr) {
+            // Redis unavailable — skip cache gracefully
+            logger.warn('[POS Analytics] Cache read failed, proceeding with DB query', {
+                error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+            });
+        }
+
+        // ──────────────────────────────────────────────────────────
+        // OPTIMIZATION: Run all aggregation queries in parallel at
+        // the database level instead of fetching all transactions
+        // and grouping in JavaScript. This moves computation to
+        // PostgreSQL where indexes can be leveraged.
+        // ──────────────────────────────────────────────────────────
+        const [
+            salesByPeriodRaw,
+            topProductsRaw,
+            salesByCategoryRaw,
+            hourlyTrendRaw,
+            paymentMethodBreakdownRaw,
+            totalTxCount,
+        ] = await Promise.all([
+            // 1. Sales by period — GROUP BY date at DB level
+            prisma.$queryRaw<{ date: Date; total: number; count: bigint }[]>(
+                Prisma.sql`
+                    SELECT
+                        DATE_TRUNC('day', "createdAt")::date AS date,
+                        SUM("totalAmount")::double precision AS total,
+                        COUNT(*)::bigint AS count
+                    FROM "PosTransaction"
+                    WHERE "tenantId" = ${tenantId}
+                      AND "status" = 'COMPLETED'
+                      AND "createdAt" >= ${dateFrom}
+                      AND "createdAt" <= ${dateTo}
+                    GROUP BY DATE_TRUNC('day', "createdAt")
+                    ORDER BY date ASC
+                `
+            ),
+
+            // 2. Top products — GROUP BY productName at DB level, top 10
+            prisma.posTransactionItem.groupBy({
+                by: ['productName'],
+                where: {
+                    tenantId,
+                    transaction: {
+                        status: 'COMPLETED',
+                        createdAt: { gte: dateFrom, lte: dateTo },
                     },
                 },
-            },
-            orderBy: { createdAt: 'asc' },
-        });
+                _sum: { subtotal: true, quantity: true },
+                orderBy: { _sum: { subtotal: 'desc' } },
+                take: 10,
+            }),
 
-        // 1. Sales by period (grouped by date)
-        const salesByPeriodMap = new Map<string, { total: number; count: number }>();
-        for (const tx of transactions) {
-            const dateKey = tx.createdAt.toISOString().split('T')[0];
-            const entry = salesByPeriodMap.get(dateKey) || { total: 0, count: 0 };
-            entry.total += Number(tx.totalAmount);
-            entry.count += 1;
-            salesByPeriodMap.set(dateKey, entry);
-        }
-        const salesByPeriod = Array.from(salesByPeriodMap.entries())
-            .map(([date, v]) => ({ date, total: v.total, count: v.count }))
-            .sort((a, b) => a.date.localeCompare(b.date));
+            // 3. Sales by category — JOIN through Product → Category at DB level
+            prisma.$queryRaw<{ category: string; quantity: number; revenue: number }[]>(
+                Prisma.sql`
+                    SELECT
+                        COALESCE(c."name", 'Lainnya') AS category,
+                        SUM(pi."quantity")::double precision AS quantity,
+                        SUM(pi."subtotal")::double precision AS revenue
+                    FROM "PosTransactionItem" pi
+                    INNER JOIN "PosTransaction" pt ON pt."id" = pi."transactionId"
+                    LEFT JOIN "Product" p ON p."id" = pi."productId"
+                    LEFT JOIN "Category" c ON c."id" = p."categoryId"
+                    WHERE pi."tenantId" = ${tenantId}
+                      AND pt."status" = 'COMPLETED'
+                      AND pt."createdAt" >= ${dateFrom}
+                      AND pt."createdAt" <= ${dateTo}
+                    GROUP BY c."name"
+                    ORDER BY revenue DESC
+                `
+            ),
+
+            // 4. Hourly trend — GROUP BY hour at DB level
+            prisma.$queryRaw<{ hour: number; count: bigint; total: number }[]>(
+                Prisma.sql`
+                    SELECT
+                        EXTRACT(HOUR FROM "createdAt")::int AS hour,
+                        COUNT(*)::bigint AS count,
+                        SUM("totalAmount")::double precision AS total
+                    FROM "PosTransaction"
+                    WHERE "tenantId" = ${tenantId}
+                      AND "status" = 'COMPLETED'
+                      AND "createdAt" >= ${dateFrom}
+                      AND "createdAt" <= ${dateTo}
+                    GROUP BY EXTRACT(HOUR FROM "createdAt")
+                    ORDER BY hour ASC
+                `
+            ),
+
+            // 5. Payment method breakdown — GROUP BY paymentMethod at DB level
+            prisma.posTransaction.groupBy({
+                by: ['paymentMethod'],
+                where: {
+                    tenantId,
+                    status: 'COMPLETED',
+                    createdAt: { gte: dateFrom, lte: dateTo },
+                },
+                _count: true,
+                _sum: { totalAmount: true },
+            }),
+
+            // 6. Total transaction count — single COUNT query
+            prisma.posTransaction.count({
+                where: {
+                    tenantId,
+                    status: 'COMPLETED',
+                    createdAt: { gte: dateFrom, lte: dateTo },
+                },
+            }),
+        ]);
+
+        // ──────────────────────────────────────────────────────────
+        // Transform results to match the original response format
+        // ──────────────────────────────────────────────────────────
+
+        // 1. Sales by period
+        const salesByPeriod = salesByPeriodRaw.map((row) => ({
+            date: row.date instanceof Date
+                ? row.date.toISOString().split('T')[0]
+                : String(row.date).split('T')[0],
+            total: Number(row.total),
+            count: Number(row.count),
+        }));
 
         // 2. Top products (top 10 by quantity sold)
-        const productMap = new Map<string, { quantity: number; revenue: number }>();
-        for (const tx of transactions) {
-            for (const item of tx.items) {
-                const prod = productMap.get(item.productName) || { quantity: 0, revenue: 0 };
-                prod.quantity += Number(item.quantity);
-                prod.revenue += Number(item.subtotal);
-                productMap.set(item.productName, prod);
-            }
-        }
-        const topProducts = Array.from(productMap.entries())
-            .map(([name, v]) => ({ name, ...v }))
-            .sort((a, b) => b.quantity - a.quantity)
-            .slice(0, 10);
+        const topProducts = topProductsRaw.map((row) => ({
+            name: row.productName,
+            quantity: Number(row._sum.quantity ?? 0),
+            revenue: Number(row._sum.subtotal ?? 0),
+        }));
 
-        // 3. Sales by category (need to join with products)
-        const productNames = Array.from(productMap.keys());
-        const products = await prisma.product.findMany({
-            where: { tenantId, name: { in: productNames } },
-            select: { name: true, categoryId: true, category: { select: { name: true } } },
-        });
-        const productNameToCategory = new Map<string, string>();
-        for (const p of products) {
-            productNameToCategory.set(p.name, p.category?.name || 'Lainnya');
-        }
+        // 3. Sales by category
+        const salesByCategory = salesByCategoryRaw.map((row) => ({
+            category: row.category,
+            quantity: Number(row.quantity),
+            revenue: Number(row.revenue),
+        }));
 
-        const categoryMap = new Map<string, { quantity: number; revenue: number }>();
-        for (const [name, prod] of productMap) {
-            const cat = productNameToCategory.get(name) || 'Lainnya';
-            const entry = categoryMap.get(cat) || { quantity: 0, revenue: 0 };
-            entry.quantity += prod.quantity;
-            entry.revenue += prod.revenue;
-            categoryMap.set(cat, entry);
-        }
-        const salesByCategory = Array.from(categoryMap.entries())
-            .map(([category, v]) => ({ category, ...v }))
-            .sort((a, b) => b.revenue - a.revenue);
-
-        // 4. Hourly trend (for today only, or for the selected period)
+        // 4. Hourly trend — ensure all 24 hours are present (0-23)
         const hourlyMap = new Map<number, { count: number; total: number }>();
         for (let h = 0; h < 24; h++) {
             hourlyMap.set(h, { count: 0, total: 0 });
         }
-        for (const tx of transactions) {
-            const hour = tx.createdAt.getHours();
-            const entry = hourlyMap.get(hour)!;
-            entry.count += 1;
-            entry.total += Number(tx.totalAmount);
+        for (const row of hourlyTrendRaw) {
+            hourlyMap.set(Number(row.hour), {
+                count: Number(row.count),
+                total: Number(row.total),
+            });
         }
         const hourlyTrend = Array.from(hourlyMap.entries())
             .map(([hour, v]) => ({ hour, ...v }));
 
         // 5. Payment method breakdown
-        const paymentMap = new Map<string, { count: number; total: number }>();
-        for (const tx of transactions) {
-            const entry = paymentMap.get(tx.paymentMethod) || { count: 0, total: 0 };
-            entry.count += 1;
-            entry.total += Number(tx.totalAmount);
-            paymentMap.set(tx.paymentMethod, entry);
-        }
-        const totalTxCount = transactions.length;
-        const paymentMethodBreakdown = Array.from(paymentMap.entries())
-            .map(([method, v]) => ({
-                method,
-                count: v.count,
-                total: v.total,
-                percentage: totalTxCount > 0 ? Math.round((v.count / totalTxCount) * 100) : 0,
+        const paymentMethodBreakdown = paymentMethodBreakdownRaw
+            .map((row) => ({
+                method: row.paymentMethod,
+                count: row._count,
+                total: Number(row._sum.totalAmount ?? 0),
+                percentage: totalTxCount > 0
+                    ? Math.round((row._count / totalTxCount) * 100)
+                    : 0,
             }))
             .sort((a, b) => b.total - a.total);
 
-        return NextResponse.json({
+        const responseData = {
             success: true,
             data: {
                 salesByPeriod,
@@ -178,7 +266,29 @@ export async function GET(request: Request) {
                     totalTransactions: totalTxCount,
                 },
             },
-        });
+            cached: false,
+            cacheKey,
+        };
+
+        // ──────────────────────────────────────────────────────────
+        // REDIS CACHE: Store the freshly computed response so
+        // subsequent requests within the TTL window are served
+        // directly from cache, skipping all 6 DB queries.
+        // ──────────────────────────────────────────────────────────
+        try {
+            const redis = await getRedisClient();
+            if (redis) {
+                await redis.setex(cacheKey, ANALYTICS_CACHE_TTL, JSON.stringify(responseData));
+                logger.info(`[POS Analytics] Cache SET for key: ${cacheKey} (TTL: ${ANALYTICS_CACHE_TTL}s)`);
+            }
+        } catch (cacheErr) {
+            // Redis unavailable — skip cache write gracefully
+            logger.warn('[POS Analytics] Cache write failed', {
+                error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+            });
+        }
+
+        return NextResponse.json(responseData);
     } catch (error) {
         return handleApiError(error);
     }

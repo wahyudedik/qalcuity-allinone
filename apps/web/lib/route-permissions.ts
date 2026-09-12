@@ -36,11 +36,80 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/hr/attendance': { permission: 'hr.attendance', fallbackRole: 'ADMIN' },
     '/api/hr/leaves': { permission: 'hr.leave', fallbackRole: 'ADMIN' },
     '/api/hr/payroll': { permission: 'hr.payroll', fallbackRole: 'ADMIN' },
+    '/api/hr/departments': { permission: 'hr.department', fallbackRole: 'ADMIN' },
+    '/api/hr/departments/[id]': { permission: 'hr.department', fallbackRole: 'ADMIN' },
+    '/api/timesheet': { permission: 'hr.timesheet', fallbackRole: 'MEMBER' },
 
     // ─── Inventory ────────────────────────────────────────────────────────────
     '/api/inventory/products': { permission: 'inventory.product', fallbackRole: 'ADMIN' },
     '/api/inventory/categories': { permission: 'inventory.category', fallbackRole: 'ADMIN' },
     '/api/inventory/suppliers': { permission: 'inventory.supplier', fallbackRole: 'ADMIN' },
+    '/api/inventory/warehouses': { permission: 'inventory.warehouse', fallbackRole: 'ADMIN' },
+    '/api/inventory/warehouses/[id]': { permission: 'inventory.warehouse', fallbackRole: 'ADMIN' },
+    '/api/inventory/stock-opname': { permission: 'inventory.stock_opname', fallbackRole: 'ADMIN' },
+    '/api/inventory/stock-opname/[id]': { permission: 'inventory.stock_opname', fallbackRole: 'ADMIN' },
+
+    // ─── Approval Engine (CRITICAL) ───────────────────────────────────────────
+    '/api/approval/levels': { permission: 'approval.level', fallbackRole: 'ADMIN' },
+    '/api/approval/levels/[id]': { permission: 'approval.level', fallbackRole: 'ADMIN' },
+    '/api/approval/requests': { permission: 'approval.request', fallbackRole: 'MEMBER' },
+    '/api/approval/requests/[id]': { permission: 'approval.request', fallbackRole: 'MEMBER' },
+    '/api/approval/requests/[id]/approve': { permission: 'approval.request', fallbackRole: 'ADMIN' },
+    '/api/approval/requests/[id]/reject': { permission: 'approval.request', fallbackRole: 'ADMIN' },
+
+    // ─── Workflow Engine (CRITICAL) ───────────────────────────────────────────
+    '/api/workflow/definitions': { permission: 'workflow.definition', fallbackRole: 'ADMIN' },
+    '/api/workflow/definitions/[id]': { permission: 'workflow.definition', fallbackRole: 'ADMIN' },
+    '/api/workflow/transition': { permission: 'workflow.transition', fallbackRole: 'ADMIN' },
+    '/api/workflow/history': { permission: 'workflow.history', fallbackRole: 'MEMBER' },
+
+    // ─── POS Transactions (CRITICAL) ──────────────────────────────────────────
+    '/api/pos/transactions': { permission: 'pos.transaction', fallbackRole: 'ADMIN' },
+    '/api/pos/transactions/[id]': { permission: 'pos.transaction', fallbackRole: 'ADMIN' },
+    '/api/pos/refunds': { permission: 'pos.refund', fallbackRole: 'ADMIN' },
+    '/api/pos/refunds/[id]': { permission: 'pos.refund', fallbackRole: 'ADMIN' },
+    '/api/pos/sessions': { permission: 'pos.session', fallbackRole: 'ADMIN' },
+    '/api/pos/sessions/[id]': { permission: 'pos.session', fallbackRole: 'ADMIN' },
+
+    // ─── POS Products & Terminals ─────────────────────────────────────────────
+    '/api/pos/products': { permission: 'pos.product', fallbackRole: 'ADMIN' },
+    '/api/pos/products/[id]': { permission: 'pos.product', fallbackRole: 'ADMIN' },
+    '/api/pos/terminals': { permission: 'pos.terminal', fallbackRole: 'ADMIN' },
+    '/api/pos/terminals/[id]': { permission: 'pos.terminal', fallbackRole: 'ADMIN' },
+    '/api/pos/terminals/status': { permission: 'pos.terminal', fallbackRole: 'ADMIN' },
+
+    // ─── POS Table Management ─────────────────────────────────────────────────
+    '/api/pos/tables': { permission: 'pos.table', fallbackRole: 'ADMIN' },
+    '/api/pos/tables/[id]': { permission: 'pos.table', fallbackRole: 'ADMIN' },
+    '/api/pos/tables/[id]/status': { permission: 'pos.table', fallbackRole: 'ADMIN' },
+    '/api/pos/tables/reservations': { permission: 'pos.table', fallbackRole: 'MEMBER' },
+    '/api/pos/tables/reservations/[id]': { permission: 'pos.table', fallbackRole: 'MEMBER' },
+    '/api/pos/tables/stats': { permission: 'pos.table', fallbackRole: 'MEMBER' },
+
+    // ─── POS Loyalty Program ──────────────────────────────────────────────────
+    '/api/pos/loyalty/members': { permission: 'pos.loyalty_member', fallbackRole: 'ADMIN' },
+    '/api/pos/loyalty/members/[id]': { permission: 'pos.loyalty_member', fallbackRole: 'ADMIN' },
+    '/api/pos/loyalty/members/[id]/transactions': { permission: 'pos.loyalty_member', fallbackRole: 'ADMIN' },
+    '/api/pos/loyalty/rewards': { permission: 'pos.loyalty_reward', fallbackRole: 'ADMIN' },
+    '/api/pos/loyalty/rewards/[id]': { permission: 'pos.loyalty_reward', fallbackRole: 'ADMIN' },
+    '/api/pos/loyalty/redeem': { permission: 'pos.loyalty_redeem', fallbackRole: 'ADMIN' },
+
+    // ─── POS Analytics ────────────────────────────────────────────────────────
+    '/api/pos/analytics': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/cashiers': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/customers': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/hours': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/products': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/sales': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/analytics/summary': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    '/api/pos/dashboard': { permission: 'pos.dashboard', fallbackRole: 'ADMIN' },
+
+    // ─── POS Kitchen Display ──────────────────────────────────────────────────
+    '/api/pos/kitchen/orders': { permission: 'pos.kitchen', fallbackRole: 'ADMIN' },
+    '/api/pos/kitchen/orders/[id]': { permission: 'pos.kitchen', fallbackRole: 'ADMIN' },
+    '/api/pos/kitchen/stations': { permission: 'pos.kitchen', fallbackRole: 'ADMIN' },
+    '/api/pos/kitchen/stations/[id]': { permission: 'pos.kitchen', fallbackRole: 'ADMIN' },
+    '/api/pos/kitchen/stats': { permission: 'pos.kitchen', fallbackRole: 'ADMIN' },
 
     // ─── Settings ─────────────────────────────────────────────────────────────
     '/api/settings/company': { permission: 'settings.company', fallbackRole: 'ADMIN' },
@@ -73,43 +142,48 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     // ─── Audit ────────────────────────────────────────────────────────────────
     '/api/audit': { permission: 'audit.read', fallbackRole: 'ADMIN' },
 
-    // ─── POS Analytics ─────────────────────────────────────────────────────
-    '/api/pos/analytics/sales': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
-    '/api/pos/analytics/products': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
-    '/api/pos/analytics/hours': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
-    '/api/pos/analytics/customers': { permission: 'pos.analytics', fallbackRole: 'ADMIN' },
+    // ─── Dashboard ────────────────────────────────────────────────────────────
+    '/api/dashboard/approvals': { permission: 'dashboard.approval', fallbackRole: 'ADMIN' },
+    '/api/dashboard/charts': { permission: 'dashboard.chart', fallbackRole: 'ADMIN' },
+    '/api/dashboard/kpi': { permission: 'dashboard.kpi', fallbackRole: 'ADMIN' },
+    '/api/dashboard/recent-activity': { permission: 'dashboard.activity', fallbackRole: 'ADMIN' },
 
-    // ─── POS Kitchen Display ─────────────────────────────────────────────────
-    '/api/pos/kitchen/orders': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
-    '/api/pos/kitchen/stations': { permission: 'pos.kitchen_station', fallbackRole: 'ADMIN' },
-    '/api/pos/kitchen/stats': { permission: 'pos.kitchen_order', fallbackRole: 'ADMIN' },
-
-    // ─── POS Table Management ──────────────────────────────────────────────
-    '/api/pos/tables': { permission: 'pos.table', fallbackRole: 'ADMIN' },
-    '/api/pos/tables/reservations': { permission: 'pos.table', fallbackRole: 'ADMIN' },
-    '/api/pos/tables/stats': { permission: 'pos.table', fallbackRole: 'ADMIN' },
-
-    // ─── Operations Module ─────────────────────────────────────────────────
-    '/api/projects': { permission: 'operations.project', fallbackRole: 'ADMIN' },
+    // ─── Operations Module ────────────────────────────────────────────────────
+    '/api/projects': { permission: 'project.read', fallbackRole: 'MEMBER' },
+    '/api/projects/[id]': { permission: 'project.read', fallbackRole: 'MEMBER' },
+    '/api/projects/[id]/budget': { permission: 'project.budget', fallbackRole: 'ADMIN' },
+    '/api/projects/[id]/gantt': { permission: 'project.gantt', fallbackRole: 'MEMBER' },
+    '/api/projects/[id]/members': { permission: 'project.member', fallbackRole: 'ADMIN' },
+    '/api/projects/[id]/resources': { permission: 'project.resource', fallbackRole: 'ADMIN' },
     '/api/tasks': { permission: 'operations.task', fallbackRole: 'ADMIN' },
-    '/api/timesheet': { permission: 'operations.timesheet', fallbackRole: 'MEMBER' },
 
-    // ─── Field Service ─────────────────────────────────────────────────────
+    // ─── Field Service ────────────────────────────────────────────────────────
     '/api/field/jobs': { permission: 'operations.field_job', fallbackRole: 'ADMIN' },
     '/api/field/checklists': { permission: 'operations.field_checklist', fallbackRole: 'ADMIN' },
 
-    // ─── AI Features ───────────────────────────────────────────────────────
+    // ─── Notifications & Upload ───────────────────────────────────────────────
+    '/api/notifications': { permission: 'notification.read', fallbackRole: 'MEMBER' },
+    '/api/upload': { permission: 'system.upload', fallbackRole: 'MEMBER' },
+
+    // ─── AI Features ──────────────────────────────────────────────────────────
     '/api/ai/query': { permission: 'ai.query', fallbackRole: 'MEMBER' },
     '/api/ai/chat': { permission: 'ai.query', fallbackRole: 'MEMBER' },
     '/api/ai/extract': { permission: 'ai.extract', fallbackRole: 'MEMBER' },
     '/api/ai/extraction-history': { permission: 'ai.extract', fallbackRole: 'MEMBER' },
     '/api/ai/anomalies': { permission: 'ai.anomaly', fallbackRole: 'ADMIN' },
+    '/api/ai/anomalies/scan': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/ai/anomalies/[id]': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/ai/health': { permission: 'ai.read', fallbackRole: 'MEMBER' },
 
-    // ─── Admin Plans (SUPERADMIN) ───────────────────────────────────────
-    '/api/admin/plans': { permission: 'platform.plan', fallbackRole: 'SUPERADMIN' },
+    // ─── CRM Emails ──────────────────────────────────────────────────────────
+    '/api/crm/emails': { permission: 'crm.contact', fallbackRole: 'ADMIN' },
 
-    // ─── Platform Admin ──────────────────────────────────────────────────
+    // ─── Admin ────────────────────────────────────────────────────────────────
+    '/api/admin/plans': { permission: 'platform.plan', fallbackRole: 'SUPERADMIN' },
+    '/api/admin/seed-workflows': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+    '/api/admin/rate-limits': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
+
+    // ─── Platform Admin ───────────────────────────────────────────────────────
     '/api/platform/tenants': { permission: 'platform.tenant', fallbackRole: 'SUPERADMIN' },
     '/api/platform/stats': { permission: 'platform.stats', fallbackRole: 'SUPERADMIN' },
     '/api/platform/monitoring': { permission: 'platform.monitoring', fallbackRole: 'SUPERADMIN' },
@@ -119,14 +193,43 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/platform/support': { permission: 'platform.support', fallbackRole: 'SUPERADMIN' },
     '/api/platform/security': { permission: 'platform.security', fallbackRole: 'SUPERADMIN' },
 
-    // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ──────
+    // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ─────────
     '/api/cron/run': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/payment-reminder': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/stock-alert': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
-    '/api/ai/anomalies/scan': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
-    '/api/ai/anomalies/[id]': { permission: 'system.admin', fallbackRole: 'SUPERADMIN' },
 };
+
+// ─── Routes that intentionally have NO permission entry ───────────────────────
+// These routes are handled by other auth mechanisms and do NOT need entries:
+//
+// SKIPPED in requirePermissionForRoute() (apps/web/lib/session.ts):
+//   - /api/auth/*          — NextAuth handler (login, register, forgot-password, etc.)
+//   - /api/mobile/*        — Mobile JWT auth (separate auth mechanism)
+//   - /api/health          — Public health check endpoint
+//   - /api/search          — Global search (explicitly skipped)
+//   - /api/demo/load       — Demo data loading (explicitly skipped)
+//   - /api/dashboard/stats — Dashboard stats (explicitly skipped)
+//
+// PUBLIC routes (in PUBLIC_API_PATHS middleware bypass):
+//   - /api/billing/payments/midtrans/callback — Midtrans webhook (HMAC signature verification)
+//
+// COVERED by prefix matching (getPermissionForRoute()):
+//   - All /api/crm/contacts/*     → covered by /api/crm/contacts
+//   - All /api/crm/leads/*        → covered by /api/crm/leads
+//   - All /api/crm/deals/*        → covered by /api/crm/deals
+//   - All /api/crm/activities/*   → covered by /api/crm/activities
+//   - All /api/ai/anomalies/*     → covered by /api/ai/anomalies (except /scan and /[id] which have explicit entries)
+//   - All /api/settings/* sub-routes → covered by parent prefixes
+//   - All /api/billing/* sub-routes → covered by parent prefixes
+//   - All /api/finance/* sub-routes → covered by parent prefixes
+//   - All /api/pos/* sub-routes → covered by parent prefixes
+//   - All /api/platform/* sub-routes → covered by parent prefixes
+//   - All /api/projects/* sub-routes → covered by /api/projects
+//   - All /api/tasks/* sub-routes → covered by /api/tasks
+//   - All /api/field/* sub-routes → covered by parent prefixes
+//   - All /api/analytics/* sub-routes → covered by /api/analytics
+//   - All /api/audit/* sub-routes → covered by /api/audit
 
 /**
  * Dapatkan permission config untuk route tertentu.

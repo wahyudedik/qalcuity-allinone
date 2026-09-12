@@ -17,6 +17,8 @@
  * @see docs/SECURITY.md — H04 (Rate Limiter)
  */
 
+import { logger } from '@/lib/logger';
+
 // Use dynamic import to avoid @types/ioredis v4 conflict with ioredis v6
 
 /**
@@ -33,6 +35,7 @@ interface RedisClient {
     set(key: string, value: string, ...args: unknown[]): Promise<unknown>;
     setex(key: string, seconds: number, value: string): Promise<unknown>;
     del(key: string): Promise<unknown>;
+    keys(pattern: string): Promise<string[]>;
     incr(key: string): Promise<number>;
     pexpire(key: string, milliseconds: number): Promise<unknown>;
     expire(key: string, seconds: number): Promise<unknown>;
@@ -61,7 +64,7 @@ async function loadRedis(): Promise<RedisConstructor | null> {
         RedisClass = mod.default;
         return RedisClass;
     } catch {
-        console.warn('[Redis] ioredis module not available');
+        logger.warn('[Redis] ioredis module not available');
         return null;
     }
 }
@@ -78,11 +81,11 @@ const REDIS_CONFIG = {
     maxRetriesPerRequest: 3,
     retryStrategy(times: number): number | null {
         if (times > 5) {
-            console.error('[Redis] Max retries exceeded, stopping retry attempts');
+            logger.error('[Redis] Max retries exceeded, stopping retry attempts');
             return null;
         }
         const delay = Math.min(times * 100, 3000);
-        console.warn(`[Redis] Retry attempt ${times}, waiting ${delay}ms`);
+        logger.warn(`[Redis] Retry attempt ${times}`, { delayMs: delay });
         return delay;
     },
     lazyConnect: true,
@@ -120,7 +123,7 @@ export async function getRedisClient(): Promise<RedisClient | null> {
     // No Redis URL configured
     if (!REDIS_URL) {
         if (!initializationAttempted) {
-            console.warn(
+            logger.warn(
                 '[Redis] REDIS_URL not configured. Using in-memory fallback. ' +
                 'Configure REDIS_URL in .env for shared rate limiting.'
             );
@@ -146,38 +149,38 @@ export async function getRedisClient(): Promise<RedisClient | null> {
 
         // Event handlers
         redisClient.on('error', (err: Error) => {
-            console.error('[Redis] Connection error:', err.message);
+            logger.error('[Redis] Connection error', err);
             redisAvailable = false;
         });
 
         redisClient.on('connect', () => {
-            console.log('[Redis] Connected successfully');
+            logger.info('[Redis] Connected successfully');
             redisAvailable = true;
         });
 
         redisClient.on('ready', () => {
-            console.log('[Redis] Ready to accept commands');
+            logger.info('[Redis] Ready to accept commands');
             redisAvailable = true;
         });
 
         redisClient.on('close', () => {
-            console.warn('[Redis] Connection closed');
+            logger.warn('[Redis] Connection closed');
             redisAvailable = false;
         });
 
         redisClient.on('reconnecting', (delay: number) => {
-            console.warn(`[Redis] Reconnecting in ${delay}ms...`);
+            logger.warn(`[Redis] Reconnecting in ${delay}ms...`);
         });
 
         // Attempt lazy connection
         redisClient.connect().catch((err: Error) => {
-            console.error('[Redis] Initial connection failed:', err.message);
+            logger.error('[Redis] Initial connection failed', err);
             redisAvailable = false;
         });
 
         return redisClient;
     } catch (error) {
-        console.error('[Redis] Failed to create client:', error);
+        logger.error('[Redis] Failed to create client', error);
         redisClient = null;
         return null;
     }
@@ -226,6 +229,33 @@ export function getRedisHealth(): {
 }
 
 /**
+ * Delete all keys matching a glob pattern.
+ * Uses KEYS command — safe for small key sets (e.g., analytics cache per tenant).
+ * Returns the number of keys deleted.
+ */
+export async function deletePattern(pattern: string): Promise<number> {
+    const redis = await getRedisClient();
+    if (!redis) return 0;
+
+    try {
+        const keys = await redis.keys(pattern);
+        if (keys.length === 0) return 0;
+
+        // ioredis with keyPrefix: keys() returns keys WITHOUT prefix,
+        // del() expects keys WITHOUT prefix (prefix added automatically).
+        await Promise.all(keys.map((key) => redis.del(key)));
+        logger.info(`[Redis] Deleted ${keys.length} keys matching pattern: ${pattern}`);
+        return keys.length;
+    } catch (error) {
+        logger.warn('[Redis] deletePattern failed', {
+            pattern,
+            error: error instanceof Error ? error.message : String(error),
+        });
+        return 0;
+    }
+}
+
+/**
  * Gracefully disconnect Redis client.
  * Call this during application shutdown.
  */
@@ -233,7 +263,7 @@ export async function disconnectRedis(): Promise<void> {
     if (redisClient) {
         try {
             await redisClient.quit();
-            console.log('[Redis] Disconnected gracefully');
+            logger.info('[Redis] Disconnected gracefully');
         } catch {
             redisClient.disconnect();
         }

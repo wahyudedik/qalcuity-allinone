@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/db';
 import { sendPaymentReminderEmail } from '@/lib/email';
 import type { CronTaskResult } from '@/lib/cron-scheduler';
+import { logger } from '@/lib/logger';
 
 export async function runPaymentReminder(): Promise<CronTaskResult> {
     const now = new Date();
@@ -136,7 +137,7 @@ export async function runPaymentReminder(): Promise<CronTaskResult> {
         }
     }
 
-    console.log(`[Cron] Payment Reminder: processed=${processed}, sent=${sent}, skipped=${skipped}`);
+    logger.info('[Cron] Payment Reminder completed', { processed, sent, skipped });
 
     return {
         success: true,

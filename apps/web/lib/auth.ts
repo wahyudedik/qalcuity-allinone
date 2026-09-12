@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import prisma from "./db";
+import { logger } from '@/lib/logger';
 
 // ─── Security: NEXTAUTH_SECRET is MANDATORY in ALL environments ────────────────
 // Previously, development mode used an insecure fallback. This is now removed
@@ -43,7 +44,7 @@ function isGoogleOAuthConfigured(): boolean {
     );
 
     if (isPlaceholder) {
-        console.warn(
+        logger.warn(
             '[Auth] Google OAuth credentials appear to be placeholder values. ' +
             'Google login is disabled.'
         );
@@ -108,7 +109,7 @@ export const authOptions: NextAuthOptions = {
                         where: { id: user.id },
                         data: { lastLoginAt: new Date() },
                     }).catch((err) => {
-                        console.error("[Auth] Failed to update lastLoginAt:", err);
+                        logger.error("[Auth] Failed to update lastLoginAt", err);
                     });
 
                     return {
@@ -123,7 +124,7 @@ export const authOptions: NextAuthOptions = {
                     if (error instanceof Error) {
                         throw error;
                     }
-                    console.error("[Auth] Unexpected error in authorize:", error);
+                    logger.error("[Auth] Unexpected error in authorize", error);
                     throw new Error("Terjadi kesalahan saat memverifikasi kredensial");
                 }
             },
@@ -150,7 +151,7 @@ export const authOptions: NextAuthOptions = {
                         where: { id: existingUser.id },
                         data: { lastLoginAt: new Date() },
                     }).catch((err) => {
-                        console.error("[Auth] Failed to update lastLoginAt:", err);
+                        logger.error("[Auth] Failed to update lastLoginAt", err);
                     });
                     return true;
                 }
@@ -203,7 +204,7 @@ export const authOptions: NextAuthOptions = {
 
                 return true;
             } catch (error) {
-                console.error("[Auth] Error in Google OAuth signIn callback:", error);
+                logger.error("[Auth] Error in Google OAuth signIn callback", error);
                 return false;
             }
         },

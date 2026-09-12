@@ -6,6 +6,7 @@
 import { prisma } from './db';
 import { sendEmail } from './email';
 import { getBaseUrl } from './utils';
+import { logger } from '@/lib/logger';
 
 const ENTITY_LABELS: Record<string, string> = {
     INVOICE: 'Invoice',
@@ -182,7 +183,7 @@ export async function notifyApprover(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[ApprovalNotification] Gagal mengirim notifikasi ke approver:', message);
+        logger.error('[ApprovalNotification] Gagal mengirim notifikasi ke approver', error, { detail: message });
         return { success: false, error: message };
     }
 }
@@ -302,7 +303,7 @@ export async function notifyRequester(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[ApprovalNotification] Gagal mengirim notifikasi ke requester:', message);
+        logger.error('[ApprovalNotification] Gagal mengirim notifikasi ke requester', error, { detail: message });
         return { success: false, error: message };
     }
 }
@@ -368,7 +369,7 @@ export async function notifyNextLevelApprover(
         );
 
         if (failures.length > 0) {
-            console.warn(
+            logger.warn(
                 '[ApprovalNotification] ' + failures.length + ' dari ' + eligibleUsers.length + ' notifikasi gagal dikirim'
             );
         }
@@ -376,7 +377,7 @@ export async function notifyNextLevelApprover(
         return { success: true };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[ApprovalNotification] Gagal mengirim notifikasi ke approver berikutnya:', message);
+        logger.error('[ApprovalNotification] Gagal mengirim notifikasi ke approver berikutnya', error, { detail: message });
         return { success: false, error: message };
     }
 }

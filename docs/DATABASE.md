@@ -1,7 +1,7 @@
 # 🗄️ Qalcuity — Database Architecture
 
-> **Last Updated:** 30 Agustus 2026
-> **Current Version:** v1.0.0-beta.1
+> **Last Updated:** 11 September 2026 (Documentation Sync)
+> **Current Version:** v1.0.0-beta.2
 
 ---
 
@@ -25,9 +25,9 @@
 | **ORM** | Prisma 5.22 |
 | **Database** | PostgreSQL 18.4 (DBngin local) |
 | **Schema Location** | [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) |
-| **Total Models** | 26 |
-| **Total Indexes** | 57 |
-| **Migrations** | 1 (clean init) |
+| **Total Models** | 100 |
+| **Total Indexes** | 242 (`@@index`) + 33 (`@@unique`) = 275 |
+| **Migrations** | 27 |
 | **Generator** | `prisma-client-js` |
 | **Auth** | Trust authentication (no password for local dev) |
 
@@ -332,7 +332,7 @@ Some unique constraints are scoped per-tenant using composite unique:
 
 ## 5. Index Strategy
 
-### Total: 57 Indexes
+### Total: 242 Indexes (`@@index`) + 33 Unique Constraints (`@@unique`) = 275 Database Indexes
 
 #### Auth & Tenant (5 indexes)
 

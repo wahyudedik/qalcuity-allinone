@@ -6,15 +6,16 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { ROLE_HIERARCHY } from '@qalcuity/config';
 
 export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
-            return NextResponse.json({
-                success: true,
-                data: { count: 0, requests: [] },
-            });
+            return NextResponse.json(
+                { success: false, error: auth.error },
+                { status: auth.status || 403 }
+            );
         }
 
         const { tenantId, role } = auth;
@@ -33,12 +34,6 @@ export async function GET(request: Request) {
         }
 
         // Determine which entity types this user can approve
-        const ROLE_HIERARCHY: Record<string, number> = {
-            VIEWER: 0,
-            MEMBER: 1,
-            ADMIN: 2,
-            SUPERADMIN: 3,
-        };
         const userLevel = ROLE_HIERARCHY[role] ?? 0;
 
         const levels = await prisma.approvalLevel.findMany({
@@ -78,66 +73,101 @@ export async function GET(request: Request) {
             }),
         ]);
 
-        // Enrich with entity info and requester
-        const enriched = await Promise.all(
-            requests.map(
-                async (req: {
-                    id: string;
-                    entityType: string;
-                    entityId: string;
-                    currentLevel: number;
-                    status: string;
-                    requestedBy: string;
-                    createdAt: Date;
-                }) => {
-                    const requester = await prisma.user.findUnique({
-                        where: { id: req.requestedBy },
-                        select: { name: true },
-                    });
+        // Batch fetch all requesters in a single query (fixes N+1)
+        const requesterIds = [...new Set(requests.map((r: { requestedBy: string }) => r.requestedBy))];
+        const requesters = await prisma.user.findMany({
+            where: { id: { in: requesterIds } },
+            select: { id: true, name: true },
+        });
+        const requesterMap = new Map(requesters.map((r) => [r.id, r.name]));
 
-                    let entityDisplay = req.entityId;
-                    let entityAmount: number | null = null;
+        // Batch fetch all entities by type (fixes N+1)
+        const invoiceIds = requests
+            .filter((r: { entityType: string }) => r.entityType === 'INVOICE')
+            .map((r: { entityId: string }) => r.entityId);
+        const poIds = requests
+            .filter((r: { entityType: string }) => r.entityType === 'PURCHASE_ORDER')
+            .map((r: { entityId: string }) => r.entityId);
+        const qtIds = requests
+            .filter((r: { entityType: string }) => r.entityType === 'QUOTATION')
+            .map((r: { entityId: string }) => r.entityId);
 
-                    if (req.entityType === 'INVOICE') {
-                        const inv = await prisma.invoice.findUnique({
-                            where: { id: req.entityId },
-                            select: { invoiceNumber: true, total: true },
-                        });
-                        if (inv) {
-                            entityDisplay = inv.invoiceNumber;
-                            entityAmount = Number(inv.total);
-                        }
-                    } else if (req.entityType === 'PURCHASE_ORDER') {
-                        const po = await prisma.purchaseOrder.findUnique({
-                            where: { id: req.entityId },
-                            select: { poNumber: true, total: true },
-                        });
-                        if (po) {
-                            entityDisplay = po.poNumber;
-                            entityAmount = Number(po.total);
-                        }
-                    } else if (req.entityType === 'QUOTATION') {
-                        const qt = await prisma.quotation.findUnique({
-                            where: { id: req.entityId },
-                            select: { quotationNumber: true, total: true },
-                        });
-                        if (qt) {
-                            entityDisplay = qt.quotationNumber;
-                            entityAmount = Number(qt.total);
-                        }
+        const [invoices, purchaseOrders, quotations] = await Promise.all([
+            invoiceIds.length > 0
+                ? prisma.invoice.findMany({
+                    where: { id: { in: invoiceIds } },
+                    select: { id: true, invoiceNumber: true, total: true },
+                })
+                : [],
+            poIds.length > 0
+                ? prisma.purchaseOrder.findMany({
+                    where: { id: { in: poIds } },
+                    select: { id: true, poNumber: true, total: true },
+                })
+                : [],
+            qtIds.length > 0
+                ? prisma.quotation.findMany({
+                    where: { id: { in: qtIds } },
+                    select: { id: true, quotationNumber: true, total: true },
+                })
+                : [],
+        ]);
+
+        // Build lookup maps for each entity type
+        const invoiceMap = new Map(
+            invoices.map((inv) => [inv.id, { display: inv.invoiceNumber, amount: Number(inv.total) }])
+        );
+        const poMap = new Map(
+            purchaseOrders.map((po) => [po.id, { display: po.poNumber, amount: Number(po.total) }])
+        );
+        const qtMap = new Map(
+            quotations.map((qt) => [qt.id, { display: qt.quotationNumber, amount: Number(qt.total) }])
+        );
+
+        // Enrich with entity info and requester — all from in-memory maps
+        const enriched = requests.map(
+            (req: {
+                id: string;
+                entityType: string;
+                entityId: string;
+                currentLevel: number;
+                status: string;
+                requestedBy: string;
+                createdAt: Date;
+            }) => {
+                let entityDisplay = req.entityId;
+                let entityAmount: number | null = null;
+
+                if (req.entityType === 'INVOICE') {
+                    const inv = invoiceMap.get(req.entityId);
+                    if (inv) {
+                        entityDisplay = inv.display;
+                        entityAmount = inv.amount;
                     }
-
-                    return {
-                        id: req.id,
-                        entityType: req.entityType,
-                        entityDisplay,
-                        entityAmount,
-                        currentLevel: req.currentLevel,
-                        requesterName: requester?.name || 'Unknown',
-                        createdAt: req.createdAt.toISOString(),
-                    };
+                } else if (req.entityType === 'PURCHASE_ORDER') {
+                    const po = poMap.get(req.entityId);
+                    if (po) {
+                        entityDisplay = po.display;
+                        entityAmount = po.amount;
+                    }
+                } else if (req.entityType === 'QUOTATION') {
+                    const qt = qtMap.get(req.entityId);
+                    if (qt) {
+                        entityDisplay = qt.display;
+                        entityAmount = qt.amount;
+                    }
                 }
-            )
+
+                return {
+                    id: req.id,
+                    entityType: req.entityType,
+                    entityDisplay,
+                    entityAmount,
+                    currentLevel: req.currentLevel,
+                    requesterName: requesterMap.get(req.requestedBy) || 'Unknown',
+                    createdAt: req.createdAt.toISOString(),
+                };
+            }
         );
 
         return NextResponse.json({

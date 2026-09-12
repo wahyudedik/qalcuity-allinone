@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
@@ -8,6 +8,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -122,7 +123,7 @@ export async function GET(request: Request) {
         if (error instanceof Error && error.message === 'Unauthorized') {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-        console.error('[API Error] GET /api/inventory/products:', error);
+        logger.error('[API Error] GET /api/inventory/products:', error);
         return handleApiError(error);
     }
 }
