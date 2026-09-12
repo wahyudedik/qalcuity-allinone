@@ -8,6 +8,7 @@
 //   - GET /api/cron/run?task=payment-reminder → run specific task
 
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -321,7 +322,7 @@ export async function updateLastRun(
         });
     } catch {
         // Table might not exist yet — log but don't fail
-        console.warn(`[Scheduler] Failed to log CronRunLog for task ${taskId}`);
+        logger.warn(`[Scheduler] Failed to log CronRunLog for task ${taskId}`);
     }
 }
 

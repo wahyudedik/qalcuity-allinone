@@ -8,23 +8,8 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface UpdateAlertBody {
-    name?: string
-    description?: string
-    metricId?: string
-    condition?: string
-    threshold?: number
-    severity?: string
-    notificationChannels?: string[]
-    recipients?: string[]
-    cooldownMinutes?: number
-    isActive?: boolean
-}
+import { updateAlertSchema, formatZodError } from '@/lib/validation-schemas'
+import { logger } from '@/lib/logger'
 
 // ============================================
 // GET — Alert rule detail
@@ -96,7 +81,7 @@ export async function GET(
             },
         })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -122,7 +107,7 @@ export async function PUT(
         }
         const { tenantId } = auth
         const { id } = params
-        const body: UpdateAlertBody = await request.json()
+        const body = await request.json()
 
         // Check rule exists and belongs to tenant
         const existing = await prisma.alertRule.findFirst({
@@ -136,39 +121,27 @@ export async function PUT(
             )
         }
 
-        // Validate condition if provided
-        if (body.condition) {
-            const validConditions = ['below', 'above', 'equals', 'not_equals', 'changes_by']
-            if (!validConditions.includes(body.condition)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid condition. Must be one of: ${validConditions.join(', ')}` },
-                    { status: 400 }
-                )
-            }
+        // Validate with Zod
+        const parsed = updateAlertSchema.safeParse(body)
+        if (!parsed.success) {
+            return NextResponse.json(
+                { success: false, error: formatZodError(parsed.error) },
+                { status: 400 }
+            )
         }
-
-        // Validate severity if provided
-        if (body.severity) {
-            const validSeverities = ['low', 'medium', 'high', 'critical']
-            if (!validSeverities.includes(body.severity)) {
-                return NextResponse.json(
-                    { success: false, error: `Invalid severity. Must be one of: ${validSeverities.join(', ')}` },
-                    { status: 400 }
-                )
-            }
-        }
+        const validated = parsed.data
 
         const updateData: Record<string, unknown> = {}
-        if (body.name !== undefined) updateData.name = body.name
-        if (body.description !== undefined) updateData.description = body.description
-        if (body.metricId !== undefined) updateData.metricId = body.metricId
-        if (body.condition !== undefined) updateData.condition = body.condition
-        if (body.threshold !== undefined) updateData.threshold = body.threshold
-        if (body.severity !== undefined) updateData.severity = body.severity
-        if (body.notificationChannels !== undefined) updateData.notificationChannels = body.notificationChannels
-        if (body.recipients !== undefined) updateData.recipients = body.recipients
-        if (body.cooldownMinutes !== undefined) updateData.cooldownMinutes = body.cooldownMinutes
-        if (body.isActive !== undefined) updateData.isActive = body.isActive
+        if (validated.name !== undefined) updateData.name = validated.name
+        if (validated.description !== undefined) updateData.description = validated.description
+        if (validated.metricId !== undefined) updateData.metricId = validated.metricId
+        if (validated.condition !== undefined) updateData.condition = validated.condition
+        if (validated.threshold !== undefined) updateData.threshold = validated.threshold
+        if (validated.severity !== undefined) updateData.severity = validated.severity
+        if (validated.notificationChannels !== undefined) updateData.notificationChannels = validated.notificationChannels
+        if (validated.recipients !== undefined) updateData.recipients = validated.recipients
+        if (validated.cooldownMinutes !== undefined) updateData.cooldownMinutes = validated.cooldownMinutes
+        if (validated.isActive !== undefined) updateData.isActive = validated.isActive
 
         const updated = await prisma.alertRule.update({
             where: { id },
@@ -195,7 +168,7 @@ export async function PUT(
             },
         })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -249,7 +222,7 @@ export async function DELETE(
             data: { message: 'Alert rule deleted successfully' },
         })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

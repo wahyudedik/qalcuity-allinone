@@ -1,7 +1,7 @@
 # 🗺️ Qalcuity Development Roadmap
 
 > **Last Updated:** 8 September 2026 (Post-Audit Documentation Sync)
-> **Current Version:** v7.1.0
+> **Current Version:** v10.1.0
 > **Status:** Core Modules Production-Ready + Foundation Engines + POS Phase 5 + Security Hardening (~85% production-ready, ~10% partial, ~5% planned)
 
 ---
@@ -645,10 +645,10 @@
 ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
 │Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │   →    │Phase │
 │1-8   │        │9-10  │        │11-13 │        │14-16 │        │17-18 │        │22-25 │
-│✅Done │        │📋NEXT│        │📋PLAN│        │📋PLAN│        │📋PLAN│        │📋PLAN│
+│✅Done │        │✅Done │        │✅Done │        │✅Done │        │📋PLAN│        │🔄POS │
 └──────┘        └──────┘        └──────┘        └──────┘        └──────┘        └──────┘
    │                │                │                │                │                │
- Aug '26        Sep '26         Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27     Sep-Nov '27
+ Aug '26     Sep-Nov '26      Oct-Nov '26     Dec '26-Feb '27  Mar-Aug '27     Sep-Nov '27
 ```
 
 | Phase | Duration | Focus | Key Deliverables | Status |
@@ -661,10 +661,10 @@
 | **14-16** | Dec '26-Feb '27 | Production + Mobile + Desktop | Multi-platform ready | ✅ `completed` (Phase 14 MVP) |
 | **17** | Mar-May '27 | Advanced Finance | Full accounting suite | 📋 `planned` |
 | **18** | Jun-Aug '27 | Enterprise features | Scale & monetization | 📋 `planned` |
-| **22** | Sep-Oct '27 | POS Module (Core) | POS Core + Sessions + Refunds + Reports + Terminals Mgmt | 🔄 `in_progress` |
-| **23** | Sep-Oct '27 | Platform Control Center (Core) | Tenant mgmt + Subscription + Billing + Entitlements + Usage | 📋 `planned` |
-| **24** | Oct-Nov '27 | Platform Monitoring & Error Center | System health + Error center + Logs + Background jobs | 📋 `planned` |
-| **25** | Nov-Dec '27 | Platform Support & Impersonation | Support tickets + Impersonation + Feature flags + Security center | 📋 `planned` |
+| **22** | Sep-Nov '26 | POS Module (Core) | POS Core + Sessions + Refunds + Reports + Terminals Mgmt | 🔄 `in_progress` |
+| **23** | Oct-Dec '26 | Platform Control Center (Core) | Tenant mgmt + Subscription + Billing + Entitlements + Usage | 📋 `planned` |
+| **24** | Jan-Mar '27 | Platform Monitoring & Error Center | System health + Error center + Logs + Background jobs | 📋 `planned` |
+| **25** | Apr-Jun '27 | Platform Support & Impersonation | Support tickets + Impersonation + Feature flags + Security center | 📋 `planned` |
 
 ### Success Criteria Per Phase
 

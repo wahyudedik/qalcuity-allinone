@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { logger } from '@/lib/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export function getAIProvider(): AIProvider {
 
     // If no API key configured, always use mock (backward compatible)
     if (!process.env.AI_API_KEY && provider !== 'mock') {
-        console.warn(
+        logger.warn(
             `[AI] ⚠️  AI_PROVIDER="${provider}" but AI_API_KEY is not set. Falling back to mock provider.`
         );
         return new MockProvider();
@@ -148,7 +149,7 @@ export function getAIProvider(): AIProvider {
             return new MockProvider();
 
         default:
-            console.warn(`[AI] Unknown provider "${provider}". Falling back to mock.`);
+            logger.warn(`[AI] Unknown provider "${provider}". Falling back to mock.`);
             return new MockProvider();
     }
 }

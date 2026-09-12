@@ -5,6 +5,7 @@ import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { prisma } from './db';
 import { emailTemplates, getEmailTemplate } from './email-templates';
+import { logger } from '@/lib/logger';
 
 export interface SendEmailOptions {
     to: string;
@@ -128,12 +129,11 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
                 replyTo: options.replyTo || undefined,
             });
 
-            console.log('[Email] Sent via SMTP:', {
+            logger.info('[Email] Sent via SMTP', {
                 messageId: info.messageId,
                 to: options.to,
                 subject: options.subject,
                 from,
-                timestamp: new Date().toISOString(),
             });
 
             return {
@@ -143,15 +143,14 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         }
 
         // --- Fallback: console.log (development / unconfigured SMTP) ---
-        console.warn(
+        logger.warn(
             '[Email] SMTP not configured — falling back to console.log. ' +
             'Set SMTP_HOST, SMTP_USER, SMTP_PASS in .env to enable real email delivery.'
         );
-        console.log('[Email] Would be sent:', {
+        logger.info('[Email] Would be sent (SMTP not configured)', {
             to: options.to,
             subject: options.subject,
             from,
-            timestamp: new Date().toISOString(),
         });
 
         return {
@@ -160,7 +159,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to send:', message);
+        logger.error('[Email] Failed to send', error);
         return {
             success: false,
             error: `Gagal mengirim email: ${message}`,
@@ -273,7 +272,7 @@ export async function testSmtpConnection(config?: {
                 socketTimeout: 15_000,
             });
             await testTransporter.verify();
-            console.log('[SMTP] Connection test passed:', {
+            logger.info('[SMTP] Connection test passed', {
                 host: config.host,
                 port: config.port,
                 secure: config.secure,
@@ -292,7 +291,7 @@ export async function testSmtpConnection(config?: {
         const transporter = getTransporter();
         await transporter.verify();
 
-        console.log('[SMTP] Connection test passed:', {
+        logger.info('[SMTP] Connection test passed', {
             host: process.env.SMTP_HOST,
             port: process.env.SMTP_PORT || '587',
             secure: process.env.SMTP_SECURE === 'true',
@@ -301,7 +300,7 @@ export async function testSmtpConnection(config?: {
         return { success: true };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[SMTP] Connection test failed:', message);
+        logger.error('[SMTP] Connection test failed', error);
         return { success: false, error: message };
     }
 }
@@ -373,7 +372,7 @@ export async function notifySuperadminPayment(paymentId: string): Promise<SendEm
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to notify superadmin:', message);
+        logger.error('[Email] Failed to notify superadmin', error);
         return { success: false, error: `Gagal mengirim notifikasi: ${message}` };
     }
 }
@@ -399,7 +398,7 @@ export async function sendInvoiceCreatedEmail(
     try {
         const customerEmail = invoice.contact?.email;
         if (!customerEmail) {
-            console.warn('[Email] sendInvoiceCreatedEmail: no customer email, skipping');
+            logger.warn('[Email] sendInvoiceCreatedEmail: no customer email, skipping');
             return { success: false, error: 'No customer email address' };
         }
 
@@ -431,7 +430,7 @@ export async function sendInvoiceCreatedEmail(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to send invoice created email:', message);
+        logger.error('[Email] Failed to send invoice created email', error);
         return { success: false, error: message };
     }
 }
@@ -455,7 +454,7 @@ export async function sendPaymentReceivedEmail(
     try {
         const customerEmail = payment.invoice?.contact?.email;
         if (!customerEmail) {
-            console.warn('[Email] sendPaymentReceivedEmail: no customer email, skipping');
+            logger.warn('[Email] sendPaymentReceivedEmail: no customer email, skipping');
             return { success: false, error: 'No customer email address' };
         }
 
@@ -483,7 +482,7 @@ export async function sendPaymentReceivedEmail(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to send payment received email:', message);
+        logger.error('[Email] Failed to send payment received email', error);
         return { success: false, error: message };
     }
 }
@@ -498,7 +497,7 @@ export async function sendWelcomeEmail(
 ): Promise<SendEmailResult> {
     try {
         if (!user.email) {
-            console.warn('[Email] sendWelcomeEmail: no user email, skipping');
+            logger.warn('[Email] sendWelcomeEmail: no user email, skipping');
             return { success: false, error: 'No user email address' };
         }
 
@@ -522,7 +521,7 @@ export async function sendWelcomeEmail(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to send welcome email:', message);
+        logger.error('[Email] Failed to send welcome email', error);
         return { success: false, error: message };
     }
 }
@@ -544,7 +543,7 @@ export async function sendPaymentReminderEmail(
     try {
         const customerEmail = invoice.contact?.email;
         if (!customerEmail) {
-            console.warn('[Email] sendPaymentReminderEmail: no customer email, skipping');
+            logger.warn('[Email] sendPaymentReminderEmail: no customer email, skipping');
             return { success: false, error: 'No customer email address' };
         }
 
@@ -574,7 +573,7 @@ export async function sendPaymentReminderEmail(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to send payment reminder email:', message);
+        logger.error('[Email] Failed to send payment reminder email', error);
         return { success: false, error: message };
     }
 }
@@ -590,7 +589,7 @@ export async function sendStockAlertEmail(
 ): Promise<SendEmailResult> {
     try {
         if (!to) {
-            console.warn('[Email] sendStockAlertEmail: no recipient email, skipping');
+            logger.warn('[Email] sendStockAlertEmail: no recipient email, skipping');
             return { success: false, error: 'No recipient email address' };
         }
 
@@ -616,7 +615,7 @@ export async function sendStockAlertEmail(
         return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[Email] Failed to send stock alert email:', message);
+        logger.error('[Email] Failed to send stock alert email', error);
         return { success: false, error: message };
     }
 }

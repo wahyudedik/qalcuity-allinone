@@ -3,6 +3,7 @@
 // Pattern: external cron service → GET/POST with Authorization: Bearer <CRON_SECRET>
 
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 /**
  * Verify that the request is authenticated via CRON_SECRET Bearer token.
@@ -16,7 +17,7 @@ export function verifyCronAuth(req: Request): boolean {
     const cronSecret = process.env.CRON_SECRET;
 
     if (!cronSecret) {
-        console.error('[Cron] CRON_SECRET environment variable is not configured');
+        logger.error('[Cron] CRON_SECRET environment variable is not configured');
         return false;
     }
 

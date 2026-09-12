@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
@@ -10,6 +10,7 @@ import { createKitchenStationSchema, updateKitchenStationSchema, formatZodError 
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
     } catch (error) {
         // Graceful fallback: PosKitchenStation table not yet available (migration pending)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
-            console.warn('[Kitchen Stations API] PosKitchenStation table not found â€” returning empty fallback');
+            logger.warn('[Kitchen Stations API] PosKitchenStation table not found â€” returning empty fallback');
             return NextResponse.json({ success: true, data: [] });
         }
         return handleApiError(error);
@@ -80,13 +81,6 @@ export async function POST(request: Request) {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_CREATE },
-                { status: 403 }
-            );
-        }
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
@@ -162,15 +156,7 @@ export async function PUT(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can update kitchen stations
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_UPDATE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         // Check station exists
         const existingStation = await prisma.posKitchenStation.findFirst({
@@ -265,15 +251,7 @@ export async function DELETE(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can delete kitchen stations
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.KITCHEN_STATION_ADMIN_ONLY_DELETE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         // Check station exists
         const existingStation = await prisma.posKitchenStation.findFirst({

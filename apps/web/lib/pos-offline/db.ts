@@ -17,6 +17,7 @@ import type {
 } from './types';
 
 import { DB_NAME, DB_VERSION, STORES } from './types';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // Database Connection
@@ -219,7 +220,7 @@ export async function cacheProducts(products: Product[]): Promise<void> {
             tx.onabort = () => reject(tx.error);
         });
     } catch (error) {
-        console.error('[POS-Offline] Failed to cache products:', error);
+        logger.error('[POS-Offline] Failed to cache products', error);
         throw error;
     }
 }
@@ -233,7 +234,7 @@ export async function getCachedProducts(): Promise<Product[]> {
         const store = getStore(db, STORES.PRODUCTS, 'readonly');
         return getAllFromCursor<Product>(store);
     } catch (error) {
-        console.error('[POS-Offline] Failed to get cached products:', error);
+        logger.error('[POS-Offline] Failed to get cached products', error);
         throw error;
     }
 }
@@ -257,7 +258,7 @@ export async function searchCachedProducts(query: string): Promise<Product[]> {
                 p.sku.toLowerCase().includes(lowerQuery)
         );
     } catch (error) {
-        console.error('[POS-Offline] Failed to search cached products:', error);
+        logger.error('[POS-Offline] Failed to search cached products', error);
         throw error;
     }
 }
@@ -275,7 +276,7 @@ export async function cacheSession(session: Session): Promise<void> {
         const store = getStore(db, STORES.SESSIONS, 'readwrite');
         await voidRequest(store.put(session));
     } catch (error) {
-        console.error('[POS-Offline] Failed to cache session:', error);
+        logger.error('[POS-Offline] Failed to cache session', error);
         throw error;
     }
 }
@@ -290,7 +291,7 @@ export async function getCachedSession(id: string): Promise<Session | null> {
         const result = await requestToPromise<Session | undefined>(store.get(id));
         return result ?? null;
     } catch (error) {
-        console.error('[POS-Offline] Failed to get cached session:', error);
+        logger.error('[POS-Offline] Failed to get cached session', error);
         throw error;
     }
 }
@@ -312,7 +313,7 @@ export async function getActiveSession(): Promise<Session | null> {
         });
         return results.length > 0 ? results[0] : null;
     } catch (error) {
-        console.error('[POS-Offline] Failed to get active session:', error);
+        logger.error('[POS-Offline] Failed to get active session', error);
         throw error;
     }
 }
@@ -330,7 +331,7 @@ export async function savePendingTransaction(tx: PendingTransaction): Promise<vo
         const store = getStore(db, STORES.PENDING_TRANSACTIONS, 'readwrite');
         await voidRequest(store.put(tx));
     } catch (error) {
-        console.error('[POS-Offline] Failed to save pending transaction:', error);
+        logger.error('[POS-Offline] Failed to save pending transaction', error);
         throw error;
     }
 }
@@ -344,7 +345,7 @@ export async function getPendingTransactions(): Promise<PendingTransaction[]> {
         const store = getStore(db, STORES.PENDING_TRANSACTIONS, 'readonly');
         return getAllFromCursor<PendingTransaction>(store);
     } catch (error) {
-        console.error('[POS-Offline] Failed to get pending transactions:', error);
+        logger.error('[POS-Offline] Failed to get pending transactions', error);
         throw error;
     }
 }
@@ -376,7 +377,7 @@ export async function markTransactionSynced(
 
         await voidRequest(store.put(updated));
     } catch (error) {
-        console.error('[POS-Offline] Failed to mark transaction synced:', error);
+        logger.error('[POS-Offline] Failed to mark transaction synced', error);
         throw error;
     }
 }
@@ -390,7 +391,7 @@ export async function deletePendingTransaction(id: string): Promise<void> {
         const store = getStore(db, STORES.PENDING_TRANSACTIONS, 'readwrite');
         await voidRequest(store.delete(id));
     } catch (error) {
-        console.error('[POS-Offline] Failed to delete pending transaction:', error);
+        logger.error('[POS-Offline] Failed to delete pending transaction', error);
         throw error;
     }
 }
@@ -408,7 +409,7 @@ export async function addToSyncQueue(operation: SyncOperation): Promise<void> {
         const store = getStore(db, STORES.SYNC_QUEUE, 'readwrite');
         await voidRequest(store.put(operation));
     } catch (error) {
-        console.error('[POS-Offline] Failed to add to sync queue:', error);
+        logger.error('[POS-Offline] Failed to add to sync queue', error);
         throw error;
     }
 }
@@ -422,7 +423,7 @@ export async function getSyncQueue(): Promise<SyncOperation[]> {
         const store = getStore(db, STORES.SYNC_QUEUE, 'readonly');
         return getAllFromCursor<SyncOperation>(store);
     } catch (error) {
-        console.error('[POS-Offline] Failed to get sync queue:', error);
+        logger.error('[POS-Offline] Failed to get sync queue', error);
         throw error;
     }
 }
@@ -436,7 +437,7 @@ export async function removeSyncOperation(id: string): Promise<void> {
         const store = getStore(db, STORES.SYNC_QUEUE, 'readwrite');
         await voidRequest(store.delete(id));
     } catch (error) {
-        console.error('[POS-Offline] Failed to remove sync operation:', error);
+        logger.error('[POS-Offline] Failed to remove sync operation', error);
         throw error;
     }
 }
@@ -455,7 +456,7 @@ export async function getConfig(key: string): Promise<string | null> {
         const result = await requestToPromise<OfflineConfig | undefined>(store.get(key));
         return result?.value ?? null;
     } catch (error) {
-        console.error('[POS-Offline] Failed to get config:', error);
+        logger.error('[POS-Offline] Failed to get config', error);
         throw error;
     }
 }
@@ -474,7 +475,7 @@ export async function setConfig(key: string, value: string): Promise<void> {
         };
         await voidRequest(store.put(entry));
     } catch (error) {
-        console.error('[POS-Offline] Failed to set config:', error);
+        logger.error('[POS-Offline] Failed to set config', error);
         throw error;
     }
 }
@@ -503,7 +504,7 @@ export async function clearAllData(): Promise<void> {
             tx.onabort = () => reject(tx.error);
         });
     } catch (error) {
-        console.error('[POS-Offline] Failed to clear all data:', error);
+        logger.error('[POS-Offline] Failed to clear all data', error);
         throw error;
     }
 }
@@ -525,7 +526,7 @@ export async function getStorageUsage(): Promise<StorageUsage> {
         // Fallback: storage API not available
         return { used: 0, quota: 0 };
     } catch (error) {
-        console.error('[POS-Offline] Failed to get storage usage:', error);
+        logger.error('[POS-Offline] Failed to get storage usage', error);
         return { used: 0, quota: 0 };
     }
 }

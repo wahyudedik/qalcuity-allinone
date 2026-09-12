@@ -15,6 +15,17 @@ export const ROLES = {
 
 export type RoleKey = keyof typeof ROLES;
 
+/**
+ * Role hierarchy levels for approval workflows.
+ * Higher number = higher authority.
+ */
+export const ROLE_HIERARCHY: Record<string, number> = {
+    VIEWER: 0,
+    MEMBER: 1,
+    ADMIN: 2,
+    SUPERADMIN: 3,
+};
+
 export const ROLE_LABELS: Record<string, string> = {
     SUPERADMIN: 'Super Admin',
     ADMIN: 'Admin',

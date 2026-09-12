@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/billing/webhook
@@ -21,6 +21,7 @@ import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
 import crypto from 'crypto';
+import { logger } from '@/lib/logger';
 
 /**
  * Verify webhook signature using HMAC SHA256.
@@ -32,7 +33,7 @@ import crypto from 'crypto';
 function verifyWebhookSignature(rawBody: string, signature: string): boolean {
     const secret = process.env.BILLING_WEBHOOK_SECRET;
     if (!secret) {
-        console.error('[Webhook] BILLING_WEBHOOK_SECRET environment variable is not set');
+        logger.error('[Webhook] BILLING_WEBHOOK_SECRET environment variable is not set');
         return false;
     }
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         const signature = request.headers.get('x-webhook-signature');
 
         if (!signature) {
-            console.warn('[Webhook] Missing X-Webhook-Signature header â€” rejecting request');
+            logger.warn('[Webhook] Missing X-Webhook-Signature header â€” rejecting request');
             return NextResponse.json(
                 { success: false, error: 'Missing webhook signature' },
                 { status: 401 }
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
         const rawBody = await request.text();
 
         if (!verifyWebhookSignature(rawBody, signature)) {
-            console.error('[Webhook] Invalid webhook signature â€” rejecting request');
+            logger.error('[Webhook] Invalid webhook signature â€” rejecting request');
             // Log failed attempt for security monitoring
             void logAudit({
                 userId: 'system',
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
             );
         }
 
-        console.log(`[Webhook] Received notification for order: ${orderId}, status: ${status}`);
+        logger.info(`[Webhook] Received notification for order: ${orderId}, status: ${status}`);
 
         // Find the billing payment by reference (orderId)
         const payment = await prisma.billingPayment.findFirst({
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
         });
 
         if (!payment) {
-            console.warn(`[Webhook] Payment not found for order: ${orderId}`);
+            logger.warn(`[Webhook] Payment not found for order: ${orderId}`);
             return NextResponse.json({
                 success: true,
                 message: 'Order not found, skipping',
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
                 invalidateEntitlementCache(payment.tenantId);
             }
 
-            console.log(`[Webhook] Payment VERIFIED for order: ${orderId}, entitlement activated`);
+            logger.info(`[Webhook] Payment VERIFIED for order: ${orderId}, entitlement activated`);
         }
 
         // Log audit
@@ -239,7 +240,7 @@ export async function POST(request: Request) {
             message: `Payment status updated: ${newPaymentStatus}`,
         });
     } catch (error) {
-        console.error('[Webhook] Error processing webhook:', error);
+        logger.error('[Webhook] Error processing webhook:', error);
         return NextResponse.json(
             { success: false, error: 'Internal server error' },
             { status: 200 }

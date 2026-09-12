@@ -6,6 +6,8 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
+import { createWorkflowDefinitionSchema } from '@/lib/validation-schemas';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * GET /api/workflow/definitions
@@ -13,6 +15,15 @@ import { handleApiError } from '@/lib/api-error';
  */
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:workflow:definitions:${ip}`, 60, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -37,6 +48,15 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:workflow:definitions:POST:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -44,43 +64,16 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
 
-        const { entityType, name, description, config } = body;
-
-        if (!entityType || !name || !config) {
+        // Validate input with Zod schema
+        const validated = createWorkflowDefinitionSchema.safeParse(body);
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_DEFINITION_FIELDS_REQUIRED },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT },
                 { status: 400 }
             );
         }
 
-        // Validate config structure
-        if (!config.states || !Array.isArray(config.states) || config.states.length === 0) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_CONFIG_STATES_ARRAY },
-                { status: 400 }
-            );
-        }
-
-        if (!config.transitions || !Array.isArray(config.transitions)) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_CONFIG_TRANSITIONS_ARRAY },
-                { status: 400 }
-            );
-        }
-
-        if (!config.initialState) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_CONFIG_INITIAL_STATE_REQUIRED },
-                { status: 400 }
-            );
-        }
-
-        if (!config.finalStates || !Array.isArray(config.finalStates)) {
-            return NextResponse.json(
-                { success: false, error: MSG.WORKFLOW_CONFIG_FINAL_STATES_ARRAY },
-                { status: 400 }
-            );
-        }
+        const { entityType, name, description, config } = validated.data;
 
         // Upsert: update jika sudah ada, create jika belum
         const existing = await prisma.workflowDefinition.findFirst({

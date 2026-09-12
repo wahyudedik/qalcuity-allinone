@@ -7,6 +7,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { createAttendanceSchema, updateAttendanceSchema, clockOutAttendanceSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function GET(request: Request) {
     try {
@@ -114,16 +115,18 @@ export async function POST(request: Request) {
         }
         const body = await request.json();
 
-        if (!body.employeeId || !body.date) {
+        const validation = createAttendanceSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Employee ID and date are required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
+        const validatedData = validation.data;
 
         // Validate employee belongs to tenant
         const employee = await prisma.employee.findFirst({
-            where: { id: body.employeeId, tenantId },
+            where: { id: validatedData.employeeId, tenantId },
         });
         if (!employee) {
             return NextResponse.json(
@@ -132,12 +135,12 @@ export async function POST(request: Request) {
             );
         }
 
-        const date = new Date(body.date);
+        const date = new Date(validatedData.date);
         date.setHours(0, 0, 0, 0);
 
         // Check if attendance already exists for this date
         const existing = await prisma.attendanceRecord.findFirst({
-            where: { employeeId: body.employeeId, date, tenantId },
+            where: { employeeId: validatedData.employeeId, date, tenantId },
         });
         if (existing) {
             return NextResponse.json(
@@ -146,10 +149,10 @@ export async function POST(request: Request) {
             );
         }
 
-        const clockIn = body.clockIn ? new Date(`${body.date}T${body.clockIn}`) : null;
-        const clockOut = body.clockOut ? new Date(`${body.date}T${body.clockOut}`) : null;
+        const clockIn = validatedData.clockIn ? new Date(`${validatedData.date}T${validatedData.clockIn}`) : null;
+        const clockOut = validatedData.clockOut ? new Date(`${validatedData.date}T${validatedData.clockOut}`) : null;
 
-        let workHours = body.workHours || 0;
+        let workHours = validatedData.workHours || 0;
         if (clockIn && clockOut && !workHours) {
             workHours = Math.round(((clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60)) * 100) / 100;
         }
@@ -159,10 +162,10 @@ export async function POST(request: Request) {
                 date,
                 clockIn,
                 clockOut,
-                status: (body.status || 'PRESENT').toUpperCase(),
+                status: validatedData.status || 'PRESENT',
                 workHours,
-                notes: body.notes || '',
-                employeeId: body.employeeId,
+                notes: validatedData.notes || '',
+                employeeId: validatedData.employeeId,
                 tenantId,
             },
             include: {
@@ -188,17 +191,18 @@ export async function PATCH(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
         const body = await request.json();
-        const { id, clockOut, status } = body;
 
-        if (!id) {
+        const validation = clockOutAttendanceSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
+        const validatedData = validation.data;
 
         const existing = await prisma.attendanceRecord.findFirst({
-            where: { id, tenantId },
+            where: { id: validatedData.id, tenantId },
         });
         if (!existing) {
             return NextResponse.json(
@@ -209,16 +213,16 @@ export async function PATCH(request: Request) {
 
         const data: Record<string, unknown> = {};
 
-        if (status) {
-            data.status = status.toUpperCase();
+        if (validatedData.status) {
+            data.status = validatedData.status;
         }
 
-        if (clockOut && existing.clockIn) {
+        if (validatedData.clockOut && existing.clockIn) {
             const dateStr = existing.date.toISOString().split('T')[0];
-            data.clockOut = new Date(`${dateStr}T${clockOut}`);
+            data.clockOut = new Date(`${dateStr}T${validatedData.clockOut}`);
             // Recalculate work hours
-            const outH = parseInt(clockOut.split(':')[0]);
-            const outM = parseInt(clockOut.split(':')[1]);
+            const outH = parseInt(validatedData.clockOut.split(':')[0]);
+            const outM = parseInt(validatedData.clockOut.split(':')[1]);
             const inTime = existing.clockIn;
             const inH = inTime.getHours();
             const inM = inTime.getMinutes();
@@ -226,7 +230,7 @@ export async function PATCH(request: Request) {
         }
 
         const updated = await prisma.attendanceRecord.update({
-            where: { id },
+            where: { id: validatedData.id },
             data,
             include: {
                 employee: { select: { name: true, employeeId: true } },
@@ -252,7 +256,15 @@ export async function PUT(request: Request) {
 
         if (!id) {
             return NextResponse.json(
-                { success: false, error: 'ID is required' },
+                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
+                { status: 400 }
+            );
+        }
+
+        const validation = updateAttendanceSchema.safeParse(updateData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
@@ -280,7 +292,7 @@ export async function PUT(request: Request) {
             data.clockOut = new Date(`${dateStr}T${updateData.clockOut}`);
         }
         if (typeof updateData.status === 'string') {
-            data.status = updateData.status.toUpperCase();
+            data.status = updateData.status;
         }
         if (typeof updateData.workHours === 'number') {
             data.workHours = updateData.workHours;

@@ -7,6 +7,7 @@ import { handleApiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { requirePermissionForRoute } from '@/lib/session';
 import { MSG } from '@/lib/api-messages';
+import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
             message: MSG.UPLOAD_SUCCESS,
         });
     } catch (error) {
-        console.error('Upload error:', error instanceof Error ? error.message : 'Unknown error');
+        logger.error('Upload error:', error instanceof Error ? error.message : 'Unknown error');
         return handleApiError(error);
     }
 }

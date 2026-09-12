@@ -16,18 +16,28 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import prisma from './db';
+import { logger } from '@/lib/logger';
 
-// ─── Security: JWT_SECRET is MANDATORY ────────────────────────────────────────
-const jwtSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+// ─── Security: JWT_SECRET is MANDATORY (separate from NextAuth) ────────────────
+// SECURITY: Mobile tokens MUST use a separate secret from NextAuth to prevent
+// cross-session token abuse. Never fall back to NEXTAUTH_SECRET.
+const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
-    throw new Error(
-        '[MobileAuth] CRITICAL: JWT_SECRET (or NEXTAUTH_SECRET) is not set! ' +
-        'Set it in apps/web/.env'
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+            '[MobileAuth] CRITICAL: JWT_SECRET is required for mobile auth in production. ' +
+            'Set JWT_SECRET in your environment variables. Do NOT use NEXTAUTH_SECRET as a fallback.'
+        );
+    }
+    // In development, log a warning but allow startup for convenience
+    logger.warn(
+        '[MobileAuth] WARNING: JWT_SECRET not set — mobile auth tokens will not be verifiable. ' +
+        'Set JWT_SECRET in apps/web/.env'
     );
 }
 
 // Separate secret for refresh tokens (defense-in-depth)
-const refreshSecret = process.env.JWT_REFRESH_SECRET || `${jwtSecret}-refresh`;
+const refreshSecret = process.env.JWT_REFRESH_SECRET || (jwtSecret ? `${jwtSecret}-refresh` : '');
 
 // ─── Token Payload Types ──────────────────────────────────────────────────────
 
@@ -164,7 +174,7 @@ export async function authenticateMobileUser(
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
     }).catch((err) => {
-        console.error('[MobileAuth] Failed to update lastLoginAt:', err);
+        logger.error('[MobileAuth] Failed to update lastLoginAt', err);
     });
 
     const mobileUser: MobileUser = {

@@ -7,22 +7,8 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateYearlyPeriods } from '@/lib/period-closing';
-import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
-
-// ============================================
-// Validation Schemas
-// ============================================
-
-const createPeriodSchema = z.object({
-    name: z.string().min(1, MSG.PERIOD_NAME_REQUIRED).max(100),
-    startDate: z.string().min(1, MSG.START_DATE_REQUIRED),
-    endDate: z.string().min(1, MSG.END_DATE_REQUIRED),
-});
-
-const generatePeriodsSchema = z.object({
-    year: z.number().int().min(2020).max(2099),
-});
+import { createPeriodSchema, generatePeriodsSchema } from '@/lib/validation-schemas';
 
 // ============================================
 // GET â€” List periods

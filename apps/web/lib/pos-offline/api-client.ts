@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POS Offline Mode — API Client
  *
  * Fetch wrapper yang bekerja online dan offline.
@@ -20,6 +20,7 @@ import {
     savePendingTransaction,
 } from './db';
 import { SyncEngine } from './sync';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // Types
@@ -143,7 +144,7 @@ export async function fetchProducts(tenantId: string): Promise<Product[]> {
         return cachedProducts;
     } catch (error) {
         // Offline or server error — fall back to cache
-        console.warn('[POS-ApiClient] Failed to fetch products, using cache:', error);
+        logger.warn('[POS-ApiClient] Failed to fetch products, using cache:', { detail: error instanceof Error ? error.message : String(error) });
         const cached = await getCachedProducts();
 
         // Filter by tenant if possible
@@ -176,7 +177,7 @@ export async function fetchSession(id: string): Promise<Session | null> {
         return data;
     } catch (error) {
         // Offline or server error — fall back to cache
-        console.warn('[POS-ApiClient] Failed to fetch session, using cache:', error);
+        logger.warn('[POS-ApiClient] Failed to fetch session, using cache:', { detail: error instanceof Error ? error.message : String(error) });
         return getCachedSession(id);
     }
 }
@@ -203,7 +204,7 @@ export async function fetchActiveSession(terminalId?: string): Promise<Session |
 
         return session ?? null;
     } catch (error) {
-        console.warn('[POS-ApiClient] Failed to fetch active session, using cache:', error);
+        logger.warn('[POS-ApiClient] Failed to fetch active session, using cache:', { detail: error instanceof Error ? error.message : String(error) });
 
         // Try to get from IndexedDB cache
         const { getActiveSession } = await import('./db');
@@ -420,7 +421,7 @@ export async function closeSession(
         await cacheSession(data);
         return data;
     } catch (error) {
-        console.warn('[POS-ApiClient] Failed to close session on server, queuing:', error);
+        logger.warn('[POS-ApiClient] Failed to close session on server, queuing:', { detail: error instanceof Error ? error.message : String(error) });
 
         // Queue for sync
         const syncOp: SyncOperation = {
@@ -483,9 +484,9 @@ export async function syncProductsToCache(tenantId: string): Promise<void> {
         }));
 
         await cacheProducts(products);
-        console.log(`[POS-ApiClient] Synced ${products.length} products to cache`);
+        logger.info(`[POS-ApiClient] Synced ${products.length} products to cache`);
     } catch (error) {
-        console.warn('[POS-ApiClient] Failed to sync products to cache:', error);
+        logger.warn('[POS-ApiClient] Failed to sync products to cache:', { detail: error instanceof Error ? error.message : String(error) });
     }
 }
 
@@ -498,9 +499,9 @@ export async function syncSessionToCache(sessionId: string): Promise<void> {
     try {
         const { data } = await posFetch<Session>(`/api/pos/sessions/${sessionId}`);
         await cacheSession(data);
-        console.log(`[POS-ApiClient] Synced session ${sessionId} to cache`);
+        logger.info(`[POS-ApiClient] Synced session ${sessionId} to cache`);
     } catch (error) {
-        console.warn(`[POS-ApiClient] Failed to sync session ${sessionId} to cache:`, error);
+        logger.warn(`[POS-ApiClient] Failed to sync session ${sessionId} to cache:`, { detail: error instanceof Error ? error.message : String(error) });
     }
 }
 
@@ -512,9 +513,9 @@ export async function clearOfflineCache(): Promise<void> {
     try {
         const { clearAllData } = await import('./db');
         await clearAllData();
-        console.log('[POS-ApiClient] Offline cache cleared');
+        logger.info('[POS-ApiClient] Offline cache cleared');
     } catch (error) {
-        console.error('[POS-ApiClient] Failed to clear offline cache:', error);
+        logger.error('[POS-ApiClient] Failed to clear offline cache:', error);
     }
 }
 

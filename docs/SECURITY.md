@@ -1,7 +1,7 @@
 # 🔒 Qalcuity — Security Architecture
 
-> **Last Updated:** 1 September 2026 (Foundation Engines Implemented)
-> **Current Version:** v5.0.0
+> **Last Updated:** 12 September 2026 (Session 6: Zod Validation & Rate Limiting Complete)
+> **Current Version:** v5.2.0
 
 ---
 
@@ -59,13 +59,13 @@
 | **Authentication** | NextAuth.js 4.24 (JWT strategy) | ✅ Implemented |
 | **Authorization** | RBAC (4 roles, 3-layer defense) + **Permission Engine** (`@qalcuity/permissions`) | ✅ Implemented |
 | **Tenant Isolation** | Application-level (tenantId filter) | ✅ Implemented |
-| **Rate Limiting** | In-memory per IP | ✅ Implemented |
+| **Rate Limiting** | Redis-backed with in-memory fallback (production-ready) | ✅ Implemented |
 | **Password Hashing** | bcryptjs | ✅ Implemented |
 | **Input Sanitization** | Custom sanitizer | ✅ Implemented |
 | **Audit Trail** | Prisma AuditLog model | ✅ Implemented |
 | **File Upload** | Basic upload + validation | ✅ Basic |
 | **HTTPS** | Infrastructure-level (not in app) | 🔲 DevOps |
-| **Redis Rate Limiting** | Not yet (current: in-memory) | 🔲 Planned |
+| **Redis Rate Limiting** | Redis-backed with in-memory fallback | ✅ Implemented |
 | **CORS** | Explicit config di middleware.ts + next.config.js | ✅ Implemented |
 | **CSP Headers** | Content-Security-Policy di middleware.ts + next.config.js (`unsafe-eval` removed) | ✅ Implemented |
 | **Export XSS Protection** | `escapeHtml()` + `escapeCSVValue()` di [`apps/web/lib/export.ts`](apps/web/lib/export.ts) | ✅ Implemented |
@@ -397,6 +397,23 @@ All schemas are in [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validatio
 | `createLeaveRequestSchema` | Leave request creation |
 | `createPayrollSchema` | Payroll creation |
 | `updateProfileSchema` | Profile update |
+| `createProjectSchema` | Project creation |
+| `updateProjectSchema` | Project update |
+| `createTaskSchema` | Task creation |
+| `updateTaskSchema` | Task update |
+| `createPOTerminalSchema` | POS terminal creation |
+| `updatePOTerminalSchema` | POS terminal update |
+| `createPOSTableSchema` | POS table creation |
+| `updatePOSTableSchema` | POS table update |
+| `createPOSSessionSchema` | POS session creation |
+| `updatePOSSessionSchema` | POS session update |
+| `createRefundSchema` | POS refund creation |
+| `createRoleSchema` | Role creation |
+| `updateRoleSchema` | Role update |
+| `createTeamMemberSchema` | Team member creation |
+| `updateTeamMemberSchema` | Team member update |
+
+> **Total: 144 schemas** (Session 6 — all POST/PUT/DELETE routes now validated)
 
 ### Input Sanitization
 
@@ -478,7 +495,7 @@ Every API route must follow this checklist:
 | 2 | No CSP (Content-Security-Policy) headers | 🟠 Medium | ✅ Fixed | CSP di middleware.ts + next.config.js — `unsafe-eval` removed |
 | 3 | No explicit CORS configuration | 🟠 Medium | ✅ Fixed | Explicit CORS di middleware.ts + next.config.js |
 | 4 | Prisma logging uncontrolled | 🟡 Low | ✅ Fixed | Toggle via `ENABLE_PRISMA_LOGGING` env var |
-| 5 | Rate limiter in-memory only | 🟡 Low | ⚠️ Open | Redis activation |
+| 5 | ~~Rate limiter in-memory only~~ | 🟡 Low | ✅ Fixed — Redis-backed with in-memory fallback (Batch 7D) | Session 3-6 |
 | 6 | No CSRF token validation | 🟡 Low | ⚠️ Open | CSRF middleware |
 
 ### Fix Priority
@@ -487,7 +504,7 @@ Every API route must follow this checklist:
 2. ~~**CSP Headers** — Add Content-Security-Policy to next.config.js~~ ✅ Done
 3. ~~**CORS** — Configure explicit allowed origins~~ ✅ Done
 4. ~~**Prisma Logging** — Toggle logging via env var~~ ✅ Done
-5. **Rate Limiter** — Migrate to Redis for multi-instance support
+5. ~~**Rate Limiter** — Migrate to Redis for multi-instance support~~ ✅ Done
 
 ---
 
@@ -528,11 +545,12 @@ Every API route must follow this checklist:
 
 ### Development
 
-- [x] All inputs validated with Zod (14+ schemas across all mutation routes)
+- [x] All inputs validated with Zod (144 schemas across all mutation routes — Session 6)
 - [x] All queries filtered by tenantId (300+ occurrences verified)
 - [x] All mutations logged in audit trail (132 logAudit calls verified)
 - [x] No hardcoded secrets (NEXTAUTH_SECRET mandatory)
 - [x] Environment variables validated (apps/web/lib/env-validation.ts)
+- [x] Rate limiting on all API mutation routes (100% coverage — Session 6)
 
 ### Production
 
@@ -540,7 +558,7 @@ Every API route must follow this checklist:
 - [x] NEXTAUTH_SECRET from env (no fallback)
 - [x] CSP headers configured — `unsafe-eval` removed
 - [x] CORS configured — explicit allowed origins
-- [ ] Rate limiter active (Redis)
+- [x] Rate limiter active (Redis)
 - [ ] Database backups running
 - [ ] Monitoring & alerting active
 
@@ -549,11 +567,12 @@ Every API route must follow this checklist:
 - [x] Auth check present (237 auth checks across all API routes)
 - [x] RBAC check present (requireMutateAuth + requireAdminAuth)
 - [x] Tenant isolation verified (300+ tenantId filters)
-- [x] Input validation verified (Zod schemas in all mutation routes)
+- [x] Input validation verified (144 Zod schemas in all mutation routes — Session 6)
+- [x] Rate limiting verified (100% coverage on all mutation routes — Session 6)
 - [x] No sensitive data in logs (sanitizeInput + env validation)
 
 ---
 
-**Last Updated:** September 1, 2026 (Foundation Engines Implemented)
+**Last Updated:** September 12, 2026 (Session 6: Zod Validation & Rate Limiting Complete)
 **Maintainer:** Qalcuity Security Team
-**Document Version:** 5.0.0
+**Document Version:** 5.2.0

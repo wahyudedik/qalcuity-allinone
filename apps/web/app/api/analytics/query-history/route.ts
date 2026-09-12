@@ -8,29 +8,11 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface CreateQueryHistoryBody {
-    queryType: string
-    sql: string
-    visualConfig?: string
-    datasetId?: string
-    datasetName?: string
-    executionMs: number
-    rowsReturned: number
-    rowsScanned?: number
-    status: string
-    errorMessage?: string
-    fromCache?: boolean
-    ipAddress?: string
-    userAgent?: string
-}
+import { createQueryHistorySchema, formatZodError } from '@/lib/validation-schemas'
 
 // ============================================
 // GET â€” List query history for tenant (with pagination)
@@ -111,7 +93,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -133,49 +115,33 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const body: CreateQueryHistoryBody = await request.json()
+        const body = await request.json()
 
-        // Validate required fields
-        if (!body.queryType || !body.sql || body.executionMs === undefined || body.rowsReturned === undefined || !body.status) {
+        // Validate with Zod
+        const parsed = createQueryHistorySchema.safeParse(body)
+        if (!parsed.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: queryType, sql, executionMs, rowsReturned, status' },
+                { success: false, error: formatZodError(parsed.error) },
                 { status: 400 }
             )
         }
-
-        // Validate queryType
-        const validQueryTypes = ['SQL', 'VISUAL', 'AI', 'DASHBOARD', 'KPI']
-        if (!validQueryTypes.includes(body.queryType)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid queryType. Must be one of: ${validQueryTypes.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate status
-        const validStatuses = ['SUCCESS', 'FAILED', 'TIMEOUT', 'BLOCKED']
-        if (!validStatuses.includes(body.status)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
-                { status: 400 }
-            )
-        }
+        const validated = parsed.data
 
         const history = await prisma.analyticsQueryHistory.create({
             data: {
-                queryType: body.queryType,
-                sql: body.sql,
-                visualConfig: body.visualConfig || null,
-                datasetId: body.datasetId || null,
-                datasetName: body.datasetName || null,
-                executionMs: body.executionMs,
-                rowsReturned: body.rowsReturned,
-                rowsScanned: body.rowsScanned ?? null,
-                status: body.status,
-                errorMessage: body.errorMessage || null,
-                fromCache: body.fromCache ?? false,
-                ipAddress: body.ipAddress || null,
-                userAgent: body.userAgent || null,
+                queryType: validated.queryType,
+                sql: validated.sql,
+                visualConfig: validated.visualConfig || null,
+                datasetId: validated.datasetId || null,
+                datasetName: validated.datasetName || null,
+                executionMs: validated.executionMs,
+                rowsReturned: validated.rowsReturned,
+                rowsScanned: validated.rowsScanned ?? null,
+                status: validated.status,
+                errorMessage: validated.errorMessage || null,
+                fromCache: validated.fromCache ?? false,
+                ipAddress: validated.ipAddress || null,
+                userAgent: validated.userAgent || null,
                 userId,
                 tenantId,
             },
@@ -201,7 +167,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

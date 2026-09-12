@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { formatZodError } from './validation-schemas';
 import { MSG } from './api-messages';
+import { logger } from '@/lib/logger';
 
 /**
  * Standardized API error handler that distinguishes between error types:
@@ -40,7 +41,7 @@ export function handleApiError(error: unknown): NextResponse {
                 );
             case 'P2021': {
                 const tableName = (error.meta?.table as string) || 'unknown';
-                console.error(`[API Error] Prisma P2021: Table "${tableName}" does not exist. Run: cd packages/db && npx prisma migrate deploy`);
+                logger.error(`[API Error] Prisma P2021: Table "${tableName}" does not exist. Run: cd packages/db && npx prisma migrate deploy`);
                 return NextResponse.json(
                     { success: false, error: `Service temporarily unavailable. Please contact administrator. (Table: ${tableName})`, code: 'SERVICE_UNAVAILABLE' },
                     { status: 503 }
@@ -61,7 +62,7 @@ export function handleApiError(error: unknown): NextResponse {
 
     // Prisma unknown request errors
     if (error instanceof Prisma.PrismaClientUnknownRequestError) {
-        console.error('[API Error] PrismaClientUnknownRequestError:', error.message);
+        logger.error('[API Error] PrismaClientUnknownRequestError', error);
         return NextResponse.json(
             { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
             { status: 500 }
@@ -70,7 +71,7 @@ export function handleApiError(error: unknown): NextResponse {
 
     // Prisma initialization errors (DB connection failure)
     if (error instanceof Prisma.PrismaClientInitializationError) {
-        console.error('[API Error] PrismaClientInitializationError:', error.message);
+        logger.error('[API Error] PrismaClientInitializationError', error);
         return NextResponse.json(
             { success: false, error: 'Service temporarily unavailable. Database connection failed.', code: 'SERVICE_UNAVAILABLE' },
             { status: 503 }
@@ -79,7 +80,7 @@ export function handleApiError(error: unknown): NextResponse {
 
     // Prisma Rust panic errors (internal engine failure)
     if (error instanceof Prisma.PrismaClientRustPanicError) {
-        console.error('[API Error] PrismaClientRustPanicError:', error.message);
+        logger.error('[API Error] PrismaClientRustPanicError', error);
         return NextResponse.json(
             { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
             { status: 500 }
@@ -98,7 +99,7 @@ export function handleApiError(error: unknown): NextResponse {
             );
         }
 
-        console.error('[API Error] Unhandled Error:', error.name, error.message);
+        logger.error('[API Error] Unhandled Error', error);
         return NextResponse.json(
             { success: false, error: MSG.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
             { status: 500 }

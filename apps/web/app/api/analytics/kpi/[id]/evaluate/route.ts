@@ -12,6 +12,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/api-error'
 import { createKPISchema } from '@/lib/validation-schemas'
 import { MSG } from '@/lib/api-messages'
+import { logger } from '@/lib/logger'
 
 // ============================================
 // TYPES
@@ -105,7 +106,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedKPIs })
     } catch (error) {
-        console.error('[KPI List Error]', error)
+        logger.error('[KPI List Error]', error)
         return handleApiError(error)
     }
 }
@@ -178,7 +179,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[KPI Create Error]', error)
+        logger.error('[KPI Create Error]', error)
         return handleApiError(error)
     }
 }

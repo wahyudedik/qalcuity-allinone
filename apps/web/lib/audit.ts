@@ -1,4 +1,5 @@
 import { prisma } from './db';
+import { logger } from '@/lib/logger';
 
 interface AuditLogParams {
     userId: string;
@@ -42,7 +43,7 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
         });
     } catch (error) {
         // Audit logging should never break the main flow
-        console.error('[AuditLog] Failed to write audit log:', error);
+        logger.error('[AuditLog] Failed to write audit log', error);
     }
 }
 

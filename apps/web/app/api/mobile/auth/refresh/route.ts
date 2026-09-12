@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 /**
  * Mobile Auth â€” Token Refresh Endpoint
@@ -21,6 +21,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { refreshMobileToken } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
     try {
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
             status = 401;
         }
 
-        console.error('[MobileAuth] Refresh error:', message);
+        logger.error('[MobileAuth] Refresh error:', message);
 
         return NextResponse.json(
             { success: false, error: 'Token is invalid or has expired', code: 'INVALID_TOKEN' },

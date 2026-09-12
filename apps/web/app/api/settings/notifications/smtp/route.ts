@@ -6,14 +6,7 @@ import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { handleApiError } from '@/lib/api-error'
-
-interface SmtpConfig {
-    smtpHost: string
-    smtpPort: string
-    smtpEmail: string
-    smtpPassword: string
-    useTLS: boolean
-}
+import { updateSmtpConfigSchema } from '@/lib/validation-schemas'
 
 /**
  * GET /api/settings/notifications/smtp
@@ -78,33 +71,16 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth
         const body = await request.json()
 
-        const { smtpHost, smtpPort, smtpEmail, smtpPassword, useTLS } = body as SmtpConfig
-
-        // Validate required fields
-        if (!smtpHost || !smtpPort || !smtpEmail) {
+        // Validate input with Zod schema
+        const validated = updateSmtpConfigSchema.safeParse(body)
+        if (!validated.success) {
             return NextResponse.json(
-                { success: false, error: MSG.SMTP_HOST_PORT_EMAIL_REQUIRED },
+                { success: false, error: validated.error.issues[0]?.message || MSG.INVALID_INPUT, code: 'VALIDATION_ERROR' },
                 { status: 400 }
             )
         }
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!emailRegex.test(smtpEmail)) {
-            return NextResponse.json(
-                { success: false, error: 'Invalid email format', code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            )
-        }
-
-        // Validate port
-        const port = parseInt(smtpPort, 10)
-        if (isNaN(port) || port < 1 || port > 65535) {
-            return NextResponse.json(
-                { success: false, error: 'Port must be between 1-65535', code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            )
-        }
+        const { smtpHost, smtpPort, smtpEmail, smtpPassword, useTLS } = validated.data
 
         // Get existing config for audit
         const existing = await prisma.tenantIntegration.findUnique({

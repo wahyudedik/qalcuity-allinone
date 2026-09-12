@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
@@ -10,6 +10,7 @@ import { sanitizeInput } from '@/lib/sanitize';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 // ─── Zod Schema ──────────────────────────────────────────────────────────────
 
@@ -165,7 +166,7 @@ async function resolveQueryContext(
         // No specific context resolved — let AI handle it
         return null;
     } catch (error) {
-        console.error('[AI Query] Context resolution error:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[AI Query] Context resolution error:', error instanceof Error ? error.message : 'Unknown');
         return null;
     }
 }

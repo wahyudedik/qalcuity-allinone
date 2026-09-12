@@ -9,6 +9,7 @@ import { inviteTeamMemberSchema, updateTeamMemberSchema, formatZodError } from '
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError, apiNotFound, apiForbidden } from '@/lib/api-error'
+import crypto from 'crypto'
 
 export async function GET(request: Request) {
     try {
@@ -105,9 +106,10 @@ export async function POST(request: Request) {
             )
         }
 
-        // Create user with temporary password (they'll need to set their own)
+        // SECURITY: Generate unique random temporary password per user (never hardcoded)
         const bcrypt = await import('bcryptjs')
-        const tempPassword = await bcrypt.hash('ChangeMe123!', 12)
+        const tempPasswordRaw = `Temp${crypto.randomBytes(8).toString('base64url')}!`
+        const tempPassword = await bcrypt.hash(tempPasswordRaw, 12)
 
         const newUser = await prisma.user.create({
             data: {

@@ -11,26 +11,8 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface CreateChartBody {
-    name: string
-    description?: string
-    slug: string
-    chartType: string
-    config?: string
-    dataSource?: string
-    datasetId?: string
-    queryId?: string
-    metricId?: string
-    queryConfig?: string
-    visibility?: string
-    isTemplate?: boolean
-    tags?: string
-}
+import { createAnalyticsChartSchema, formatZodError } from '@/lib/validation-schemas'
+import { logger } from '@/lib/logger'
 
 // ============================================
 // GET â€” List all charts for tenant
@@ -109,7 +91,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedCharts })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -131,62 +113,35 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const body: CreateChartBody = await request.json()
+        const body = await request.json()
 
-        // Validate required fields
-        if (!body.name || !body.slug || !body.chartType) {
+        // Validate with Zod
+        const parsed = createAnalyticsChartSchema.safeParse(body)
+        if (!parsed.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: name, slug, chartType' },
+                { success: false, error: formatZodError(parsed.error) },
                 { status: 400 }
             )
         }
-
-        // Validate chartType
-        const validChartTypes = ['bar', 'line', 'pie', 'donut', 'area', 'scatter', 'heatmap', 'kpi_card', 'table']
-        if (!validChartTypes.includes(body.chartType)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid chartType. Must be one of: ${validChartTypes.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate visibility
-        const validVisibilities = ['PRIVATE', 'TEAM', 'DEPARTMENT', 'ORGANIZATION']
-        const visibility = body.visibility || 'PRIVATE'
-        if (!validVisibilities.includes(visibility)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid visibility. Must be one of: ${validVisibilities.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate dataSource
-        const validDataSources = ['DATASET', 'QUERY', 'METRIC']
-        const dataSource = body.dataSource || 'DATASET'
-        if (!validDataSources.includes(dataSource)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid dataSource. Must be one of: ${validDataSources.join(', ')}` },
-                { status: 400 }
-            )
-        }
+        const validated = parsed.data
 
         const chart = await prisma.analyticsChart.create({
             data: {
-                name: body.name,
-                description: body.description,
-                slug: body.slug,
-                chartType: body.chartType,
-                config: body.config || '{}',
-                dataSource,
-                datasetId: body.datasetId || null,
-                queryId: body.queryId || null,
-                metricId: body.metricId || null,
-                queryConfig: body.queryConfig || null,
-                visibility,
+                name: validated.name,
+                description: validated.description,
+                slug: validated.slug,
+                chartType: validated.chartType,
+                config: validated.config || '{}',
+                dataSource: validated.dataSource || 'DATASET',
+                datasetId: validated.datasetId || null,
+                queryId: validated.queryId || null,
+                metricId: validated.metricId || null,
+                queryConfig: validated.queryConfig || null,
+                visibility: validated.visibility || 'PRIVATE',
                 ownerId: userId,
                 ownerName: null,
-                isTemplate: body.isTemplate ?? false,
-                tags: body.tags || null,
+                isTemplate: validated.isTemplate ?? false,
+                tags: validated.tags || null,
                 tenantId,
             },
         })
@@ -215,7 +170,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

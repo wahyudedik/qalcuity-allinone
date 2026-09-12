@@ -175,15 +175,7 @@ export async function PUT(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can update loyalty members
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_UPDATE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         // Check member exists
         const existingMember = await prisma.loyaltyMember.findFirst({
@@ -281,15 +273,7 @@ export async function DELETE(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId, role } = auth;
-
-        // Only ADMIN+ can delete loyalty members
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.REWARD_ADMIN_ONLY_DELETE },
-                { status: 403 }
-            );
-        }
+        const { userId, tenantId } = auth;
 
         // Check member exists
         const existingMember = await prisma.loyaltyMember.findFirst({

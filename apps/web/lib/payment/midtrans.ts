@@ -17,6 +17,7 @@ import type {
     PaymentVerifyResult,
     WebhookResult,
 } from './provider';
+import { logger } from '@/lib/logger';
 
 export class MidtransProvider implements PaymentProvider {
     private snap: Snap;
@@ -59,7 +60,7 @@ export class MidtransProvider implements PaymentProvider {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            console.error('[MidtransProvider] createPayment error:', message);
+            logger.error('[MidtransProvider] createPayment error', error, { detail: message });
             return { success: false, error: message };
         }
     }
@@ -77,7 +78,7 @@ export class MidtransProvider implements PaymentProvider {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            console.error('[MidtransProvider] verifyPayment error:', message);
+            logger.error('[MidtransProvider] verifyPayment error', error, { detail: message });
             return { success: false, status: 'FAILED', error: message };
         }
     }
@@ -98,7 +99,7 @@ export class MidtransProvider implements PaymentProvider {
                 gross_amount: grossAmount,
             });
             if (signature && expectedSignature !== signature) {
-                console.warn('[MidtransProvider] Webhook signature mismatch');
+                logger.warn('[MidtransProvider] Webhook signature mismatch');
                 return {
                     success: false,
                     orderId,
@@ -116,7 +117,7 @@ export class MidtransProvider implements PaymentProvider {
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            console.error('[MidtransProvider] handleWebhook error:', message);
+            logger.error('[MidtransProvider] handleWebhook error', error, { detail: message });
             return {
                 success: false,
                 orderId: '',

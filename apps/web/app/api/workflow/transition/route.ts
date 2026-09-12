@@ -8,6 +8,7 @@ import { WorkflowEngine } from '@qalcuity/workflow';
 import { workflowTransitionSchema } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * POST /api/workflow/transition
@@ -21,6 +22,15 @@ import { handleApiError } from '@/lib/api-error';
  */
 export async function POST(request: Request) {
     try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:workflow:transition:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });

@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { METRIC_DEFINITIONS } from '@qalcuity/analytics'
 import { handleApiError } from '@/lib/api-error'
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

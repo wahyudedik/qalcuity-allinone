@@ -10,6 +10,7 @@
 
 import { MidtransProvider } from './midtrans';
 import { MockPaymentProvider } from './mock';
+import { logger } from '@/lib/logger';
 
 // ============================================================
 // Payment Provider Interfaces
@@ -82,7 +83,7 @@ export function getPaymentProvider(): PaymentProvider {
             return new MidtransProvider();
         case 'xendit':
             // Xendit provider coming soon, fallback to mock
-            console.warn('[PaymentProvider] Xendit provider not yet implemented, using mock');
+            logger.warn('[PaymentProvider] Xendit provider not yet implemented, using mock');
             return new MockPaymentProvider();
         default:
             return new MockPaymentProvider();

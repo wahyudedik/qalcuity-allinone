@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { verifyCronAuth, cronSuccess, cronError } from '@/lib/cron';
 import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 import {
     shouldRun,
     getLastRunInfo,
@@ -132,7 +133,7 @@ export async function GET(req: Request) {
             // Execute the task
             const startTime = Date.now();
             try {
-                console.log(`[Scheduler] Running task: ${task.id} (${task.name})`);
+                logger.info(`[Scheduler] Running task: ${task.id}`, { name: task.name });
                 const result = await task.handler();
                 const duration = Date.now() - startTime;
 
@@ -146,7 +147,7 @@ export async function GET(req: Request) {
                 });
                 ran++;
 
-                console.log(`[Scheduler] Task ${task.id} completed in ${duration}ms: ${result.message}`);
+                logger.info(`[Scheduler] Task ${task.id} completed`, { duration, message: result.message });
             } catch (error) {
                 const duration = Date.now() - startTime;
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -161,7 +162,7 @@ export async function GET(req: Request) {
                 });
                 failed++;
 
-                console.error(`[Scheduler] Task ${task.id} failed after ${duration}ms:`, error);
+                logger.error(`[Scheduler] Task ${task.id} failed`, error, { duration });
             }
         }
 
@@ -170,7 +171,7 @@ export async function GET(req: Request) {
             return cronError(`Task '${taskFilter}' not found`, 404);
         }
 
-        console.log(`[Scheduler] Dispatch complete: ran=${ran}, skipped=${skipped}, failed=${failed}`);
+        logger.info('[Scheduler] Dispatch complete', { ran, skipped, failed });
 
         return cronSuccess({
             ran,

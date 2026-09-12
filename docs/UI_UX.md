@@ -1,7 +1,7 @@
 # 🎨 Qalcuity — UI/UX Architecture
 
-> **Last Updated:** 30 Agustus 2026
-> **Current Version:** v1.0.0-beta.1
+> **Last Updated:** 11 September 2026 (Documentation Sync)
+> **Current Version:** v1.0.0-beta.2
 
 ---
 
@@ -93,19 +93,9 @@
 - Gunakan skeleton/placeholder yang sesuai dengan konten
 - Konsisten dengan loading patterns di halaman lain
 
-**Coverage:** 9 `loading.tsx` files
+**Coverage:** 116 `loading.tsx` files (semua module sections dan detail pages)
 
-| Page | Path |
-|------|------|
-| Dashboard | `app/dashboard/loading.tsx` |
-| Invoice Detail | `app/dashboard/finance/invoices/[id]/loading.tsx` |
-| PO Detail | `app/dashboard/finance/purchase-orders/[id]/loading.tsx` |
-| Quotation Detail | `app/dashboard/finance/quotations/[id]/loading.tsx` |
-| Contact Detail | `app/dashboard/crm/contacts/[id]/loading.tsx` |
-| Lead Detail | `app/dashboard/crm/leads/[id]/loading.tsx` |
-| Deal Detail | `app/dashboard/crm/deals/[id]/loading.tsx` |
-| Employee Detail | `app/dashboard/hr/employees/[id]/loading.tsx` |
-| Supplier Detail | `app/dashboard/inventory/suppliers/[id]/loading.tsx` |
+> File `loading.tsx` mencakup seluruh module: Dashboard, Finance (Invoices, Payments, PO, Quotations, CoA, Reconciliation, Tax Rates), CRM (Contacts, Leads, Deals), HR (Employees, Attendance, Leaves, Payroll), Inventory (Products, Categories, Suppliers, Stock), Reports, Analytics (Studio, Explorer, History, Scheduled, Dictionary), Settings (Company, Team, Roles, Security, Notifications, Audit, Integrations, Industry, Workflow), Tasks/Projects, dan POS modules.
 
 ### Empty States
 

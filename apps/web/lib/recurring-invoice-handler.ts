@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/db';
 import { generateInvoiceFromRecurring } from '@/lib/recurring-invoice';
 import type { CronTaskResult } from '@/lib/cron-scheduler';
+import { logger } from '@/lib/logger';
 
 export async function runRecurringInvoice(): Promise<CronTaskResult> {
     const now = new Date();
@@ -34,12 +35,12 @@ export async function runRecurringInvoice(): Promise<CronTaskResult> {
             await generateInvoiceFromRecurring(recurring);
             generated++;
         } catch (error) {
-            console.error(`[Cron] Failed to generate invoice for recurring ${recurring.id}:`, error);
+            logger.error(`[Cron] Failed to generate invoice for recurring ${recurring.id}`, error);
             failed++;
         }
     }
 
-    console.log(`[Cron] Recurring Invoice: processed=${processed}, generated=${generated}, failed=${failed}`);
+    logger.info('[Cron] Recurring Invoice completed', { processed, generated, failed });
 
     return {
         success: true,

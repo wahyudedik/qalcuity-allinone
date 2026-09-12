@@ -8,27 +8,11 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface CreateScheduledQueryBody {
-    name: string
-    description?: string
-    queryHistoryId: string
-    datasetId?: string
-    cronExpression: string
-    frequency: string
-    timeOfDay?: string
-    outputFormat?: string
-    recipients?: string[]
-    alertOnFailure?: boolean
-    alertOnAnomaly?: boolean
-}
+import { createScheduledQuerySchema, formatZodError } from '@/lib/validation-schemas'
 
 // ============================================
 // GET â€” List scheduled queries for tenant
@@ -91,7 +75,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedScheduled })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -113,58 +97,31 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { userId, tenantId } = auth
-        const body: CreateScheduledQueryBody = await request.json()
+        const body = await request.json()
 
-        // Validate required fields
-        if (!body.name || !body.queryHistoryId || !body.cronExpression || !body.frequency) {
+        // Validate with Zod
+        const parsed = createScheduledQuerySchema.safeParse(body)
+        if (!parsed.success) {
             return NextResponse.json(
-                { success: false, error: 'Missing required fields: name, queryHistoryId, cronExpression, frequency' },
+                { success: false, error: formatZodError(parsed.error) },
                 { status: 400 }
             )
         }
-
-        // Validate frequency
-        const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY']
-        if (!validFrequencies.includes(body.frequency)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid frequency. Must be one of: ${validFrequencies.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate outputFormat
-        const validOutputFormats = ['EMAIL', 'PDF', 'EXCEL', 'CSV', 'SLACK']
-        const outputFormat = body.outputFormat || 'EMAIL'
-        if (!validOutputFormats.includes(outputFormat)) {
-            return NextResponse.json(
-                { success: false, error: `Invalid outputFormat. Must be one of: ${validOutputFormats.join(', ')}` },
-                { status: 400 }
-            )
-        }
-
-        // Validate timeOfDay format if provided
-        const timeOfDay = body.timeOfDay || '08:00'
-        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
-        if (!timeRegex.test(timeOfDay)) {
-            return NextResponse.json(
-                { success: false, error: 'Invalid timeOfDay format. Must be HH:MM (24-hour)' },
-                { status: 400 }
-            )
-        }
+        const validated = parsed.data
 
         const scheduled = await prisma.scheduledQuery.create({
             data: {
-                name: body.name,
-                description: body.description || null,
-                queryHistoryId: body.queryHistoryId,
-                datasetId: body.datasetId || null,
-                cronExpression: body.cronExpression,
-                frequency: body.frequency,
-                timeOfDay,
-                outputFormat,
-                recipients: body.recipients ?? [],
-                alertOnFailure: body.alertOnFailure ?? true,
-                alertOnAnomaly: body.alertOnAnomaly ?? false,
+                name: validated.name,
+                description: validated.description || null,
+                queryHistoryId: validated.queryHistoryId,
+                datasetId: validated.datasetId || null,
+                cronExpression: validated.cronExpression,
+                frequency: validated.frequency,
+                timeOfDay: validated.timeOfDay || '08:00',
+                outputFormat: validated.outputFormat || 'EMAIL',
+                recipients: validated.recipients ?? [],
+                alertOnFailure: validated.alertOnFailure ?? true,
+                alertOnAnomaly: validated.alertOnAnomaly ?? false,
                 ownerId: userId,
                 tenantId,
             },
@@ -196,7 +153,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

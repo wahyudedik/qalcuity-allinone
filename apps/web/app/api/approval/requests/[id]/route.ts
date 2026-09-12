@@ -11,6 +11,7 @@ import { createApprovalRequest, getApprovalLevels } from '@/lib/approval';
 import { checkAutoApproval } from '@/lib/auto-approval';
 import { notifyApprover } from '@/lib/approval-notifications';
 import { handleApiError } from '@/lib/api-error';
+import { ROLE_HIERARCHY } from '@qalcuity/config';
 
 export async function GET(request: Request) {
     try {
@@ -48,7 +49,6 @@ export async function GET(request: Request) {
         // (based on eligible approval levels)
         if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             const eligibleLevels = await getApprovalLevels(tenantId, where.entityType as string || '');
-            const ROLE_HIERARCHY: Record<string, number> = { VIEWER: 0, MEMBER: 1, ADMIN: 2, SUPERADMIN: 3 };
             const userLevel = ROLE_HIERARCHY[role] ?? 0;
 
             const eligibleEntityTypes = eligibleLevels
@@ -73,30 +73,35 @@ export async function GET(request: Request) {
             prisma.approvalRequest.count({ where }),
         ]);
 
-        // Enrich with level names and requester info
-        const enrichedRequests = await Promise.all(
-            requests.map(async (req) => {
-                const level = await prisma.approvalLevel.findFirst({
-                    where: {
-                        tenantId,
-                        entityType: req.entityType,
-                        level: req.currentLevel,
-                    },
-                });
+        // Batch fetch all requesters in a single query (fixes N+1)
+        const requesterIds = [...new Set(requests.map((r) => r.requestedBy))];
+        const requesters = await prisma.user.findMany({
+            where: { id: { in: requesterIds } },
+            select: { id: true, name: true, email: true },
+        });
+        const requesterMap = new Map(requesters.map((r) => [r.id, { name: r.name, email: r.email }]));
 
-                const requester = await prisma.user.findUnique({
-                    where: { id: req.requestedBy },
-                    select: { id: true, name: true, email: true },
-                });
-
-                return {
-                    ...req,
-                    levelName: level?.name || `Level ${req.currentLevel}`,
-                    requesterName: requester?.name || 'Unknown',
-                    requesterEmail: requester?.email || '',
-                };
-            })
+        // Batch fetch all approval levels for this tenant in a single query (fixes N+1)
+        const entityTypes = [...new Set(requests.map((r) => r.entityType))];
+        const allLevels = await prisma.approvalLevel.findMany({
+            where: { tenantId, entityType: { in: entityTypes } },
+        });
+        const levelMap = new Map(
+            allLevels.map((l) => [`${l.entityType}:${l.level}`, l.name])
         );
+
+        // Enrich with level names and requester info — all from in-memory maps
+        const enrichedRequests = requests.map((req) => {
+            const levelKey = `${req.entityType}:${req.currentLevel}`;
+            const requester = requesterMap.get(req.requestedBy);
+
+            return {
+                ...req,
+                levelName: levelMap.get(levelKey) || `Level ${req.currentLevel}`,
+                requesterName: requester?.name || 'Unknown',
+                requesterEmail: requester?.email || '',
+            };
+        });
 
         return NextResponse.json({
             success: true,
@@ -164,23 +169,17 @@ export async function POST(request: Request) {
         });
 
         if (!approvalRequest) {
-            // No approval levels â€” auto-approved
+            // No approval levels — auto-approved
             return NextResponse.json({
                 success: true,
                 data: null,
-                message: 'Tidak ada approval level yang dikonfigurasi â€” auto-approved',
+                message: 'Tidak ada approval level yang dikonfigurasi — auto-approved',
             });
         }
 
         // Send notification to approvers asynchronously
         // Find eligible approvers for level 1
         const levels = await getApprovalLevels(tenantId, entityType);
-        const ROLE_HIERARCHY: Record<string, number> = {
-            VIEWER: 0,
-            MEMBER: 1,
-            ADMIN: 2,
-            SUPERADMIN: 3,
-        };
 
         const firstActiveLevel = levels.find(
             (l: { isActive: boolean; requiredRole: string; entityType: string; level: number }) => l.isActive

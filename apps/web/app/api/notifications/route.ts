@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
@@ -7,6 +7,8 @@ import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { updateNotificationSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * Graceful fallback when the InAppNotification table does not exist yet
@@ -14,7 +16,7 @@ import { handleApiError } from '@/lib/api-error'
  * the client-side notification centre degrades silently.
  */
 function tableNotFoundFallback(kind: 'list' | 'mark' | 'delete') {
-    console.warn('[Notifications API] InAppNotification table not found â€” returning empty fallback')
+    logger.warn('[Notifications API] InAppNotification table not found â€” returning empty fallback')
     if (kind === 'list') {
         return NextResponse.json({ success: true, data: [], unreadCount: 0, total: 0 })
     }
@@ -48,6 +50,15 @@ function isTableNotFoundError(error: unknown): boolean {
  */
 export async function GET(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:notifications:${ip}`, 60, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            )
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -93,7 +104,7 @@ export async function GET(request: Request) {
         if (isTableNotFoundError(error)) {
             return tableNotFoundFallback('list')
         }
-        console.error('[Notifications API] GET error:', error)
+        logger.error('[Notifications API] GET error:', error)
         return handleApiError(error)
     }
 }
@@ -108,6 +119,15 @@ export async function GET(request: Request) {
  */
 export async function PUT(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:notifications:PUT:${ip}`, 30, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            )
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -158,7 +178,7 @@ export async function PUT(request: Request) {
         if (isTableNotFoundError(error)) {
             return tableNotFoundFallback('mark')
         }
-        console.error('[Notifications API] PUT error:', error)
+        logger.error('[Notifications API] PUT error:', error)
         return handleApiError(error)
     }
 }
@@ -170,6 +190,15 @@ export async function PUT(request: Request) {
  */
 export async function DELETE(request: Request) {
     try {
+        const ip = getClientIp(request)
+        const rateLimitResult = checkRateLimit(`api:notifications:DELETE:${ip}`, 10, 60000)
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            )
+        }
+
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -188,7 +217,7 @@ export async function DELETE(request: Request) {
         if (isTableNotFoundError(error)) {
             return tableNotFoundFallback('delete')
         }
-        console.error('[Notifications API] DELETE error:', error)
+        logger.error('[Notifications API] DELETE error:', error)
         return handleApiError(error)
     }
 }

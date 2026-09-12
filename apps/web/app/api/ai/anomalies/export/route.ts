@@ -4,12 +4,23 @@ import { NextResponse } from 'next/server';
 import { requirePermissionForRoute } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api-error';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { MSG } from '@/lib/api-messages';
 
 // â”€â”€â”€ GET: Export anomalies to CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Requires ADMIN/SUPERADMIN role. Supports filtering by severity, status, entityType.
 
 export async function GET(req: Request) {
     try {
+        const ip = getClientIp(req);
+        const rateLimitResult = checkRateLimit(`api:ai:anomalies:export:${ip}`, 10, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
         const auth = await requirePermissionForRoute(req);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;

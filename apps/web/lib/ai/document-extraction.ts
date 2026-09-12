@@ -3,6 +3,7 @@
 // Menggunakan AI vision API dengan fallback ke regex-based extraction.
 
 import { getAIProvider, type AIChatMessage } from './provider';
+import { logger } from '@/lib/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -236,7 +237,7 @@ Pastikan semua key ada di output, meskipun value kosong.`;
             method: 'ai',
         };
     } catch (error) {
-        console.error('[DocumentExtraction] AI extraction failed:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[DocumentExtraction] AI extraction failed', error);
         throw error;
     }
 }
@@ -357,7 +358,7 @@ export async function extractDocument(request: ExtractionRequest): Promise<Extra
     try {
         return await extractWithAI(request);
     } catch (aiError) {
-        console.warn('[DocumentExtraction] AI failed, falling back to regex:', aiError instanceof Error ? aiError.message : 'Unknown');
+        logger.warn('[DocumentExtraction] AI failed, falling back to regex', { detail: aiError instanceof Error ? aiError.message : 'Unknown' });
 
         // Fallback to regex (only useful for text-based PDFs)
         if (request.mimeType === 'application/pdf') {
@@ -425,7 +426,7 @@ export async function persistExtraction(
             },
         });
     } catch (error) {
-        console.error('[DocumentExtraction] Failed to persist extraction:', error instanceof Error ? error.message : 'Unknown');
+        logger.error('[DocumentExtraction] Failed to persist extraction', error);
         // Don't throw — persistence failure shouldn't break extraction
     }
 }

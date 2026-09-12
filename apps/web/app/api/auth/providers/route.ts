@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/auth/providers
@@ -52,7 +53,7 @@ export async function GET() {
             // handle its own connectivity errors at login time.
             if (process.env.GOOGLE_OAUTH_SKIP_HEALTH_CHECK === 'true') {
                 providers.google = true;
-                console.log(
+                logger.info(
                     '[Auth Providers] Google OAuth health check skipped (GOOGLE_OAUTH_SKIP_HEALTH_CHECK=true). ' +
                     'Google login is enabled based on valid credentials.'
                 );
@@ -76,21 +77,21 @@ export async function GET() {
                     if (response.ok) {
                         providers.google = true;
                     } else {
-                        console.warn(
+                        logger.warn(
                             `[Auth Providers] Google OAuth endpoint returned status ${response.status}. ` +
                             `Google login is disabled.`
                         );
                     }
                 } catch (error) {
                     // Network error, timeout, or DNS failure â€” Google OAuth is not reachable
-                    console.warn(
+                    logger.warn(
                         `[Auth Providers] Cannot reach Google OAuth endpoint. ` +
                         `Google login is disabled. Error: ${error instanceof Error ? error.message : 'Unknown'}`,
                     );
                 }
             }
         } else {
-            console.warn(
+            logger.warn(
                 '[Auth Providers] Google OAuth credentials appear to be placeholder values. ' +
                 'Google login is disabled.'
             );

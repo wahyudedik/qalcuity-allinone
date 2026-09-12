@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 /**
  * Mobile Auth â€” Login Endpoint
@@ -21,6 +21,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { authenticateMobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
     try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
             status = 403;
         }
 
-        console.error('[MobileAuth] Login error:', message);
+        logger.error('[MobileAuth] Login error:', message);
 
         return NextResponse.json(
             { success: false, error: message },

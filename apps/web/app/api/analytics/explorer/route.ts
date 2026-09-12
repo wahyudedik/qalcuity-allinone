@@ -8,36 +8,13 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
 import { requirePermissionForRoute } from '@/lib/session'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/db'
 import { getDatasetById } from '@qalcuity/analytics'
 import type { DatasetDefinition, DimensionDefinition, MeasureDefinition } from '@qalcuity/analytics'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/api-error'
-
-// ============================================
-// TYPES
-// ============================================
-
-interface ExplorerFilter {
-    field: string
-    operator: string
-    value: unknown
-}
-
-interface ExplorerRequest {
-    dataset: string
-    dimensions: string[]
-    measures: string[]
-    filters: ExplorerFilter[]
-    dateRange?: {
-        from: string
-        to: string
-        granularity?: string
-    }
-    orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>
-    limit?: number
-    offset?: number
-}
+import { analyticsExplorerRequestSchema, formatZodError } from '@/lib/validation-schemas'
 
 interface ExplorerColumn {
     key: string
@@ -128,12 +105,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
         const { tenantId } = auth
-        const body: ExplorerRequest = await request.json()
+        const body = await request.json()
 
-        const { dataset, dimensions, measures, filters, dateRange, orderBy, limit, offset } = body
+        // Validate with Zod
+        const parsed = analyticsExplorerRequestSchema.safeParse(body)
+        if (!parsed.success) {
+            return NextResponse.json(
+                { success: false, error: formatZodError(parsed.error) },
+                { status: 400 }
+            )
+        }
+        const validated = parsed.data
+
+        const { dataset, dimensions, measures, filters, dateRange, orderBy, limit, offset } = validated
 
         // Validate dataset
-        if (!dataset || !DATASET_MODEL_MAP[dataset]) {
+        if (!DATASET_MODEL_MAP[dataset]) {
             return NextResponse.json(
                 { success: false, error: `Invalid dataset: ${dataset}. Supported: ${Object.keys(DATASET_MODEL_MAP).join(', ')}` },
                 { status: 400 }
@@ -306,7 +293,7 @@ export async function POST(request: Request) {
             },
         })
     } catch (error) {
-        console.error('[Analytics Explorer Error]', error)
+        logger.error('[Analytics Explorer Error]', error)
         return handleApiError(error)
     }
 }

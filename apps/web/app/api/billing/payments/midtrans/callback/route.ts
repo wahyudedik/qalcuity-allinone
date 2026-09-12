@@ -22,6 +22,7 @@ import { logAudit } from '@/lib/audit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { midtransWebhookSchema, formatZodError } from '@/lib/validation-schemas';
 import type { MidtransProvider } from '@/lib/payment/midtrans';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/billing/payments/midtrans/callback
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         const validation = midtransWebhookSchema.safeParse(body);
         if (!validation.success) {
             const errorResponse = formatZodError(validation.error);
-            console.warn('[MidtransCallback] Invalid webhook payload:', errorResponse);
+            logger.warn('[MidtransCallback] Invalid webhook payload:', errorResponse);
             return NextResponse.json(
                 { success: false, error: errorResponse.message },
                 { status: 400 }
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
         }
 
         const data = validation.data;
-        console.log(`[MidtransCallback] Received notification for order: ${data.order_id}, status: ${data.transaction_status}`);
+        logger.info(`[MidtransCallback] Received notification for order: ${data.order_id}, status: ${data.transaction_status}`);
 
         // Verifikasi signature menggunakan Midtrans provider
         const provider = getPaymentProvider();
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
         const webhookResult = await provider.handleWebhook(body, data.signature_key || '');
 
         if (!webhookResult.success) {
-            console.error(`[MidtransCallback] Webhook verification failed for order: ${data.order_id}, error: ${webhookResult.error}`);
+            logger.error(`[MidtransCallback] Webhook verification failed for order: ${data.order_id}, error: ${webhookResult.error}`);
             return NextResponse.json(
                 { success: false, error: webhookResult.error },
                 { status: 400 }
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
         });
 
         if (!payment) {
-            console.warn(`[MidtransCallback] Payment not found for order: ${data.order_id}`);
+            logger.warn(`[MidtransCallback] Payment not found for order: ${data.order_id}`);
             // Return 200 agar Midtrans tidak retry terus-menerus
             return NextResponse.json({
                 success: true,
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
                 data: { subscriptionStatus: 'ACTIVE' },
             });
 
-            console.log(`[MidtransCallback] Payment VERIFIED for order: ${data.order_id}, subscription activated`);
+            logger.info(`[MidtransCallback] Payment VERIFIED for order: ${data.order_id}, subscription activated`);
 
             // Log audit
             void logAudit({
@@ -148,9 +149,9 @@ export async function POST(request: Request) {
                 request,
             });
         } else if (data.transaction_status === 'pending') {
-            console.log(`[MidtransCallback] Payment PENDING for order: ${data.order_id}`);
+            logger.info(`[MidtransCallback] Payment PENDING for order: ${data.order_id}`);
         } else {
-            console.log(`[MidtransCallback] Payment ${newPaymentStatus} for order: ${data.order_id}`);
+            logger.info(`[MidtransCallback] Payment ${newPaymentStatus} for order: ${data.order_id}`);
 
             // Log audit untuk status non-success
             void logAudit({
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
             message: `Payment status updated: ${newPaymentStatus}`,
         });
     } catch (error) {
-        console.error('[MidtransCallback] Error processing webhook:', error);
+        logger.error('[MidtransCallback] Error processing webhook:', error);
         // Return 200 agar Midtrans tidak retry terus-menerus
         // Log error untuk investigasi manual
         return NextResponse.json(

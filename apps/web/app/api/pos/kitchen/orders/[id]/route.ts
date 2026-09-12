@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
@@ -10,6 +10,7 @@ import { createKitchenOrderSchema, formatZodError } from '@/lib/validation-schem
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
     } catch (error) {
         // Graceful fallback: PosKitchenOrder table not yet available (migration pending)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
-            console.warn('[Kitchen Orders API] PosKitchenOrder table not found â€” returning empty fallback');
+            logger.warn('[Kitchen Orders API] PosKitchenOrder table not found â€” returning empty fallback');
             return NextResponse.json({ success: true, data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
         }
         return handleApiError(error);
@@ -116,13 +117,6 @@ export async function POST(request: Request) {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: MSG.KITCHEN_ORDER_ADMIN_ONLY_CREATE },
-                { status: 403 }
-            );
-        }
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @qalcuity/web — Workflow Helper
  *
  * Helper functions untuk integrasi workflow engine dengan API routes.
@@ -7,6 +7,7 @@
 
 import { WorkflowEngine, type Transition, type WorkflowDefinition } from '@qalcuity/workflow';
 import { prisma } from './db';
+import { logger } from '@/lib/logger';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -419,11 +420,9 @@ export async function logWorkflowHistory(params: {
         return true;
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(
+        logger.warn(
             `[Workflow] Gagal menulis workflow history ke DB: ${message}`,
-            `\n  Entity: ${params.entityType}#${params.entityId}`,
-            `\n  Transition: ${params.fromState} → ${params.toState} (${params.action})`,
-            `\n  User: ${params.userId}, Tenant: ${params.tenantId}`
+            { entity: `${params.entityType}#${params.entityId}`, transition: `${params.fromState} → ${params.toState} (${params.action})`, user: params.userId, tenant: params.tenantId }
         );
         return false;
     }
@@ -447,11 +446,9 @@ export async function validateWorkflowTransitionSafe(
         return await validateWorkflowTransition(tenantId, entityType, fromStatus, toStatus, callerRole);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(
+        logger.warn(
             `[Workflow] Workflow validation gagal, mengizinkan transisi dengan fallback: ${message}`,
-            `\n  Entity: ${entityType}`,
-            `\n  Transition: ${fromStatus} → ${toStatus}`,
-            `\n  Caller role: ${callerRole}`
+            { entity: entityType, transition: `${fromStatus} → ${toStatus}`, callerRole }
         );
         // Backward compatibility: izinkan transisi jika workflow engine gagal
         return { valid: true };
@@ -474,10 +471,9 @@ export function canTransitionSafe(
         return WorkflowEngine.canTransition(entityType, fromStatus, toStatus, tenantId);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(
+        logger.warn(
             `[Workflow] canTransition gagal, mengizinkan transisi dengan fallback: ${message}`,
-            `\n  Entity: ${entityType}`,
-            `\n  Transition: ${fromStatus} → ${toStatus}`
+            { entity: entityType, transition: `${fromStatus} → ${toStatus}` }
         );
         // Backward compatibility: izinkan transisi jika workflow engine gagal
         return true;

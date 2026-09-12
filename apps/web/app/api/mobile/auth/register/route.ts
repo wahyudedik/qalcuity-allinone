@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 /**
  * Mobile Auth â€” Register Endpoint
@@ -26,6 +26,7 @@ import prisma from '@/lib/db';
 import { generateMobileToken, generateRefreshToken, type MobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, isValidEmail } from '@/lib/sanitize';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
     try {
@@ -138,14 +139,14 @@ export async function POST(request: Request) {
             if (prismaError.code === 'P2002') {
                 const target = prismaError.meta?.target;
                 const field = Array.isArray(target) ? target[0] : 'field';
-                console.error(`[MobileAuth] Unique constraint violation on field: ${field}`);
+                logger.error(`[MobileAuth] Unique constraint violation on field: ${field}`);
                 return NextResponse.json(
                     { success: false, error: `Data sudah ada untuk ${String(field)}` },
                     { status: 400 }
                 );
             }
 
-            console.error('[MobileAuth] Prisma error:', prismaError.code);
+            logger.error('[MobileAuth] Prisma error:', prismaError.code);
             return NextResponse.json(
                 { success: false, error: 'Terjadi kesalahan database' },
                 { status: 500 }
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
         }
 
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan server';
-        console.error('[MobileAuth] Register error:', message);
+        logger.error('[MobileAuth] Register error:', message);
 
         return NextResponse.json(
             { success: false, error: message },

@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email";
 import { getBaseUrl } from "@/lib/utils";
 import crypto from "crypto";
 import { z } from "zod";
+import { logger } from '@/lib/logger';
 
 // â”€â”€â”€ Forgot Password Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const forgotPasswordSchema = z.object({
@@ -58,8 +59,8 @@ export async function POST(req: Request) {
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                // Store reset token in a way we can verify later
-                // Using the existing updatedAt trigger + a custom approach
+                resetToken,
+                resetTokenExpiry,
             },
         });
 
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
         });
 
         if (!emailResult.success) {
-            console.error("[Forgot Password] Email send failed:", emailResult.error);
+            logger.error("[Forgot Password] Email send failed:", emailResult.error);
             // Still return success to prevent email enumeration
         }
 

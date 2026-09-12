@@ -13,6 +13,7 @@ import { handleApiError } from '@/lib/api-error'
 import type { Prisma } from '@prisma/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createReportSchema } from '@/lib/validation-schemas'
+import { logger } from '@/lib/logger'
 
 // ============================================
 // GET â€” List saved reports for tenant
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedReports })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
-        console.error('[ERROR]', error)
+        logger.error('[ERROR]', error)
         return handleApiError(error)
     }
 }

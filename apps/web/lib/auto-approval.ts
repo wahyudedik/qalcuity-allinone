@@ -7,6 +7,7 @@
 import { prisma } from './db';
 import { Prisma } from '@prisma/client';
 import { logAudit } from './audit';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -275,7 +276,7 @@ export async function checkAutoApproval(
         return { autoApproved: true };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[AutoApproval] Error:', message);
+        logger.error('[AutoApproval] Error', error, { detail: message });
         return { autoApproved: false, reason: `Error: ${message}` };
     }
 }

@@ -9,6 +9,7 @@ import { createPosTransactionSchema, formatZodError } from '@/lib/validation-sch
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
+import { invalidatePosAnalyticsCache, invalidatePosDashboardCache } from '@/lib/pos-cache';
 
 export async function GET(request: Request) {
     try {
@@ -263,6 +264,10 @@ export async function POST(request: Request) {
             },
             request,
         });
+
+        // Fire-and-forget: invalidate POS analytics + dashboard cache
+        invalidatePosAnalyticsCache(tenantId).catch(() => { });
+        invalidatePosDashboardCache(tenantId).catch(() => { });
 
         return NextResponse.json({
             success: true,

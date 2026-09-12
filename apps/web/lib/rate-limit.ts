@@ -34,6 +34,7 @@ import {
     type RateLimitRule,
 } from '@/lib/rate-limit-config';
 import { logRateLimitViolation } from '@/lib/rate-limit-monitor';
+import { logger } from '@/lib/logger';
 
 // ============================================================
 // Types
@@ -68,7 +69,7 @@ const blockStore = new Map<string, number>(); // ip:pathname → expiry timestam
 
 // ─── Production Warning ──────────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
-    console.warn(
+    logger.warn(
         '[RateLimit] ⚠️  WARNING: REDIS_URL is not configured in production! ' +
         'In-memory rate limiting is NOT suitable for multi-instance deployments. ' +
         'Rate limits will NOT be shared across instances. ' +
@@ -173,7 +174,7 @@ export async function checkRateLimitAsync(
                 backend: 'redis',
             };
         } catch (error) {
-            console.error('[RateLimit] Redis error, falling back to memory:', error);
+            logger.error('[RateLimit] Redis error, falling back to memory', error);
         }
     }
 
@@ -359,7 +360,7 @@ async function incrementViolationCount(
             if (count >= rule.blockThreshold) {
                 const blockKey = `rl:block:${ip}:${pathname}`;
                 await redis.setex(blockKey, Math.ceil(rule.blockDurationMs / 1000), '1');
-                console.warn(
+                logger.warn(
                     `[RateLimit] AUTO-BLOCK: IP=${ip} blocked for ${rule.blockDurationMs / 1000}s ` +
                     `(${count} violations on ${pathname})`
                 );
@@ -408,7 +409,7 @@ function incrementViolationCountMemory(
 
     if (count >= rule.blockThreshold) {
         blockStore.set(memKey, now + rule.blockDurationMs);
-        console.warn(
+        logger.warn(
             `[RateLimit] AUTO-BLOCK (memory): IP=${ip} blocked for ${rule.blockDurationMs / 1000}s ` +
             `(${count} violations on ${pathname})`
         );

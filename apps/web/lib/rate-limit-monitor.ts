@@ -14,6 +14,7 @@
 
 import { prisma } from '@/lib/db';
 import { isRedisAvailable, getRedisClient } from '@/lib/redis';
+import { logger } from '@/lib/logger';
 
 // ============================================================
 // Types
@@ -60,7 +61,7 @@ export interface SuspiciousPattern {
 export async function logRateLimitViolation(violation: RateLimitViolation): Promise<void> {
     // 1. Console log (always)
     const level = violation.blocked ? 'BLOCKED' : 'VIOLATED';
-    console.warn(
+    logger.warn(
         `[RateLimit] ${level}: IP=${violation.ip} ` +
         `endpoint=${violation.pathname} ` +
         `requests=${violation.requestCount}/${violation.maxRequests} ` +
@@ -309,7 +310,7 @@ export async function cleanupOldLogs(retentionDays: number = 30): Promise<number
             },
         });
         if (result.count > 0) {
-            console.log(`[RateLimit] Cleaned up ${result.count} old log entries (>${retentionDays} days)`);
+            logger.info(`[RateLimit] Cleaned up ${result.count} old log entries (>${retentionDays} days)`);
         }
         return result.count;
     } catch {
