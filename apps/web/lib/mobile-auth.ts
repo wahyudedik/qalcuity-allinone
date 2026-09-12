@@ -21,23 +21,30 @@ import { logger } from '@/lib/logger';
 // ─── Security: JWT_SECRET is MANDATORY (separate from NextAuth) ────────────────
 // SECURITY: Mobile tokens MUST use a separate secret from NextAuth to prevent
 // cross-session token abuse. Never fall back to NEXTAUTH_SECRET.
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) {
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-            '[MobileAuth] CRITICAL: JWT_SECRET is required for mobile auth in production. ' +
-            'Set JWT_SECRET in your environment variables. Do NOT use NEXTAUTH_SECRET as a fallback.'
+// NOTE: Using lazy check (not top-level throw) to avoid crashing Next.js build
+// during page data collection. The error will be thrown when auth functions are called.
+function getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error(
+                '[MobileAuth] CRITICAL: JWT_SECRET is required for mobile auth in production. ' +
+                'Set JWT_SECRET in your environment variables. Do NOT use NEXTAUTH_SECRET as a fallback.'
+            );
+        }
+        // In development, log a warning but allow startup for convenience
+        logger.warn(
+            '[MobileAuth] WARNING: JWT_SECRET not set — mobile auth tokens will not be verifiable. ' +
+            'Set JWT_SECRET in apps/web/.env'
         );
     }
-    // In development, log a warning but allow startup for convenience
-    logger.warn(
-        '[MobileAuth] WARNING: JWT_SECRET not set — mobile auth tokens will not be verifiable. ' +
-        'Set JWT_SECRET in apps/web/.env'
-    );
+    return secret || '';
 }
 
 // Separate secret for refresh tokens (defense-in-depth)
-const refreshSecret = process.env.JWT_REFRESH_SECRET || (jwtSecret ? `${jwtSecret}-refresh` : '');
+function getRefreshSecret(): string {
+    return process.env.JWT_REFRESH_SECRET || `${getJwtSecret()}-refresh`;
+}
 
 // ─── Token Payload Types ──────────────────────────────────────────────────────
 
@@ -81,7 +88,7 @@ export function generateMobileToken(user: MobileUser): string {
         type: 'access',
     };
 
-    return jwt.sign(payload, jwtSecret as string, {
+    return jwt.sign(payload, getJwtSecret(), {
         expiresIn: '24h',
         issuer: 'qalcuity-mobile',
         audience: 'qalcuity-mobile-app',
@@ -98,7 +105,7 @@ export function generateRefreshToken(user: MobileUser): string {
         type: 'refresh',
     };
 
-    return jwt.sign(payload, refreshSecret as string, {
+    return jwt.sign(payload, getRefreshSecret(), {
         expiresIn: '7d',
         issuer: 'qalcuity-mobile',
         audience: 'qalcuity-mobile-app',
@@ -111,7 +118,7 @@ export function generateRefreshToken(user: MobileUser): string {
  * Verify JWT access token and return decoded payload.
  */
 export function verifyMobileToken(token: string): MobileTokenPayload {
-    const decoded = jwt.verify(token, jwtSecret as string, {
+    const decoded = jwt.verify(token, getJwtSecret(), {
         issuer: 'qalcuity-mobile',
         audience: 'qalcuity-mobile-app',
     }) as MobileTokenPayload;
@@ -127,7 +134,7 @@ export function verifyMobileToken(token: string): MobileTokenPayload {
  * Verify refresh token and return decoded payload.
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
-    const decoded = jwt.verify(token, refreshSecret as string, {
+    const decoded = jwt.verify(token, getRefreshSecret(), {
         issuer: 'qalcuity-mobile',
         audience: 'qalcuity-mobile-app',
     }) as RefreshTokenPayload;
