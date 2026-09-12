@@ -122,9 +122,9 @@ export async function POST(request: Request) {
             );
         }
 
-        // Check if terminal already has an active session
+        // Check if terminal already has an active session (must filter by tenantId for tenant isolation)
         const existingOpenSession = await prisma.posSession.findFirst({
-            where: { terminalId: validatedData.terminalId, status: 'OPEN' },
+            where: { terminalId: validatedData.terminalId, status: 'OPEN', tenantId },
         });
         if (existingOpenSession) {
             return NextResponse.json(

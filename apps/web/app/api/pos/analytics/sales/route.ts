@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -10,7 +11,7 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/sales
  *
- * Sales analytics â€” daily/weekly/monthly revenue, transaction count,
+ * Sales analytics -- daily/weekly/monthly revenue, transaction count,
  * avg order value, growth %.
  *
  * Query params:
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // â”€â”€â”€ Aggregate sales data using raw SQL for efficiency â”€â”€â”€
+        // --- Aggregate sales data using raw SQL for efficiency ---
         // We use raw queries for GROUP BY date truncation which Prisma doesn't support natively
         const dateFormat = period === 'monthly'
             ? 'YYYY-MM'
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
                 ? 'IYYY-IW' // ISO week
                 : 'YYYY-MM-DD';
 
-        const salesData = await prisma.$queryRawUnsafe<
+        const salesData = await prisma.$queryRaw<
             Array<{
                 period_date: string;
                 revenue: number;
@@ -65,48 +66,41 @@ export async function GET(request: Request) {
                 avg_order_value: number;
             }>
         >(
-            `SELECT
-                TO_CHAR("createdAt", $1) AS period_date,
+            Prisma.sql`SELECT
+                TO_CHAR("createdAt", ${dateFormat}) AS period_date,
                 SUM("totalAmount")::float AS revenue,
                 COUNT(*)::int AS transaction_count,
                 AVG("totalAmount")::float AS avg_order_value
             FROM "PosTransaction"
-            WHERE "tenantId" = $2
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $3
-              AND "createdAt" <= $4
+              AND "createdAt" >= ${dateFrom}
+              AND "createdAt" <= ${endDate}
             GROUP BY period_date
-            ORDER BY period_date ASC`,
-            dateFormat,
-            tenantId,
-            dateFrom,
-            endDate
+            ORDER BY period_date ASC`
         );
 
-        // â”€â”€â”€ Calculate summary stats â”€â”€â”€
+        // --- Calculate summary stats ---
         const totalRevenue = salesData.reduce((sum, d) => sum + (d.revenue || 0), 0);
         const totalTransactions = salesData.reduce((sum, d) => sum + (d.transaction_count || 0), 0);
         const avgOrderValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
-        // â”€â”€â”€ Calculate growth (compare current period to previous period) â”€â”€â”€
+        // --- Calculate growth (compare current period to previous period) ---
         const periodMs = endDate.getTime() - dateFrom.getTime();
         const prevDateFrom = new Date(dateFrom.getTime() - periodMs);
         const prevEndDate = new Date(dateFrom.getTime() - 1);
 
-        const prevStats = await prisma.$queryRawUnsafe<
+        const prevStats = await prisma.$queryRaw<
             Array<{ revenue: number; transaction_count: number }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 SUM("totalAmount")::float AS revenue,
                 COUNT(*)::int AS transaction_count
             FROM "PosTransaction"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $2
-              AND "createdAt" <= $3`,
-            tenantId,
-            prevDateFrom,
-            prevEndDate
+              AND "createdAt" >= ${prevDateFrom}
+              AND "createdAt" <= ${prevEndDate}`
         );
 
         const prevRevenue = prevStats[0]?.revenue || 0;
@@ -118,24 +112,21 @@ export async function GET(request: Request) {
             ? ((totalTransactions - prevTransactions) / prevTransactions) * 100
             : 0;
 
-        // â”€â”€â”€ Payment method breakdown â”€â”€â”€
-        const paymentBreakdown = await prisma.$queryRawUnsafe<
+        // --- Payment method breakdown ---
+        const paymentBreakdown = await prisma.$queryRaw<
             Array<{ method: string; count: number; total: number }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 "paymentMethod" AS method,
                 COUNT(*)::int AS count,
                 SUM("totalAmount")::float AS total
             FROM "PosTransaction"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $2
-              AND "createdAt" <= $3
+              AND "createdAt" >= ${dateFrom}
+              AND "createdAt" <= ${endDate}
             GROUP BY "paymentMethod"
-            ORDER BY total DESC`,
-            tenantId,
-            dateFrom,
-            endDate
+            ORDER BY total DESC`
         );
 
         return NextResponse.json({

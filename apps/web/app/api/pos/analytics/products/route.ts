@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -10,7 +11,7 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/products
  *
- * Product analytics â€” top sellers, slow movers, category breakdown, profit margins.
+ * Product analytics -- top sellers, slow movers, category breakdown, profit margins.
  *
  * Query params:
  *   - dateFrom: ISO date string (default: 30 days ago)
@@ -45,8 +46,8 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // â”€â”€â”€ Top selling products â”€â”€â”€
-        const topProducts = await prisma.$queryRawUnsafe<
+        // --- Top selling products ---
+        const topProducts = await prisma.$queryRaw<
             Array<{
                 product_id: string;
                 product_name: string;
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
                 transaction_count: number;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 pti."productId" AS product_id,
                 pti."productName" AS product_name,
                 pti."productSku" AS product_sku,
@@ -67,22 +68,18 @@ export async function GET(request: Request) {
                 COUNT(DISTINCT pti."transactionId")::int AS transaction_count
             FROM "PosTransactionItem" pti
             INNER JOIN "PosTransaction" pt ON pt."id" = pti."transactionId"
-            WHERE pt."tenantId" = $1
+            WHERE pt."tenantId" = ${tenantId}
               AND pt."status" = 'COMPLETED'
-              AND pt."createdAt" >= $2
-              AND pt."createdAt" <= $3
+              AND pt."createdAt" >= ${dateFrom}
+              AND pt."createdAt" <= ${endDate}
             GROUP BY pti."productId", pti."productName", pti."productSku"
             ORDER BY total_revenue DESC
-            LIMIT $4`,
-            tenantId,
-            dateFrom,
-            endDate,
-            limit
+            LIMIT ${limit}`
         );
 
-        // â”€â”€â”€ Slow movers (products with lowest sales) â”€â”€â”€
+        // --- Slow movers (products with lowest sales) ---
         // Products that exist but have few or no sales
-        const slowMovers = await prisma.$queryRawUnsafe<
+        const slowMovers = await prisma.$queryRaw<
             Array<{
                 product_id: string;
                 product_name: string;
@@ -91,7 +88,7 @@ export async function GET(request: Request) {
                 total_revenue: number;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 p."id" AS product_id,
                 p."name" AS product_name,
                 p."sku" AS product_sku,
@@ -105,24 +102,20 @@ export async function GET(request: Request) {
                     SUM(pti."subtotal")::float AS total_revenue
                 FROM "PosTransactionItem" pti
                 INNER JOIN "PosTransaction" pt ON pt."id" = pti."transactionId"
-                WHERE pt."tenantId" = $1
+                WHERE pt."tenantId" = ${tenantId}
                   AND pt."status" = 'COMPLETED'
-                  AND pt."createdAt" >= $2
-                  AND pt."createdAt" <= $3
+                  AND pt."createdAt" >= ${dateFrom}
+                  AND pt."createdAt" <= ${endDate}
                 GROUP BY pti."productId"
             ) sales ON sales."productId" = p."id"
-            WHERE p."tenantId" = $1
+            WHERE p."tenantId" = ${tenantId}
               AND p."isActive" = true
             ORDER BY COALESCE(sales.total_revenue, 0) ASC, p."name" ASC
-            LIMIT $4`,
-            tenantId,
-            dateFrom,
-            endDate,
-            limit
+            LIMIT ${limit}`
         );
 
-        // â”€â”€â”€ Category breakdown â”€â”€â”€
-        const categoryBreakdown = await prisma.$queryRawUnsafe<
+        // --- Category breakdown ---
+        const categoryBreakdown = await prisma.$queryRaw<
             Array<{
                 category_name: string;
                 total_quantity: number;
@@ -130,7 +123,7 @@ export async function GET(request: Request) {
                 product_count: number;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 COALESCE(c."name", 'Tanpa Kategori') AS category_name,
                 SUM(pti."quantity")::float AS total_quantity,
                 SUM(pti."subtotal")::float AS total_revenue,
@@ -139,19 +132,16 @@ export async function GET(request: Request) {
             INNER JOIN "PosTransaction" pt ON pt."id" = pti."transactionId"
             LEFT JOIN "Product" p ON p."id" = pti."productId"
             LEFT JOIN "Category" c ON c."id" = p."categoryId"
-            WHERE pt."tenantId" = $1
+            WHERE pt."tenantId" = ${tenantId}
               AND pt."status" = 'COMPLETED'
-              AND pt."createdAt" >= $2
-              AND pt."createdAt" <= $3
+              AND pt."createdAt" >= ${dateFrom}
+              AND pt."createdAt" <= ${endDate}
             GROUP BY c."name"
-            ORDER BY total_revenue DESC`,
-            tenantId,
-            dateFrom,
-            endDate
+            ORDER BY total_revenue DESC`
         );
 
-        // â”€â”€â”€ Product profit margins â”€â”€â”€
-        const profitMargins = await prisma.$queryRawUnsafe<
+        // --- Product profit margins ---
+        const profitMargins = await prisma.$queryRaw<
             Array<{
                 product_id: string;
                 product_name: string;
@@ -162,7 +152,7 @@ export async function GET(request: Request) {
                 margin_percent: number;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 pti."productId" AS product_id,
                 pti."productName" AS product_name,
                 SUM(pti."quantity")::float AS total_quantity,
@@ -177,17 +167,13 @@ export async function GET(request: Request) {
             FROM "PosTransactionItem" pti
             INNER JOIN "PosTransaction" pt ON pt."id" = pti."transactionId"
             LEFT JOIN "Product" p ON p."id" = pti."productId"
-            WHERE pt."tenantId" = $1
+            WHERE pt."tenantId" = ${tenantId}
               AND pt."status" = 'COMPLETED'
-              AND pt."createdAt" >= $2
-              AND pt."createdAt" <= $3
+              AND pt."createdAt" >= ${dateFrom}
+              AND pt."createdAt" <= ${endDate}
             GROUP BY pti."productId", pti."productName"
             ORDER BY profit DESC
-            LIMIT $4`,
-            tenantId,
-            dateFrom,
-            endDate,
-            limit
+            LIMIT ${limit}`
         );
 
         return NextResponse.json({
