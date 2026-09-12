@@ -1879,3 +1879,21 @@ export const updateWorkflowDefinitionSchema = z.object({
     description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
     config: workflowConfigSchema.optional(),
 });
+
+// ============================================
+// Auth Schemas
+// ============================================
+
+export const registerSchema = z.object({
+    companyName: z.string().min(1, 'Nama perusahaan wajib diisi').max(255, 'Nama perusahaan maksimal 255 karakter'),
+    fullName: z.string().min(1, 'Nama lengkap wajib diisi').max(255, 'Nama lengkap maksimal 255 karakter'),
+    email: z.string().min(1, 'Email wajib diisi').email('Format email tidak valid').max(255, 'Email maksimal 255 karakter'),
+    password: z.string().min(8, 'Password minimal 8 karakter').max(128, 'Password maksimal 128 karakter'),
+});
+
+export const mobileRegisterSchema = z.object({
+    companyName: z.string().min(1, 'Nama perusahaan wajib diisi').max(255, 'Nama perusahaan maksimal 255 karakter'),
+    name: z.string().min(1, 'Nama wajib diisi').max(255, 'Nama maksimal 255 karakter'),
+    email: z.string().min(1, 'Email wajib diisi').email('Format email tidak valid').max(255, 'Email maksimal 255 karakter'),
+    password: z.string().min(8, 'Password minimal 8 karakter').max(128, 'Password maksimal 128 karakter'),
+});

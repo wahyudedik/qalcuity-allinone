@@ -5,9 +5,10 @@ import { MSG } from '@/lib/api-messages';
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { sanitizeInput, isValidEmail } from "@/lib/sanitize";
+import { sanitizeInput } from "@/lib/sanitize";
 import { sendWelcomeEmail } from "@/lib/email";
 import { logger } from '@/lib/logger';
+import { registerSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function POST(request: Request) {
     try {
@@ -21,35 +22,22 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { companyName, fullName, email, password } = body;
+
+        // Validate input with Zod schema
+        const validation = registerSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const { companyName, fullName, email, password } = validation.data;
 
         // Sanitize text inputs
-        const sanitizedCompany = typeof companyName === 'string' ? sanitizeInput(companyName) : '';
-        const sanitizedName = typeof fullName === 'string' ? sanitizeInput(fullName) : '';
-        const sanitizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-
-        // Validasi input
-        if (!sanitizedCompany || !sanitizedName || !sanitizedEmail || !password) {
-            return NextResponse.json(
-                { error: "All fields are required", code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
-
-        if (password.length < 8) {
-            return NextResponse.json(
-                { error: "Password must be at least 8 characters", code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
-
-        // Validasi email format
-        if (!isValidEmail(sanitizedEmail)) {
-            return NextResponse.json(
-                { error: "Invalid email format", code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
+        const sanitizedCompany = sanitizeInput(companyName);
+        const sanitizedName = sanitizeInput(fullName);
+        const sanitizedEmail = email.trim().toLowerCase();
 
         // Cek apakah email sudah terdaftar
         const existingUser = await prisma.user.findUnique({

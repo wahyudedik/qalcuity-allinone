@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -10,8 +11,8 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/hours
  *
- * Hourly heatmap â€” transactions & revenue per hour per day of week.
- * Returns a 7Ã—24 matrix (7 days Ã— 24 hours) for heatmap visualization.
+ * Hourly heatmap -- transactions & revenue per hour per day of week.
+ * Returns a 7x24 matrix (7 days x 24 hours) for heatmap visualization.
  *
  * Query params:
  *   - dateFrom: ISO date string (default: 30 days ago)
@@ -44,9 +45,9 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // â”€â”€â”€ Hourly heatmap data â”€â”€â”€
+        // --- Hourly heatmap data ---
         // Day of week: 0=Sunday, 1=Monday, ..., 6=Saturday
-        const heatmapData = await prisma.$queryRawUnsafe<
+        const heatmapData = await prisma.$queryRaw<
             Array<{
                 day_of_week: number;
                 hour: number;
@@ -54,24 +55,21 @@ export async function GET(request: Request) {
                 revenue: number;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 EXTRACT(DOW FROM "createdAt")::int AS day_of_week,
                 EXTRACT(HOUR FROM "createdAt")::int AS hour,
                 COUNT(*)::int AS transaction_count,
                 SUM("totalAmount")::float AS revenue
             FROM "PosTransaction"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $2
-              AND "createdAt" <= $3
+              AND "createdAt" >= ${dateFrom}
+              AND "createdAt" <= ${endDate}
             GROUP BY day_of_week, hour
-            ORDER BY day_of_week, hour`,
-            tenantId,
-            dateFrom,
-            endDate
+            ORDER BY day_of_week, hour`
         );
 
-        // â”€â”€â”€ Build 7Ã—24 matrix â”€â”€â”€
+        // --- Build 7x24 matrix ---
         const transactionsByDayHour: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
         const revenueByDayHour: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
 
@@ -84,7 +82,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // â”€â”€â”€ Find peak hours â”€â”€â”€
+        // --- Find peak hours ---
         let maxTransactions = 0;
         let peakDay = 0;
         let peakHour = 0;
@@ -99,7 +97,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // â”€â”€â”€ Summary stats â”€â”€â”€
+        // --- Summary stats ---
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const totalTransactionsPerDay = transactionsByDayHour.map((day) =>
             day.reduce((sum, count) => sum + count, 0)

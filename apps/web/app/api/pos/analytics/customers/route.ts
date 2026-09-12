@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -10,7 +11,7 @@ import { MSG } from '@/lib/api-messages';
 /**
  * GET /api/pos/analytics/customers
  *
- * Customer analytics â€” repeat rate, avg spend, top customers, loyalty stats.
+ * Customer analytics -- repeat rate, avg spend, top customers, loyalty stats.
  *
  * Query params:
  *   - dateFrom: ISO date string (default: 30 days ago)
@@ -45,67 +46,58 @@ export async function GET(request: Request) {
         const endDate = new Date(dateTo);
         endDate.setHours(23, 59, 59, 999);
 
-        // â”€â”€â”€ Total unique customers in period â”€â”€â”€
+        // --- Total unique customers in period ---
         // Customer = identified by customerName or customerPhone
-        const totalCustomersResult = await prisma.$queryRawUnsafe<
+        const totalCustomersResult = await prisma.$queryRaw<
             Array<{ total_customers: number }>
         >(
-            `SELECT COUNT(DISTINCT COALESCE(NULLIF("customerName", ''), "customerPhone"))::text AS total_customers
+            Prisma.sql`SELECT COUNT(DISTINCT COALESCE(NULLIF("customerName", ''), "customerPhone"))::text AS total_customers
             FROM "PosTransaction"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $2
-              AND "createdAt" <= $3
-              AND (COALESCE(NULLIF("customerName", ''), "customerPhone") IS NOT NULL)`,
-            tenantId,
-            dateFrom,
-            endDate
+              AND "createdAt" >= ${dateFrom}
+              AND "createdAt" <= ${endDate}
+              AND (COALESCE(NULLIF("customerName", ''), "customerPhone") IS NOT NULL)`
         );
         const totalCustomers = totalCustomersResult[0]?.total_customers || 0;
 
-        // â”€â”€â”€ Total transactions (including anonymous) â”€â”€â”€
-        const totalTransactionsResult = await prisma.$queryRawUnsafe<
+        // --- Total transactions (including anonymous) ---
+        const totalTransactionsResult = await prisma.$queryRaw<
             Array<{ total_transactions: number }>
         >(
-            `SELECT COUNT(*)::int AS total_transactions
+            Prisma.sql`SELECT COUNT(*)::int AS total_transactions
             FROM "PosTransaction"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $2
-              AND "createdAt" <= $3`,
-            tenantId,
-            dateFrom,
-            endDate
+              AND "createdAt" >= ${dateFrom}
+              AND "createdAt" <= ${endDate}`
         );
         const totalTransactions = totalTransactionsResult[0]?.total_transactions || 0;
 
-        // â”€â”€â”€ Repeat customers (2+ transactions) â”€â”€â”€
-        const repeatCustomersResult = await prisma.$queryRawUnsafe<
+        // --- Repeat customers (2+ transactions) ---
+        const repeatCustomersResult = await prisma.$queryRaw<
             Array<{ repeat_customers: number }>
         >(
-            `SELECT COUNT(*)::int AS repeat_customers
+            Prisma.sql`SELECT COUNT(*)::int AS repeat_customers
             FROM (
                 SELECT COALESCE(NULLIF("customerName", ''), "customerPhone") AS customer_id
                 FROM "PosTransaction"
-                WHERE "tenantId" = $1
+                WHERE "tenantId" = ${tenantId}
                   AND "status" = 'COMPLETED'
-                  AND "createdAt" >= $2
-                  AND "createdAt" <= $3
+                  AND "createdAt" >= ${dateFrom}
+                  AND "createdAt" <= ${endDate}
                   AND (COALESCE(NULLIF("customerName", ''), "customerPhone") IS NOT NULL)
                 GROUP BY customer_id
                 HAVING COUNT(*) >= 2
-            ) sub`,
-            tenantId,
-            dateFrom,
-            endDate
+            ) sub`
         );
         const repeatCustomers = repeatCustomersResult[0]?.repeat_customers || 0;
         const repeatRate = totalCustomers > 0
             ? Math.round((repeatCustomers / totalCustomers) * 10000) / 100
             : 0;
 
-        // â”€â”€â”€ Top customers by total spend â”€â”€â”€
-        const topCustomers = await prisma.$queryRawUnsafe<
+        // --- Top customers by total spend ---
+        const topCustomers = await prisma.$queryRaw<
             Array<{
                 customer_name: string;
                 customer_phone: string;
@@ -116,7 +108,7 @@ export async function GET(request: Request) {
                 last_purchase: Date;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 COALESCE(NULLIF("customerName", ''), "customerPhone") AS customer_name,
                 "customerPhone" AS customer_phone,
                 SUM("totalAmount")::float AS total_spend,
@@ -125,70 +117,60 @@ export async function GET(request: Request) {
                 MIN("createdAt") AS first_purchase,
                 MAX("createdAt") AS last_purchase
             FROM "PosTransaction"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
               AND "status" = 'COMPLETED'
-              AND "createdAt" >= $2
-              AND "createdAt" <= $3
+              AND "createdAt" >= ${dateFrom}
+              AND "createdAt" <= ${endDate}
               AND (COALESCE(NULLIF("customerName", ''), "customerPhone") IS NOT NULL)
             GROUP BY customer_name, "customerPhone"
             ORDER BY total_spend DESC
-            LIMIT $4`,
-            tenantId,
-            dateFrom,
-            endDate,
-            limit
+            LIMIT ${limit}`
         );
 
-        // â”€â”€â”€ Loyalty member stats â”€â”€â”€
-        const loyaltyStats = await prisma.$queryRawUnsafe<
+        // --- Loyalty member stats ---
+        const loyaltyStats = await prisma.$queryRaw<
             Array<{
                 total_members: number;
                 total_points: number;
                 avg_points: number;
                 total_spent: number;
-                tiers: Array<{ tier: string; count: number }>;
             }>
         >(
-            `SELECT
+            Prisma.sql`SELECT
                 COUNT(*)::int AS total_members,
                 SUM(points)::int AS total_points,
                 AVG(points)::float AS avg_points,
                 SUM("totalSpent")::float AS total_spent
             FROM "LoyaltyMember"
-            WHERE "tenantId" = $1`,
-            tenantId
+            WHERE "tenantId" = ${tenantId}`
         );
 
-        const tierBreakdown = await prisma.$queryRawUnsafe<
+        const tierBreakdown = await prisma.$queryRaw<
             Array<{ tier: string; count: number }>
         >(
-            `SELECT tier, COUNT(*)::int AS count
+            Prisma.sql`SELECT tier, COUNT(*)::int AS count
             FROM "LoyaltyMember"
-            WHERE "tenantId" = $1
+            WHERE "tenantId" = ${tenantId}
             GROUP BY tier
-            ORDER BY count DESC`,
-            tenantId
+            ORDER BY count DESC`
         );
 
-        // â”€â”€â”€ New vs returning customers â”€â”€â”€
-        const newCustomersResult = await prisma.$queryRawUnsafe<
+        // --- New vs returning customers ---
+        const newCustomersResult = await prisma.$queryRaw<
             Array<{ new_customers: number }>
         >(
-            `SELECT COUNT(DISTINCT customer_key)::int AS new_customers
+            Prisma.sql`SELECT COUNT(DISTINCT customer_key)::int AS new_customers
             FROM (
                 SELECT
                     COALESCE(NULLIF("customerName", ''), "customerPhone") AS customer_key,
                     MIN("createdAt") AS first_purchase
                 FROM "PosTransaction"
-                WHERE "tenantId" = $1
+                WHERE "tenantId" = ${tenantId}
                   AND "status" = 'COMPLETED'
                   AND COALESCE(NULLIF("customerName", ''), "customerPhone") IS NOT NULL
                 GROUP BY customer_key
             ) sub
-            WHERE first_purchase >= $2 AND first_purchase <= $3`,
-            tenantId,
-            dateFrom,
-            endDate
+            WHERE first_purchase >= ${dateFrom} AND first_purchase <= ${endDate}`
         );
         const newCustomers = newCustomersResult[0]?.new_customers || 0;
         const returningCustomers = totalCustomers - newCustomers;

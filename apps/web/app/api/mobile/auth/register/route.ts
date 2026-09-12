@@ -25,8 +25,9 @@ import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
 import { generateMobileToken, generateRefreshToken, type MobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { sanitizeInput, isValidEmail } from '@/lib/sanitize';
+import { sanitizeInput } from '@/lib/sanitize';
 import { logger } from '@/lib/logger';
+import { mobileRegisterSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function POST(request: Request) {
     try {
@@ -41,36 +42,22 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { name, email, password, companyName } = body;
+
+        // Validate input with Zod schema
+        const validation = mobileRegisterSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const { name, email, password, companyName } = validation.data;
 
         // Sanitize inputs
-        const sanitizedName = typeof name === 'string' ? sanitizeInput(name) : '';
-        const sanitizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-        const sanitizedCompany = typeof companyName === 'string' ? sanitizeInput(companyName) : '';
-
-        // Validate required fields
-        if (!sanitizedName || !sanitizedEmail || !password || !sanitizedCompany) {
-            return NextResponse.json(
-                { success: false, error: 'All fields are required (name, email, password, companyName)', code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
-
-        // Validate email format
-        if (!isValidEmail(sanitizedEmail)) {
-            return NextResponse.json(
-                { success: false, error: 'Invalid email format', code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
-
-        // Validate password
-        if (typeof password !== 'string' || password.length < 8) {
-            return NextResponse.json(
-                { success: false, error: 'Password must be at least 8 characters', code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
+        const sanitizedName = sanitizeInput(name);
+        const sanitizedEmail = email.trim().toLowerCase();
+        const sanitizedCompany = sanitizeInput(companyName);
 
         // Check duplicate email
         const existingUser = await prisma.user.findUnique({
