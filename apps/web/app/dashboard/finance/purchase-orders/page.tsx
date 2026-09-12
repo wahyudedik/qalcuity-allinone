@@ -1,5 +1,6 @@
 'use client'
 
+import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -43,7 +44,8 @@ const statusLabels: Record<string, string> = {
 export default function PurchaseOrdersPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('finance')
     const [orders, setOrders] = useState<PurchaseOrder[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)

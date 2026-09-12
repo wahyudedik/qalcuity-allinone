@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -86,7 +87,8 @@ function validateProductForm(data: ProductFormData, t: (key: string) => string):
 export default function ProductsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
     const [products, setProducts] = useState<Product[]>([])
     const [categories, setCategories] = useState<Category[]>([])
     const [loading, setLoading] = useState(true)

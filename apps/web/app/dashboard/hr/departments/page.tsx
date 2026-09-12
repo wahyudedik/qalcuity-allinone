@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -46,7 +47,8 @@ interface DepartmentFormData {
 export default function DepartmentsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
 
     const [departments, setDepartments] = useState<Department[]>([])
     const [loading, setLoading] = useState(true)

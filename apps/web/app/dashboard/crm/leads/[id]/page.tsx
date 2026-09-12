@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -36,7 +37,8 @@ const activityTypeConfig: Record<string, { icon: typeof Phone; color: string }> 
 export default function LeadDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('crm')
     const router = useRouter()
     const [lead, setLead] = useState<LeadDetail | null>(null)
     const [loading, setLoading] = useState(true)

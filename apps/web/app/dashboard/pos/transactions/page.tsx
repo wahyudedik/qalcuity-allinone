@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -33,7 +34,8 @@ type Transaction = {
 export default function POSTransactionsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { isAdmin } = usePermission()
+    const canManage = isAdmin()
 
     const PAYMENT_METHOD_LABELS: Record<string, string> = {
         CASH: t('pos.cash') || 'Tunai',

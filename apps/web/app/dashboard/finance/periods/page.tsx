@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
@@ -71,8 +72,9 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
 export default function PeriodsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
-    const isSuperAdmin = session?.user?.role === 'SUPERADMIN'
+    const { isAdmin: isAdminFn, isSuperAdmin: isSuperAdminFn } = usePermission()
+    const isAdmin = isAdminFn()
+    const isSuperAdmin = isSuperAdminFn()
 
     const [periods, setPeriods] = useState<Period[]>([])
     const [loading, setLoading] = useState(true)

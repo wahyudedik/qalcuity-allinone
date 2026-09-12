@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -46,7 +47,8 @@ const stageFlow: Record<string, string[]> = {
 export default function DealDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('crm')
     const router = useRouter()
     const [deal, setDeal] = useState<DealDetail | null>(null)
     const [loading, setLoading] = useState(true)

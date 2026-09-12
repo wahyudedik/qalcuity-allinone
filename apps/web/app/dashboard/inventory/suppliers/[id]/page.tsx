@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -28,7 +29,8 @@ interface SupplierDetail {
 export default function SupplierDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
     const router = useRouter()
     const [supplier, setSupplier] = useState<SupplierDetail | null>(null)
     const [loading, setLoading] = useState(true)

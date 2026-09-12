@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
@@ -36,7 +37,8 @@ interface AttendanceRecord {
 export default function AttendancePage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
     const [historicalData, setHistoricalData] = useState<AttendanceRecord[]>([])
     const [loading, setLoading] = useState(true)

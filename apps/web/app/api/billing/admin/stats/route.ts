@@ -3,16 +3,16 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { getSession, isAdmin } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { handleApiError } from '@/lib/api-error';
 
 export async function GET() {
     try {
-        const session = await getSession();
-        if (!isAdmin(session)) {
+        const auth = await requirePermissionForRoute(new Request('http://localhost/api/billing/admin/stats', { method: 'GET' }));
+        if ('error' in auth) {
             return NextResponse.json(
-                { success: false, error: 'Unauthorized' },
-                { status: 403 }
+                { success: false, error: auth.error },
+                { status: auth.status }
             );
         }
 

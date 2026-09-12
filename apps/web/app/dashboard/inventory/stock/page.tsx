@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { formatCurrency } from '@/lib/utils'
@@ -45,7 +46,8 @@ type WarehouseOption = {
 export default function StockPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
     const [stock, setStock] = useState<StockItem[]>([])
     const [warehouses, setWarehouses] = useState<WarehouseOption[]>([])
     const [loading, setLoading] = useState(true)

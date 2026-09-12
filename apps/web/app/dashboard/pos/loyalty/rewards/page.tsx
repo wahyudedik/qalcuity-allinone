@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency } from '@/lib/utils'
@@ -46,7 +47,8 @@ const REWARD_TYPE_COLORS: Record<string, string> = {
 export default function LoyaltyRewardsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { isAdmin } = usePermission()
+    const canManage = isAdmin()
 
     const [rewards, setRewards] = useState<Reward[]>([])
     const [loading, setLoading] = useState(true)
@@ -191,9 +193,8 @@ export default function LoyaltyRewardsPage() {
         <div className="space-y-6">
             {/* Toast */}
             {toast && (
-                <div className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-                    toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                }`}>
+                <div className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
                     {toast.message}
                 </div>
             )}
@@ -238,11 +239,10 @@ export default function LoyaltyRewardsPage() {
                         return (
                             <div
                                 key={reward.id}
-                                className={`relative rounded-xl border bg-white p-5 dark:bg-gray-800 ${
-                                    reward.isActive
+                                className={`relative rounded-xl border bg-white p-5 dark:bg-gray-800 ${reward.isActive
                                         ? 'border-gray-200 dark:border-gray-700'
                                         : 'border-gray-200 opacity-60 dark:border-gray-700'
-                                }`}
+                                    }`}
                             >
                                 {!reward.isActive && (
                                     <span className="absolute right-3 top-3 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">

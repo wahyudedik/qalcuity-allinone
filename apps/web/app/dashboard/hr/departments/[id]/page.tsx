@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -54,7 +55,8 @@ export default function DepartmentDetailPage({ params }: { params: { id: string 
     const { t } = useTranslation()
     const router = useRouter()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
 
     const [department, setDepartment] = useState<DepartmentDetail | null>(null)
     const [loading, setLoading] = useState(true)

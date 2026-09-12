@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
@@ -61,8 +62,6 @@ interface FormErrors {
     salary?: string
 }
 
-const DEPARTMENTS = ['Engineering', 'Marketing', 'Finance', 'Human Resources', 'Sales', 'Product', 'Operations', 'Design']
-
 function validateEmployeeForm(data: EmployeeFormData): FormErrors {
     const errors: FormErrors = {}
 
@@ -109,7 +108,8 @@ function validateEmployeeForm(data: EmployeeFormData): FormErrors {
 export default function EmployeesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -120,6 +120,8 @@ export default function EmployeesPage() {
     const [sortField, setSortField] = useState<'name' | 'department' | 'position'>('name')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
+    const [departmentsLoading, setDepartmentsLoading] = useState(false)
 
     // Form modal state
     const [showForm, setShowForm] = useState(false)
@@ -143,6 +145,22 @@ export default function EmployeesPage() {
             return () => clearTimeout(timer)
         }
     }, [toast])
+
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            try {
+                setDepartmentsLoading(true)
+                const res = await fetch('/api/hr/departments?limit=100')
+                const data = await res.json()
+                setDepartments(data.data || [])
+            } catch {
+                // Silent fail — departments list is optional
+            } finally {
+                setDepartmentsLoading(false)
+            }
+        }
+        fetchDepartments()
+    }, [])
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -420,8 +438,8 @@ export default function EmployeesPage() {
                     className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
                 >
                     <option value="All">{t('hr.employees.allDepartments') || 'Semua Departemen'}</option>
-                    {DEPARTMENTS.map(dept => (
-                        <option key={dept} value={dept}>{dept}</option>
+                    {departments.map(dept => (
+                        <option key={dept.id} value={dept.name}>{dept.name}</option>
                     ))}
                 </select>
                 <select
@@ -765,9 +783,13 @@ export default function EmployeesPage() {
                                         }`}
                                 >
                                     <option value="">{t('hr.employees.form.departmentPlaceholder') || 'Pilih departemen'}</option>
-                                    {DEPARTMENTS.map(dept => (
-                                        <option key={dept} value={dept}>{dept}</option>
-                                    ))}
+                                    {departmentsLoading ? (
+                                        <option value="" disabled>Memuat data departemen...</option>
+                                    ) : (
+                                        departments.map(dept => (
+                                            <option key={dept.id} value={dept.name}>{dept.name}</option>
+                                        ))
+                                    )}
                                 </select>
                                 {formErrors.department && (
                                     <p className="mt-1 text-xs text-red-600">{formErrors.department}</p>

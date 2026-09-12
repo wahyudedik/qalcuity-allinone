@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,7 +21,8 @@ export default function CategoriesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
     const router = useRouter()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
     const [categories, setCategories] = useState<Category[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)

@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
@@ -95,7 +96,8 @@ export default function LeavesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
     const router = useRouter()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
     const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -190,7 +192,7 @@ export default function LeavesPage() {
             const res = await fetch('/api/hr/leaves', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: confirmActionId, status: 'approved', approvedBy: session?.user?.name || 'Admin' }),
+                body: JSON.stringify({ id: confirmActionId, status: 'approved', approvedBy: session?.user?.id }),
             })
             const result = await res.json()
             if (result.success) {

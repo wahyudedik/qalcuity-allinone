@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { formatCurrency } from '@/lib/utils'
@@ -139,7 +140,8 @@ function getJkkRiskOptions(t: (key: string) => string) {
 export default function PayrollPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('hr')
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'list' | 'calculate'>('list')

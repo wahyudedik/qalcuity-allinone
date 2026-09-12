@@ -1,4 +1,5 @@
 'use client'
+import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -34,7 +35,8 @@ const statusConfig: Record<string, { color: string }> = {
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('inventory')
     const router = useRouter()
     const [product, setProduct] = useState<ProductDetail | null>(null)
     const [loading, setLoading] = useState(true)

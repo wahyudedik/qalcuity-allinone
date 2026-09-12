@@ -1,5 +1,6 @@
 'use client'
 
+import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -35,7 +36,8 @@ const statusConfig: Record<string, { labelKey: string; color: string }> = {
 export default function InvoicesPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateFn } = usePermission()
+    const canMutate = canMutateFn('finance')
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
