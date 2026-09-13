@@ -22,46 +22,46 @@ export async function GET(request: Request) {
             prisma.user.count(),
         ]);
 
-        // 4. Calculate MRR from active subscriptions
-        const activeSubscriptions = await prisma.tenantSubscription.findMany({
-            where: { status: "ACTIVE" },
+        // 4. Calculate MRR from active entitlements (Plan model)
+        const activeEntitlements = await prisma.tenantEntitlement.findMany({
+            where: { status: "active" },
             include: { plan: true },
         });
 
-        const mrr = activeSubscriptions.reduce(
-            (sum: number, sub) =>
-                sum + Number(sub.plan?.price ?? 0),
+        const mrr = activeEntitlements.reduce(
+            (sum: number, ent) =>
+                sum + Number(ent.plan?.priceMonthly ?? 0),
             0
         );
 
-        // 5. Calculate MRR growth from subscription history
+        // 5. Calculate MRR growth from entitlement history
         const now = new Date();
         const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-        const [currentMonthSubs, prevMonthSubs] = await Promise.all([
-            prisma.tenantSubscription.findMany({
+        const [currentMonthEntitlements, prevMonthEntitlements] = await Promise.all([
+            prisma.tenantEntitlement.findMany({
                 where: {
                     createdAt: { gte: currentMonthStart },
-                    status: "ACTIVE",
+                    status: "active",
                 },
                 include: { plan: true },
             }),
-            prisma.tenantSubscription.findMany({
+            prisma.tenantEntitlement.findMany({
                 where: {
                     createdAt: { gte: prevMonthStart, lt: currentMonthStart },
-                    status: "ACTIVE",
+                    status: "active",
                 },
                 include: { plan: true },
             }),
         ]);
 
-        const currentMonthMRR = currentMonthSubs.reduce(
-            (sum: number, sub) => sum + Number(sub.plan?.price ?? 0),
+        const currentMonthMRR = currentMonthEntitlements.reduce(
+            (sum: number, ent) => sum + Number(ent.plan?.priceMonthly ?? 0),
             0
         );
-        const prevMonthMRR = prevMonthSubs.reduce(
-            (sum: number, sub) => sum + Number(sub.plan?.price ?? 0),
+        const prevMonthMRR = prevMonthEntitlements.reduce(
+            (sum: number, ent) => sum + Number(ent.plan?.priceMonthly ?? 0),
             0
         );
 

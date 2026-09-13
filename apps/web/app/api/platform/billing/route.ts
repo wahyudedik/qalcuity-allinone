@@ -29,14 +29,14 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get("limit") || "20");
         const skip = (page - 1) * limit;
 
-        // 3. Get all active subscriptions for MRR calculation
-        const activeSubscriptions = await prisma.tenantSubscription.findMany({
-            where: { status: "ACTIVE" },
+        // 3. Get all active entitlements for MRR calculation (Plan model)
+        const activeEntitlements = await prisma.tenantEntitlement.findMany({
+            where: { status: "active" },
             include: { plan: true, tenant: { select: { id: true, name: true, email: true } } },
         });
 
-        const mrr = activeSubscriptions.reduce(
-            (sum: number, sub) => sum + Number(sub.plan?.price ?? 0),
+        const mrr = activeEntitlements.reduce(
+            (sum: number, ent) => sum + Number(ent.plan?.priceMonthly ?? 0),
             0
         );
         const arr = mrr * 12;
@@ -97,8 +97,8 @@ export async function GET(request: Request) {
             0
         );
 
-        // 7. Plan distribution
-        const planDistribution = await prisma.tenantSubscription.groupBy({
+        // 7. Plan distribution (from TenantEntitlement)
+        const planDistribution = await prisma.tenantEntitlement.groupBy({
             by: ["status"],
             _count: true,
         });
@@ -111,20 +111,20 @@ export async function GET(request: Request) {
                     mrr,
                     arr,
                     churnRate,
-                    totalActiveSubscriptions: activeSubscriptions.length,
+                    totalActiveSubscriptions: activeEntitlements.length,
                     totalTenants,
                     totalOverdueAmount,
                     overdueCount: overdueInvoices.length,
                 },
-                activeSubscriptions: activeSubscriptions.map((sub) => ({
-                    id: sub.id,
-                    tenantName: sub.tenant?.name || "Unknown",
-                    tenantEmail: sub.tenant?.email || "",
-                    plan: sub.plan?.name || "Unknown",
-                    price: Number(sub.plan?.price ?? 0),
-                    status: sub.status,
-                    startDate: sub.startDate.toISOString(),
-                    endDate: sub.endDate?.toISOString() || null,
+                activeSubscriptions: activeEntitlements.map((ent) => ({
+                    id: ent.id,
+                    tenantName: ent.tenant?.name || "Unknown",
+                    tenantEmail: ent.tenant?.email || "",
+                    plan: ent.plan?.name || "Unknown",
+                    price: Number(ent.plan?.priceMonthly ?? 0),
+                    status: ent.status.toUpperCase(),
+                    startDate: ent.currentPeriodStart.toISOString(),
+                    endDate: ent.currentPeriodEnd.toISOString(),
                 })),
                 paymentHistory: invoices.map((inv) => ({
                     id: inv.id,

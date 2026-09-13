@@ -153,68 +153,72 @@ export async function POST(request: Request) {
             },
         });
 
-        // If payment is confirmed, activate entitlement
+        // If payment is confirmed, activate entitlement via Plan model
         if (isPaid) {
-            // Find the subscription to get the plan
-            const subscription = await prisma.tenantSubscription.findUnique({
-                where: { id: payment.subscriptionId },
+            // Find the existing entitlement to get the current plan
+            const entitlement = await prisma.tenantEntitlement.findUnique({
+                where: { tenantId: payment.tenantId },
                 include: { plan: true },
             });
 
-            if (subscription?.plan) {
-                // Find or create the Plan in entitlement system
+            const planSlug = entitlement?.plan?.slug;
+
+            if (planSlug) {
+                // Ensure Plan exists in the entitlement system
                 let plan = await prisma.plan.findUnique({
-                    where: { slug: subscription.plan.slug },
+                    where: { slug: planSlug },
                 });
 
-                if (!plan) {
-                    // Create plan from subscription plan
+                if (!plan && entitlement?.plan) {
+                    // Bridge: create Plan from legacy SubscriptionPlan data if missing
                     plan = await prisma.plan.create({
                         data: {
-                            name: subscription.plan.name,
-                            slug: subscription.plan.slug,
-                            description: subscription.plan.description,
-                            priceMonthly: subscription.plan.price,
+                            name: entitlement.plan.name,
+                            slug: entitlement.plan.slug,
+                            description: entitlement.plan.description,
+                            priceMonthly: entitlement.plan.priceMonthly,
                             priceYearly: null,
-                            maxUsers: subscription.plan.maxUsers,
+                            maxUsers: entitlement.plan.maxUsers,
                             maxStorage: null,
-                            sortOrder: subscription.plan.sortOrder,
+                            sortOrder: entitlement.plan.sortOrder,
                         },
                     });
                 }
 
-                // Activate entitlement
-                const now = new Date();
-                const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                if (plan) {
+                    // Activate entitlement
+                    const now = new Date();
+                    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-                await prisma.tenantEntitlement.upsert({
-                    where: { tenantId: payment.tenantId },
-                    update: {
-                        planId: plan.id,
-                        status: 'active',
-                        currentPeriodStart: now,
-                        currentPeriodEnd: periodEnd,
-                    },
-                    create: {
-                        tenantId: payment.tenantId,
-                        planId: plan.id,
-                        status: 'active',
-                        currentPeriodStart: now,
-                        currentPeriodEnd: periodEnd,
-                    },
-                });
+                    await prisma.tenantEntitlement.upsert({
+                        where: { tenantId: payment.tenantId },
+                        update: {
+                            planId: plan.id,
+                            status: 'active',
+                            currentPeriodStart: now,
+                            currentPeriodEnd: periodEnd,
+                        },
+                        create: {
+                            tenantId: payment.tenantId,
+                            planId: plan.id,
+                            status: 'active',
+                            currentPeriodStart: now,
+                            currentPeriodEnd: periodEnd,
+                        },
+                    });
 
-                // Update tenant subscription status
-                await prisma.tenant.update({
-                    where: { id: payment.tenantId },
-                    data: {
-                        subscriptionStatus: 'ACTIVE',
-                        currentPlanSlug: subscription.plan.slug,
-                    },
-                });
+                    // Update tenant subscription status
+                    await prisma.tenant.update({
+                        where: { id: payment.tenantId },
+                        data: {
+                            subscriptionStatus: 'ACTIVE',
+                            currentPlanSlug: planSlug,
+                        },
+                    });
 
-                // Invalidate cache
-                invalidateEntitlementCache(payment.tenantId);
+                    // Invalidate cache
+                    invalidateEntitlementCache(payment.tenantId);
+                }
             }
 
             logger.info(`[Webhook] Payment VERIFIED for order: ${orderId}, entitlement activated`);
