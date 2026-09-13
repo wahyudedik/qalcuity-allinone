@@ -39,6 +39,7 @@ export async function GET(request: Request) {
                 createdAt: true,
             },
             orderBy: { createdAt: 'asc' },
+            take: 100,
         })
 
         const data = members.map((member) => ({

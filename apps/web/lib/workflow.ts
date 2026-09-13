@@ -169,6 +169,8 @@ export async function loadWorkflowsToCache(tenantId: string): Promise<void> {
     });
 
     for (const def of definitions) {
+        // Prisma JSON fields return Prisma.JsonValue (union of primitives/arrays/objects),
+        // which doesn't structurally overlap with WorkflowDefinition — intermediate unknown cast required.
         const config = def.config as unknown as WorkflowDefinition;
         WorkflowEngine.registerWorkflow(tenantId, def.entityType, config);
     }

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { createContactSchema, updateContactSchema, formatZodError } from '@/lib/validation-schemas';
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
             },
         });
 
-        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Contact', entityId: contact.id, newValues: contact as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Contact', entityId: contact.id, newValues: toAuditPayload(contact), request });
 
         return NextResponse.json({ success: true, data: contact }, { status: 201 });
     } catch (error) {
@@ -260,7 +260,7 @@ export async function DELETE(request: Request) {
             );
         }
 
-        void logAudit({ userId, tenantId: authTenantId, action: 'DELETE', entity: 'Contact', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId: authTenantId, action: 'DELETE', entity: 'Contact', entityId: id, oldValues: toAuditPayload(existing), request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

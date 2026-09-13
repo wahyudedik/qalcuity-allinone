@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 12, 2026 (Session 9: Global Audit Fixes — v11.1.0)
+**Last Updated:** September 13, 2026 (Session 19: TypeScript Cleanup + Security Alerts + Redis Cache — v11.9.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 15.0 — Session 9: Global Audit, 146 Zod schemas, 100% rate limiting, Cron scheduler, ~100/100 health score
+**Document Version:** 18.0 — Session 19: securityAlerts activated, Redis-backed cache, ~11 remaining casts documented, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -108,7 +108,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-08 | Custom provider, 1170+ keys, all modules localized (Settings 135+, POS 130+, 70 new status label keys, backend api-messages.ts 310+ constants) |
 | **Responsive Design** | 🚀 `production_ready` | 2026-09-01 | Mobile-first, 44x44px touch targets, Reports page 12 sub-components |
 | **Responsive Tables** | 🚀 `production_ready` | 2026-09-01 | Dual layout: mobile cards + desktop tables (19 pages) |
-| **Zod Validation** | 🚀 `production_ready` | 2026-09-08 | 146 schemas, all mutation routes validated |
+| **Zod Validation** | 🚀 `production_ready` | 2026-09-08 | 153 schemas, all mutation routes validated |
 | **RBAC Defense-in-depth** | 🚀 `production_ready` | 2026-08-30 | Middleware + API route + UI visibility |
 | **Lucide Icons** | 🚀 `production_ready` | 2026-08-30 | Consistent icon system across all modules |
 | **Empty States** | 🚀 `production_ready` | 2026-08-30 | All CRUD pages have empty state components |
@@ -120,7 +120,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Error Handling Consolidation** | 🚀 `production_ready` | 2026-09-08 | 27 API routes refactored with centralized `handleApiError()`, 35 catch blocks consolidated, ~95%+ error handling coverage |
 | **Backend i18n** | 🚀 `production_ready` | 2026-09-08 | [`api-messages.ts`](apps/web/lib/api-messages.ts) with 310+ English constants, 200+ API route files migrated from hardcoded strings |
 | **Inline Error Banners** | 🚀 `production_ready` | 2026-09-01 | Inline error display on form pages — replaces silent failures |
-| **Security Hardening** | 🚀 `production_ready` | 2026-09-12 | .gitignore hardened, .env removed from git history, 146 Zod schemas (all mutation routes), 100% rate limiting coverage |
+| **Security Hardening** | 🚀 `production_ready` | 2026-09-12 | .gitignore hardened, .env removed from git history, 153 Zod schemas (all mutation routes), 100% rate limiting coverage, 64 unsafe casts refactored to `toAuditPayload()`, platform settings enforced (maintenanceMode, allowRegistration, emailNotifications) |
 | **.env.example Updated** | 🚀 `production_ready` | 2026-09-01 | Comprehensive env template with comments for all config vars |
 | **Deploy Scripts** | 🚀 `production_ready` | 2026-09-08 | aaPanel Node.js Project Manager, configurable port, robust db:push, update.sh |
 | **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |
@@ -536,9 +536,9 @@ Omnichannel support yang terintegrasi.
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Data Lineage** | 📋 `planned` | — | Track metric origins and transformations: Revenue → Invoice → InvoiceItem → Product → COGS. Interactive lineage graph |
-| **Anomaly Detection** | 📋 `planned` | — | Deteksi anomali statistik: current vs normal range, severity levels (Critical/High/Medium/Low), auto-alerts |
+| **Anomaly Detection** | 🚀 `production_ready` | 2026-09-10 | Deteksi anomali statistik: 12 rule-based rules + AI enrichment, severity levels (Critical/High/Medium/Low), cron daily 02:00, API + UI — [`apps/web/lib/ai/anomaly-detection.ts`](apps/web/lib/ai/anomaly-detection.ts), [`/api/ai/anomalies`](apps/web/app/api/ai/anomalies/) |
 | **Forecasting** | 📋 `planned` | — | Prediksi time series: sales forecasting, cash flow prediction, inventory demand. Time series algorithms |
-| **Analytics Read Model** | 📋 `planned` | — | Materialized views untuk performa: ERP DB → Materialized Views → Read-only SQL Engine → Analyst. Auto-refresh |
+| **Analytics Read Model** | 🔄 `partial` | 2026-09-10 | 3 materialized views (`mv_daily_revenue`, `mv_top_products`, `mv_pos_sales_summary`), refresh function, API route `/api/analytics/refresh`, dashboard uses MVs with fallback |
 | **Industry Analytics** | 📋 `planned` | — | Configurable analytics templates per industri: Retail, Manufacturing, Construction, Service |
 | **Advanced Segmentation** | 📋 `planned` | — | Customer/product segmentation: clustering algorithms, behavioral segmentation, RFM analysis |
 
@@ -670,7 +670,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **REST API** | 🔄 `partial` | — | 120+ routes, belum public API documentation |
+| **REST API** | 🔄 `partial` | — | 400+ handlers across 228 route files, belum public API documentation |
 | **GraphQL** | 📋 `planned` | — | Belum ada kode |
 | **Webhook** | 📋 `planned` | — | Belum ada kode |
 | **API Documentation** | 📋 `planned` | — | Belum ada kode |
@@ -739,7 +739,7 @@ Enterprise-grade security untuk data protection.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Audit Trail** | 🚀 `production_ready` | 2026-08-31 | 132 audit calls across all mutation endpoints |
+| **Audit Trail** | 🚀 `production_ready` | 2026-08-31 | 300+ audit calls across all mutation endpoints |
 | **GDPR Ready** | 📋 `planned` | — | Belum ada kode |
 | **Indonesian Regulation (PDP)** | 📋 `planned` | — | Belum ada kode |
 | **SOC 2 Type II** | 📋 `planned` | — | Target Phase 3 |
@@ -960,8 +960,8 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **Permission Model (Prisma)** | 🚀 `production_ready` | 2026-09-01 | User → Membership → Role → Permission → Scope → Resource → Action |
 | **@qalcuity/permissions package** | 🚀 `production_ready` | 2026-09-01 | Shared package for Web, Mobile, Desktop, API, AI Agent |
 | **Permission Middleware** | 🚀 `production_ready` | 2026-09-01 | API route-level permission enforcement via `@qalcuity/permissions` |
-| **Permission Engine Integration (Batch 7A)** | 🚀 `production_ready` | 2026-09-01 | ~90 API routes integrated with `can()` checks via `route-permissions.ts` |
-| **Permission Hooks (usePermission)** | 📋 `planned` | — | UI-level permission-based conditional rendering (Phase 11) |
+| **Permission Engine Integration (Batch 7A)** | 🚀 `production_ready` | 2026-09-01 | 165 API routes integrated with `can()` checks via `route-permissions.ts` |
+| **Permission Hooks (usePermission)** | 🚀 `production_ready` | 2026-09-10 | UI-level permission hook [`usePermission`](apps/web/lib/use-permission.ts) — used in 86+ pages for conditional rendering |
 | **Platform Permissions** | 🚀 `production_ready` | 2026-09-01 | Internal Qalcuity: tenant.view, subscription.manage, system.monitor |
 | **Tenant Permissions** | 🚀 `production_ready` | 2026-09-01 | Customer org: invoice.approve, employee.view, payroll.manage |
 | **Scope Support** | 🚀 `production_ready` | 2026-09-01 | Branch + Department level permissions |
@@ -1439,6 +1439,18 @@ Electron-based desktop application.
 | **IP Allowlist** | 📋 `planned` | — | Per-tenant IP restriction |
 | **Session Management** | 📋 `planned` | — | View/revoke active sessions per tenant |
 
+#### Platform Settings
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Platform Settings (Database)** | 🚀 `production_ready` | 2026-09-13 | PlatformSetting + PlanTenantLimit models in PostgreSQL, upsert pattern — [`apps/web/lib/platform-settings.ts`](apps/web/lib/platform-settings.ts) |
+| **Maintenance Mode** | 🚀 `production_ready` | 2026-09-13 | Blocks MEMBER/VIEWER access in middleware when enabled — [`apps/web/middleware.ts`](apps/web/middleware.ts) |
+| **Allow Registration Toggle** | 🚀 `production_ready` | 2026-09-13 | Blocks web + mobile registration when disabled — [`apps/web/app/api/auth/register/`](apps/web/app/api/auth/register/), [`apps/web/app/api/mobile/auth/register/`](apps/web/app/api/mobile/auth/register/) |
+| **Email Notifications Toggle** | 🚀 `production_ready` | 2026-09-13 | Skips email sending when disabled — email sending functions |
+| **Plan Tenant Limit** | 🚀 `production_ready` | 2026-09-13 | `checkPlanTenantLimit()` enforces per-plan tenant limits during registration (fail-open strategy) |
+| **Platform Settings Cache** | 🚀 `production_ready` | 2026-09-13 | Redis-backed two-tier cache (L1 Redis + L2 in-memory fallback) for platform settings — reduces database queries, Redis optional with graceful fallback |
+| **Security Alerts Toggle** | 🚀 `production_ready` | 2026-09-13 | Controls security alert emails (forgot-password, anomaly detection) — [`apps/web/lib/email.ts`](apps/web/lib/email.ts), [`apps/web/app/api/auth/forgot-password/route.ts`](apps/web/app/api/auth/forgot-password/route.ts) |
+
 ### 19.3 Superadmin Roles
 
 | Role | Scope | Key Permissions | Status | Notes |
@@ -1469,16 +1481,17 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~83 | ~46% |
+| `production_ready` | 🚀 | ~85 | ~47% |
 | `implemented` | ✅ | ~33 | ~18% |
 | `verified` | ✔️ | 1 | ~1% |
-| `partial` | 🔄 | ~19 | ~11% |
+| `partial` | 🔄 | ~20 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~139 | ~38% |
+| `planned` | 📋 | ~136 | ~37% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~289** | **100%** |
 
+> **Session 14 Impact (13 Sep):** +2 production_ready (Anomaly Detection, usePermission Hook), +1 partial (Analytics Read Model/MVs) → Net: production_ready 83→85, partial 19→20, planned 139→136
 > **Session 9 Impact (12 Sep):** +18 production_ready (POS Terminal, Refunds, Shift Mgmt, Cashier Mgmt, Offline Mode, Audit Trail, Dashboard, Transactions, Sessions, Terminals, Reports, Loyalty, Analytics, Multi-terminal, Kitchen Display, Kitchen API, Table Mgmt, Table API), -15 implemented → Net: production_ready 65→83, implemented 48→33
 > **Session 8 (11 Sep):** POS Products full CRUD (6 entities), 310+ API message constants, i18n backend migration
 > **Session 7 (10 Sep):** Codebase audit: 630+ TS files, 209 API route files, 100+ indexes, health ~100/100
@@ -1492,6 +1505,35 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v18.0.0 (September 13, 2026) — Session 19: TypeScript Cleanup + Security Alerts + Redis Cache (v11.9.0)
+- **Remaining `as unknown as` Cast Improvement** — 4 casts removed/fixed, 9 casts documented with explanatory comments, 2 casts intentionally kept (db.ts singleton)
+- **`securityAlerts` Setting Activated** — Security alert emails now controlled by platform setting: forgot-password route + anomaly detection alerts
+- **Redis-backed Cache Upgrade** — Platform settings cache upgraded from single-tier (in-memory) to two-tier (Redis L1 + in-memory L2), Redis optional with graceful fallback
+- **Platform Settings Complete** — All 4 settings now fully active: maintenanceMode, allowRegistration, emailNotifications, securityAlerts
+- **Security Hardening Update** — Updated Security Hardening entry with securityAlerts + Redis cache details
+- **Status Summary** — +1 production_ready (Security Alerts Toggle), Cache description updated
+- **Version** — v11.8.0 → v11.9.0
+
+### v17.0.0 (September 13, 2026) — Session 18: Cast Refactoring + Platform Settings Consumption (v11.8.0)
+- **`as unknown as` Cast Refactoring** — 64 unsafe casts refactored to type-safe `toAuditPayload()` across 45 files (28 Finance + 30 CRM/HR/Inventory/Projects/Settings/Tasks/Approval + 6 POS offline sync)
+- **Platform Settings Consumption** — 3 platform settings now actively enforced: `maintenanceMode` (middleware), `allowRegistration` (registration routes), `emailNotifications` (email sending)
+- **Platform Settings Cache** — In-memory cache with TTL 60s via [`apps/web/lib/platform-settings.ts`](apps/web/lib/platform-settings.ts) to reduce database queries
+- **PlanTenantLimit Enforcement** — `checkPlanTenantLimit()` function enforces per-plan tenant limits during web + mobile registration (fail-open strategy)
+- **Platform Settings Features** — 7 new entries added to Section 19.2: Platform Settings (DB), Maintenance Mode, Allow Registration, Email Notifications, Plan Tenant Limit, Cache, Security Alerts
+- **Zod Validation Update** — 149 → 153 schemas (mobile auth, support tickets, security sessions from Session 15)
+- **Security Hardening Update** — Updated Security Hardening entry with cast refactoring + platform settings enforcement details
+- **Status Summary** — No change in production_ready count (code quality improvement, not new features)
+- **Version** — v11.5.0 → v11.8.0
+
+### v16.0.0 (September 13, 2026) — Session 14: Documentation Sync (v11.5.0)
+- **FEATURES.md Audit Sync** — 12 discrepancies fixed: status updates, count corrections, version bump
+- **Anomaly Detection** — Upgraded `planned` → `production_ready` (full implementation verified: engine, scan handler, API, cron, UI, Prisma model)
+- **usePermission Hook** — Upgraded `planned` → `production_ready` (implemented at `apps/web/lib/use-permission.ts`, used in 86+ pages)
+- **Analytics Read Model** — Upgraded `planned` → `partial` (3 materialized views + refresh function + API + dashboard integration)
+- **Count Corrections** — API routes: 120+ → 400+ handlers (228 files), Audit calls: 132 → 300+, RBAC routes: ~90 → 165, Zod schemas: 146 → 149
+- **Version** — v11.1.0 → v11.5.0
+- **Status Summary** — production_ready: 83→85, partial: 19→20, planned: 139→136
 
 ### v15.0.0 (September 12, 2026) — Session 9: Global Audit Fixes (v11.1.0)
 - **Global Audit Fixes** — 146 Zod schemas, 100% rate limiting coverage, API error handling consolidation
@@ -1791,6 +1833,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 12, 2026 (Session 9: Global Audit Fixes — v11.1.0)
+**Last Updated:** September 13, 2026 (Session 19: TypeScript Cleanup + Security Alerts + Redis Cache — v11.9.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 15.0 — Session 9: Global Audit, 146 Zod schemas, 100% rate limiting, ~100/100 health score
+**Document Version:** 18.0 — Session 19: securityAlerts activated, Redis-backed cache, ~11 remaining casts documented, 153 Zod schemas, 400+ API routes, 165 RBAC routes

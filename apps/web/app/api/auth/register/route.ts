@@ -9,9 +9,29 @@ import { sanitizeInput } from "@/lib/sanitize";
 import { sendWelcomeEmail } from "@/lib/email";
 import { logger } from '@/lib/logger';
 import { registerSchema, formatZodError } from '@/lib/validation-schemas';
+import { getPlatformSettings, checkPlanTenantLimit } from '@/lib/platform-settings';
 
 export async function POST(request: Request) {
     try {
+        // Check if registration is allowed
+        const platformSettings = await getPlatformSettings();
+        if (platformSettings && !platformSettings.allowRegistration) {
+            return NextResponse.json(
+                { error: "Registration is currently disabled", code: 'REGISTRATION_DISABLED' },
+                { status: 403 }
+            );
+        }
+
+        // Check plan tenant limit (default plan: "starter")
+        const planName = 'starter';
+        const limitCheck = await checkPlanTenantLimit(planName);
+        if (!limitCheck.allowed) {
+            return NextResponse.json(
+                { error: MSG.TENANT_LIMIT_REACHED, code: 'TENANT_LIMIT_REACHED', details: { current: limitCheck.current, limit: limitCheck.limit } },
+                { status: 403 }
+            );
+        }
+
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:register:${ip}`, 5, 300000);
         if (!rateLimitResult.success) {

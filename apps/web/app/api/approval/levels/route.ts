@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createApprovalLevelSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
             action: 'CREATE',
             entity: 'ApprovalLevel',
             entityId: created.id,
-            newValues: created as unknown as Record<string, unknown>,
+            newValues: toAuditPayload(created),
             request,
         });
 

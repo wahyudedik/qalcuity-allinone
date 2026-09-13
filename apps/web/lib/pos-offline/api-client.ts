@@ -21,6 +21,7 @@ import {
 } from './db';
 import { SyncEngine } from './sync';
 import { logger } from '@/lib/logger';
+import { toAuditPayload } from '@/lib/audit';
 
 // =============================================================================
 // Types
@@ -238,8 +239,8 @@ export async function createTransaction(
             type: 'CREATE_TRANSACTION',
             entityType: 'transaction',
             entityId: tx.localId,
-            data: tx as unknown as Record<string, unknown>,
-            payload: tx as unknown as Record<string, unknown>,
+            data: toAuditPayload(tx),
+            payload: toAuditPayload(tx),
             endpoint: '/api/pos/transactions',
             method: 'POST',
             idempotencyKey: tx.idempotencyKey,
@@ -286,8 +287,8 @@ export async function createTransaction(
                 type: 'CREATE_TRANSACTION',
                 entityType: 'transaction',
                 entityId: tx.localId,
-                data: tx as unknown as Record<string, unknown>,
-                payload: tx as unknown as Record<string, unknown>,
+                data: toAuditPayload(tx),
+                payload: toAuditPayload(tx),
                 endpoint: '/api/pos/transactions',
                 method: 'POST',
                 idempotencyKey: tx.idempotencyKey,
@@ -328,8 +329,8 @@ export async function createTransaction(
             type: 'CREATE_TRANSACTION',
             entityType: 'transaction',
             entityId: tx.localId,
-            data: tx as unknown as Record<string, unknown>,
-            payload: tx as unknown as Record<string, unknown>,
+            data: toAuditPayload(tx),
+            payload: toAuditPayload(tx),
             endpoint: '/api/pos/transactions',
             method: 'POST',
             idempotencyKey: tx.idempotencyKey,

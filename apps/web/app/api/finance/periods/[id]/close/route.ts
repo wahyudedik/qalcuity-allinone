@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateYearlyPeriods } from '@/lib/period-closing';
 import { handleApiError } from '@/lib/api-error';
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
         void logAudit({
             userId, tenantId, action: 'CREATE', entity: 'AccountingPeriod',
             entityId: period.id,
-            newValues: period as unknown as Record<string, unknown>,
+            newValues: toAuditPayload(period),
             request,
         });
 

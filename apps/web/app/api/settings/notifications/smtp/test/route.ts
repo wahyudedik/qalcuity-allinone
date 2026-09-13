@@ -15,6 +15,7 @@ interface SmtpTestRequest {
     smtpEmail: string
     smtpPassword: string
     useTLS: boolean
+    allowSelfSigned?: boolean
 }
 
 /**
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth
         const body = await request.json()
 
-        const { smtpHost, smtpPort, smtpEmail, useTLS } = body as SmtpTestRequest
+        const { smtpHost, smtpPort, smtpEmail, useTLS, allowSelfSigned } = body as SmtpTestRequest
 
         // Validate required fields
         if (!smtpHost || !smtpPort || !smtpEmail) {
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
                     {
                         host: smtpHost,
                         port,
-                        rejectUnauthorized: false, // Allow self-signed certs for testing
+                        rejectUnauthorized: !allowSelfSigned, // TLS validation enabled by default; opt-in for self-signed certs
                     },
                     () => {
                         if (!resolved) {

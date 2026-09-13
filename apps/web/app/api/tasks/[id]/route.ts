@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { updateTaskSchema, formatZodError } from '@/lib/validation-schemas';
@@ -194,7 +194,7 @@ export async function PUT(request: Request, context: RouteContext) {
                 priority: existing.priority,
                 progress: existing.progress,
             },
-            newValues: validation.data as unknown as Record<string, unknown>,
+            newValues: toAuditPayload(validation.data),
             request,
         });
 

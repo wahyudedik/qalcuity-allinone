@@ -22,6 +22,7 @@ import { MSG } from '@/lib/api-messages';
 import { authenticateMobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { mobileLoginSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function POST(request: Request) {
     try {
@@ -36,22 +37,17 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { email, password } = body;
 
-        // Validate required fields
-        if (!email || !password) {
+        // Zod validation
+        const validation = mobileLoginSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Email and password are required', code: 'VALIDATION_ERROR' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
-        if (typeof email !== 'string' || typeof password !== 'string') {
-            return NextResponse.json(
-                { success: false, error: 'Invalid input format', code: 'VALIDATION_ERROR' },
-                { status: 400 }
-            );
-        }
+        const { email, password } = validation.data;
 
         // Authenticate
         const result = await authenticateMobileUser(email.trim().toLowerCase(), password);

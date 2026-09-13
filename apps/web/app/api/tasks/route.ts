@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createTaskSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
             action: 'CREATE',
             entity: 'Task',
             entityId: task.id,
-            newValues: validation.data as unknown as Record<string, unknown>,
+            newValues: toAuditPayload(validation.data),
             request,
         });
 

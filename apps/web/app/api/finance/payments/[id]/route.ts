@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { processPaymentSchema, formatZodError } from '@/lib/validation-schemas';
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
       entity: 'Payment',
       entityId: payment.id,
       newValues: {
-        ...payment as unknown as Record<string, unknown>,
+        ...toAuditPayload(payment),
         gateway: providerName,
         orderId,
       },
@@ -172,6 +172,6 @@ export async function POST(request: Request) {
       },
     }, { status: 201 });
   } catch (error) {
-      return handleApiError(error);
+    return handleApiError(error);
   }
 }

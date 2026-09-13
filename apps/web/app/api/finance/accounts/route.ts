@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { createCoAAccountSchema, updateCoAAccountSchema } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
             action: 'CREATE',
             entity: 'CoAAccount',
             entityId: newAccount.id,
-            newValues: newAccount as unknown as Record<string, unknown>,
+            newValues: toAuditPayload(newAccount),
             request,
         });
 
@@ -242,8 +242,8 @@ export async function PUT(request: Request) {
             action: 'UPDATE',
             entity: 'CoAAccount',
             entityId: id,
-            oldValues: existing as unknown as Record<string, unknown>,
-            newValues: updated as unknown as Record<string, unknown>,
+            oldValues: toAuditPayload(existing),
+            newValues: toAuditPayload(updated),
             request,
         });
 
@@ -315,7 +315,7 @@ export async function DELETE(request: Request) {
             action: 'DELETE',
             entity: 'CoAAccount',
             entityId: id,
-            oldValues: existing as unknown as Record<string, unknown>,
+            oldValues: toAuditPayload(existing),
             request,
         });
 

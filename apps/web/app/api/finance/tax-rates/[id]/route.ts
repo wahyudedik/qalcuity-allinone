@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createTaxRateSchema, updateTaxRateSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
 
         void logAudit({
             userId, tenantId, action: 'CREATE', entity: 'TaxRate', entityId: taxRate.id,
-            newValues: taxRate as unknown as Record<string, unknown>, request,
+            newValues: toAuditPayload(taxRate), request,
         });
 
         return NextResponse.json({ success: true, data: taxRate }, { status: 201 });

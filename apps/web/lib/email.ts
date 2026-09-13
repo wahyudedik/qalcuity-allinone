@@ -6,6 +6,7 @@ import type { Transporter } from 'nodemailer';
 import { prisma } from './db';
 import { emailTemplates, getEmailTemplate } from './email-templates';
 import { logger } from '@/lib/logger';
+import { getPlatformSettings } from '@/lib/platform-settings';
 
 export interface SendEmailOptions {
     to: string;
@@ -20,12 +21,20 @@ export interface SendEmailOptions {
         content: Buffer | string;
         contentType?: string;
     }>;
+    /**
+     * Optional category tag for platform-setting gating.
+     * - 'security' — gated by `securityAlerts` platform setting
+     * - other values can be added in the future (e.g., 'billing', 'marketing')
+     */
+    category?: string;
 }
 
 export interface SendEmailResult {
     success: boolean;
     messageId?: string;
     error?: string;
+    /** Indicates email was skipped due to platform settings (e.g., emailNotifications disabled) */
+    skipped?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +104,21 @@ function getDefaultFrom(): string {
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
     try {
+        // Check platform settings for email gating
+        const settings = await getPlatformSettings();
+
+        // Check if email notifications are enabled (applies to all emails)
+        if (settings && !settings.emailNotifications) {
+            logger.info('[Email] Skipping — emailNotifications is disabled via platform settings');
+            return { success: true, skipped: true };
+        }
+
+        // Check if security alert emails are enabled (applies to category='security')
+        if (options.category === 'security' && settings && !settings.securityAlerts) {
+            logger.info('[Email] Skipping security email — securityAlerts is disabled via platform settings');
+            return { success: true, skipped: true };
+        }
+
         // Validasi input
         if (!options.to || !options.subject || !options.html) {
             return {

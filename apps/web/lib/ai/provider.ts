@@ -29,7 +29,10 @@ export class OpenAICompatibleProvider implements AIProvider {
 
     constructor(config?: { baseURL?: string; apiKey?: string; model?: string }) {
         const baseURL = config?.baseURL || process.env.AI_BASE_URL || 'https://api.openai.com/v1';
-        const apiKey = config?.apiKey || process.env.AI_API_KEY || 'sk-placeholder';
+        const apiKey = config?.apiKey || process.env.AI_API_KEY;
+        if (!apiKey) {
+            throw new Error('AI_API_KEY environment variable is required for OpenAICompatibleProvider');
+        }
 
         this.client = new OpenAI({ apiKey, baseURL });
         this.defaultModel = config?.model || process.env.AI_MODEL || 'gpt-3.5-turbo';
