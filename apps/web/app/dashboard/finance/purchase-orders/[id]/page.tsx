@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { ArrowLeft, Printer, CheckCircle, FileText, Send, XCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Printer, CheckCircle, FileText, Send, XCircle, Loader2, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface PODetail {
     id: string
@@ -35,12 +37,16 @@ const statusColors: Record<string, string> = {
 export default function PurchaseOrderDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const router = useRouter()
+    const { data: session } = useSession()
+    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
     const [po, setPO] = useState<PODetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
     const [showReceiveConfirm, setShowReceiveConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [processing, setProcessing] = useState(false)
+    const [deleting, setDeleting] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
@@ -143,6 +149,27 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
             setToast({ message: t('finance.purchaseOrdersDetail.toastCancelFailed'), type: 'error' })
         } finally {
             setProcessing(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        try {
+            setDeleting(true)
+            const res = await fetch(`/api/finance/purchase-orders/${params.id}`, {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('finance.purchaseOrdersDetail.toastDeleted') || 'Purchase Order berhasil dihapus', type: 'success' })
+                setShowDeleteConfirm(false)
+                router.push('/dashboard/finance/purchase-orders')
+            } else {
+                setToast({ message: data.error || t('finance.purchaseOrdersDetail.toastDeleteFailed') || 'Gagal menghapus PO', type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('finance.purchaseOrdersDetail.toastDeleteFailed') || 'Gagal menghapus PO', type: 'error' })
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -333,10 +360,30 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                                     {t('finance.purchaseOrdersDetail.cancelPO')}
                                 </button>
                             )}
+                            {canDelete && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleDelete}
+                title={t('finance.purchaseOrdersDetail.deleteConfirmTitle') || 'Konfirmasi Hapus'}
+                message={t('finance.purchaseOrdersDetail.deleteConfirmMessage') || 'Apakah Anda yakin ingin menghapus Purchase Order ini? Tindakan ini tidak dapat dibatalkan.'}
+                confirmText={deleting ? (t('common.deleting') || 'Menghapus...') : (t('common.delete') || 'Hapus')}
+                variant="danger"
+            />
 
             {/* Cancel Confirmation Modal */}
             {showCancelConfirm && (

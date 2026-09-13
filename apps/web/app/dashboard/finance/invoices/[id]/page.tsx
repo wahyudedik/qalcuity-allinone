@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle, CreditCard, Smartphone, QrCode, Building2, Download, Loader2, Bell } from 'lucide-react'
+import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle, CreditCard, Smartphone, QrCode, Building2, Download, Loader2, Bell, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface InvoiceDetail {
     id: string
@@ -35,8 +37,12 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const router = useRouter()
+    const { data: session } = useSession()
+    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
     const [showSendModal, setShowSendModal] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleting, setDeleting] = useState(false)
     const [sendingReminder, setSendingReminder] = useState(false)
     const [invoice, setInvoice] = useState<InvoiceDetail | null>(null)
     const [loading, setLoading] = useState(true)
@@ -150,6 +156,27 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
             setToast({ message: t('finance.invoiceDetail.toastCancelFailed'), type: 'error' })
         } finally {
             setCancelling(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        try {
+            setDeleting(true)
+            const res = await fetch(`/api/finance/invoices/${params.id}`, {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('finance.invoiceDetail.toastDeleted') || 'Invoice berhasil dihapus', type: 'success' })
+                setShowDeleteConfirm(false)
+                router.push('/dashboard/finance/invoices')
+            } else {
+                setToast({ message: data.error || t('finance.invoiceDetail.toastDeleteFailed') || 'Gagal menghapus invoice', type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('finance.invoiceDetail.toastDeleteFailed') || 'Gagal menghapus invoice', type: 'error' })
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -496,6 +523,15 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                                     {t('finance.invoiceDetail.cancelInvoice')}
                                 </button>
                             )}
+                            {canDelete && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="w-full px-4 py-2.5 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -595,6 +631,17 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleDelete}
+                title={t('finance.invoiceDetail.deleteConfirmTitle') || 'Konfirmasi Hapus'}
+                message={t('finance.invoiceDetail.deleteConfirmMessage') || 'Apakah Anda yakin ingin menghapus invoice ini? Tindakan ini tidak dapat dibatalkan.'}
+                confirmText={deleting ? (t('common.deleting') || 'Menghapus...') : (t('common.delete') || 'Hapus')}
+                variant="danger"
+            />
         </div>
     )
 }

@@ -1,8 +1,9 @@
 # Rencana Migrasi: SubscriptionPlan → Plan Model
 
-> **ID Task:** H8  
-> **Tanggal:** 8 September 2026  
-> **Status:** Rencana (belum diimplementasi)  
+> **ID Task:** H8 / Issue #37
+> **Tanggal:** 8 September 2026
+> **Updated:** 12 September 2026
+> **Status:** Partial — Direct code references migrated to Plan/TenantEntitlement
 > **Author:** Qalcuity AI Agent
 
 ---
@@ -406,14 +407,14 @@ Jika model lama masih ada di schema (deploy code baru TANPA hapus model lama):
 
 ### During Migration
 
-- [ ] Phase 0: Persiapan ✅
-- [ ] Phase 1: Data migration ✅
-- [ ] Phase 2: Code updates ✅
-- [ ] Phase 3: BillingPayment migration ✅
-- [ ] Phase 4: Schema cleanup ✅
-- [ ] Phase 5: Tenant fields evaluation ✅
-- [ ] Phase 6: Testing ✅
-- [ ] Phase 7: Deployment ✅
+- [ ] Phase 0: Persiapan
+- [ ] Phase 1: Data migration
+- [x] Phase 2: Code updates — **Partial** (direct `subscriptionPlan` references migrated to `plan` + `tenantEntitlement` in platform/tenants routes, e2e-test, types; billing system routes still use legacy models)
+- [ ] Phase 3: BillingPayment migration
+- [ ] Phase 4: Schema cleanup (remove SubscriptionPlan + TenantSubscription models)
+- [ ] Phase 5: Tenant fields evaluation
+- [ ] Phase 6: Testing
+- [ ] Phase 7: Deployment
 
 ### Post-Migration
 
@@ -453,6 +454,30 @@ Migrasi ini **harus dilakukan** karena:
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 8 September 2026  
-**Next Review:** Setelah approval dari tim
+**Document Version:** 1.1
+**Last Updated:** 12 September 2026 (Issue #37 — partial migration)
+**Next Review:** Setelah billing system migration selesai
+
+### Progress Log
+
+| Date | Change | Files Modified |
+|------|--------|----------------|
+| 12 Sep 2026 | Phase 2 partial: Migrated direct `subscriptionPlan` references to `plan` + `tenantEntitlement` | `platform/tenants/route.ts`, `platform/tenants/[id]/route.ts`, `e2e-test.ts`, `packages/types/src/index.ts`, `packages/db/prisma/seed.ts` |
+
+### Remaining Legacy References (Billing System)
+
+> ⚠️ **File-file ini masih menggunakan model lama** karena `BillingPayment` masih mereferensikan `TenantSubscription`:
+
+| File | Model Used | Reason |
+|------|-----------|--------|
+| `apps/web/app/api/billing/payments/route.ts` | TenantSubscription | CRUD payments |
+| `apps/web/app/api/billing/payments/midtrans/route.ts` | TenantSubscription | Midtrans payment |
+| `apps/web/app/api/billing/payments/midtrans/callback/route.ts` | TenantSubscription | Midtrans callback |
+| `apps/web/app/api/billing/admin/payments/[id]/verify/route.ts` | TenantSubscription | Verify payment |
+| `apps/web/app/api/billing/webhook/route.ts` | TenantSubscription + SubscriptionPlan (bridge) | Webhook handler |
+| `apps/web/app/api/billing/subscription/route.ts` | TenantSubscription | Subscription info |
+| `apps/web/app/api/billing/admin/notifications/route.ts` | TenantSubscription | Notifications |
+| `apps/web/app/api/platform/stats/route.ts` | TenantSubscription | MRR calculation |
+| `apps/web/app/api/platform/billing/route.ts` | TenantSubscription | Billing overview |
+| `apps/web/app/dashboard/settings/billing/page.tsx` | TenantSubscription | Billing UI |
+| `apps/web/app/platform/tenants/[id]/page.tsx` | TenantSubscription | Tenant detail UI |

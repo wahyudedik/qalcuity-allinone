@@ -727,26 +727,36 @@ export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'PENDING_PAYMENT' | 'SUSPE
 export type BillingPeriod = 'monthly' | 'yearly';
 export type PaymentTransactionStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
-export interface SubscriptionPlan {
+export interface Plan {
     id: ID;
     name: string;
     slug: string;
     description?: string;
-    price: number;
-    billingPeriod: BillingPeriod;
+    priceMonthly: number;
+    priceYearly?: number | null;
     maxUsers: number;
-    maxProducts: number;
-    maxStorage?: string;
-    features?: string[];
+    maxStorage?: number | null; // in MB
     isActive: boolean;
     sortOrder: number;
+    features?: PlanFeature[];
 }
+
+export interface PlanFeature {
+    id: ID;
+    planId: ID;
+    featureKey: string;
+    enabled: boolean;
+    limit?: number | null;
+}
+
+/** @deprecated Use `Plan` instead. Will be removed in a future version. */
+export type SubscriptionPlan = Plan;
 
 export interface TenantSubscription {
     id: ID;
     tenantId: ID;
     planId: ID;
-    plan?: SubscriptionPlan;
+    plan?: Plan;
     status: SubscriptionStatus;
     startDate: Timestamp;
     endDate?: Timestamp;

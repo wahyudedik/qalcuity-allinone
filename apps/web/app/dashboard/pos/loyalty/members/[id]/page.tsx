@@ -9,7 +9,9 @@ import { useRouter } from 'next/navigation'
 import {
     ArrowLeft, Loader2, Award, Star, CreditCard,
     ChevronLeft, ChevronRight, Plus, Minus,
+    Trash2,
 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type MemberDetail = {
     id: string
@@ -60,6 +62,11 @@ export default function LoyaltyMemberDetailPage({ params }: { params: { id: stri
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [deleting, setDeleting] = useState(false)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<(() => Promise<void>) | null>(null)
+    const [confirmTitle, setConfirmTitle] = useState('')
+    const [confirmMessage, setConfirmMessage] = useState('')
 
     // Adjust points modal
     const [showAdjustModal, setShowAdjustModal] = useState(false)
@@ -124,6 +131,31 @@ export default function LoyaltyMemberDetailPage({ params }: { params: { id: stri
         }
     }
 
+    const handleDelete = () => {
+        setConfirmTitle('Hapus Member')
+        setConfirmMessage(`Apakah Anda yakin ingin menghapus member "${member?.name}"? Semua data poin dan transaksi akan dihapus.`)
+        setConfirmAction(() => async () => {
+            try {
+                setDeleting(true)
+                const response = await fetch(`/api/pos/loyalty/members/${params.id}`, {
+                    method: 'DELETE',
+                })
+                const result = await response.json()
+                if (result.success) {
+                    setToast({ message: 'Member berhasil dihapus', type: 'success' })
+                    router.push('/dashboard/pos/loyalty/members')
+                } else {
+                    setToast({ message: result.error || 'Gagal menghapus member', type: 'error' })
+                }
+            } catch {
+                setToast({ message: 'Gagal menghapus member', type: 'error' })
+            } finally {
+                setDeleting(false)
+            }
+        })
+        setShowConfirmDialog(true)
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
@@ -149,9 +181,8 @@ export default function LoyaltyMemberDetailPage({ params }: { params: { id: stri
         <div className="space-y-6">
             {/* Toast */}
             {toast && (
-                <div className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-                    toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                }`}>
+                <div className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
                     {toast.message}
                 </div>
             )}
@@ -181,15 +212,27 @@ export default function LoyaltyMemberDetailPage({ params }: { params: { id: stri
                             {member.phone && <p className="text-sm text-gray-500 dark:text-gray-400">{member.phone}</p>}
                         </div>
                     </div>
-                    {canAdjust && (
-                        <button
-                            onClick={() => setShowAdjustModal(true)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                        >
-                            <CreditCard className="h-4 w-4" />
-                            {t('pos.loyalty.adjustPoints')}
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {canAdjust && (
+                            <button
+                                onClick={() => setShowAdjustModal(true)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                            >
+                                <CreditCard className="h-4 w-4" />
+                                {t('pos.loyalty.adjustPoints')}
+                            </button>
+                        )}
+                        {isAdmin() && (
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:bg-gray-700 dark:text-red-400 dark:hover:bg-red-900/30"
+                            >
+                                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                {t('common.delete') || 'Hapus'}
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Stats */}
@@ -308,6 +351,24 @@ export default function LoyaltyMemberDetailPage({ params }: { params: { id: stri
                     </div>
                 </div>
             )}
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={showConfirmDialog}
+                onClose={() => {
+                    setShowConfirmDialog(false)
+                    setConfirmAction(null)
+                }}
+                onConfirm={async () => {
+                    if (confirmAction) await confirmAction()
+                    setShowConfirmDialog(false)
+                    setConfirmAction(null)
+                }}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmText={t('common.confirm')}
+                variant="danger"
+            />
         </div>
     )
 }

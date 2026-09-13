@@ -27,6 +27,7 @@ import {
     BarChart3,
 } from "lucide-react";
 import { exportToCSV } from "@/lib/export";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PlanFeature {
@@ -182,6 +183,8 @@ export default function PlatformBillingPage() {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [planToDelete, setPlanToDelete] = useState<Plan | null>(null);
 
     // Payment history state
     const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -333,10 +336,15 @@ export default function PlatformBillingPage() {
     };
 
     const handleDelete = async (plan: Plan) => {
-        if (!confirm(`${t('platform.billingPage.confirmDelete')} "${plan.name}"?`)) return;
+        setPlanToDelete(plan);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!planToDelete) return;
 
         try {
-            const res = await fetch(`/api/admin/plans/${plan.id}`, { method: "DELETE" });
+            const res = await fetch(`/api/admin/plans/${planToDelete.id}`, { method: "DELETE" });
             const data = await res.json();
             if (data.success) {
                 setMessage({ type: "success", text: data.message });
@@ -346,6 +354,9 @@ export default function PlatformBillingPage() {
             }
         } catch {
             setMessage({ type: "error", text: t('platform.billingPage.errorDelete') });
+        } finally {
+            setShowDeleteConfirm(false);
+            setPlanToDelete(null);
         }
     };
 
@@ -1126,6 +1137,19 @@ export default function PlatformBillingPage() {
                     </div>
                 </div>
             )}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => {
+                    setShowDeleteConfirm(false);
+                    setPlanToDelete(null);
+                }}
+                onConfirm={confirmDelete}
+                title={t('platform.billingPage.confirmDelete')}
+                message={planToDelete ? `${t('platform.billingPage.confirmDelete')} "${planToDelete.name}"?` : ''}
+                confirmText={t('common.delete')}
+                cancelText={t('common.cancel')}
+                variant="danger"
+            />
         </div>
     );
 }

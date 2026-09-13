@@ -166,6 +166,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/analytics/reports/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/reports/[id]/execute': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/scheduled': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/refresh': { permission: 'analytics:edit', fallbackRole: 'SUPERADMIN' },
 
     // ─── Reports ──────────────────────────────────────────────────────────────
     '/api/reports': { permission: 'reports:view', fallbackRole: 'ADMIN' },
