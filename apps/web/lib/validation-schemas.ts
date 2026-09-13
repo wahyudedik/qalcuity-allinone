@@ -1257,12 +1257,31 @@ export const updateTaskSchema = z.object({
     }).optional(),
     assigneeId: z.string().max(50).optional().nullable(),
     dueDate: z.string().optional().nullable(),
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+    progress: z.number().int('Progress harus bilangan bulat').min(0, 'Progress minimal 0').max(100, 'Progress maksimal 100').optional(),
+    dependsOnId: z.string().optional().nullable(),
     estimatedHours: z.number().min(0, 'Estimasi jam tidak boleh negatif').optional().nullable(),
     actualHours: z.number().min(0, 'Jam aktual tidak boleh negatif').optional().nullable(),
     tags: z.string().max(500, 'Tags maksimal 500 karakter').optional().nullable(),
     sortOrder: z.number().int('Sort order harus bilangan bulat').min(0).optional(),
 }).refine((data) => Object.keys(data).length > 0, {
     message: 'Minimal satu field harus di-update',
+});
+
+export const bulkUpdateTaskSchema = z.object({
+    taskIds: z.array(z.string().min(1, 'ID task wajib diisi')).min(1, 'Minimal satu task harus dipilih').max(100, 'Maksimal 100 task per batch'),
+    updates: z.object({
+        status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'], {
+            message: 'Status harus TODO, IN_PROGRESS, IN_REVIEW, DONE, atau CANCELLED',
+        }).optional(),
+        priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], {
+            message: 'Prioritas harus LOW, MEDIUM, HIGH, atau URGENT',
+        }).optional(),
+        assigneeId: z.string().max(50).optional().nullable(),
+    }).refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus di-update',
+    }),
 });
 
 export const createTimeLogSchema = z.object({

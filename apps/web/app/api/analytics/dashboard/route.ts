@@ -195,12 +195,15 @@ export async function GET(request: Request) {
         // ============================================
         // PARALLEL QUERIES
         // ============================================
+
+        // Materialized view queries for revenue data (fast path)
+        // Plus non-revenue queries — all in parallel for maximum performance
         const [
-            currentInvoices,
-            previousInvoices,
+            mvCurrentRevenue,
+            mvPreviousRevenue,
+            mvRevenueByMonth,
             currentExpenses,
             previousExpenses,
-            revenueByMonth,
             expensesByMonth,
             totalDeals,
             wonDeals,
@@ -212,25 +215,31 @@ export async function GET(request: Request) {
             recentAlerts,
             topKPIs,
         ] = await Promise.all([
-            // Current period revenue
-            prisma.invoice.aggregate({
-                where: {
-                    tenantId,
-                    status: { notIn: ['CANCELLED'] },
-                    createdAt: createdAtFilter,
-                },
-                _sum: { total: true },
-            }),
+            // MV: Current period revenue (fast — pre-aggregated)
+            prisma.$queryRaw<{ total: number | null }[]>`
+                SELECT COALESCE(SUM(total_revenue), 0)::float AS total
+                FROM mv_daily_revenue
+                WHERE "tenantId" = ${tenantId}
+                AND date >= ${currentFrom} AND date <= ${currentTo}
+            `,
 
-            // Previous period revenue
-            prisma.invoice.aggregate({
-                where: {
-                    tenantId,
-                    status: { notIn: ['CANCELLED'] },
-                    createdAt: previousCreatedAtFilter,
-                },
-                _sum: { total: true },
-            }),
+            // MV: Previous period revenue (fast — pre-aggregated)
+            prisma.$queryRaw<{ total: number | null }[]>`
+                SELECT COALESCE(SUM(total_revenue), 0)::float AS total
+                FROM mv_daily_revenue
+                WHERE "tenantId" = ${tenantId}
+                AND date >= ${previousFrom} AND date <= ${previousTo}
+            `,
+
+            // MV: Revenue by month for trend chart (fast — pre-aggregated)
+            prisma.$queryRaw<{ month: string; total: number | null }[]>`
+                SELECT TO_CHAR(date, 'YYYY-MM') AS month,
+                       SUM(total_revenue)::float AS total
+                FROM mv_daily_revenue
+                WHERE "tenantId" = ${tenantId}
+                GROUP BY TO_CHAR(date, 'YYYY-MM')
+                ORDER BY TO_CHAR(date, 'YYYY-MM')
+            `,
 
             // Current period expenses
             prisma.payment.aggregate({
@@ -252,16 +261,6 @@ export async function GET(request: Request) {
                     paymentDate: previousCreatedAtFilter,
                 },
                 _sum: { amount: true },
-            }),
-
-            // Revenue by month
-            prisma.invoice.findMany({
-                where: {
-                    tenantId,
-                    status: { notIn: ['CANCELLED'] },
-                },
-                select: { total: true, createdAt: true },
-                orderBy: { createdAt: 'asc' },
             }),
 
             // Expenses by month
@@ -332,11 +331,72 @@ export async function GET(request: Request) {
         ])
 
         // ============================================
+        // PROCESS MV REVENUE DATA WITH FALLBACK
+        // ============================================
+        // If materialized view has no data for this tenant (first load),
+        // fall back to direct Invoice table queries.
+        const mvHasRevenueData = mvRevenueByMonth.length > 0
+
+        let currentRevenueTotal: number
+        let previousRevenueTotal: number
+        let revenueMonthlyData: Array<{ month: string; value: number }>
+
+        if (mvHasRevenueData) {
+            // Fast path: use materialized view data
+            currentRevenueTotal = toNumber(mvCurrentRevenue[0]?.total)
+            previousRevenueTotal = toNumber(mvPreviousRevenue[0]?.total)
+            revenueMonthlyData = mvRevenueByMonth.map((row) => ({
+                month: row.month,
+                value: toNumber(row.total),
+            }))
+            logger.info(`[Analytics Dashboard] Using mv_daily_revenue for tenant ${tenantId}`)
+        } else {
+            // Fallback: direct queries to Invoice table
+            logger.info(`[Analytics Dashboard] MV empty for tenant ${tenantId}, falling back to direct queries`)
+            const [fallbackCurrent, fallbackPrevious, fallbackByMonth] = await Promise.all([
+                prisma.invoice.aggregate({
+                    where: {
+                        tenantId,
+                        status: { notIn: ['CANCELLED'] },
+                        createdAt: createdAtFilter,
+                    },
+                    _sum: { total: true },
+                }),
+                prisma.invoice.aggregate({
+                    where: {
+                        tenantId,
+                        status: { notIn: ['CANCELLED'] },
+                        createdAt: previousCreatedAtFilter,
+                    },
+                    _sum: { total: true },
+                }),
+                prisma.invoice.findMany({
+                    where: {
+                        tenantId,
+                        status: { notIn: ['CANCELLED'] },
+                    },
+                    select: { total: true, createdAt: true },
+                    orderBy: { createdAt: 'asc' },
+                }),
+            ])
+            currentRevenueTotal = toNumber(fallbackCurrent._sum.total)
+            previousRevenueTotal = toNumber(fallbackPrevious._sum.total)
+
+            const revenueMonthlyMap = new Map<string, number>()
+            for (const inv of fallbackByMonth) {
+                const d = new Date(inv.createdAt)
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+                revenueMonthlyMap.set(key, (revenueMonthlyMap.get(key) || 0) + toNumber(inv.total))
+            }
+            revenueMonthlyData = Array.from(revenueMonthlyMap.entries()).map(([month, value]) => ({ month, value }))
+        }
+
+        // ============================================
         // COMPUTE SUMMARY
         // ============================================
 
-        const totalRevenue = toNumber(currentInvoices._sum.total)
-        const prevRevenue = toNumber(previousInvoices._sum.total)
+        const totalRevenue = currentRevenueTotal
+        const prevRevenue = previousRevenueTotal
         const totalExpenses = toNumber(currentExpenses._sum.amount)
         const prevExpenses = toNumber(previousExpenses._sum.amount)
         const netIncome = totalRevenue - totalExpenses
@@ -390,14 +450,6 @@ export async function GET(request: Request) {
         // ============================================
         // COMPUTE TRENDS
         // ============================================
-
-        const revenueMonthlyMap = new Map<string, number>()
-        for (const inv of revenueByMonth) {
-            const d = new Date(inv.createdAt)
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            revenueMonthlyMap.set(key, (revenueMonthlyMap.get(key) || 0) + toNumber(inv.total))
-        }
-        const revenueMonthlyData = Array.from(revenueMonthlyMap.entries()).map(([month, value]) => ({ month, value }))
 
         const expensesMonthlyMap = new Map<string, number>()
         for (const exp of expensesByMonth) {

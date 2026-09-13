@@ -5,11 +5,15 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { createTaskSchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
+import { updateTaskSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(request: Request) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+// ─── GET /api/tasks/[id] ───────────────────────────────────────────────────
+export async function GET(request: Request, context: RouteContext) {
     try {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:tasks:${ip}`, 100, 60000);
@@ -23,92 +27,92 @@ export async function GET(request: Request) {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const projectId = searchParams.get('projectId');
-        const status = searchParams.get('status');
-        const priority = searchParams.get('priority');
-        const assigneeId = searchParams.get('assigneeId');
-        const search = searchParams.get('search');
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '20');
-        const skip = (page - 1) * limit;
+        const { id } = await context.params;
 
-        const where: Record<string, unknown> = { tenantId };
-
-        if (projectId) {
-            where.projectId = projectId;
-        }
-        if (status) {
-            where.status = status.toUpperCase();
-        }
-        if (priority) {
-            where.priority = priority.toUpperCase();
-        }
-        if (assigneeId) {
-            where.assigneeId = assigneeId;
-        }
-        if (search) {
-            where.OR = [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-            ];
-        }
-
-        const [tasks, total] = await Promise.all([
-            prisma.task.findMany({
-                where,
-                include: {
-                    project: {
-                        select: { id: true, name: true },
-                    },
-                    _count: {
-                        select: {
-                            comments: true,
-                            timeLogs: true,
-                        },
-                    },
+        const task = await prisma.task.findFirst({
+            where: { id, tenantId },
+            include: {
+                project: {
+                    select: { id: true, name: true },
                 },
-                skip,
-                take: limit,
-                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-            }),
-            prisma.task.count({ where }),
-        ]);
+                comments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 50,
+                },
+                timeLogs: {
+                    orderBy: { date: 'desc' },
+                },
+            },
+        });
 
-        const data = tasks.map((t) => ({
-            id: t.id,
-            projectId: t.projectId,
-            projectName: t.project.name,
-            title: t.title,
-            description: t.description,
-            status: t.status,
-            priority: t.priority,
-            assigneeId: t.assigneeId,
-            dueDate: t.dueDate?.toISOString() || null,
-            estimatedHours: t.estimatedHours ? Number(t.estimatedHours) : null,
-            actualHours: t.actualHours ? Number(t.actualHours) : 0,
-            tags: t.tags,
-            sortOrder: t.sortOrder,
-            commentCount: t._count.comments,
-            timeLogCount: t._count.timeLogs,
-            createdAt: t.createdAt.toISOString(),
-            updatedAt: t.updatedAt.toISOString(),
-        }));
+        if (!task) {
+            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
+        }
+
+        // Calculate total logged hours
+        const totalLoggedHours = task.timeLogs.reduce(
+            (sum, log) => sum + Number(log.hours),
+            0
+        );
+
+        // If task has a dependency, fetch its info
+        let dependency: { id: string; title: string; status: string } | null = null;
+        if (task.dependsOnId) {
+            const depTask = await prisma.task.findFirst({
+                where: { id: task.dependsOnId, tenantId },
+                select: { id: true, title: true, status: true },
+            });
+            dependency = depTask;
+        }
 
         return NextResponse.json({
             success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            data: {
+                id: task.id,
+                projectId: task.projectId,
+                projectName: task.project.name,
+                title: task.title,
+                description: task.description,
+                status: task.status,
+                priority: task.priority,
+                assigneeId: task.assigneeId,
+                dueDate: task.dueDate?.toISOString() || null,
+                startDate: task.startDate?.toISOString() || null,
+                endDate: task.endDate?.toISOString() || null,
+                progress: task.progress,
+                dependsOnId: task.dependsOnId,
+                dependency,
+                estimatedHours: task.estimatedHours ? Number(task.estimatedHours) : null,
+                actualHours: task.actualHours ? Number(task.actualHours) : 0,
+                totalLoggedHours,
+                tags: task.tags,
+                sortOrder: task.sortOrder,
+                comments: task.comments.map((c) => ({
+                    id: c.id,
+                    authorId: c.authorId,
+                    content: c.content,
+                    createdAt: c.createdAt.toISOString(),
+                    updatedAt: c.updatedAt.toISOString(),
+                })),
+                timeLogs: task.timeLogs.map((tl) => ({
+                    id: tl.id,
+                    employeeId: tl.employeeId,
+                    date: tl.date.toISOString(),
+                    hours: Number(tl.hours),
+                    description: tl.description,
+                    createdAt: tl.createdAt.toISOString(),
+                })),
+                createdAt: task.createdAt.toISOString(),
+                updatedAt: task.updatedAt.toISOString(),
+            },
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-export async function POST(request: Request) {
+// ─── PUT /api/tasks/[id] ───────────────────────────────────────────────────
+export async function PUT(request: Request, context: RouteContext) {
     try {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:tasks:${ip}`, 30, 60000);
@@ -122,10 +126,14 @@ export async function POST(request: Request) {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
+        const { id } = await context.params;
         const body = await request.json();
 
+        // Sanitize text inputs before validation
+        const sanitizedBody = sanitizeObject(body);
+
         // Validasi input dengan Zod
-        const validation = createTaskSchema.safeParse(body);
+        const validation = updateTaskSchema.safeParse(sanitizedBody);
         if (!validation.success) {
             return NextResponse.json(
                 { success: false, ...formatZodError(validation.error) },
@@ -133,36 +141,43 @@ export async function POST(request: Request) {
             );
         }
 
-        // Verify project exists and belongs to tenant
-        const project = await prisma.project.findFirst({
-            where: { id: validation.data.projectId, tenantId },
+        // Verify task exists and belongs to tenant
+        const existing = await prisma.task.findFirst({
+            where: { id, tenantId },
         });
 
-        if (!project) {
-            return NextResponse.json({ success: false, error: MSG.PROJECT_NOT_FOUND }, { status: 404 });
+        if (!existing) {
+            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
         }
 
-        const { projectId, title, description, status, priority, assigneeId, dueDate, estimatedHours, tags } = validation.data;
+        const {
+            title, description, status, priority, assigneeId,
+            dueDate, estimatedHours, actualHours, tags, sortOrder,
+            startDate, endDate, progress, dependsOnId,
+        } = validation.data;
 
-        // Get next sort order
-        const maxSortOrder = await prisma.task.aggregate({
-            where: { projectId, tenantId },
-            _max: { sortOrder: true },
-        });
+        // Build update data — only include provided fields
+        const updateData: Record<string, unknown> = {};
+        if (title !== undefined) updateData.title = title.trim();
+        if (description !== undefined) updateData.description = description?.trim() || null;
+        if (status !== undefined) updateData.status = status;
+        if (priority !== undefined) updateData.priority = priority;
+        if (assigneeId !== undefined) updateData.assigneeId = assigneeId || null;
+        if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
+        if (estimatedHours !== undefined) updateData.estimatedHours = estimatedHours;
+        if (actualHours !== undefined) updateData.actualHours = actualHours;
+        if (tags !== undefined) updateData.tags = tags?.trim() || null;
+        if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+        if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+        if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+        if (progress !== undefined) updateData.progress = progress;
+        if (dependsOnId !== undefined) updateData.dependsOnId = dependsOnId || null;
 
-        const task = await prisma.task.create({
-            data: {
-                tenantId,
-                projectId,
-                title: title.trim(),
-                description: description?.trim() || null,
-                status: status || 'TODO',
-                priority: priority || 'MEDIUM',
-                assigneeId: assigneeId || null,
-                dueDate: dueDate ? new Date(dueDate) : null,
-                estimatedHours: estimatedHours || null,
-                tags: tags?.trim() || null,
-                sortOrder: (maxSortOrder._max.sortOrder || 0) + 1,
+        const task = await prisma.task.update({
+            where: { id },
+            data: updateData,
+            include: {
+                project: { select: { id: true, name: true } },
             },
         });
 
@@ -170,14 +185,69 @@ export async function POST(request: Request) {
         void logAudit({
             userId,
             tenantId,
-            action: 'CREATE',
+            action: 'UPDATE',
             entity: 'Task',
             entityId: task.id,
+            oldValues: {
+                title: existing.title,
+                status: existing.status,
+                priority: existing.priority,
+                progress: existing.progress,
+            },
             newValues: validation.data as unknown as Record<string, unknown>,
             request,
         });
 
-        return NextResponse.json({ success: true, data: task }, { status: 201 });
+        return NextResponse.json({ success: true, data: task });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+// ─── DELETE /api/tasks/[id] ────────────────────────────────────────────────
+export async function DELETE(request: Request, context: RouteContext) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:tasks:${ip}`, 10, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const { id } = await context.params;
+
+        // Verify task exists and belongs to tenant
+        const existing = await prisma.task.findFirst({
+            where: { id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json({ success: false, error: MSG.TASK_NOT_FOUND }, { status: 404 });
+        }
+
+        await prisma.task.delete({ where: { id } });
+
+        // Audit logging non-blocking
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'DELETE',
+            entity: 'Task',
+            entityId: id,
+            oldValues: {
+                title: existing.title,
+                status: existing.status,
+                projectId: existing.projectId,
+            },
+            request,
+        });
+
+        return NextResponse.json({ success: true, data: { id } });
     } catch (error) {
         return handleApiError(error);
     }
