@@ -38,12 +38,13 @@ export async function GET(request: Request) {
             );
         }
 
-        const subscription = await prisma.tenantSubscription.findFirst({
+        const entitlement = await prisma.tenantEntitlement.findUnique({
             where: { tenantId: auth.tenantId },
             include: {
-                plan: true,
+                plan: {
+                    include: { features: true },
+                },
             },
-            orderBy: { createdAt: 'desc' },
         });
 
         return NextResponse.json({
@@ -54,15 +55,22 @@ export async function GET(request: Request) {
                     currentPlanSlug: tenant.currentPlanSlug,
                     trialEndsAt: tenant.trialEndsAt,
                 },
-                subscription: subscription
+                subscription: entitlement
                     ? {
-                        ...subscription,
-                        plan: subscription.plan
+                        id: entitlement.id,
+                        status: entitlement.status.toUpperCase(),
+                        startDate: entitlement.currentPeriodStart,
+                        endDate: entitlement.currentPeriodEnd,
+                        plan: entitlement.plan
                             ? {
-                                ...subscription.plan,
-                                features: subscription.plan.features
-                                    ? JSON.parse(subscription.plan.features)
-                                    : [],
+                                id: entitlement.plan.id,
+                                name: entitlement.plan.name,
+                                slug: entitlement.plan.slug,
+                                description: entitlement.plan.description,
+                                price: entitlement.plan.priceMonthly,
+                                features: entitlement.plan.features
+                                    .filter((f) => f.enabled)
+                                    .map((f) => f.featureKey),
                             }
                             : null,
                     }

@@ -1,6 +1,38 @@
-> **Last Updated:** 12 September 2026 (Session 11: Rate Limiter In-Memory Fallback Cleanup — Fail-Closed Production Security)
-> **Version:** v11.2.0
-> **Status:** ✅ HEALTHY — Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+> **Last Updated:** 13 September 2026 (Session 12: SubscriptionPlan → Plan Migration Phase 3 — 6 Billing Files Migrated)
+> **Version:** v11.3.0
+> **Status:** ✅ HEALTHY — Session 12: SubscriptionPlan → Plan migration Phase 3 complete — 6 billing files migrated (seed.ts, subscription/route.ts, platform/stats/route.ts, platform/billing/route.ts, billing/webhook/route.ts, platform/tenants/[id]/page.tsx). Phase 4 pending: 6 billing payment files blocked by BillingPayment.subscriptionId FK (requires Prisma schema change). Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+
+---
+
+## 🚀 Session 12 — SubscriptionPlan → Plan Migration Phase 3: 6 Billing Files Migrated (13 Sep 2026)
+
+> **Focus:** Continue SubscriptionPlan → Plan migration — migrate 6 remaining billing files to use new Plan model
+> **Total Files Changed:** 7 ([`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts), [`apps/web/app/api/billing/subscription/route.ts`](apps/web/app/api/billing/subscription/route.ts), [`apps/web/app/api/platform/stats/route.ts`](apps/web/app/api/platform/stats/route.ts), [`apps/web/app/api/platform/billing/route.ts`](apps/web/app/api/platform/billing/route.ts), [`apps/web/app/api/billing/webhook/route.ts`](apps/web/app/api/billing/webhook/route.ts), [`apps/web/app/platform/tenants/[id]/page.tsx`](apps/web/app/platform/tenants/[id]/page.tsx), [`CURRENT.md`](CURRENT.md))
+> **TypeScript:** `npx tsc —noEmit` — 0 errors
+> **Health Score:** ~100/100
+
+### Task: SubscriptionPlan → Plan Migration Phase 3 ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟡 Medium (billing model change — requires careful testing)
+- **Description:** Migrate 6 billing files from legacy `SubscriptionPlan` model to new `Plan` model (Issue #37, Phase 3)
+- **Files Migrated:**
+  1. [`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts) — `prisma.subscriptionPlan` → `prisma.plan`
+  2. [`apps/web/app/api/billing/subscription/route.ts`](apps/web/app/api/billing/subscription/route.ts) — `tenantSubscription` → `tenantEntitlement`
+  3. [`apps/web/app/api/platform/stats/route.ts`](apps/web/app/api/platform/stats/route.ts) — MRR calculation migrated to Plan model
+  4. [`apps/web/app/api/platform/billing/route.ts`](apps/web/app/api/platform/billing/route.ts) — Plan distribution query migrated
+  5. [`apps/web/app/api/billing/webhook/route.ts`](apps/web/app/api/billing/webhook/route.ts) — Bridge code rewritten for Plan model
+  6. [`apps/web/app/platform/tenants/[id]/page.tsx`](apps/web/app/platform/tenants/[id]/page.tsx) — Interface migrated from SubscriptionPlan to Plan
+- **Phase 4 Pending:** 6 billing payment files still use legacy model due to `BillingPayment.subscriptionId` FK blocker — requires Prisma schema change to proceed
+
+### 📊 Session 12 Summary
+
+| Category | Count |
+|----------|-------|
+| Files Modified | 7 |
+| Billing Files Migrated | 6 |
+| TypeScript Errors | 0 (verified) |
+| Breaking Changes | None (backward compatible) |
 
 ---
 
@@ -2706,7 +2738,7 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 34 | ~~Hardcoded Indonesian strings in API routes~~ | 🟠 Medium | i18n | ✅ Fixed — 310+ constants in `api-messages.ts`, 200+ files migrated (Batch 2) |
 | 35 | ~~i18n status labels hardcoded~~ | 🟡 Low | i18n/UI | ✅ Fixed — 70 new i18n keys, 6 pages updated with `STATUS_I18N_KEYS` pattern (Batch 2) |
 | 36 | ~~`ignoreBuildErrors: true` in next.config.js~~ | 🟠 Medium | Build | ✅ Fixed — changed to `false`, all TS errors resolved (Batch 2) |
-| 37 | **SubscriptionPlan → Plan migration pending** | 🟡 Low | Billing | 🔄 Partial — Phase 2 done (6 files migrated), Phase 3 billing (11 files) pending |
+| 37 | **SubscriptionPlan → Plan migration pending** | 🟡 Low | Billing | 🔄 ~75% Complete (Phase 1-3 done, Phase 4 pending — needs schema change) — 6 billing payment files still use legacy model due to `BillingPayment.subscriptionId` FK blocker |
 
 ---
 

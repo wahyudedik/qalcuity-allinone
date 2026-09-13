@@ -36,7 +36,7 @@ interface TenantUser {
     role: string;
 }
 
-interface TenantSubscription {
+interface TenantEntitlement {
     id: string;
     plan: string;
     status: string;
@@ -74,7 +74,7 @@ interface TenantDetail {
         totalProducts: number;
     };
     users: TenantUser[];
-    subscriptions: TenantSubscription[];
+    entitlement: TenantEntitlement | null;
     recentActivity: TenantActivity[];
 }
 
@@ -537,40 +537,38 @@ export default function PlatformTenantDetailPage() {
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {tenant.subscriptions.length === 0 ? (
+                            {!tenant.entitlement ? (
                                 <div className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                     {t('platform.tenantDetailPage.noSubscription')}
                                 </div>
                             ) : (
-                                tenant.subscriptions.map((sub) => (
-                                    <div key={sub.id} className="px-6 py-3">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                    {sub.plan}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {new Date(sub.startDate).toLocaleDateString("id-ID")} - {sub.endDate ? new Date(sub.endDate).toLocaleDateString("id-ID") : t('platform.tenantDetailPage.active')}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sub.status === "ACTIVE"
-                                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                    : sub.status === "TRIAL"
-                                                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                                        : sub.status === "SUSPENDED"
-                                                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                                            : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                                                    }`}>
-                                                    {sub.status}
-                                                </span>
-                                                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                                    {sub.price > 0 ? formatRupiah(sub.price) : t('platform.tenantDetailPage.free')}
-                                                </p>
-                                            </div>
+                                <div className="px-6 py-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                {tenant.entitlement.plan}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {new Date(tenant.entitlement.startDate).toLocaleDateString("id-ID")} - {tenant.entitlement.endDate ? new Date(tenant.entitlement.endDate).toLocaleDateString("id-ID") : t('platform.tenantDetailPage.active')}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${tenant.entitlement.status === "ACTIVE" || tenant.entitlement.status === "active"
+                                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                : tenant.entitlement.status === "TRIAL" || tenant.entitlement.status === "trial"
+                                                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                    : tenant.entitlement.status === "SUSPENDED" || tenant.entitlement.status === "suspended"
+                                                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                        : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                                }`}>
+                                                {tenant.entitlement.status}
+                                            </span>
+                                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                                {tenant.entitlement.price > 0 ? formatRupiah(tenant.entitlement.price) : t('platform.tenantDetailPage.free')}
+                                            </p>
                                         </div>
                                     </div>
-                                ))
+                                </div>
                             )}
                         </div>
                     </div>

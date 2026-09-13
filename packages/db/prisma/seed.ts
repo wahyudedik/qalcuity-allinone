@@ -1141,11 +1141,11 @@ async function main() {
     },
   });
 
-  // [LEGACY] Find a SubscriptionPlan to link the legacy subscription to (if one exists)
-  // Note: SubscriptionPlan is the legacy model. New code should use Plan + TenantEntitlement.
+  // [LEGACY] Find a Plan to link the legacy subscription to (if one exists)
+  // Note: SubscriptionPlan is the legacy model. New code uses Plan + TenantEntitlement.
   // This legacy code is kept because BillingPayment still references TenantSubscription.
   // TODO (#37): Remove after billing system is fully migrated to Plan + TenantEntitlement.
-  const legacyPlan = await prisma.subscriptionPlan.findFirst({ where: { slug: 'growth' } });
+  const legacyPlan = await prisma.plan.findFirst({ where: { slug: 'growth' } });
   let sub: Awaited<ReturnType<typeof prisma.tenantSubscription.upsert>> | null = null;
   if (legacyPlan) {
     sub = await prisma.tenantSubscription.upsert({
