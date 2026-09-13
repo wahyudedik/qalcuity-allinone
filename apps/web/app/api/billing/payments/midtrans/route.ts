@@ -14,7 +14,7 @@ import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { createMidtransPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 import { getPublicBaseUrl } from '@/lib/utils';
@@ -197,13 +197,13 @@ export async function POST(request: Request) {
             action: 'CREATE',
             entity: 'BillingPayment',
             entityId: payment.id,
-            newValues: {
+            newValues: toAuditPayload({
                 amount,
                 orderId,
                 planName,
                 paymentMethod: 'midtrans',
                 entitlementId: entitlement?.id || null,
-            } as Record<string, unknown>,
+            }),
             request,
         });
 

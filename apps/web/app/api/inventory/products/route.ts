@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
@@ -268,7 +268,7 @@ export async function DELETE(request: Request) {
         }
 
         // Log audit delete
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Product', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Product', entityId: id, oldValues: toAuditPayload(existing), request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

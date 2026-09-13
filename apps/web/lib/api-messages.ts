@@ -325,6 +325,11 @@ export const MSG = {
     ANOMALY_STATUS_UPDATED: 'Anomaly status updated',
     ANOMALY_SCAN_FAILED: 'Anomaly scan failed',
     ANOMALY_ADMIN_ONLY: 'Only admin can manage anomalies',
+
+    // -----------------------------------------------------------------------
+    // Platform / Tenant Limits
+    // -----------------------------------------------------------------------
+    TENANT_LIMIT_REACHED: 'Tenant limit reached for this plan. Please upgrade or contact support.',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

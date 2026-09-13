@@ -30,6 +30,7 @@ import { NextResponse } from "next/server";
 import type { NextFetchEvent } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 import { checkRateLimit, getClientIp } from "@/lib/middleware-rate-limit";
+import { getPlatformSettingsCached } from "@/lib/platform-settings";
 
 // ─── Inline Rate Limit Rules (Edge Runtime-safe) ────────────────────────────
 // Only the essential rules for middleware. Full config lives in rate-limit-config.ts.
@@ -69,12 +70,37 @@ export default withAuth(
             return NextResponse.next();
         }
 
+        // ─── Maintenance Mode — block non-admin users ─────────────────────────
+        // Uses synchronous cached settings (Edge-safe, no DB query).
+        // SUPERADMIN and ADMIN are always allowed through (they need access to fix things).
+        const settings = getPlatformSettingsCached();
+        if (settings?.maintenanceMode) {
+            const role = req.nextauth?.token?.role;
+            if (role !== "SUPERADMIN" && role !== "ADMIN") {
+                if (pathname.startsWith("/api/")) {
+                    return NextResponse.json(
+                        {
+                            error: "System sedang dalam mode maintenance. Silakan coba lagi nanti.",
+                            code: "MAINTENANCE_MODE",
+                        },
+                        { status: 503 }
+                    );
+                }
+                // For page routes, redirect to login with maintenance flag
+                return NextResponse.redirect(
+                    new URL("/login?error=maintenance", req.url)
+                );
+            }
+        }
+
         // ─── Rate Limiting for API routes (in-memory, Edge-safe) ──────────────
         if (pathname.startsWith("/api/")) {
             const rule = getRateLimitRule(pathname);
 
             if (rule.maxRequests > 0) {
-                const ip = getClientIp(req as unknown as Request);
+                // NextRequestWithAuth extends NextRequest which extends Web Request,
+                // so casting to Request is safe — getClientIp only uses headers.get().
+                const ip = getClientIp(req as Request);
                 const rateLimitKey = `middleware:${ip}:${pathname}`;
                 const { success } = checkRateLimit(rateLimitKey, rule.maxRequests, rule.windowMs);
 

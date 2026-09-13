@@ -297,9 +297,11 @@ export async function GET(request: Request) {
                             deliveryDate: true,
                             orderDate: true,
                         },
+                        take: 500,
                     },
                 },
                 orderBy: { rating: 'desc' },
+                take: 500,
             }),
         ])
 

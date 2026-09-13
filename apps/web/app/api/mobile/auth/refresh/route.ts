@@ -22,6 +22,7 @@ import { MSG } from '@/lib/api-messages';
 import { refreshMobileToken } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { mobileRefreshSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function POST(request: Request) {
     try {
@@ -36,14 +37,17 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { refreshToken } = body;
 
-        if (!refreshToken || typeof refreshToken !== 'string') {
+        // Zod validation
+        const validation = mobileRefreshSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Refresh token is required', code: 'VALIDATION_ERROR' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
+
+        const { refreshToken } = validation.data;
 
         const tokens = await refreshMobileToken(refreshToken);
 

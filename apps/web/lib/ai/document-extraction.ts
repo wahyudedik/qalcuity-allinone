@@ -159,19 +159,18 @@ Pastikan semua key ada di output, meskipun value kosong.`;
         { role: 'system', content: systemPrompt },
         {
             role: 'user',
+            // Build text-only representation of multimodal content for non-vision models.
+            // Each content part is JSON-stringified and joined with spaces.
             content: [
-                {
-                    type: 'text',
-                    text: userMessage,
-                } as unknown as string,
-                {
+                JSON.stringify({ type: 'text', text: userMessage }),
+                JSON.stringify({
                     type: 'image_url',
                     image_url: {
                         url: `data:${request.mimeType};base64,${request.fileBase64}`,
                         detail: 'high',
                     },
-                } as unknown as string,
-            ].map((c) => (typeof c === 'string' ? c : JSON.stringify(c))).join(' '),
+                }),
+            ].join(' '),
         },
     ];
 

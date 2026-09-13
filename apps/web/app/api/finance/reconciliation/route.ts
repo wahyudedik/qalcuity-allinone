@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import {
     reconcileTransactionSchema,
     unreconcileTransactionSchema,
@@ -213,8 +213,8 @@ export async function POST(request: Request) {
                 action: 'UPDATE',
                 entity: 'BankTransaction',
                 entityId: updated.id,
-                oldValues: bankTx as unknown as Record<string, unknown>,
-                newValues: updated as unknown as Record<string, unknown>,
+                oldValues: toAuditPayload(bankTx),
+                newValues: toAuditPayload(updated),
                 request,
             });
 
@@ -283,8 +283,8 @@ export async function POST(request: Request) {
             action: 'UPDATE',
             entity: 'BankTransaction',
             entityId: updated.id,
-            oldValues: bankTx as unknown as Record<string, unknown>,
-            newValues: updated as unknown as Record<string, unknown>,
+            oldValues: toAuditPayload(bankTx),
+            newValues: toAuditPayload(updated),
             request,
         });
 
@@ -354,8 +354,8 @@ export async function PUT(request: Request) {
             action: 'UPDATE',
             entity: 'BankTransaction',
             entityId: updated.id,
-            oldValues: bankTx as unknown as Record<string, unknown>,
-            newValues: updated as unknown as Record<string, unknown>,
+            oldValues: toAuditPayload(bankTx),
+            newValues: toAuditPayload(updated),
             request,
         });
 

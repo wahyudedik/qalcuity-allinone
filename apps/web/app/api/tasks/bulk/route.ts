@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { bulkUpdateTaskSchema, formatZodError } from '@/lib/validation-schemas';
@@ -94,7 +94,7 @@ export async function PUT(request: Request) {
                 count: foundIds.length,
                 previousStatuses: existingTasks.map((t) => ({ id: t.id, status: t.status })),
             },
-            newValues: updates as unknown as Record<string, unknown>,
+            newValues: toAuditPayload(updates),
             request,
         });
 

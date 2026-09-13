@@ -5,7 +5,7 @@ import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
-import { revokeSessionSchema, formatZodError } from '@/lib/validation-schemas'
+import { revokeSessionSchema, createSecuritySessionSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
 
 /**
@@ -69,19 +69,17 @@ export async function POST(request: Request) {
         const { userId, tenantId } = auth
 
         const body = await request.json()
-        const { token, device, ipAddress, userAgent } = body as {
-            token?: string
-            device?: string
-            ipAddress?: string
-            userAgent?: string
-        }
 
-        if (!token) {
+        // Zod validation
+        const validation = createSecuritySessionSchema.safeParse(body)
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: 'Token is required', code: 'VALIDATION_ERROR' },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             )
         }
+
+        const { token, device, ipAddress, userAgent } = validation.data
 
         // Create session with 30-day expiry
         const expiresAt = new Date()

@@ -72,6 +72,10 @@ export class IndustryConfigEngine {
     /**
      * Deep merge two objects. Source values override target values.
      * Arrays are replaced, not merged.
+     *
+     * Returns `unknown` because the merged shape depends on the input types.
+     * Callers use typed wrappers (getConfig, mergeTenantConfig, mergeWithDefaults)
+     * to assert the final return type.
      */
     private deepMerge(target: unknown, source: unknown): unknown {
         if (typeof target !== 'object' || target === null || Array.isArray(target)) {
@@ -131,6 +135,8 @@ export class IndustryConfigEngine {
             return defaultConfig;
         }
 
+        // deepMerge returns unknown; cast is safe because tenantOverride.config
+        // is a Partial<IndustryConfig> merged onto the default IndustryConfig.
         return this.deepMerge(defaultConfig, tenantOverride.config) as unknown as IndustryConfig;
     }
 
@@ -345,6 +351,8 @@ export class IndustryConfigEngine {
      * @returns Merged IndustryConfig
      */
     mergeTenantConfig(base: IndustryConfig, overrides: Partial<IndustryConfig>): IndustryConfig {
+        // deepMerge returns unknown; cast is safe because base is IndustryConfig
+        // and overrides is Partial<IndustryConfig> — result preserves the shape.
         return this.deepMerge(base, overrides) as unknown as IndustryConfig;
     }
 
@@ -378,6 +386,8 @@ export class IndustryConfigEngine {
      * @returns Merged IndustryPack
      */
     mergeWithDefaults(pack: IndustryPack, customConfig: Partial<IndustryPack>): IndustryPack {
+        // deepMerge returns unknown; cast is safe because pack is IndustryPack
+        // and customConfig is Partial<IndustryPack> — result preserves the shape.
         return this.deepMerge(pack, customConfig) as unknown as IndustryPack;
     }
 }

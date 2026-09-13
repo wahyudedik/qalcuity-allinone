@@ -1950,3 +1950,38 @@ export const mobileRegisterSchema = z.object({
     email: z.string().min(1, 'Email wajib diisi').email('Format email tidak valid').max(255, 'Email maksimal 255 karakter'),
     password: z.string().min(8, 'Password minimal 8 karakter').max(128, 'Password maksimal 128 karakter'),
 });
+
+// ============================================
+// Mobile Auth Schemas
+// ============================================
+
+export const mobileLoginSchema = z.object({
+    email: z.string().min(1, 'Email wajib diisi').email('Format email tidak valid').max(255, 'Email maksimal 255 karakter'),
+    password: z.string().min(1, 'Password wajib diisi').max(128, 'Password maksimal 128 karakter'),
+});
+
+export const mobileRefreshSchema = z.object({
+    refreshToken: z.string().min(1, 'Refresh token wajib diisi'),
+});
+
+// ============================================
+// Platform Support Schemas
+// ============================================
+
+export const createSupportTicketSchema = z.object({
+    subject: z.string().min(1, 'Subjek wajib diisi').max(255, 'Subjek maksimal 255 karakter'),
+    message: z.string().min(1, 'Pesan wajib diisi').max(5000, 'Pesan maksimal 5000 karakter'),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
+    category: z.string().max(100, 'Kategori maksimal 100 karakter').optional(),
+});
+
+// ============================================
+// Security Session Schemas
+// ============================================
+
+export const createSecuritySessionSchema = z.object({
+    token: z.string().min(1, 'Token wajib diisi').max(500, 'Token maksimal 500 karakter'),
+    device: z.string().max(255, 'Device info maksimal 255 karakter').optional(),
+    ipAddress: z.string().max(45, 'IP address maksimal 45 karakter').optional(),
+    userAgent: z.string().max(500, 'User agent maksimal 500 karakter').optional(),
+});

@@ -1353,12 +1353,13 @@ async function notifyCriticalAnomalies(
             </p>
           </div>`;
 
-        // Send to all admins
+        // Send to all admins (security category — gated by securityAlerts platform setting)
         for (const admin of admins) {
             await sendEmail({
                 to: admin.email,
                 subject,
                 html,
+                category: 'security',
             }).catch(err => {
                 logger.error(`[AnomalyDetection] Failed to send email to ${admin.email}`, err);
             });
@@ -1573,7 +1574,10 @@ export async function runAnomalyScan(tenantId: string): Promise<AnomalyScanResul
         }),
     ]);
 
-    // Cast to our local types for type-safe detector functions
+    // Prisma select results are structurally compatible with our local record types,
+    // but TypeScript's Prisma-generated types are nominal and don't directly assign.
+    // Cast via unknown is required. The select clauses above are verified to match
+    // the local type shapes (InvoiceRecord, PaymentRecord, etc.).
     const invoices = allInvoices as unknown as InvoiceRecord[];
     const payments = allPayments as unknown as PaymentRecord[];
     const purchaseOrders = allPurchaseOrders as unknown as PurchaseOrderRecord[];

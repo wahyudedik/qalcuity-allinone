@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { createLeaveSchema, updateLeaveSchema, approveLeaveSchema, formatZodError } from '@/lib/validation-schemas';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
@@ -337,7 +337,7 @@ export async function DELETE(request: Request) {
         await prisma.leaveRequest.delete({ where: { id } });
 
         // Audit logging non-blocking
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'LeaveRequest', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'LeaveRequest', entityId: id, oldValues: toAuditPayload(existing), request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

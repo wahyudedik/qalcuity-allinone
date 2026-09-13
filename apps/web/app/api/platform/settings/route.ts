@@ -6,10 +6,10 @@ import { requirePermissionForRoute } from "@/lib/session";
 import { handleApiError } from "@/lib/api-error";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
-import fs from "fs";
-import path from "path";
+import { prisma } from "@/lib/db";
+import { invalidatePlatformSettingsCache } from "@/lib/platform-settings";
 
-// â”€â”€â”€ Platform Settings Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Platform Settings Schema ──────────────────────────────────────────────────
 const platformSettingsSchema = z.object({
     platformName: z.string().min(1).max(100),
     supportEmail: z.string().email(),
@@ -23,53 +23,14 @@ const platformSettingsSchema = z.object({
 
 type PlatformSettings = z.infer<typeof platformSettingsSchema>;
 
-// â”€â”€â”€ Default Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const defaultSettings: PlatformSettings = {
-    platformName: "Qalcuity",
-    supportEmail: "support@qalcuity.com",
-    defaultTrialDays: 14,
-    maxTenantsPerPlan: {
-        Starter: 50,
-        Professional: 100,
-        Enterprise: 500,
-    },
-    maintenanceMode: false,
-    allowRegistration: true,
-    emailNotifications: true,
-    securityAlerts: true,
-};
+// ─── Default Settings ──────────────────────────────────────────────────────────
+const DEFAULT_PLAN_LIMITS = [
+    { planName: 'Starter', maxTenants: 50 },
+    { planName: 'Professional', maxTenants: 100 },
+    { planName: 'Enterprise', maxTenants: 500 },
+];
 
-// â”€â”€â”€ File Storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const SETTINGS_FILE = path.join(process.cwd(), "data", "platform-settings.json");
-
-function getSettingsFilePath(): string {
-    return SETTINGS_FILE;
-}
-
-function readSettings(): PlatformSettings {
-    try {
-        const filePath = getSettingsFilePath();
-        if (fs.existsSync(filePath)) {
-            const raw = fs.readFileSync(filePath, "utf-8");
-            const parsed = JSON.parse(raw) as Partial<PlatformSettings>;
-            return { ...defaultSettings, ...parsed };
-        }
-    } catch {
-        // Fall through to defaults
-    }
-    return { ...defaultSettings };
-}
-
-function writeSettings(settings: PlatformSettings): void {
-    const filePath = getSettingsFilePath();
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(filePath, JSON.stringify(settings, null, 2), "utf-8");
-}
-
-// â”€â”€â”€ GET /api/platform/settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── GET /api/platform/settings ────────────────────────────────────────────────
 // Returns platform-wide settings. Only accessible by SUPERADMIN.
 export async function GET(request: Request) {
     // 1. Rate limiting
@@ -79,22 +40,49 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    // 2. Auth + RBAC check â€” SUPERADMIN only
+    // 2. Auth + RBAC check — SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
-        const settings = readSettings();
+        // 3. Get or create platform settings (singleton pattern)
+        let settings = await prisma.platformSetting.findFirst();
+        if (!settings) {
+            settings = await prisma.platformSetting.create({ data: {} });
+        }
+
+        // 4. Get plan tenant limits
+        const planLimits = await prisma.planTenantLimit.findMany();
+        const maxTenantsPerPlan: Record<string, number> = {};
+        for (const limit of planLimits) {
+            maxTenantsPerPlan[limit.planName] = limit.maxTenants;
+        }
+        // Add defaults for plans that don't have limits yet
+        for (const defaultLimit of DEFAULT_PLAN_LIMITS) {
+            if (!(defaultLimit.planName in maxTenantsPerPlan)) {
+                maxTenantsPerPlan[defaultLimit.planName] = defaultLimit.maxTenants;
+            }
+        }
+
         return NextResponse.json({
             success: true,
-            data: settings,
+            data: {
+                platformName: settings.platformName,
+                supportEmail: settings.supportEmail,
+                defaultTrialDays: settings.defaultTrialDays,
+                maintenanceMode: settings.maintenanceMode,
+                allowRegistration: settings.allowRegistration,
+                emailNotifications: settings.emailNotifications,
+                securityAlerts: settings.securityAlerts,
+                maxTenantsPerPlan,
+            },
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-// â”€â”€â”€ PUT /api/platform/settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── PUT /api/platform/settings ────────────────────────────────────────────────
 // Update platform-wide settings. Only accessible by SUPERADMIN.
 export async function PUT(req: Request) {
     // 1. Rate limiting
@@ -104,7 +92,7 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    // 2. Auth + RBAC check â€” SUPERADMIN only
+    // 2. Auth + RBAC check — SUPERADMIN only
     const auth = await requirePermissionForRoute(req);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -119,12 +107,45 @@ export async function PUT(req: Request) {
             );
         }
 
-        // 4. Save settings
-        writeSettings(validated.data);
+        // 4. Extract maxTenantsPerPlan (stored in separate table)
+        const { maxTenantsPerPlan, ...settingsData } = validated.data;
+
+        // 5. Upsert platform settings (singleton pattern)
+        const existing = await prisma.platformSetting.findFirst();
+        let settings;
+        if (existing) {
+            settings = await prisma.platformSetting.update({
+                where: { id: existing.id },
+                data: settingsData,
+            });
+        } else {
+            settings = await prisma.platformSetting.create({ data: settingsData });
+        }
+
+        // 6. Update plan tenant limits
+        for (const [planName, maxTenants] of Object.entries(maxTenantsPerPlan)) {
+            await prisma.planTenantLimit.upsert({
+                where: { planName },
+                update: { maxTenants },
+                create: { planName, maxTenants },
+            });
+        }
+
+        // 7. Invalidate in-memory cache so middleware + other code pick up new settings
+        invalidatePlatformSettingsCache();
 
         return NextResponse.json({
             success: true,
-            data: validated.data,
+            data: {
+                platformName: settings.platformName,
+                supportEmail: settings.supportEmail,
+                defaultTrialDays: settings.defaultTrialDays,
+                maintenanceMode: settings.maintenanceMode,
+                allowRegistration: settings.allowRegistration,
+                emailNotifications: settings.emailNotifications,
+                securityAlerts: settings.securityAlerts,
+                maxTenantsPerPlan,
+            },
             message: "Platform settings berhasil disimpan",
         });
     } catch (error) {

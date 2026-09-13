@@ -68,10 +68,11 @@ export async function POST(req: Request) {
         const baseUrl = getBaseUrl();
         const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
-        // Send email
+        // Send email (security category — gated by securityAlerts platform setting)
         const emailResult = await sendEmail({
             to: email,
             subject: "Reset Password - Qalcuity",
+            category: 'security',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                     <h2 style="color: #333;">Reset Password</h2>

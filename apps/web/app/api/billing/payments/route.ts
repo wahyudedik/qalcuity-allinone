@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput } from '@/lib/sanitize';
 import { notifySuperadminPayment } from '@/lib/email';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { createBillingPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
         });
 
         // Log audit create
-        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'BillingPayment', entityId: payment.id, newValues: { amount: payment.amount, bankName: payment.bankName, subscriptionId: payment.subscriptionId, entitlementId: resolvedEntitlementId } as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'BillingPayment', entityId: payment.id, newValues: toAuditPayload({ amount: payment.amount, bankName: payment.bankName, subscriptionId: payment.subscriptionId, entitlementId: resolvedEntitlementId }), request });
 
         return NextResponse.json({
             success: true,

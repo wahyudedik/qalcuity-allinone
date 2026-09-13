@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { midtransWebhookSchema, formatZodError } from '@/lib/validation-schemas';
@@ -173,12 +173,12 @@ export async function POST(request: Request) {
                 action: 'UPDATE',
                 entity: 'BillingPayment',
                 entityId: payment.id,
-                oldValues: { status: payment.status } as Record<string, unknown>,
-                newValues: {
+                oldValues: toAuditPayload({ status: payment.status }),
+                newValues: toAuditPayload({
                     status: newPaymentStatus,
                     transactionId: data.transaction_id,
                     transactionStatus: data.transaction_status,
-                } as Record<string, unknown>,
+                }),
                 request,
             });
         } else if (data.transaction_status === 'pending') {
@@ -193,11 +193,11 @@ export async function POST(request: Request) {
                 action: 'UPDATE',
                 entity: 'BillingPayment',
                 entityId: payment.id,
-                oldValues: { status: payment.status } as Record<string, unknown>,
-                newValues: {
+                oldValues: toAuditPayload({ status: payment.status }),
+                newValues: toAuditPayload({
                     status: newPaymentStatus,
                     transactionStatus: data.transaction_status,
-                } as Record<string, unknown>,
+                }),
                 request,
             });
         }

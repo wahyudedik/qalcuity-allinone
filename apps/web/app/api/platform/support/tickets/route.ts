@@ -5,6 +5,7 @@ import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
+import { createSupportTicketSchema, formatZodError } from "@/lib/validation-schemas";
 
 // â”€â”€â”€ GET /api/platform/support/tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns support tickets derived from AuditLog entries (support-related actions).
@@ -127,25 +128,28 @@ export async function POST(request: Request) {
         const tenantId = auth.tenantId;
 
         const body = await request.json();
-        const { subject, message, priority, category } = body;
 
-        if (!subject || !message) {
+        // Zod validation
+        const validation = createSupportTicketSchema.safeParse(body);
+        if (!validation.success) {
             return NextResponse.json(
-                { success: false, error: "MSG.SUBJECT_AND_MESSAGE_REQUIRED" },
+                { success: false, ...formatZodError(validation.error) },
                 { status: 400 }
             );
         }
 
+        const { subject, message, priority, category } = validation.data;
+
         // Create as AuditLog entry (support ticket representation)
         const log = await prisma.auditLog.create({
             data: {
-                action: subject.slice(0, 255),
+                action: subject,
                 entity: "SUPPORT_TICKET",
                 entityId: null,
                 oldValues: null,
                 newValues: JSON.stringify({
                     message,
-                    priority: priority || "medium",
+                    priority,
                     category: category || "General",
                     createdBy: "Platform Admin",
                 }),
@@ -168,7 +172,7 @@ export async function POST(request: Request) {
                 subject: log.action,
                 message,
                 status: "open",
-                priority: priority || "medium",
+                priority,
                 category: category || "General",
                 createdAt: log.createdAt.toISOString(),
                 updatedAt: log.createdAt.toISOString(),

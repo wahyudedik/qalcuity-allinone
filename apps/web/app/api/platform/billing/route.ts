@@ -30,9 +30,12 @@ export async function GET(request: Request) {
         const skip = (page - 1) * limit;
 
         // 3. Get all active entitlements for MRR calculation (Plan model)
+        // Note: priceMonthly is on the related Plan model, not TenantEntitlement,
+        // so Prisma aggregate() cannot sum it directly. Using findMany with a safety limit.
         const activeEntitlements = await prisma.tenantEntitlement.findMany({
             where: { status: "active" },
-            include: { plan: true, tenant: { select: { id: true, name: true, email: true } } },
+            include: { plan: { select: { priceMonthly: true, name: true } }, tenant: { select: { id: true, name: true, email: true } } },
+            take: 10000,
         });
 
         const mrr = activeEntitlements.reduce(

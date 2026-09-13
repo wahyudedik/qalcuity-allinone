@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
-import { logAudit } from '@/lib/audit'
+import { logAudit, toAuditPayload } from '@/lib/audit'
 import { updateNotificationPreferencesSchema, formatZodError } from '@/lib/validation-schemas'
 import { sanitizeObject } from '@/lib/sanitize'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
@@ -192,8 +192,8 @@ export async function PUT(request: Request) {
             action: 'UPDATE',
             entity: 'TenantNotificationSettings',
             entityId: updated.id,
-            oldValues: oldValues as unknown as Record<string, unknown>,
-            newValues: newData as unknown as Record<string, unknown>,
+            oldValues: toAuditPayload(oldValues),
+            newValues: toAuditPayload(newData),
             request,
         })
 

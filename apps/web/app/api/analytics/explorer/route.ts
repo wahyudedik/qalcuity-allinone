@@ -37,6 +37,14 @@ const DATASET_MODEL_MAP: Record<string, string> = {
     employees: 'Employee',
 }
 
+// Whitelist of allowed Prisma models for dynamic access (security: prevents arbitrary model access)
+const ALLOWED_PRISMA_MODELS = [
+    'Invoice', 'Payment', 'Contact', 'Product', 'Employee',
+    'Attendance', 'Leave', 'Payroll', 'PurchaseOrder',
+    'JournalEntry', 'StockMovement', 'PosTransaction',
+    'Task', 'Project', 'SupportTicket', 'Deal',
+] as const;
+
 // ============================================
 // HELPERS
 // ============================================
@@ -139,6 +147,14 @@ export async function POST(request: Request) {
         const startTime = Date.now()
         const modelName = DATASET_MODEL_MAP[dataset]
 
+        // Security: Validate model name against whitelist before dynamic access
+        if (!ALLOWED_PRISMA_MODELS.includes(modelName as typeof ALLOWED_PRISMA_MODELS[number])) {
+            return NextResponse.json(
+                { success: false, error: `Invalid model name: ${modelName}` },
+                { status: 400 }
+            )
+        }
+
         // Build where clause
         const where: Record<string, unknown> = { tenantId }
 
@@ -204,7 +220,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // Execute query using Prisma dynamic model access
+        // Execute query using Prisma dynamic model access.
+        // Cast is required because PrismaClient doesn't support dynamic model access
+        // via string index — we use the MODEL_WHITELIST above for security.
         const prismaClient = prisma as unknown as PrismaClient
         const rawData: Record<string, unknown>[] = await prismaClient[modelName].findMany({
             where,

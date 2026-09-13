@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { createInvoiceSchema, updateInvoiceSchema, formatZodError } from '@/lib/validation-schemas';
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
             });
         });
 
-        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Invoice', entityId: invoice.id, newValues: invoice as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Invoice', entityId: invoice.id, newValues: toAuditPayload(invoice), request });
 
         // Approval Engine: trigger approval if levels are configured
         const approvalResult = await createApprovalRequest({
@@ -354,7 +354,7 @@ export async function DELETE(request: Request) {
             );
         }
 
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Invoice', entityId: id, oldValues: toAuditPayload(existing), request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

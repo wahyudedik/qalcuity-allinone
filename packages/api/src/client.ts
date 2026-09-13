@@ -195,8 +195,10 @@ export function createApiClient(config: ApiClientConfig = {}): ApiClient {
             endpoint: string,
             params?: PaginationParams
         ): Promise<ApiResponseWithMeta<T>> {
-            return request<ApiResponseWithMeta<T>>(endpoint, { params: params as Record<string, string> })
-                .then((res) => res.data as unknown as ApiResponseWithMeta<T>);
+            // Server returns ApiResponseWithMeta<T> shape directly (success, data[], total, page, limit, totalPages),
+            // but request<T> wraps it as ApiResponse<T>. We cast the full response to the flat server shape.
+            return request<unknown>(endpoint, { params: params as Record<string, string> })
+                .then((res) => res as unknown as ApiResponseWithMeta<T>);
         },
 
         configure(newConfig: Partial<ApiClientConfig>): void {

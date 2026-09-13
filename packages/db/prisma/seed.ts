@@ -1590,6 +1590,42 @@ async function main() {
     }
   }
 
+  // ============================================
+  // PLATFORM SETTINGS (Global, non-tenant)
+  // ============================================
+  const existingPlatformSetting = await prisma.platformSetting.findFirst();
+  if (!existingPlatformSetting) {
+    await prisma.platformSetting.create({
+      data: {
+        platformName: 'Qalcuity',
+        supportEmail: 'support@qalcuity.com',
+        defaultTrialDays: 14,
+        maintenanceMode: false,
+        allowRegistration: true,
+        emailNotifications: true,
+        securityAlerts: true,
+      },
+    });
+    console.log("✅ Platform Settings created with defaults");
+  } else {
+    console.log("✅ Platform Settings already exists");
+  }
+
+  // Plan Tenant Limits
+  const planLimits = [
+    { planName: 'Starter', maxTenants: 50 },
+    { planName: 'Professional', maxTenants: 100 },
+    { planName: 'Enterprise', maxTenants: 500 },
+  ];
+  for (const limit of planLimits) {
+    await prisma.planTenantLimit.upsert({
+      where: { planName: limit.planName },
+      update: {},
+      create: limit,
+    });
+  }
+  console.log("✅ Plan Tenant Limits seeded");
+
   console.log("\n🎉 Seeding completed!");
   console.log("\n📋 Demo Accounts:");
   console.log("  SuperAdmin: info@qalcuity.com / Wahyu123456789@");

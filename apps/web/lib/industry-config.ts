@@ -5,6 +5,7 @@
  * Menyediakan fungsi-fungsi yang bisa dipanggil dari API route atau server action.
  */
 
+import { Prisma } from '@prisma/client';
 import { IndustryConfigEngine, type IndustryType, type IndustryConfig, type CustomField, type CustomFieldValidationResult } from '@qalcuity/industry-config';
 import { prisma } from './db';
 
@@ -155,14 +156,17 @@ export async function updateTenantIndustryConfig(
 
     let record;
     if (existing) {
-        // Merge existing config with new overrides
+        // Merge existing config with new overrides.
+        // Prisma JSON fields return Prisma.JsonValue (union of primitives/arrays/objects),
+        // which doesn't structurally overlap with IndustryConfig — intermediate unknown cast required.
         const mergedConfig = engine.mergeTenantConfig(
             existing.config as unknown as IndustryConfig,
             config
         );
         record = await prisma.industryConfiguration.update({
             where: { tenantId },
-            data: { config: mergedConfig as unknown as Record<string, unknown> as never },
+            // Prisma JSON fields require Prisma.InputJsonValue for writes.
+            data: { config: mergedConfig as unknown as Prisma.InputJsonValue },
         });
     } else {
         // Create new config
@@ -170,7 +174,8 @@ export async function updateTenantIndustryConfig(
             data: {
                 tenantId,
                 industry: config.industry || 'general',
-                config: config as unknown as Record<string, unknown> as never,
+                // Prisma JSON fields require Prisma.InputJsonValue for writes.
+                config: config as unknown as Prisma.InputJsonValue,
             },
         });
     }

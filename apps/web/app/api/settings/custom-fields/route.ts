@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { createCustomFieldSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
             action: 'CREATE',
             entity: 'TenantCustomField',
             entityId: field.id,
-            newValues: { entity, fieldName, fieldLabel, fieldType } as Record<string, unknown>,
+            newValues: toAuditPayload({ entity, fieldName, fieldLabel, fieldType }),
         });
 
         return NextResponse.json({

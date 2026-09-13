@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { createActivitySchema, formatZodError } from '@/lib/validation-schemas';
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
             },
         });
 
-        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Activity', entityId: activity.id, newValues: activity as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Activity', entityId: activity.id, newValues: toAuditPayload(activity), request });
 
         return NextResponse.json({ success: true, data: activity }, { status: 201 });
     } catch (error) {

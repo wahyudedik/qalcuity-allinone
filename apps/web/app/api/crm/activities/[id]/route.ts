@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { createActivitySchema, updateActivitySchema, formatZodError } from '@/lib/validation-schemas';
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
             },
         });
 
-        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Activity', entityId: activity.id, newValues: activity as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Activity', entityId: activity.id, newValues: toAuditPayload(activity), request });
 
         return NextResponse.json({ success: true, data: activity }, { status: 201 });
     } catch (error) {
@@ -190,7 +190,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             data: updateData,
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Activity', entityId: activity.id, oldValues: existing as unknown as Record<string, unknown>, newValues: activity as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Activity', entityId: activity.id, oldValues: toAuditPayload(existing), newValues: toAuditPayload(activity), request });
 
         return NextResponse.json({ success: true, data: activity });
     } catch (error) {
@@ -228,7 +228,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
             where: { id: params.id },
         });
 
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Activity', entityId: params.id, oldValues: existing as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Activity', entityId: params.id, oldValues: toAuditPayload(existing), request });
 
         return NextResponse.json({ success: true, message: 'Activity deleted' });
     } catch (error) {

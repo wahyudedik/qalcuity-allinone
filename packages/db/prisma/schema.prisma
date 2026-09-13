@@ -2640,3 +2640,28 @@ model CronRunLog {
   @@index([createdAt])
   @@index([taskId, createdAt(sort: Desc)])
 }
+
+// ============================================
+// PLATFORM SETTINGS (Global, non-tenant)
+// ============================================
+
+model PlatformSetting {
+  id                 String   @id @default(cuid())
+  platformName       String   @default("Qalcuity")
+  supportEmail       String   @default("support@qalcuity.com")
+  defaultTrialDays   Int      @default(14)
+  maintenanceMode    Boolean  @default(false)
+  allowRegistration  Boolean  @default(true)
+  emailNotifications Boolean  @default(true)
+  securityAlerts     Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model PlanTenantLimit {
+  id         String   @id @default(cuid())
+  planName   String   @unique
+  maxTenants Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

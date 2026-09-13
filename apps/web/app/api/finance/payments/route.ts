@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
-import { logAudit } from '@/lib/audit';
+import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { createPaymentSchema, updatePaymentSchema, formatZodError } from '@/lib/validation-schemas';
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
             return newPayment;
         });
 
-        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Payment', entityId: payment.id, newValues: payment as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Payment', entityId: payment.id, newValues: toAuditPayload(payment), request });
 
         // Auto Journal Entry: when payment status is COMPLETED
         if (status === 'COMPLETED') {
@@ -363,7 +363,7 @@ export async function DELETE(request: Request) {
 
         await prisma.payment.delete({ where: { id } });
 
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Payment', entityId: id, oldValues: existing as unknown as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Payment', entityId: id, oldValues: toAuditPayload(existing), request });
 
         return NextResponse.json({ success: true, data: null });
     } catch (error) {

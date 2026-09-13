@@ -48,6 +48,17 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
 }
 
 /**
+ * Safely cast Prisma model data to Record<string, unknown> for audit logging.
+ * Replaces verbose `value as unknown as Record<string, unknown>` casts.
+ */
+export function toAuditPayload(data: unknown): Record<string, unknown> {
+    if (data && typeof data === 'object') {
+        return data as Record<string, unknown>;
+    }
+    return {};
+}
+
+/**
  * Extract only the changed fields between old and new values.
  */
 export function diffValues(

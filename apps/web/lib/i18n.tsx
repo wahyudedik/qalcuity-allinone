@@ -17,9 +17,11 @@ interface I18nContextValue {
 
 // ---- Messages map ----
 
+// JSON imports have deeply nested types from TypeScript's JSON module resolution.
+// Cast to Record<string, unknown> for dynamic traversal via getNestedValue().
 const messages: Record<Locale, Record<string, unknown>> = {
-    id: idMessages as unknown as Record<string, unknown>,
-    en: enMessages as unknown as Record<string, unknown>,
+    id: idMessages as Record<string, unknown>,
+    en: enMessages as Record<string, unknown>,
 };
 
 // ---- Helper: get nested value ----

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db'
 import { requirePermissionForRoute } from '@/lib/session'
-import { logAudit } from '@/lib/audit'
+import { logAudit, toAuditPayload } from '@/lib/audit'
 import { updateCompanySettingsSchema, formatZodError } from '@/lib/validation-schemas'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
@@ -180,7 +180,7 @@ export async function PUT(request: Request) {
             action: 'UPDATE',
             entity: 'Tenant',
             entityId: tenantId,
-            oldValues: currentTenant as unknown as Record<string, unknown>,
+            oldValues: toAuditPayload(currentTenant),
             newValues: updateData,
             request,
         })
