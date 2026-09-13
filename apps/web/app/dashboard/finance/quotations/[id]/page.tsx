@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { ArrowLeft, Printer, Send, FileText, Copy, ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowLeft, Printer, Send, FileText, Copy, ArrowRight, Loader2, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface QuotationDetail {
     id: string
@@ -35,12 +37,16 @@ const statusColors: Record<string, string> = {
 export default function QuotationDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const router = useRouter()
+    const { data: session } = useSession()
+    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
     const [quotation, setQuotation] = useState<QuotationDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showSendModal, setShowSendModal] = useState(false)
     const [showConvertConfirm, setShowConvertConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [processing, setProcessing] = useState(false)
+    const [deleting, setDeleting] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
@@ -147,6 +153,27 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
             setToast({ message: t('finance.quotationsDetail.toastConvertFailed'), type: 'error' })
         } finally {
             setProcessing(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        try {
+            setDeleting(true)
+            const res = await fetch(`/api/finance/quotations/${params.id}`, {
+                method: 'DELETE',
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: t('finance.quotationsDetail.toastDeleted') || 'Quotation berhasil dihapus', type: 'success' })
+                setShowDeleteConfirm(false)
+                router.push('/dashboard/finance/quotations')
+            } else {
+                setToast({ message: data.error || t('finance.quotationsDetail.toastDeleteFailed') || 'Gagal menghapus quotation', type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('finance.quotationsDetail.toastDeleteFailed') || 'Gagal menghapus quotation', type: 'error' })
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -334,10 +361,30 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
                                     {t('finance.quotationsDetail.convertToInvoice')}
                                 </button>
                             )}
+                            {canDelete && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('common.delete') || 'Hapus'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleDelete}
+                title={t('finance.quotationsDetail.deleteConfirmTitle') || 'Konfirmasi Hapus'}
+                message={t('finance.quotationsDetail.deleteConfirmMessage') || 'Apakah Anda yakin ingin menghapus quotation ini? Tindakan ini tidak dapat dibatalkan.'}
+                confirmText={deleting ? (t('common.deleting') || 'Menghapus...') : (t('common.delete') || 'Hapus')}
+                variant="danger"
+            />
 
             {/* Send Modal */}
             {showSendModal && (

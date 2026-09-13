@@ -53,6 +53,30 @@ export interface RateLimitResult {
     backend: 'redis' | 'memory';
 }
 
+// ============================================================
+// Configuration
+// ============================================================
+
+/**
+ * ENABLE_MEMORY_RATE_LIMIT — Explicit toggle untuk in-memory fallback.
+ *
+ * - `true`  → In-memory fallback diaktifkan (development / single-instance)
+ * - `false` → In-memory fallback DINONAKTIFKAN — request akan DITOLAK jika Redis unavailable
+ * - *(unset)* → Default: `true` di development, `false` di production
+ *
+ * Di production, jika Redis tidak tersedia dan env ini tidak di-set explicit,
+ * rate limiter akan MENOLAK semua request (fail-closed) demi keamanan.
+ */
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const ENABLE_MEMORY_FALLBACK = (() => {
+    const envVal = process.env.ENABLE_MEMORY_RATE_LIMIT;
+    if (envVal !== undefined) {
+        return envVal === 'true';
+    }
+    // Default: allowed in development, blocked in production
+    return !IS_PRODUCTION;
+})();
+
 export interface RateLimitHeaders {
     'X-RateLimit-Limit': string;
     'X-RateLimit-Remaining': string;
@@ -68,12 +92,26 @@ const memoryStore = new Map<string, { count: number; resetTime: number }>();
 const blockStore = new Map<string, number>(); // ip:pathname → expiry timestamp
 
 // ─── Production Warning ──────────────────────────────────────────────────────
-if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+if (IS_PRODUCTION && !process.env.REDIS_URL) {
     logger.warn(
         '[RateLimit] ⚠️  WARNING: REDIS_URL is not configured in production! ' +
         'In-memory rate limiting is NOT suitable for multi-instance deployments. ' +
         'Rate limits will NOT be shared across instances. ' +
         'Configure REDIS_URL in your .env for shared rate limiting.'
+    );
+}
+if (IS_PRODUCTION && !ENABLE_MEMORY_FALLBACK && !process.env.REDIS_URL) {
+    logger.warn(
+        '[RateLimit] 🔴 CRITICAL: In-memory fallback is DISABLED in production without Redis! ' +
+        'All rate limit checks will FAIL-CLOSED (reject requests). ' +
+        'Set ENABLE_MEMORY_RATE_LIMIT=true in .env to allow in-memory fallback, ' +
+        'or configure REDIS_URL for shared rate limiting.'
+    );
+}
+if (!IS_PRODUCTION && process.env.ENABLE_MEMORY_RATE_LIMIT === undefined) {
+    logger.info(
+        '[RateLimit] ℹ️  Development mode: in-memory fallback enabled by default. ' +
+        'Set ENABLE_MEMORY_RATE_LIMIT=false in .env to test fail-closed behavior.'
     );
 }
 
@@ -103,6 +141,10 @@ if (typeof setInterval !== 'undefined') {
  * Check rate limit (synchronous — in-memory only).
  * Backward compatible dengan API yang sudah ada.
  *
+ * ⚠️ DEPRECATION: Use `checkRateLimitAsync()` for Redis-backed rate limiting.
+ * This sync function only works with in-memory store and is NOT safe for
+ * multi-instance production deployments.
+ *
  * @param key - Unique identifier
  * @param limit - Maximum requests per window (default: 100)
  * @param windowMs - Time window in ms (default: 60000 = 1 minute)
@@ -113,6 +155,20 @@ export function checkRateLimit(
     limit: number = 100,
     windowMs: number = 60000
 ): { success: boolean; remaining: number } {
+    // Production warning — sync function is in-memory only
+    if (IS_PRODUCTION) {
+        logger.warn(
+            '[RateLimit] ⚠️  checkRateLimit() (sync) used in production — ' +
+            'this is IN-MEMORY only and NOT shared across instances. ' +
+            'Migrate to checkRateLimitAsync() for Redis-backed rate limiting.'
+        );
+    }
+
+    if (!ENABLE_MEMORY_FALLBACK) {
+        // Fail-closed: reject all requests when in-memory fallback is disabled
+        return { success: false, remaining: 0 };
+    }
+
     const now = Date.now();
     const record = memoryStore.get(key);
 
@@ -178,7 +234,34 @@ export async function checkRateLimitAsync(
         }
     }
 
-    // In-memory fallback
+    // ─── In-memory fallback ─────────────────────────────────────────────────
+    if (!ENABLE_MEMORY_FALLBACK) {
+        // Fail-closed: reject all requests when in-memory fallback is disabled
+        if (IS_PRODUCTION) {
+            logger.error(
+                '[RateLimit] 🔴 REJECTED: Redis unavailable AND in-memory fallback is disabled. ' +
+                'Request blocked for safety. Configure REDIS_URL or set ENABLE_MEMORY_RATE_LIMIT=true.'
+            );
+        }
+        return {
+            allowed: false,
+            remaining: 0,
+            resetTime: Math.ceil((now + windowMs) / 1000),
+            limit,
+            backend: 'memory',
+        };
+    }
+
+    // Log in-memory fallback usage (once per startup to avoid log spam)
+    if (IS_PRODUCTION) {
+        logger.warn(
+            '[RateLimit] ⚠️  Using in-memory rate limiter fallback — ' +
+            'NOT suitable for production multi-instance deployments. ' +
+            'Rate limits will NOT be shared across instances. ' +
+            'Configure REDIS_URL for shared rate limiting.'
+        );
+    }
+
     const record = memoryStore.get(key);
     const resetTime = now + windowMs;
 

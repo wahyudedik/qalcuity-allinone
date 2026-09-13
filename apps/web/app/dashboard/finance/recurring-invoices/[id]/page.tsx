@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, Pause, Play, XCircle, FileText, Calendar, Clock, Hash, Eye } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { ArrowLeft, Loader2, Pause, Play, XCircle, FileText, Calendar, Clock, Hash, Eye, Trash2 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface RecurringInvoiceDetail {
     id: string
@@ -46,9 +48,13 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 export default function RecurringInvoiceDetailPage({ params }: { params: { id: string } }) {
     const { t } = useTranslation()
     const router = useRouter()
+    const { data: session } = useSession()
+    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
     const [data, setData] = useState<RecurringInvoiceDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleting, setDeleting] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
@@ -98,6 +104,27 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
             setToast({ message: 'Failed to update status', type: 'error' })
         } finally {
             setActionLoading(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        try {
+            setDeleting(true)
+            const res = await fetch(`/api/finance/recurring-invoices/${params.id}`, {
+                method: 'DELETE',
+            })
+            const json = await res.json()
+            if (json.success) {
+                setToast({ message: 'Recurring invoice berhasil dihapus', type: 'success' })
+                setShowDeleteConfirm(false)
+                router.push('/dashboard/finance/recurring-invoices')
+            } else {
+                setToast({ message: json.error || 'Gagal menghapus recurring invoice', type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal menghapus recurring invoice', type: 'error' })
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -181,9 +208,30 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
                             Cancel
                         </button>
                     )}
+                    {canDelete && (
+                        <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={actionLoading}
+                            className="px-4 py-2.5 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                        </button>
+                    )}
                     {actionLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleDelete}
+                title="Konfirmasi Hapus"
+                message="Apakah Anda yakin ingin menghapus recurring invoice ini? Tindakan ini tidak dapat dibatalkan."
+                confirmText={deleting ? 'Menghapus...' : 'Hapus'}
+                variant="danger"
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}

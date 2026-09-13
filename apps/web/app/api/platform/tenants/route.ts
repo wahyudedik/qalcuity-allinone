@@ -49,10 +49,8 @@ export async function GET(request: Request) {
                 where,
                 include: {
                     users: { select: { id: true } },
-                    subscriptions: {
-                        where: { status: "ACTIVE" },
+                    entitlement: {
                         include: { plan: true },
-                        take: 1,
                     },
                 },
                 orderBy: { createdAt: "desc" },
@@ -71,7 +69,7 @@ export async function GET(request: Request) {
             plan: tenant.currentPlanSlug || "starter",
             status: tenant.subscriptionStatus?.toLowerCase() || "trial",
             userCount: tenant.users.length,
-            mrr: tenant.subscriptions[0]?.plan?.price || 0,
+            mrr: tenant.entitlement?.plan?.priceMonthly || 0,
             createdAt: tenant.createdAt.toISOString(),
             updatedAt: tenant.updatedAt.toISOString(),
         }));
@@ -136,22 +134,25 @@ export async function POST(request: Request) {
             },
         });
 
-        // 6. Create trial subscription if plan specified
+        // 6. Create trial entitlement if plan specified
         if (plan) {
-            const planRecord = await prisma.subscriptionPlan.findUnique({
+            const planRecord = await prisma.plan.findUnique({
                 where: { slug: plan },
             });
             if (planRecord) {
                 const trialEnd = new Date();
                 trialEnd.setDate(trialEnd.getDate() + 14); // 14-day trial
 
-                await prisma.tenantSubscription.create({
+                const now = new Date();
+                await prisma.tenantEntitlement.create({
                     data: {
                         tenantId: tenant.id,
                         planId: planRecord.id,
-                        status: "TRIAL",
-                        startDate: new Date(),
-                        endDate: trialEnd,
+                        status: "trial",
+                        billingCycle: "monthly",
+                        trialEndsAt: trialEnd,
+                        currentPeriodStart: now,
+                        currentPeriodEnd: trialEnd,
                     },
                 });
             }

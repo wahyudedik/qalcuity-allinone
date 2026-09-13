@@ -22,6 +22,7 @@ import {
     Baby,
     Wallet,
     AlertTriangle,
+    Trash2,
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
@@ -86,6 +87,7 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
     const [confirmTitle, setConfirmTitle] = useState('')
     const [confirmMessage, setConfirmMessage] = useState('')
     const [processing, setProcessing] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     // ============================================
     // EFFECTS
@@ -177,6 +179,31 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                 setToast({ message: t('hr.leave.toast.rejectFailed'), type: 'error' })
             } finally {
                 setProcessing(false)
+            }
+        })
+        setShowConfirmDialog(true)
+    }
+
+    const handleDelete = () => {
+        setConfirmTitle(t('hr.leave.confirm.deleteTitle') || 'Hapus Cuti')
+        setConfirmMessage(`${t('hr.leave.confirm.deleteMessage') || 'Apakah Anda yakin ingin menghapus data cuti ini?'} ${leave?.employeeName || ''}`)
+        setConfirmAction(() => async () => {
+            try {
+                setDeleting(true)
+                const response = await fetch(`/api/hr/leaves/${params.id}`, {
+                    method: 'DELETE',
+                })
+                const result = await response.json()
+                if (result.success) {
+                    setToast({ message: t('hr.leave.toast.deleteSuccess') || 'Cuti berhasil dihapus', type: 'success' })
+                    router.push('/dashboard/hr/leaves')
+                } else {
+                    setToast({ message: result.error || t('hr.leave.toast.deleteFailed') || 'Gagal menghapus cuti', type: 'error' })
+                }
+            } catch {
+                setToast({ message: t('hr.leave.toast.deleteFailed') || 'Gagal menghapus cuti', type: 'error' })
+            } finally {
+                setDeleting(false)
             }
         })
         setShowConfirmDialog(true)
@@ -351,6 +378,16 @@ export default function LeaveDetailPage({ params }: { params: { id: string } }) 
                                 {t('hr.leave.reject')}
                             </button>
                         </>
+                    )}
+                    {canMutate && (
+                        <button
+                            onClick={handleDelete}
+                            disabled={deleting}
+                            className="flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        >
+                            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            {t('common.delete') || 'Hapus'}
+                        </button>
                     )}
                 </div>
             </div>

@@ -700,24 +700,24 @@ async function testBilling(tenantId: string) {
 
     const startTime = Date.now();
     try {
-        const plans = await (prisma as any).subscriptionPlan.findMany({
+        const plans = await (prisma as any).plan.findMany({
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
         });
-        recordTest('Billing Plans', 'GET subscription plans', 'PASS', `${plans.length} plans found`, Date.now() - startTime);
+        recordTest('Billing Plans', 'GET plans', 'PASS', `${plans.length} plans found`, Date.now() - startTime);
     } catch {
-        recordTest('Billing Plans', 'GET subscription plans', 'SKIP', 'Model not available — run prisma generate');
+        recordTest('Billing Plans', 'GET plans', 'SKIP', 'Model not available — run prisma generate');
     }
 
     const startTime2 = Date.now();
     try {
-        const subscription = await (prisma as any).tenantSubscription.findFirst({
+        const entitlement = await (prisma as any).tenantEntitlement.findFirst({
             where: { tenantId },
             include: { plan: true },
         });
-        recordTest('Billing Subscription', 'GET tenant subscription', 'PASS', subscription ? `Plan: ${subscription.plan.name}` : 'No subscription', Date.now() - startTime2);
+        recordTest('Billing Entitlement', 'GET tenant entitlement', 'PASS', entitlement ? `Plan: ${entitlement.plan.name}` : 'No entitlement', Date.now() - startTime2);
     } catch {
-        recordTest('Billing Subscription', 'GET tenant subscription', 'SKIP', 'Model not available — run prisma generate');
+        recordTest('Billing Entitlement', 'GET tenant entitlement', 'SKIP', 'Model not available — run prisma generate');
     }
 }
 
