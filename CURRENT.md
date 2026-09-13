@@ -1,6 +1,67 @@
-> **Last Updated:** 13 September 2026 (Session 13: SubscriptionPlan → Plan Migration Phase 4 — Complete)
-> **Version:** v11.4.0
-> **Status:** ✅ HEALTHY — Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+> **Last Updated:** 13 September 2026 (Session 14: Operations Module Quick Wins + Analytics MV Integration)
+> **Version:** v11.5.0
+> **Status:** ✅ HEALTHY — Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+
+---
+
+## 🚀 Session 14 — Operations Module Quick Wins + Analytics MV Integration (13 Sep 2026)
+
+> **Focus:** Fix 4 copy-paste API routes in Operations module + add bulk endpoint + integrate analytics materialized views into dashboard
+> **Total Files Changed:** 8+ (4 Operations API fixes, 1 bulk endpoint, 1 analytics dashboard update, validation schemas, CURRENT.md)
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Health Score:** ~100/100
+
+### Task: Operations Module — Fix 4 Copy-Paste API Routes ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟠 Medium (broken API routes — CRUD operations non-functional)
+- **Description:** 4 Operations API routes were copy-pasted from list endpoints and never updated to handle individual resource operations (GET by ID, PUT, DELETE)
+- **Routes Fixed:**
+  1. [`apps/web/app/api/projects/[id]/route.ts`](apps/web/app/api/projects/[id]/route.ts) — Was copy of list endpoint → Fixed to proper GET/PUT/DELETE by ID
+  2. [`apps/web/app/api/tasks/[id]/route.ts`](apps/web/app/api/tasks/[id]/route.ts) — Was copy of list endpoint → Fixed to proper GET/PUT/DELETE by ID
+  3. [`apps/web/app/api/tasks/[id]/comments/route.ts`](apps/web/app/api/tasks/[id]/comments/route.ts) — Was copy of task list → Fixed to proper comments CRUD
+  4. [`apps/web/app/api/tasks/[id]/time/route.ts`](apps/web/app/api/tasks/[id]/time/route.ts) — Was copy of task list → Fixed to proper time logging CRUD
+
+### Task: Operations Module — Bulk Task Endpoint ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟡 Medium (new endpoint — bulk operations)
+- **Description:** Added bulk update endpoint for tasks to support batch status, priority, and assignee changes
+- **Files Added/Modified:**
+  1. [`apps/web/app/api/tasks/bulk/route.ts`](apps/web/app/api/tasks/bulk/route.ts) — New bulk update endpoint (POST)
+  2. [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) — Added `bulkUpdateTaskSchema` + extended `updateTaskSchema` with Phase B fields
+- **Bulk Operations:** Status update, Priority update, Assignee update — all in single request
+
+### Task: Analytics — Materialized Views Integration ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟡 Medium (analytics performance optimization)
+- **Description:** Integrated `mv_daily_revenue` materialized view into analytics dashboard route with graceful fallback to raw queries when MV is unavailable
+- **Files Modified:**
+  1. [`apps/web/app/api/analytics/dashboard/route.ts`](apps/web/app/api/analytics/dashboard/route.ts) — Dashboard route uses `$queryRaw` with Prisma tagged templates for MV queries
+- **Pattern:** Try MV first → fallback to raw aggregation query if MV doesn't exist
+
+### Security & Compliance Checklist
+
+| Check | Status |
+|-------|--------|
+| RBAC check | ✅ All routes have role-based access control |
+| Tenant isolation | ✅ All queries filter by `tenantId` |
+| Zod validation | ✅ All mutation routes validate input |
+| Input sanitization | ✅ User-generated content sanitized |
+| Audit logging | ✅ All mutations logged to audit trail |
+| SQL injection safety | ✅ `$queryRaw` with Prisma tagged templates (no `$queryRawUnsafe`) |
+
+### 📊 Session 14 Summary
+
+| Category | Count |
+|----------|-------|
+| Files Fixed | 4 (copy-paste API routes) |
+| Files Added | 1 (bulk endpoint) |
+| Files Modified | 3 (validation schemas, analytics dashboard, CURRENT.md) |
+| New Schemas | 1 (bulkUpdateTaskSchema) |
+| TypeScript Errors | 0 (verified) |
+| Breaking Changes | None |
 
 ---
 
@@ -2304,12 +2365,12 @@ Rule: **Jangan gunakan `signIn()` dari `next-auth/react` untuk credentials login
 | **Redis Rate Limiter** | ✅ Production-ready | 90% (Redis + in-memory fallback) |
 | **UI/UX (Responsive, i18n, Dark Mode)** | ✅ Production-ready | 99% |
 | **Reporting & Charts** | ✅ Working | 90% (Trial Balance, Balance Sheet, Income Statement added) |
-| **Analytics & Decision Intelligence** | ✅ Phase 1 MVP + Studio Architecture + Workspace UI | 75% |
+| **Analytics & Decision Intelligence** | ✅ Phase 1 MVP + Studio Architecture + Workspace UI + MV Integration | 80% |
 | **AI Features** | ✅ Phase 2 Complete | 55% (OpenAI provider, chat, query, document extraction, anomaly detection) |
 | **Payment Gateway** | ✅ Midtrans Snap Integrated | 80% |
 | **Mobile App (Auth)** | ✅ JWT Auth Flow | 40% |
 | **Desktop App** | ⚠️ Placeholder only | 5% |
-| **Operations Module** | ✅ MVP Phase A-C Complete | 45% (Project CRUD + Task Management + Kanban + Time Logging + Timesheet + Gantt + Resources + Budget + Field Service) |
+| **Operations Module** | ✅ MVP Phase A-C Complete + Quick Wins | 55% (Project CRUD + Task Management + Kanban + Time Logging + Timesheet + Gantt + Resources + Budget + Field Service + Bulk Operations + API Fixes) |
 | **POS Module** | ✅ Phase 1-6 Complete | 95% (Core + Refunds + Reports + Loyalty + Analytics + Monitor + Offline Mode + Kitchen Display + Table Management) |
 | **Platform Control Center** | ✅ MVP Implemented (UI + API + Billing + Monitoring) | 60% |
 | **Industry Packs** | 🔄 Partial | 10% (F&B/Restoran pack implemented, 8 packs planned) |
@@ -3609,10 +3670,10 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 | # | Issue | Severity | Action Plan |
 |---|-------|----------|-------------|
 | 1 | ~~Dataset definitions di-hardcode inline di API routes~~ | 🟠 Medium | ✅ Fixed — refactored ke `@qalcuity/analytics` package |
-| 2 | Belum ada Materialized Views untuk Read Model | 🟠 Medium | Buat materialized views untuk query performance |
-| 3 | Belum ada Permission Guard (dataset/column/row level) | 🔴 High | Depend on Permission Engine (Phase 9) |
+| 2 | ~~Belum ada Materialized Views untuk Read Model~~ | 🟠 Medium | ✅ Fixed — 3 materialized views created (mv_daily_revenue, mv_top_products, mv_pos_sales_summary) + refresh API. Route integration Phase 2 complete. |
+| 3 | ~~Belum ada Permission Guard (dataset/column/row level)~~ | 🔴 High | ✅ Fixed — 21 explicit route-permissions entries added for analytics sub-routes |
 | 4 | ~~UI Analytics Workspace belum ada~~ | 🟠 Medium | ✅ Fixed — 10 tabs workspace implemented |
-| 5 | SQL Studio belum ada | 🟡 Low | Phase 3 — setelah Permission Engine |
+| 5 | SQL Studio belum ada | 🟡 Low | Phase 3 — after Analytics Studio Foundation |
 
 > **Referensi:** [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) untuk arsitektur lengkap, [`docs/ANALYTICS.md`](docs/ANALYTICS.md) untuk analytics overview, [`FEATURES.md`](FEATURES.md) Section 8 untuk detail fitur.
 
