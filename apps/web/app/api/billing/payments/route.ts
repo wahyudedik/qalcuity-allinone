@@ -26,6 +26,10 @@ export async function GET(request: Request) {
             prisma.billingPayment.findMany({
                 where: { tenantId: auth.tenantId },
                 include: {
+                    // Phase 4: Prefer entitlement.plan over subscription.plan
+                    entitlement: {
+                        include: { plan: true },
+                    },
                     subscription: {
                         include: { plan: true },
                     },
@@ -73,6 +77,7 @@ export async function POST(request: Request) {
 
         const {
             subscriptionId,
+            entitlementId: inputEntitlementId,
             amount,
             bankName,
             accountNumber,
@@ -83,7 +88,7 @@ export async function POST(request: Request) {
             proofFileName,
         } = validation.data;
 
-        // Validasi subscription exists dan milik tenant
+        // Phase 4: Validate subscription exists and belongs to tenant (backward compat)
         const subscription = await prisma.tenantSubscription.findFirst({
             where: {
                 id: subscriptionId,
@@ -98,9 +103,18 @@ export async function POST(request: Request) {
             );
         }
 
+        // Phase 4: Look up TenantEntitlement for this tenant (preferred path)
+        const entitlement = await prisma.tenantEntitlement.findUnique({
+            where: { tenantId },
+            include: { plan: true },
+        });
+
+        const resolvedEntitlementId = inputEntitlementId || entitlement?.id || null;
+
         const payment = await prisma.billingPayment.create({
             data: {
                 subscriptionId,
+                entitlementId: resolvedEntitlementId,
                 tenantId,
                 amount,
                 paymentMethod: 'manual_transfer',
@@ -115,16 +129,26 @@ export async function POST(request: Request) {
             },
         });
 
-        // Update subscription status
-        await prisma.tenantSubscription.update({
-            where: { id: subscriptionId },
-            data: { status: 'PENDING_PAYMENT' },
-        });
+        // Phase 4: Update TenantEntitlement status if available, else fallback to TenantSubscription
+        if (entitlement) {
+            // TenantEntitlement doesn't have PENDING_PAYMENT status — keep current status
+            // but sync Tenant.subscriptionStatus for backward compat
+            await prisma.tenant.update({
+                where: { id: tenantId },
+                data: { subscriptionStatus: 'PENDING_PAYMENT' },
+            });
+        } else {
+            // Fallback: update legacy TenantSubscription status
+            await prisma.tenantSubscription.update({
+                where: { id: subscriptionId },
+                data: { status: 'PENDING_PAYMENT' },
+            });
 
-        await prisma.tenant.update({
-            where: { id: tenantId },
-            data: { subscriptionStatus: 'PENDING_PAYMENT' },
-        });
+            await prisma.tenant.update({
+                where: { id: tenantId },
+                data: { subscriptionStatus: 'PENDING_PAYMENT' },
+            });
+        }
 
         // Notify superadmin via email (non-blocking)
         notifySuperadminPayment(payment.id).catch((err) => {
@@ -132,7 +156,7 @@ export async function POST(request: Request) {
         });
 
         // Log audit create
-        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'BillingPayment', entityId: payment.id, newValues: { amount: payment.amount, bankName: payment.bankName, subscriptionId: payment.subscriptionId } as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'BillingPayment', entityId: payment.id, newValues: { amount: payment.amount, bankName: payment.bankName, subscriptionId: payment.subscriptionId, entitlementId: resolvedEntitlementId } as Record<string, unknown>, request });
 
         return NextResponse.json({
             success: true,

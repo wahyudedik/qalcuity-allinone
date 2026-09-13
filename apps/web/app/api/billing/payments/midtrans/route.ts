@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
  * Midtrans Snap Payment API Route
  *
  * Membuat transaksi Midtrans Snap untuk pembayaran billing/subscription.
- * Flow: User pilih plan â†’ POST ke route ini â†’ Redirect ke Midtrans Snap.
+ * Flow: User pilih plan → POST ke route ini → Redirect ke Midtrans Snap.
  *
  * @see https://docs.midtrans.com/#snap-integration
  */
@@ -18,7 +18,6 @@ import { logAudit } from '@/lib/audit';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { createMidtransPaymentSchema, formatZodError } from '@/lib/validation-schemas';
 import { getPublicBaseUrl } from '@/lib/utils';
-import { z } from 'zod';
 
 export async function POST(request: Request) {
     try {
@@ -41,27 +40,49 @@ export async function POST(request: Request) {
 
         const { subscriptionId } = validation.data;
 
-        // Cek subscription exists dan milik tenant ini
+        // Phase 4: Cek subscription exists dan milik tenant ini (backward compat)
         const subscription = await prisma.tenantSubscription.findFirst({
             where: {
                 id: subscriptionId,
                 tenantId,
             },
-            include: {
-                plan: true,
-            },
         });
 
         if (!subscription) {
             return NextResponse.json(
-                { success: false, error: 'Subscription not found', code: 'NOT_FOUND' },
+                { success: false, error: MSG.SUBSCRIPTION_NOT_FOUND, code: 'NOT_FOUND' },
                 { status: 404 }
             );
         }
 
-        if (!subscription.plan) {
+        // Phase 4: Look up TenantEntitlement + Plan (preferred path)
+        const entitlement = await prisma.tenantEntitlement.findUnique({
+            where: { tenantId },
+            include: { plan: true },
+        });
+
+        // Fallback: if no entitlement, look up plan via legacy SubscriptionPlan
+        let planName = 'Unknown Plan';
+        let planPrice = 0;
+
+        if (entitlement?.plan) {
+            // Use Plan model (new path)
+            planName = entitlement.plan.name;
+            planPrice = Number(entitlement.plan.priceMonthly);
+        } else {
+            // Fallback to legacy SubscriptionPlan
+            const legacyPlan = await prisma.subscriptionPlan.findUnique({
+                where: { id: subscription.planId },
+            });
+            if (legacyPlan) {
+                planName = legacyPlan.name;
+                planPrice = Number(legacyPlan.price);
+            }
+        }
+
+        if (planPrice <= 0) {
             return NextResponse.json(
-                { success: false, error: 'Invalid subscription plan', code: 'VALIDATION_ERROR' },
+                { success: false, error: MSG.INVALID_SUBSCRIPTION_PLAN, code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
@@ -91,32 +112,42 @@ export async function POST(request: Request) {
         const appUrl = getPublicBaseUrl();
         const callbackUrl = `${appUrl}/dashboard/billing?payment=success&orderId=${orderId}`;
 
-        // Hitung total amount (price Ã— 1 bulan)
-        const amount = Number(subscription.plan.price);
+        // Hitung total amount
+        const amount = planPrice;
 
         // Buat billing payment record
         const payment = await prisma.billingPayment.create({
             data: {
                 subscriptionId,
+                entitlementId: entitlement?.id || null,
                 tenantId,
                 amount,
                 paymentMethod: 'midtrans',
                 reference: orderId,
                 status: 'PENDING',
-                notes: `Pembayaran via Midtrans Snap - Paket ${subscription.plan.name}`,
+                notes: `Pembayaran via Midtrans Snap - Paket ${planName}`,
             },
         });
 
-        // Update subscription status
-        await prisma.tenantSubscription.update({
-            where: { id: subscriptionId },
-            data: { status: 'PENDING_PAYMENT' },
-        });
+        // Phase 4: Update TenantEntitlement or fallback to TenantSubscription
+        if (entitlement) {
+            // TenantEntitlement doesn't have PENDING_PAYMENT — sync Tenant.subscriptionStatus
+            await prisma.tenant.update({
+                where: { id: tenantId },
+                data: { subscriptionStatus: 'PENDING_PAYMENT' },
+            });
+        } else {
+            // Fallback: update legacy TenantSubscription status
+            await prisma.tenantSubscription.update({
+                where: { id: subscriptionId },
+                data: { status: 'PENDING_PAYMENT' },
+            });
 
-        await prisma.tenant.update({
-            where: { id: tenantId },
-            data: { subscriptionStatus: 'PENDING_PAYMENT' },
-        });
+            await prisma.tenant.update({
+                where: { id: tenantId },
+                data: { subscriptionStatus: 'PENDING_PAYMENT' },
+            });
+        }
 
         // Buat Midtrans Snap transaction
         const provider = getPaymentProvider();
@@ -129,7 +160,7 @@ export async function POST(request: Request) {
             customerPhone: undefined,
             items: [
                 {
-                    name: `Langganan ${subscription.plan.name} - 1 Bulan`,
+                    name: `Langganan ${planName} - 1 Bulan`,
                     price: amount,
                     quantity: 1,
                 },
@@ -155,7 +186,7 @@ export async function POST(request: Request) {
             where: { id: payment.id },
             data: {
                 reference: orderId,
-                notes: `Pembayaran via Midtrans Snap - Paket ${subscription.plan.name} - Token: ${result.paymentToken}`,
+                notes: `Pembayaran via Midtrans Snap - Paket ${planName} - Token: ${result.paymentToken}`,
             },
         });
 
@@ -169,8 +200,9 @@ export async function POST(request: Request) {
             newValues: {
                 amount,
                 orderId,
-                planName: subscription.plan.name,
+                planName,
                 paymentMethod: 'midtrans',
+                entitlementId: entitlement?.id || null,
             } as Record<string, unknown>,
             request,
         });
