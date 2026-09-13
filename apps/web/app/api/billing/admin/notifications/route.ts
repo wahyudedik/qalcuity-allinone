@@ -32,6 +32,18 @@ export async function GET() {
                         email: true,
                     },
                 },
+                // Phase 4: Include entitlement with Plan (preferred path)
+                entitlement: {
+                    select: {
+                        plan: {
+                            select: {
+                                name: true,
+                                priceMonthly: true,
+                            },
+                        },
+                    },
+                },
+                // Keep legacy subscription include for backward compat
                 subscription: {
                     select: {
                         plan: {
@@ -55,7 +67,10 @@ export async function GET() {
                 title: `Pembayaran Baru dari ${n.tenant.name}`,
                 message: `${n.accountName || 'Unknown'} mengirim Rp ${Number(n.amount).toLocaleString('id-ID')} via ${n.bankName || 'Transfer Bank'}`,
                 tenant: n.tenant,
-                plan: n.subscription.plan,
+                // Phase 4: Prefer entitlement.plan over subscription.plan
+                plan: n.entitlement?.plan
+                    ? { name: n.entitlement.plan.name, price: n.entitlement.plan.priceMonthly }
+                    : n.subscription.plan,
                 amount: n.amount,
                 isRead: false,
                 createdAt: n.createdAt,

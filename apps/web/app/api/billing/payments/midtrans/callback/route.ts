@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * 1. Midtrans POST notification ke route ini
  * 2. Verifikasi signature dengan HMAC SHA512
  * 3. Update BillingPayment status berdasarkan transaction_status
- * 4. Update TenantSubscription status jika pembayaran berhasil
+ * 4. Phase 4: Update TenantEntitlement status (or fallback TenantSubscription) jika pembayaran berhasil
  *
  * @see https://docs.midtrans.com/#webhook-notification
  */
@@ -19,6 +19,7 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
+import { invalidateEntitlementCache } from '@/lib/entitlement';
 import { getPaymentProvider } from '@/lib/payment/provider';
 import { midtransWebhookSchema, formatZodError } from '@/lib/validation-schemas';
 import type { MidtransProvider } from '@/lib/payment/midtrans';
@@ -28,7 +29,7 @@ import { logger } from '@/lib/logger';
  * POST /api/billing/payments/midtrans/callback
  *
  * Webhook handler untuk Midtrans payment notification.
- * Tidak memerlukan auth â€” dipanggil langsung oleh Midtrans server.
+ * Tidak memerlukan auth — dipanggil langsung oleh Midtrans server.
  */
 export async function POST(request: Request) {
     try {
@@ -73,7 +74,13 @@ export async function POST(request: Request) {
                 reference: data.order_id,
             },
             include: {
-                subscription: true,
+                // Phase 4: Include both entitlement and subscription for backward compat
+                entitlement: {
+                    include: { plan: true },
+                },
+                subscription: {
+                    include: { plan: true },
+                },
             },
         });
 
@@ -112,26 +119,52 @@ export async function POST(request: Request) {
             },
         });
 
-        // Jika pembayaran berhasil, update subscription status
+        // Phase 4: If payment is successfully, activate entitlement via Plan model (preferred)
         if (isPaid) {
-            // Update subscription ke ACTIVE
-            await prisma.tenantSubscription.update({
-                where: { id: payment.subscriptionId },
-                data: {
-                    status: 'ACTIVE',
-                    startDate: new Date(),
-                    paymentMethod: 'midtrans',
-                    notes: `Activated via Midtrans - Order: ${data.order_id}`,
-                },
-            });
+            if (payment.entitlement?.plan) {
+                // New path: Update TenantEntitlement status
+                const now = new Date();
+                const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-            // Update tenant subscription status
-            await prisma.tenant.update({
-                where: { id: payment.tenantId },
-                data: { subscriptionStatus: 'ACTIVE' },
-            });
+                await prisma.tenantEntitlement.update({
+                    where: { id: payment.entitlement.id },
+                    data: {
+                        status: 'active',
+                        currentPeriodStart: now,
+                        currentPeriodEnd: periodEnd,
+                    },
+                });
 
-            logger.info(`[MidtransCallback] Payment VERIFIED for order: ${data.order_id}, subscription activated`);
+                // Sync Tenant.subscriptionStatus
+                await prisma.tenant.update({
+                    where: { id: payment.tenantId },
+                    data: { subscriptionStatus: 'ACTIVE' },
+                });
+
+                // Invalidate entitlement cache
+                invalidateEntitlementCache(payment.tenantId);
+
+                logger.info(`[MidtransCallback] Payment VERIFIED for order: ${data.order_id}, entitlement activated`);
+            } else {
+                // Fallback: Update legacy TenantSubscription status
+                await prisma.tenantSubscription.update({
+                    where: { id: payment.subscriptionId },
+                    data: {
+                        status: 'ACTIVE',
+                        startDate: new Date(),
+                        paymentMethod: 'midtrans',
+                        notes: `Activated via Midtrans - Order: ${data.order_id}`,
+                    },
+                });
+
+                // Update tenant subscription status
+                await prisma.tenant.update({
+                    where: { id: payment.tenantId },
+                    data: { subscriptionStatus: 'ACTIVE' },
+                });
+
+                logger.info(`[MidtransCallback] Payment VERIFIED for order: ${data.order_id}, legacy subscription activated`);
+            }
 
             // Log audit
             void logAudit({

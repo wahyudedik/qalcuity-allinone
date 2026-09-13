@@ -40,6 +40,20 @@ export async function GET(request: Request) {
                             subscriptionStatus: true,
                         },
                     },
+                    // Phase 4: Include entitlement with Plan (preferred path)
+                    entitlement: {
+                        include: {
+                            plan: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    slug: true,
+                                    priceMonthly: true,
+                                },
+                            },
+                        },
+                    },
+                    // Keep legacy subscription include for backward compat
                     subscription: {
                         include: {
                             plan: {

@@ -910,12 +910,14 @@ model TenantSubscription {
 }
 
 model BillingPayment {
-  id             String             @id @default(cuid())
+  id             String              @id @default(cuid())
   subscriptionId String
-  subscription   TenantSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription   TenantSubscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  entitlementId  String?             // Phase 4: link to TenantEntitlement (nullable for backward compat)
+  entitlement    TenantEntitlement?  @relation(fields: [entitlementId], references: [id], onDelete: SetNull)
   tenantId       String
-  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  amount         Decimal            @default(0) @db.Decimal(19, 4) // Amount in Rupiah
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount         Decimal             @default(0) @db.Decimal(19, 4) // Amount in Rupiah
   paymentMethod  String // manual_transfer
   bankName       String? // BRI, JAGO, BTN, BSI
   accountNumber  String? // Rekening pengirim
@@ -923,18 +925,19 @@ model BillingPayment {
   proofFileUrl   String? // URL/path bukti transfer
   proofFileName  String? // Original filename
   reference      String? // Reference number from user
-  status         String             @default("PENDING") // PENDING, VERIFIED, REJECTED
+  status         String              @default("PENDING") // PENDING, VERIFIED, REJECTED
   verifiedById   String? // userId of admin who verified
   verifiedAt     DateTime?
   rejectReason   String?
   notes          String?
-  waConfirmed    Boolean            @default(false) // User sudah konfirmasi via WA
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  waConfirmed    Boolean             @default(false) // User sudah konfirmasi via WA
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([tenantId])
   @@index([status])
   @@index([subscriptionId])
+  @@index([entitlementId])
 }
 
 // ============================================================
@@ -1753,8 +1756,9 @@ model TenantEntitlement {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan   Plan   @relation(fields: [planId], references: [id])
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     Plan            @relation(fields: [planId], references: [id])
+  payments BillingPayment[]
 
   @@index([tenantId])
   @@index([planId])
