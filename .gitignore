@@ -45,6 +45,9 @@ coverage/
 *.db
 *.db-journal
 
+# Uploaded files
+apps/web/public/uploads/
+
 # Misc
 *.tsbuildinfo
 test3-cookies.txt
