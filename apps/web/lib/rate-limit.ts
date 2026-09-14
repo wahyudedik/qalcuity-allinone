@@ -60,12 +60,14 @@ export interface RateLimitResult {
 /**
  * ENABLE_MEMORY_RATE_LIMIT — Explicit toggle untuk in-memory fallback.
  *
- * - `true`  → In-memory fallback diaktifkan (development / single-instance)
+ * - `true`  → In-memory fallback diaktifkan (default untuk semua environment)
  * - `false` → In-memory fallback DINONAKTIFKAN — request akan DITOLAK jika Redis unavailable
- * - *(unset)* → Default: `true` di development, `false` di production
+ * - *(unset)* → Default: `true` (in-memory fallback aktif di semua environment)
  *
- * Di production, jika Redis tidak tersedia dan env ini tidak di-set explicit,
- * rate limiter akan MENOLAK semua request (fail-closed) demi keamanan.
+ * ⚠️ CATATAN: Di production, in-memory rate limiting TIDAK ter-shared antar instances.
+ * Untuk multi-instance production, SELALU konfigurasi REDIS_URL.
+ * Set `ENABLE_MEMORY_RATE_LIMIT=false` hanya jika Anda ingin fail-closed
+ * saat Redis unavailable (eksplisit security choice).
  */
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const ENABLE_MEMORY_FALLBACK = (() => {
@@ -73,8 +75,10 @@ const ENABLE_MEMORY_FALLBACK = (() => {
     if (envVal !== undefined) {
         return envVal === 'true';
     }
-    // Default: allowed in development, blocked in production
-    return !IS_PRODUCTION;
+    // Default: always enabled. In-memory fallback aktif di semua environment.
+    // Operator bisa explicitly disable dengan ENABLE_MEMORY_RATE_LIMIT=false
+    // jika ingin fail-closed behavior saat Redis unavailable.
+    return true;
 })();
 
 export interface RateLimitHeaders {
@@ -106,6 +110,12 @@ if (IS_PRODUCTION && !ENABLE_MEMORY_FALLBACK && !process.env.REDIS_URL) {
         'All rate limit checks will FAIL-CLOSED (reject requests). ' +
         'Set ENABLE_MEMORY_RATE_LIMIT=true in .env to allow in-memory fallback, ' +
         'or configure REDIS_URL for shared rate limiting.'
+    );
+}
+if (IS_PRODUCTION && process.env.ENABLE_MEMORY_RATE_LIMIT === undefined) {
+    logger.info(
+        '[RateLimit] ℹ️  Production mode: in-memory fallback enabled by default. ' +
+        'Set ENABLE_MEMORY_RATE_LIMIT=false in .env to enable fail-closed behavior when Redis is unavailable.'
     );
 }
 if (!IS_PRODUCTION && process.env.ENABLE_MEMORY_RATE_LIMIT === undefined) {
