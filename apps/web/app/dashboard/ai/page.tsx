@@ -19,6 +19,7 @@ interface FeatureCard {
     iconBg: string;
     iconColor: string;
     status: 'available' | 'coming-soon';
+    href?: string;
 }
 
 const features: FeatureCard[] = [
@@ -28,7 +29,8 @@ const features: FeatureCard[] = [
         icon: TrendingUp,
         iconBg: 'bg-green-100 dark:bg-green-900/30',
         iconColor: 'text-green-600 dark:text-green-400',
-        status: 'coming-soon',
+        status: 'available',
+        href: '/dashboard/ai/agents',
     },
     {
         titleKey: 'ai.salesAgent',
@@ -36,7 +38,8 @@ const features: FeatureCard[] = [
         icon: Users,
         iconBg: 'bg-blue-100 dark:bg-blue-900/30',
         iconColor: 'text-blue-600 dark:text-blue-400',
-        status: 'coming-soon',
+        status: 'available',
+        href: '/dashboard/ai/agents',
     },
     {
         titleKey: 'ai.inventoryAgent',
@@ -44,7 +47,8 @@ const features: FeatureCard[] = [
         icon: Package,
         iconBg: 'bg-orange-100 dark:bg-orange-900/30',
         iconColor: 'text-orange-600 dark:text-orange-400',
-        status: 'coming-soon',
+        status: 'available',
+        href: '/dashboard/ai/agents',
     },
     {
         titleKey: 'ai.nlqTitle',
@@ -92,10 +96,10 @@ export default function AIPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {features.map((feature) => {
                     const Icon = feature.icon;
-                    return (
+                    const cardContent = (
                         <div
                             key={feature.titleKey}
-                            className="rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                            className={`rounded-xl border border-gray-200 bg-white p-6 transition-shadow dark:border-gray-700 dark:bg-gray-800 ${feature.href ? 'cursor-pointer hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600' : ''}`}
                         >
                             <div
                                 className={`mb-4 flex h-12 w-12 items-center justify-center rounded-lg ${feature.iconBg}`}
@@ -119,6 +123,15 @@ export default function AIPage() {
                             </div>
                         </div>
                     );
+
+                    if (feature.href) {
+                        return (
+                            <Link key={feature.titleKey} href={feature.href} className="block">
+                                {cardContent}
+                            </Link>
+                        );
+                    }
+                    return cardContent;
                 })}
             </div>
 

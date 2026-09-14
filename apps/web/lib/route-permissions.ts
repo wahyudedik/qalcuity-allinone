@@ -206,6 +206,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/ai/anomalies/scan': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/ai/anomalies/[id]': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/ai/health': { permission: 'ai:view', fallbackRole: 'MEMBER' },
+    '/api/ai/agents': { permission: 'ai:view', fallbackRole: 'MEMBER' },
 
     // ─── CRM Emails ──────────────────────────────────────────────────────────
     '/api/crm/emails': { permission: 'crm:view', fallbackRole: 'ADMIN' },
