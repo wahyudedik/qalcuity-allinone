@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { sendPaymentReminderEmail } from '@/lib/email';
 import type { CronTaskResult } from '@/lib/cron-scheduler';
 import { logger } from '@/lib/logger';
-import { notifyNewNotification } from '@/app/api/notifications/stream/route';
+import { notifyNewNotification } from '@/lib/notification-pubsub';
 
 export async function runPaymentReminder(): Promise<CronTaskResult> {
     const now = new Date();
