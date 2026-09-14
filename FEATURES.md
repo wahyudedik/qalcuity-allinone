@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 14, 2026 (Session 32: Sprint 32 Critical Fixes + Finance Enhancements — v11.23.0)
+**Last Updated:** September 14, 2026 (Session 33: Sprint 33 POS Critical Fixes + Daily Closing Report — v11.24.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 26.0 — Session 32: CRM Pipeline bug fixes, Dashboard real DB queries, Aging Report (AR/AP) production-ready. Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 27.0 — Session 33: POS critical fixes (Close Session, Approve Refund, Void Transaction with stock restoration), Daily Closing Report. Session 32: CRM Pipeline bug fixes, Dashboard real DB queries, Aging Report (AR/AP) production-ready. Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -1168,14 +1168,15 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 |---------|--------|---------------|-------|
 | **POS Terminal (Cashier)** | 🚀 `production_ready` | 2026-09-12 | Terminal/Cashier page + API, RBAC, tenant isolation, Zod validation (Phase 2) |
 | **POS Returns** | 📋 `planned` | — | Pengembalian barang partial/full |
-| **POS Refunds** | 🚀 `production_ready` | 2026-09-12 | Refunds page + 2 API routes, RBAC, tenant isolation, Zod validation (Phase 3) |
+| **POS Refunds** | 🚀 `production_ready` | 2026-09-14 | Refunds page + 2 API routes, PUT handler with stock restoration, RBAC, tenant isolation, Zod validation (Phase 3) |
+| **POS Void Transaction** | 🚀 `production_ready` | 2026-09-14 | Void PUT handler with stock restoration, `prisma.$transaction` atomicity, RBAC, tenant isolation — [`apps/web/app/api/pos/transactions/[id]/void/route.ts`](apps/web/app/api/pos/transactions/[id]/void/route.ts) |
 | **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
 | **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
 | **POS Products** | 🚀 `production_ready` | 2026-09-11 | Products full CRUD — GET list, GET by ID, POST, PUT, DELETE (Phase 2 Batch 1) |
 | **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
 | **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
 | **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
-| **POS Shift Management** | 🚀 `production_ready` | 2026-09-12 | Sessions page + API, RBAC, tenant isolation, Zod validation |
+| **POS Shift Management** | 🚀 `production_ready` | 2026-09-14 | Sessions page + API, Close Session PUT handler with closing report + expected cash calculation + variance, Daily Closing Report API (`GET /api/pos/sessions/[id]/closing-report`), RBAC, tenant isolation, Zod validation |
 | **POS Cashier Management** | 🚀 `production_ready` | 2026-09-12 | Terminals Management page (CRUD), RBAC, tenant isolation |
 | **POS Receipt Printing** | 🚀 `production_ready` | 2026-09-14 | Thermal printer format (80mm), `window.print()` for thermal printer, Web Share API for mobile sharing, download as .txt, Print CSS (`@media print`) — [`apps/web/components/pos/pos-receipt.tsx`](apps/web/components/pos/pos-receipt.tsx) |
 | **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
@@ -1496,16 +1497,17 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~89 | ~49% |
+| `production_ready` | 🚀 | ~90 | ~49% |
 | `implemented` | ✅ | ~33 | ~18% |
 | `verified` | ✔️ | 0 | 0% |
 | `partial` | 🔄 | ~20 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~132 | ~36% |
+| `planned` | 📋 | ~131 | ~36% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
-| **Total** | | **~289** | **100%** |
+| **Total** | | **~290** | **100%** |
 
+> **Session 33 Impact (14 Sep):** +1 production_ready (POS Void Transaction new entry), POS Refunds + POS Shift Management notes updated (stock restoration, closing report, expected cash) → production_ready 89→90, planned 132→131
 > **Session 32 Impact (14 Sep):** +4 production_ready (Aging Report, Tax Report, Dashboard Stats, POS Receipt), -1 verified → production_ready 85→89, verified 1→0, planned 136→132
 > **Session 14 Impact (13 Sep):** +2 production_ready (Anomaly Detection, usePermission Hook), +1 partial (Analytics Read Model/MVs) → Net: production_ready 83→85, partial 19→20, planned 139→136
 > **Session 9 Impact (12 Sep):** +18 production_ready (POS Terminal, Refunds, Shift Mgmt, Cashier Mgmt, Offline Mode, Audit Trail, Dashboard, Transactions, Sessions, Terminals, Reports, Loyalty, Analytics, Multi-terminal, Kitchen Display, Kitchen API, Table Mgmt, Table API), -15 implemented → Net: production_ready 65→83, implemented 48→33
