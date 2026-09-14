@@ -7,9 +7,10 @@ import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
 import {
     Search, Receipt, Loader2, Check, X, AlertCircle, Eye, Ban,
-    ChevronLeft, ChevronRight,
+    ChevronLeft, ChevronRight, Printer,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
+import POSReceipt, { type POSReceiptData } from '@/components/pos/pos-receipt'
 
 type Transaction = {
     id: string
@@ -63,6 +64,11 @@ export default function POSTransactionsPage() {
     const [showVoidModal, setShowVoidModal] = useState(false)
     const [voidingId, setVoidingId] = useState<string | null>(null)
     const [voiding, setVoiding] = useState(false)
+
+    // Receipt modal
+    const [showReceipt, setShowReceipt] = useState(false)
+    const [receiptData, setReceiptData] = useState<POSReceiptData | null>(null)
+    const [loadingReceipt, setLoadingReceipt] = useState(false)
 
     useEffect(() => {
         if (toast) {
@@ -143,6 +149,47 @@ export default function POSTransactionsPage() {
             }
         } catch {
             setToast({ message: t('pos.transactions.errorLoadDetail') || 'Gagal memuat detail transaksi', type: 'error' })
+        }
+    }
+
+    const fetchReceipt = async (id: string) => {
+        try {
+            setLoadingReceipt(true)
+            const response = await fetch(`/api/pos/transactions/${id}`)
+            const data = await response.json()
+            if (data.success) {
+                const d = data.data
+                setReceiptData({
+                    id: d.id,
+                    transactionNumber: d.transactionNo,
+                    createdAt: d.createdAt,
+                    items: d.items.map((item: { productName: string; quantity: number; unitPrice: number; subtotal: number; taxRate?: number }) => ({
+                        name: item.productName,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        total: item.subtotal,
+                        taxRate: item.taxRate,
+                    })),
+                    subtotal: d.subtotal,
+                    discount: d.discountAmount,
+                    taxAmount: d.taxAmount,
+                    total: d.totalAmount,
+                    paymentMethod: d.paymentMethod,
+                    paymentAmount: d.paidAmount,
+                    change: d.changeAmount,
+                    customerName: d.customerName,
+                    cashierName: d.cashierName,
+                    storeName: d.storeName,
+                    storeAddress: d.storeAddress,
+                    storePhone: d.storePhone,
+                    notes: d.notes,
+                })
+                setShowReceipt(true)
+            }
+        } catch {
+            setToast({ message: t('pos.transactions.errorLoadDetail') || 'Gagal memuat data struk', type: 'error' })
+        } finally {
+            setLoadingReceipt(false)
         }
     }
 
@@ -263,6 +310,16 @@ export default function POSTransactionsPage() {
                                                     <Eye className="h-3.5 w-3.5" />
                                                     {t('pos.transactions.detail') || 'Detail'}
                                                 </button>
+                                                {tr.status === 'COMPLETED' && (
+                                                    <button
+                                                        onClick={() => fetchReceipt(tr.id)}
+                                                        disabled={loadingReceipt}
+                                                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
+                                                    >
+                                                        <Printer className="h-3.5 w-3.5" />
+                                                        {t('pos.transactions.print') || 'Cetak'}
+                                                    </button>
+                                                )}
                                                 {tr.status === 'COMPLETED' && canManage && (
                                                     <button
                                                         onClick={() => { setVoidingId(tr.id); setShowVoidModal(true) }}
@@ -312,6 +369,16 @@ export default function POSTransactionsPage() {
                                         >
                                             {t('pos.transactions.detail') || 'Detail'}
                                         </button>
+                                        {tr.status === 'COMPLETED' && (
+                                            <button
+                                                onClick={() => fetchReceipt(tr.id)}
+                                                disabled={loadingReceipt}
+                                                className="rounded-lg px-3 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50 disabled:opacity-50"
+                                            >
+                                                <Printer className="h-3.5 w-3.5 inline mr-0.5" />
+                                                {t('pos.transactions.print') || 'Cetak'}
+                                            </button>
+                                        )}
                                         {tr.status === 'COMPLETED' && canManage && (
                                             <button
                                                 onClick={() => { setVoidingId(tr.id); setShowVoidModal(true) }}
@@ -477,6 +544,24 @@ export default function POSTransactionsPage() {
                                 {voiding ? (t('pos.transactions.voiding') || 'Membatalkan...') : (t('pos.transactions.voidConfirmButton') || 'Ya, Batalkan')}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Receipt Modal */}
+            {showReceipt && receiptData && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowReceipt(false)}>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4 no-print">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.transactions.receiptTitle') || 'Struk Transaksi'}</h3>
+                            <button onClick={() => setShowReceipt(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <POSReceipt
+                            transaction={receiptData}
+                            onClose={() => setShowReceipt(false)}
+                        />
                     </div>
                 </div>
             )}

@@ -11,6 +11,7 @@ import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { generatePurchaseOrderJournalEntry } from '@/lib/auto-journal';
+import { calculateTax, DEFAULT_PPN_RATE } from '@/lib/ppn';
 
 export async function GET(request: Request) {
     try {
@@ -121,9 +122,10 @@ export async function POST(request: Request) {
             (sum, item) => sum + item.quantity * item.unitPrice,
             0
         );
-        const taxRate = validatedData.taxRate || 11;
-        const taxAmount = subtotal * (taxRate / 100);
-        const total = subtotal + taxAmount;
+        const taxRate = validatedData.taxRate || DEFAULT_PPN_RATE;
+        const taxCalc = calculateTax(subtotal, taxRate);
+        const taxAmount = taxCalc.taxAmount;
+        const total = taxCalc.total;
 
         let supplierId = validatedData.supplierId;
         if (!supplierId && validatedData.supplierName) {
@@ -235,10 +237,10 @@ export async function PUT(request: Request) {
                 0
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
-            const taxAmount = subtotal * (taxRate / 100);
+            const taxCalc = calculateTax(subtotal, taxRate);
             data.subtotal = subtotal;
-            data.taxAmount = taxAmount;
-            data.total = subtotal + taxAmount;
+            data.taxAmount = taxCalc.taxAmount;
+            data.total = taxCalc.total;
 
             await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
             await prisma.purchaseOrderItem.createMany({

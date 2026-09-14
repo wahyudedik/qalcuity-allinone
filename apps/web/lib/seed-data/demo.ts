@@ -24,6 +24,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { calculateTax, DEFAULT_PPN_RATE } from "../ppn";
 
 const prisma = new PrismaClient();
 
@@ -308,9 +309,10 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
                 continue;
             }
 
-            const taxRate = 11;
-            const taxAmount = parseFloat((inv.subtotal * taxRate / 100).toFixed(2));
-            const total = inv.subtotal + taxAmount;
+            const taxRate = DEFAULT_PPN_RATE;
+            const taxCalc = calculateTax(inv.subtotal, taxRate);
+            const taxAmount = taxCalc.taxAmount;
+            const total = taxCalc.total;
             const createdAt = new Date(Date.now() - inv.daysAgo * 24 * 60 * 60 * 1000);
             const dueDate = new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
             const contactId = contacts[i % contacts.length]?.id;
@@ -417,9 +419,10 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
                 continue;
             }
 
-            const taxRate = 11;
-            const taxAmount = parseFloat(((quo.subtotal - quo.discount) * taxRate / 100).toFixed(2));
-            const total = quo.subtotal - quo.discount + taxAmount;
+            const taxRate = DEFAULT_PPN_RATE;
+            const taxCalc = calculateTax(quo.subtotal, taxRate, quo.discount);
+            const taxAmount = taxCalc.taxAmount;
+            const total = taxCalc.total;
             const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             const contactId = contacts[i % contacts.length]?.id;
 
@@ -471,9 +474,10 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
                 continue;
             }
 
-            const taxRate = 11;
-            const taxAmount = parseFloat((po.subtotal * taxRate / 100).toFixed(2));
-            const total = po.subtotal + taxAmount;
+            const taxRate = DEFAULT_PPN_RATE;
+            const taxCalc = calculateTax(po.subtotal, taxRate);
+            const taxAmount = taxCalc.taxAmount;
+            const total = taxCalc.total;
             const createdAt = new Date(Date.now() - po.daysAgo * 24 * 60 * 60 * 1000);
             const deliveryDate = new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
             const supplierId = suppliers[i % suppliers.length]?.id;

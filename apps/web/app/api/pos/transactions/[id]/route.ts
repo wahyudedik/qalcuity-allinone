@@ -26,101 +26,187 @@ export async function GET(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
-        const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
-        const paymentMethod = searchParams.get('paymentMethod');
-        const sessionId = searchParams.get('sessionId');
-        const dateFrom = searchParams.get('dateFrom');
-        const dateTo = searchParams.get('dateTo');
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '20');
-        const skip = (page - 1) * limit;
+        // Extract ID from URL path
+        const url = new URL(request.url);
+        const pathParts = url.pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
 
-        const where: Record<string, unknown> = { tenantId };
+        // If no ID in path or ID is a search param, treat as list query
+        if (!id || id === 'route') {
+            const { searchParams } = url;
+            const status = searchParams.get('status');
+            const paymentMethod = searchParams.get('paymentMethod');
+            const sessionId = searchParams.get('sessionId');
+            const dateFrom = searchParams.get('dateFrom');
+            const dateTo = searchParams.get('dateTo');
+            const page = parseInt(searchParams.get('page') || '1');
+            const limit = parseInt(searchParams.get('limit') || '20');
+            const skip = (page - 1) * limit;
 
-        if (status) {
-            where.status = status.toUpperCase();
-        }
+            const where: Record<string, unknown> = { tenantId };
 
-        if (paymentMethod) {
-            where.paymentMethod = paymentMethod.toUpperCase();
-        }
-
-        if (sessionId) {
-            where.sessionId = sessionId;
-        }
-
-        if (dateFrom || dateTo) {
-            where.createdAt = {};
-            if (dateFrom) {
-                (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
+            if (status) {
+                where.status = status.toUpperCase();
             }
-            if (dateTo) {
-                const endDate = new Date(dateTo);
-                endDate.setHours(23, 59, 59, 999);
-                (where.createdAt as Record<string, unknown>).lte = endDate;
+
+            if (paymentMethod) {
+                where.paymentMethod = paymentMethod.toUpperCase();
             }
+
+            if (sessionId) {
+                where.sessionId = sessionId;
+            }
+
+            if (dateFrom || dateTo) {
+                where.createdAt = {};
+                if (dateFrom) {
+                    (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
+                }
+                if (dateTo) {
+                    const endDate = new Date(dateTo);
+                    endDate.setHours(23, 59, 59, 999);
+                    (where.createdAt as Record<string, unknown>).lte = endDate;
+                }
+            }
+
+            const [transactions, total] = await Promise.all([
+                prisma.posTransaction.findMany({
+                    where,
+                    include: {
+                        items: { select: { id: true, productName: true, quantity: true, unitPrice: true, subtotal: true } },
+                        payments: { select: { id: true, method: true, amount: true, reference: true, status: true } },
+                        refunds: { select: { id: true, amount: true, reason: true, status: true } },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    skip,
+                    take: limit,
+                }),
+                prisma.posTransaction.count({ where }),
+            ]);
+
+            const data = transactions.map((t) => ({
+                id: t.id,
+                transactionNo: t.transactionNo,
+                customerName: t.customerName || '-',
+                subtotal: Number(t.subtotal),
+                discountAmount: Number(t.discountAmount),
+                taxAmount: Number(t.taxAmount),
+                totalAmount: Number(t.totalAmount),
+                paidAmount: Number(t.paidAmount),
+                changeAmount: Number(t.changeAmount),
+                paymentMethod: t.paymentMethod,
+                status: t.status,
+                notes: t.notes,
+                itemCount: t.items.length,
+                items: t.items.map((item) => ({
+                    id: item.id,
+                    productName: item.productName,
+                    quantity: Number(item.quantity),
+                    unitPrice: Number(item.unitPrice),
+                    subtotal: Number(item.subtotal),
+                })),
+                payments: t.payments.map((p) => ({
+                    id: p.id,
+                    method: p.method,
+                    amount: Number(p.amount),
+                    reference: p.reference,
+                    status: p.status,
+                })),
+                refunds: t.refunds.map((r) => ({
+                    id: r.id,
+                    amount: Number(r.amount),
+                    reason: r.reason,
+                    status: r.status,
+                })),
+                createdAt: t.createdAt.toISOString(),
+            }));
+
+            return NextResponse.json({
+                success: true,
+                data,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            });
         }
 
-        const [transactions, total] = await Promise.all([
-            prisma.posTransaction.findMany({
-                where,
-                include: {
-                    items: { select: { id: true, productName: true, quantity: true, unitPrice: true, subtotal: true } },
-                    payments: { select: { id: true, method: true, amount: true, reference: true, status: true } },
-                    refunds: { select: { id: true, amount: true, reason: true, status: true } },
+        // Single transaction detail (includes session, terminal, tenant info for receipt)
+        const transaction = await prisma.posTransaction.findFirst({
+            where: { id, tenantId },
+            include: {
+                session: {
+                    include: {
+                        terminal: true,
+                    },
                 },
-                orderBy: { createdAt: 'desc' },
-                skip,
-                take: limit,
-            }),
-            prisma.posTransaction.count({ where }),
-        ]);
+                items: true,
+                payments: true,
+                refunds: true,
+            },
+        });
 
-        const data = transactions.map((t) => ({
-            id: t.id,
-            transactionNo: t.transactionNo,
-            customerName: t.customerName || '-',
-            subtotal: Number(t.subtotal),
-            discountAmount: Number(t.discountAmount),
-            taxAmount: Number(t.taxAmount),
-            totalAmount: Number(t.totalAmount),
-            paidAmount: Number(t.paidAmount),
-            changeAmount: Number(t.changeAmount),
-            paymentMethod: t.paymentMethod,
-            status: t.status,
-            notes: t.notes,
-            itemCount: t.items.length,
-            items: t.items.map((item) => ({
-                id: item.id,
-                productName: item.productName,
-                quantity: Number(item.quantity),
-                unitPrice: Number(item.unitPrice),
-                subtotal: Number(item.subtotal),
-            })),
-            payments: t.payments.map((p) => ({
-                id: p.id,
-                method: p.method,
-                amount: Number(p.amount),
-                reference: p.reference,
-                status: p.status,
-            })),
-            refunds: t.refunds.map((r) => ({
-                id: r.id,
-                amount: Number(r.amount),
-                reason: r.reason,
-                status: r.status,
-            })),
-            createdAt: t.createdAt.toISOString(),
-        }));
+        if (!transaction) {
+            return NextResponse.json(
+                { success: false, error: MSG.TRANSACTION_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Fetch tenant info for store name/address
+        const tenant = await prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { name: true, address: true, phone: true },
+        });
 
         return NextResponse.json({
             success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            data: {
+                id: transaction.id,
+                transactionNo: transaction.transactionNo,
+                customerName: transaction.customerName || '-',
+                subtotal: Number(transaction.subtotal),
+                discountAmount: Number(transaction.discountAmount),
+                taxAmount: Number(transaction.taxAmount),
+                totalAmount: Number(transaction.totalAmount),
+                paidAmount: Number(transaction.paidAmount),
+                changeAmount: Number(transaction.changeAmount),
+                paymentMethod: transaction.paymentMethod,
+                status: transaction.status,
+                notes: transaction.notes,
+                itemCount: transaction.items.length,
+                items: transaction.items.map((item) => ({
+                    id: item.id,
+                    productName: item.productName,
+                    productSku: item.productSku,
+                    quantity: Number(item.quantity),
+                    unitPrice: Number(item.unitPrice),
+                    discountAmount: Number(item.discountAmount),
+                    taxRate: Number(item.taxRate),
+                    taxAmount: Number(item.taxAmount),
+                    subtotal: Number(item.subtotal),
+                })),
+                payments: transaction.payments.map((p) => ({
+                    id: p.id,
+                    method: p.method,
+                    amount: Number(p.amount),
+                    reference: p.reference,
+                    status: p.status,
+                })),
+                refunds: transaction.refunds.map((r) => ({
+                    id: r.id,
+                    amount: Number(r.amount),
+                    reason: r.reason,
+                    status: r.status,
+                })),
+                createdAt: transaction.createdAt.toISOString(),
+                // Receipt-specific fields
+                cashierName: transaction.session?.cashierName || null,
+                terminalName: transaction.session?.terminal?.name || null,
+                storeName: tenant?.name || null,
+                storeAddress: tenant?.address || null,
+                storePhone: tenant?.phone || null,
+            },
         });
     } catch (error) {
         return handleApiError(error);

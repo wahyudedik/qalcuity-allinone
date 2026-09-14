@@ -26,6 +26,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/reconciliation': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/journal-entries': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/tax-rates': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/tax-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/periods': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/recurring-invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
 

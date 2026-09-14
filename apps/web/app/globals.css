@@ -87,3 +87,58 @@
     }
   }
 }
+
+/* POS Receipt Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-container,
+  .receipt-container * {
+    visibility: visible;
+  }
+
+  .receipt-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    max-width: 80mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #000;
+    background: #fff;
+    padding: 4mm;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Receipt on-screen styling */
+.receipt-container {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 312px;
+  margin: 0 auto;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  .receipt-container {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+}
