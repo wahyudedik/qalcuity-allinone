@@ -29,6 +29,7 @@ export interface PosTableData {
     currentSessionId: string | null;
     notes: string | null;
     activeReservationCount: number;
+    activeKitchenOrderCount: number;
     activeReservations: Array<{
         id: string;
         customerName: string;

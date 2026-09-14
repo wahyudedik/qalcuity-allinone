@@ -18,6 +18,7 @@ import {
     Trash2,
     Edit3,
     Utensils,
+    Flame,
 } from 'lucide-react';
 
 // =============================================================================
@@ -42,6 +43,7 @@ interface TableCardData {
     floor: string | null;
     currentSessionId: string | null;
     activeReservationCount: number;
+    activeKitchenOrderCount: number;
     activeReservations: ActiveReservation[];
     isActive: boolean;
 }
@@ -138,6 +140,12 @@ export function TableCard({ table, onStatusChange, onDelete, onUpdate }: TableCa
                     <span className="inline-flex items-center gap-1 text-orange-600">
                         <Utensils className="h-3.5 w-3.5" />
                         Aktif
+                    </span>
+                )}
+                {table.activeKitchenOrderCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 ring-1 ring-inset ring-orange-200">
+                        <Flame className="h-3 w-3" />
+                        {table.activeKitchenOrderCount} pesanan
                     </span>
                 )}
             </div>

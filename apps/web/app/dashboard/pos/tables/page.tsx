@@ -363,6 +363,7 @@ export default function TablesPage() {
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.status') || 'Status'}</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.zone') || 'Zona'}</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.reservations') || 'Reservasi'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.tables.kitchenOrders') || 'Pesanan Dapur'}</th>
                                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.tables.actions') || 'Aksi'}</th>
                             </tr>
                         </thead>
@@ -391,6 +392,15 @@ export default function TablesPage() {
                                         ) : '-'}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-700">{table.activeReservationCount}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                        {table.activeKitchenOrderCount > 0 ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                                                {table.activeKitchenOrderCount} pesanan
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400">-</span>
+                                        )}
+                                    </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-1">
                                             <select
