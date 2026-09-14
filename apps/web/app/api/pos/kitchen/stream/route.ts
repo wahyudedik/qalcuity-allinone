@@ -8,8 +8,7 @@ export const dynamic = 'force-dynamic';
  * push notifications when orders are created or updated.
  *
  * Architecture:
- * - In-memory subscriber map keyed by tenantId
- * - notifyKitchenUpdate() exported for use by order CRUD routes
+ * - Subscriber map managed in @/lib/kitchen-pubsub (shared with order CRUD routes)
  * - Auto-cleanup on client disconnect (abort signal)
  * - Heartbeat every 30s to keep connection alive
  * - Polling retained as fallback on client side
@@ -18,56 +17,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logger } from '@/lib/logger';
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-const encoder = new TextEncoder();
-
-/** Encode a string to Uint8Array for ReadableStream controller */
-function sseEncode(data: string): Uint8Array {
-    return encoder.encode(`data: ${data}\n\n`);
-}
-
-// =============================================================================
-// Subscriber Management
-// =============================================================================
-
-/** In-memory subscribers per tenant — controller set per tenantId */
-const subscribers = new Map<string, Set<ReadableStreamDefaultController<Uint8Array>>>();
-
-/**
- * Notify all kitchen display subscribers for a given tenant.
- * Called after order create/update/delete to push real-time updates.
- *
- * @param tenantId - The tenant whose subscribers should be notified
- */
-export function notifyKitchenUpdate(tenantId: string): void {
-    const tenantSubscribers = subscribers.get(tenantId);
-    if (!tenantSubscribers || tenantSubscribers.size === 0) return;
-
-    const payload = JSON.stringify({ type: 'update', timestamp: Date.now() });
-    const encoded = sseEncode(payload);
-    const deadControllers: ReadableStreamDefaultController<Uint8Array>[] = [];
-
-    tenantSubscribers.forEach((controller) => {
-        try {
-            controller.enqueue(encoded);
-        } catch {
-            // Controller already closed — mark for cleanup
-            deadControllers.push(controller);
-        }
-    });
-
-    // Cleanup dead controllers
-    for (const dead of deadControllers) {
-        tenantSubscribers.delete(dead);
-    }
-    if (tenantSubscribers.size === 0) {
-        subscribers.delete(tenantId);
-    }
-}
+import { sseEncode } from '@/lib/notification-pubsub';
+import { kitchenSubscribers } from '@/lib/kitchen-pubsub';
 
 // =============================================================================
 // GET — SSE Stream Handler
@@ -88,17 +39,17 @@ export async function GET(request: Request) {
         const stream = new ReadableStream<Uint8Array>({
             start(controller) {
                 // Register subscriber
-                if (!subscribers.has(tenantId)) {
-                    subscribers.set(tenantId, new Set());
+                if (!kitchenSubscribers.has(tenantId)) {
+                    kitchenSubscribers.set(tenantId, new Set());
                 }
-                subscribers.get(tenantId)!.add(controller);
+                kitchenSubscribers.get(tenantId)!.add(controller);
 
                 // Send initial connection confirmation
                 controller.enqueue(sseEncode(JSON.stringify({ type: 'connected', timestamp: Date.now() })));
 
                 logger.info('[Kitchen SSE] Client connected', {
                     tenantId,
-                    activeConnections: subscribers.get(tenantId)!.size,
+                    activeConnections: kitchenSubscribers.get(tenantId)!.size,
                 });
 
                 // Send heartbeat every 30s to keep connection alive
@@ -113,9 +64,9 @@ export async function GET(request: Request) {
                 // Cleanup on client disconnect
                 request.signal.addEventListener('abort', () => {
                     clearInterval(heartbeatId);
-                    subscribers.get(tenantId)?.delete(controller);
-                    if (subscribers.get(tenantId)?.size === 0) {
-                        subscribers.delete(tenantId);
+                    kitchenSubscribers.get(tenantId)?.delete(controller);
+                    if (kitchenSubscribers.get(tenantId)?.size === 0) {
+                        kitchenSubscribers.delete(tenantId);
                     }
                     try {
                         controller.close();
@@ -124,7 +75,7 @@ export async function GET(request: Request) {
                     }
                     logger.info('[Kitchen SSE] Client disconnected', {
                         tenantId,
-                        remainingConnections: subscribers.get(tenantId)?.size ?? 0,
+                        remainingConnections: kitchenSubscribers.get(tenantId)?.size ?? 0,
                     });
                 });
             },
