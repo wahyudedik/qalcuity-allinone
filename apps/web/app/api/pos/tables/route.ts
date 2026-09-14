@@ -59,6 +59,52 @@ export async function GET(request: Request) {
             orderBy: { number: 'asc' },
         });
 
+        // --- Active kitchen orders derivation via session chain ---
+        // PosTable.currentSessionId → PosSession → PosTransaction → PosKitchenOrder
+        const activeSessionIds = [...new Set(
+            tables.map((t) => t.currentSessionId).filter((id): id is string => Boolean(id))
+        )];
+        let tableOrderCounts: Record<string, number> = {};
+
+        if (activeSessionIds.length > 0) {
+            // Find transactions for these sessions
+            const sessionTransactions = await prisma.posTransaction.findMany({
+                where: {
+                    sessionId: { in: activeSessionIds },
+                    tenantId,
+                    status: 'COMPLETED',
+                },
+                select: { id: true, sessionId: true },
+            });
+
+            const txIds = sessionTransactions.map((t) => t.id);
+            if (txIds.length > 0) {
+                // Count active kitchen orders (PENDING, PREPARING, READY) for these transactions
+                const activeOrders = await prisma.posKitchenOrder.groupBy({
+                    by: ['transactionId'],
+                    where: {
+                        transactionId: { in: txIds },
+                        tenantId,
+                        status: { in: ['PENDING', 'PREPARING', 'READY'] },
+                    },
+                    _count: { id: true },
+                });
+
+                // Map transactionId → sessionId → tableId → count
+                const txToSessionMap: Record<string, string> = {};
+                sessionTransactions.forEach((t) => {
+                    txToSessionMap[t.id] = t.sessionId;
+                });
+
+                activeOrders.forEach((order) => {
+                    const sessionId = txToSessionMap[order.transactionId || ''];
+                    if (sessionId) {
+                        tableOrderCounts[sessionId] = (tableOrderCounts[sessionId] || 0) + order._count.id;
+                    }
+                });
+            }
+        }
+
         const data = tables.map((table) => ({
             id: table.id,
             number: table.number,
@@ -75,6 +121,7 @@ export async function GET(request: Request) {
             currentSessionId: table.currentSessionId,
             notes: table.notes,
             activeReservationCount: table._count.reservations,
+            activeKitchenOrderCount: table.currentSessionId ? (tableOrderCounts[table.currentSessionId] || 0) : 0,
             activeReservations: table.reservations.map((r) => ({
                 id: r.id,
                 customerName: r.customerName,

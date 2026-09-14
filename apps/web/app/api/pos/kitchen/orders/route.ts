@@ -32,6 +32,7 @@ export async function GET(request: Request) {
         const status = searchParams.get('status');
         const stationId = searchParams.get('stationId');
         const priority = searchParams.get('priority');
+        const tableNumberFilter = searchParams.get('tableNumber');
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '50');
         const skip = (page - 1) * limit;
@@ -64,35 +65,85 @@ export async function GET(request: Request) {
             prisma.posKitchenOrder.count({ where }),
         ]);
 
-        const data = orders.map((order) => ({
-            id: order.id,
-            transactionId: order.transactionId,
-            orderNumber: order.orderNumber,
-            status: order.status,
-            priority: order.priority,
-            notes: order.notes,
-            estimatedMinutes: order.estimatedMinutes,
-            startedAt: order.startedAt?.toISOString() || null,
-            completedAt: order.completedAt?.toISOString() || null,
-            servedAt: order.servedAt?.toISOString() || null,
-            station: order.station,
-            items: order.items.map((item) => ({
-                id: item.id,
-                productName: item.productName,
-                quantity: item.quantity,
-                notes: item.notes,
-                status: item.status,
-            })),
-            createdAt: order.createdAt.toISOString(),
-        }));
+        // --- Table info derivation via transaction chain ---
+        // PosKitchenOrder.transactionId → PosTransaction → PosSession → PosTable.currentSessionId
+        const transactionIds = [...new Set(orders.map((o) => o.transactionId).filter((id): id is string => Boolean(id)))];
+        let tableMapByTxId: Record<string, { tableNumber: number; tableName: string | null; zone: string | null }> = {};
+
+        if (transactionIds.length > 0) {
+            const transactions = await prisma.posTransaction.findMany({
+                where: { id: { in: transactionIds }, tenantId },
+                select: { id: true, sessionId: true },
+            });
+
+            const sessionIds = [...new Set(transactions.map((t) => t.sessionId).filter((id): id is string => Boolean(id)))];
+            const txToSessionMap: Record<string, string> = {};
+            transactions.forEach((t) => {
+                if (t.sessionId) txToSessionMap[t.id] = t.sessionId;
+            });
+
+            if (sessionIds.length > 0) {
+                const tables = await prisma.posTable.findMany({
+                    where: { currentSessionId: { in: sessionIds }, tenantId },
+                    select: { number: true, name: true, zone: true, currentSessionId: true },
+                });
+
+                const sessionToTable: Record<string, { tableNumber: number; tableName: string | null; zone: string | null }> = {};
+                tables.forEach((tbl) => {
+                    if (tbl.currentSessionId) {
+                        sessionToTable[tbl.currentSessionId] = { tableNumber: tbl.number, tableName: tbl.name, zone: tbl.zone };
+                    }
+                });
+
+                transactionIds.forEach((txId) => {
+                    const sessionId = txToSessionMap[txId];
+                    if (sessionId && sessionToTable[sessionId]) {
+                        tableMapByTxId[txId] = sessionToTable[sessionId];
+                    }
+                });
+            }
+        }
+
+        const data = orders.map((order) => {
+            const tableInfo = order.transactionId ? tableMapByTxId[order.transactionId] : undefined;
+            return {
+                id: order.id,
+                transactionId: order.transactionId,
+                orderNumber: order.orderNumber,
+                status: order.status,
+                priority: order.priority,
+                notes: order.notes,
+                estimatedMinutes: order.estimatedMinutes,
+                tableNumber: tableInfo ? String(tableInfo.tableNumber) : null,
+                tableName: tableInfo?.tableName || null,
+                tableZone: tableInfo?.zone || null,
+                startedAt: order.startedAt?.toISOString() || null,
+                completedAt: order.completedAt?.toISOString() || null,
+                servedAt: order.servedAt?.toISOString() || null,
+                station: order.station,
+                items: order.items.map((item) => ({
+                    id: item.id,
+                    productName: item.productName,
+                    quantity: item.quantity,
+                    notes: item.notes,
+                    status: item.status,
+                })),
+                createdAt: order.createdAt.toISOString(),
+            };
+        });
+
+        // Filter by tableNumber if specified (post-derive filter since tableNumber is not a DB column)
+        const filteredData = tableNumberFilter
+            ? data.filter((order) => order.tableNumber === tableNumberFilter)
+            : data;
 
         return NextResponse.json({
             success: true,
-            data,
-            total,
+            data: filteredData,
+            total: tableNumberFilter ? filteredData.length : total,
             page,
             limit,
-            totalPages: Math.ceil(total / limit),
+            totalPages: tableNumberFilter ? 1 : Math.ceil(total / limit),
         });
     } catch (error) {
         // Graceful fallback: PosKitchenOrder table not yet available (migration pending)
@@ -186,6 +237,24 @@ export async function POST(request: Request) {
             include: { items: true, station: { select: { id: true, name: true } } },
         });
 
+        // --- Derive table info for the response ---
+        let tableInfo: { tableNumber: string; tableName: string | null; tableZone: string | null } | null = null;
+        if (order.transactionId) {
+            const tx = await prisma.posTransaction.findUnique({
+                where: { id: order.transactionId },
+                select: { sessionId: true },
+            });
+            if (tx?.sessionId) {
+                const tbl = await prisma.posTable.findFirst({
+                    where: { currentSessionId: tx.sessionId, tenantId },
+                    select: { number: true, name: true, zone: true },
+                });
+                if (tbl) {
+                    tableInfo = { tableNumber: String(tbl.number), tableName: tbl.name, tableZone: tbl.zone };
+                }
+            }
+        }
+
         void logAudit({
             userId,
             tenantId,
@@ -208,6 +277,9 @@ export async function POST(request: Request) {
                 priority: completeOrder!.priority,
                 notes: completeOrder!.notes,
                 estimatedMinutes: completeOrder!.estimatedMinutes,
+                tableNumber: tableInfo?.tableNumber || null,
+                tableName: tableInfo?.tableName || null,
+                tableZone: tableInfo?.tableZone || null,
                 station: completeOrder!.station,
                 items: completeOrder!.items.map((item) => ({
                     id: item.id,

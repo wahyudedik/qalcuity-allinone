@@ -39,6 +39,8 @@ export interface KitchenOrder {
     orderNumber: number;
     orderType?: string;
     tableNumber?: string | null;
+    tableName?: string | null;
+    tableZone?: string | null;
     status: KitchenOrderStatus;
     priority: KitchenOrderPriority;
     notes: string | null;
@@ -83,6 +85,7 @@ export interface KitchenStats {
 export interface KitchenFilter {
     status: KitchenOrderStatus | 'ALL';
     stationId: string | 'ALL';
+    tableNumber: string | 'ALL';
 }
 
 export interface UseKitchenOrdersReturn {
@@ -140,6 +143,7 @@ export function useKitchenOrders(): UseKitchenOrdersReturn {
     const [filter, setFilterState] = useState<KitchenFilter>({
         status: 'ALL',
         stationId: 'ALL',
+        tableNumber: 'ALL',
     });
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -172,6 +176,9 @@ export function useKitchenOrders(): UseKitchenOrdersReturn {
             }
             if (activeFilter.stationId !== 'ALL') {
                 params.set('stationId', activeFilter.stationId);
+            }
+            if (activeFilter.tableNumber !== 'ALL') {
+                params.set('tableNumber', activeFilter.tableNumber);
             }
             params.set('limit', '100');
 

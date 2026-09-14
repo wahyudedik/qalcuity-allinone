@@ -24,6 +24,7 @@ import {
     Truck,
     StickyNote,
     X,
+    MapPin,
 } from 'lucide-react';
 import type { KitchenOrder, KitchenOrderStatus } from '@/hooks/use-kitchen-orders';
 import { KitchenOrderTimer } from './kitchen-order-timer';
@@ -184,6 +185,25 @@ export function KitchenOrderCard({ order, onStatusChange }: KitchenOrderCardProp
                         <span className="text-xs text-gray-500">
                             {orderTypeConfig.label}
                         </span>
+                        {order.tableNumber && (
+                            <>
+                                <span className="text-gray-300">•</span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                    <MapPin className="h-3 w-3" />
+                                    Meja {order.tableNumber}
+                                    {order.tableName && <span className="text-purple-500">({order.tableName})</span>}
+                                </span>
+                            </>
+                        )}
+                        {order.tableZone && !order.tableNumber && (
+                            <>
+                                <span className="text-gray-300">•</span>
+                                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                    <MapPin className="h-3 w-3" />
+                                    {order.tableZone}
+                                </span>
+                            </>
+                        )}
                         {order.station && (
                             <>
                                 <span className="text-gray-300">•</span>
