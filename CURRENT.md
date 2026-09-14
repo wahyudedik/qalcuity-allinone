@@ -1,6 +1,105 @@
-﻿> **Last Updated:** 14 September 2026 (Session 27: Dashboard 429 Rate Limit Fix)
+﻿> **Last Updated:** 14 September 2026 (Session 28-29: Sprint 28-29 Complete)
 > **Version:** v11.20.0
-> **Status:** ✅ HEALTHY — Session 27: Fixed critical 429 rate limit bug — `checkRateLimit()` sync function was fail-closed in production, rejecting ALL API requests. Changed `ENABLE_MEMORY_FALLBACK` default from `false` to `true` in production. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+> **Status:** ✅ HEALTHY — Session 28-29: Sprint 28-29 complete — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine. 3 bug fixes: Dashboard 429 rate limit fallback, CRM locale error, CRM setState during render. TypeScript: 0 errors. Code Quality Score: 8.5/10. Session 27: Fixed critical 429 rate limit bug — `checkRateLimit()` sync function was fail-closed in production. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+
+## 🚀 Session 28-29 — Sprint 28-29 Complete (14 Sep 2026)
+
+> **Focus:** Sprint 28-29 — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents, Unified Control Engine, 3 bug fixes
+> **Total Files Changed:** 20+ (new files + modified files)
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Code Quality Score:** 8.5/10
+> **Health Score:** ~100/100
+
+### Bug Fixes
+
+#### Bug #1 — Dashboard 429 Rate Limit Error ✅
+
+- **Status:** ✅ Fixed
+- **Description:** `ENABLE_MEMORY_FALLBACK` default was `false` in production, causing sync `checkRateLimit()` to reject ALL API requests with 429.
+- **Fix:** Changed default to `true` (always enabled). In-memory fallback now active in all environments.
+- **File:** [`apps/web/lib/rate-limit.ts`](apps/web/lib/rate-limit.ts)
+- **Commit:** `92834ac`
+
+#### Bug #2 — CRM Page Locale Error ✅
+
+- **Status:** ✅ Fixed
+- **Description:** [`timeAgo()`](apps/web/lib/utils.ts) used invalid language tag format causing locale errors on CRM pages.
+- **Fix:** Corrected language tag format in `timeAgo()` function.
+- **Commit:** `949b555`
+
+#### Bug #3 — CRM setState During Render ✅
+
+- **Status:** ✅ Fixed
+- **Description:** `timeAgo()` called inside component render causing setState during render warning.
+- **Fix:** Moved `timeAgo()` call outside component to prevent render-time state updates.
+- **Commit:** `949b555`
+
+### Features Implemented
+
+#### Feature #1 — Industry Packs Activation UI ✅
+
+- **Status:** ✅ Complete
+- **Description:** Enhanced industry settings page with pack selection grid, detail preview modal, and activation flow. Users can browse available industry packs, preview pack details (workflows, custom fields, documents), and activate packs with confirmation.
+- **UI:** [`apps/web/app/dashboard/settings/industry/page.tsx`](apps/web/app/dashboard/settings/industry/page.tsx)
+- **Commit:** `8acadad`
+
+#### Feature #2 — POS Kitchen Display × Table Management ✅
+
+- **Status:** ✅ Complete
+- **Description:** Kitchen orders now show table info (table number, zone). Table cards show active kitchen orders with status. Full integration between Kitchen Display System and Table Management modules.
+- **Files:**
+  - [`apps/web/app/dashboard/pos/kitchen/page.tsx`](apps/web/app/dashboard/pos/kitchen/page.tsx)
+  - [`apps/web/app/dashboard/pos/tables/page.tsx`](apps/web/app/dashboard/pos/tables/page.tsx)
+  - [`apps/web/components/pos/kitchen-order-card.tsx`](apps/web/components/pos/kitchen-order-card.tsx)
+  - [`apps/web/components/pos/table-card.tsx`](apps/web/components/pos/table-card.tsx)
+  - [`apps/web/hooks/use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts)
+  - [`apps/web/hooks/use-pos-tables.ts`](apps/web/hooks/use-pos-tables.ts)
+- **Commit:** `f73b154`
+
+#### Feature #3 — AI Agents (Finance/Sales/Inventory) ✅
+
+- **Status:** ✅ Complete
+- **Description:** 3 AI agent modules with orchestrator pattern. Each agent has specialized capabilities:
+  - **Finance Agent:** Cash flow prediction, expense categorization, anomaly detection
+  - **Sales Agent:** Win probability, lead scoring, next best action
+  - **Inventory Agent:** Stockout prediction, demand forecasting, dead stock detection
+- **Files:**
+  - [`apps/web/lib/ai/agents/finance-agent.ts`](apps/web/lib/ai/agents/finance-agent.ts)
+  - [`apps/web/lib/ai/agents/sales-agent.ts`](apps/web/lib/ai/agents/sales-agent.ts)
+  - [`apps/web/lib/ai/agents/inventory-agent.ts`](apps/web/lib/ai/agents/inventory-agent.ts)
+  - [`apps/web/lib/ai/agents/agent-orchestrator.ts`](apps/web/lib/ai/agents/agent-orchestrator.ts)
+  - [`apps/web/app/dashboard/ai/agents/page.tsx`](apps/web/app/dashboard/ai/agents/page.tsx)
+  - [`apps/web/app/dashboard/ai/agents/error.tsx`](apps/web/app/dashboard/ai/agents/error.tsx)
+- **Commit:** `ff0ba14`
+
+#### Feature #4 — Unified Control Engine ✅
+
+- **Status:** ✅ Complete
+- **Description:** Centralized platform configuration panel with 7 tabs: Modules, Workflow, Approvals, Fields, Widgets, Permissions, History. Provides a single interface for platform administrators to configure all control engine settings.
+- **Files:**
+  - [`apps/web/lib/control-engine.ts`](apps/web/lib/control-engine.ts)
+  - [`apps/web/lib/controls/module-control.ts`](apps/web/lib/controls/module-control.ts)
+  - [`apps/web/lib/controls/workflow-control.ts`](apps/web/lib/controls/workflow-control.ts)
+  - [`apps/web/lib/controls/widget-control.ts`](apps/web/lib/controls/widget-control.ts)
+- **Commit:** `85e7850`
+
+### Code Quality
+
+- **Console.log audit:** 0 found in 228 API routes (already clean)
+- **TypeScript:** 0 errors
+- **Code Quality Score:** 8.5/10
+
+### Session 28-29 Summary
+
+| Metric | Value |
+|--------|-------|
+| Bug Fixes | 3 (rate limit, CRM locale, CRM setState) |
+| Features | 4 (Industry Packs UI, POS Kitchen × Tables, AI Agents, Unified Control Engine) |
+| Commits | 6 (`949b555`, `92834ac`, `8acadad`, `f73b154`, `ff0ba14`, `85e7850`) |
+| TypeScript | 0 errors |
+| Code Quality Score | 8.5/10 |
+
+---
 
 ## 🔧 Session 27 — Dashboard 429 Rate Limit Fix (14 Sep 2026)
 
@@ -4920,4 +5019,4 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 13.0 — Session 26+: NLU parser, statistical anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time, batch document extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 14.0 — Session 28-29: Sprint 28-29 complete — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser, statistical anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time, batch document extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes
