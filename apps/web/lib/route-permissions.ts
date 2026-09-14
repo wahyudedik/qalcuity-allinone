@@ -27,6 +27,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/journal-entries': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/tax-rates': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/tax-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/aging-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/periods': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/recurring-invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
 
@@ -177,6 +178,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/audit': { permission: 'audit:view', fallbackRole: 'ADMIN' },
 
     // ─── Dashboard ────────────────────────────────────────────────────────────
+    '/api/dashboard/stats': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/approvals': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/charts': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/kpi': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
@@ -245,7 +247,6 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 //   - /api/health          — Public health check endpoint
 //   - /api/search          — Global search (explicitly skipped)
 //   - /api/demo/load       — Demo data loading (explicitly skipped)
-//   - /api/dashboard/stats — Dashboard stats (explicitly skipped)
 //
 // PUBLIC routes (in PUBLIC_API_PATHS middleware bypass):
 //   - /api/billing/payments/midtrans/callback — Midtrans webhook (HMAC signature verification)

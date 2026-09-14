@@ -18,7 +18,6 @@ interface DealDetail {
     company: string
     contactName: string
     value: number
-    currency: string
     stage: string
     probability: number
     expectedCloseDate: string

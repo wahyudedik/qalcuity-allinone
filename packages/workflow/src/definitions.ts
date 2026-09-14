@@ -63,14 +63,14 @@ const PAYROLL_TRANSITIONS: Transition[] = [
 // ─── Deal Workflow ───────────────────────────────────────────────────────────
 
 const DEAL_TRANSITIONS: Transition[] = [
-    { from: 'LEAD', to: 'QUALIFICATION', action: 'qualify', permissions: ['crm:edit'] },
-    { from: 'QUALIFICATION', to: 'PROPOSAL', action: 'propose', permissions: ['crm:edit'] },
+    { from: 'DISCOVERY', to: 'PROPOSAL', action: 'propose', permissions: ['crm:edit'] },
     { from: 'PROPOSAL', to: 'NEGOTIATION', action: 'negotiate', permissions: ['crm:edit'] },
-    { from: 'NEGOTIATION', to: 'CLOSED_WON', action: 'close_won', permissions: ['crm:edit'] },
-    { from: 'NEGOTIATION', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
-    { from: 'LEAD', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
-    { from: 'QUALIFICATION', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
+    { from: 'NEGOTIATION', to: 'CLOSING', action: 'close', permissions: ['crm:edit'] },
+    { from: 'CLOSING', to: 'CLOSED_WON', action: 'close_won', permissions: ['crm:edit'] },
+    { from: 'CLOSING', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
+    { from: 'DISCOVERY', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
     { from: 'PROPOSAL', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
+    { from: 'NEGOTIATION', to: 'CLOSED_LOST', action: 'close_lost', permissions: ['crm:edit'] },
 ];
 
 // ─── Default Workflows ──────────────────────────────────────────────────────
@@ -116,9 +116,9 @@ export const DEFAULT_WORKFLOWS: Record<string, {
         finalStates: ['PAID', 'REJECTED', 'CANCELLED'],
     },
     DEAL: {
-        states: ['LEAD', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST'],
+        states: ['DISCOVERY', 'PROPOSAL', 'NEGOTIATION', 'CLOSING', 'CLOSED_WON', 'CLOSED_LOST'],
         transitions: DEAL_TRANSITIONS,
-        initialState: 'LEAD',
+        initialState: 'DISCOVERY',
         finalStates: ['CLOSED_WON', 'CLOSED_LOST'],
     },
 };

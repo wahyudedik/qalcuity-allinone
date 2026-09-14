@@ -121,7 +121,7 @@ export async function POST(request: Request) {
         const validatedData = validation.data;
 
         // Tentukan initial stage dari workflow definition
-        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'LEAD';
+        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'DISCOVERY';
         const dealStage = (validatedData.stage || initialStage).toUpperCase().replace(' ', '_');
 
         // Validasi bahwa stage yang diberikan adalah valid dalam workflow
@@ -149,7 +149,8 @@ export async function POST(request: Request) {
                 leadId: validatedData.leadId || null,
             },
             include: {
-                contact: { select: { id: true, name: true } },
+                contact: { select: { id: true, name: true, company: true } },
+                lead: { select: { id: true, name: true, company: true } },
             },
         });
 
@@ -167,8 +168,26 @@ export async function POST(request: Request) {
             },
         });
 
+        const mappedDeal = {
+            id: deal.id,
+            title: deal.title,
+            name: deal.title,
+            value: Number(deal.value),
+            stage: deal.stage,
+            probability: deal.probability,
+            closeDate: deal.closeDate?.toISOString() || null,
+            expectedCloseDate: deal.closeDate?.toISOString() || null,
+            notes: deal.notes,
+            contactId: deal.contactId,
+            leadId: deal.leadId,
+            contactName: deal.contact?.name || deal.lead?.name || null,
+            company: deal.contact?.company || deal.lead?.company || null,
+            createdAt: deal.createdAt.toISOString(),
+            updatedAt: deal.updatedAt.toISOString(),
+        };
+
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Deal', entityId: deal.id, newValues: { title: deal.title, value: deal.value, stage: deal.stage } as Record<string, unknown>, request });
-        return NextResponse.json({ success: true, data: deal }, { status: 201 });
+        return NextResponse.json({ success: true, data: mappedDeal }, { status: 201 });
     } catch (error) {
         return handleApiError(error);
     }

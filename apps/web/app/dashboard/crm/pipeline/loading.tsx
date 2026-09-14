@@ -5,8 +5,8 @@ export default function PipelineLoading() {
         <div className="space-y-6">
             <PageHeaderSkeleton />
             {/* Kanban board skeleton */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                {['Discovery', 'Proposal', 'Negosiasi', 'Closing'].map((stage) => (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                {['DISCOVERY', 'PROPOSAL', 'NEGOTIATION', 'CLOSING', 'CLOSED_WON', 'CLOSED_LOST'].map((stage) => (
                     <div key={stage} className="rounded-xl border border-gray-200 bg-white p-4">
                         <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-4" />
                         <div className="space-y-3">

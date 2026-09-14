@@ -11,7 +11,7 @@ import { WorkflowEngine } from '@qalcuity/workflow';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 
-export async function GET(request: Request) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:deals:${ip}`, 100, 60000);
@@ -25,67 +25,38 @@ export async function GET(request: Request) {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const stage = searchParams.get('stage');
-        const search = searchParams.get('search');
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '10');
-        const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        const deal = await prisma.deal.findFirst({
+            where: { id: params.id, tenantId },
+            include: {
+                contact: { select: { id: true, name: true, email: true, phone: true, company: true } },
+                lead: { select: { id: true, name: true, email: true, phone: true, company: true } },
+            },
+        });
 
-        if (stage) {
-            where.stage = stage.toUpperCase().replace(' ', '_');
+        if (!deal) {
+            return NextResponse.json({ success: false, error: 'Deal not found' }, { status: 404 });
         }
 
-        if (search) {
-            where.OR = [
-                { title: { contains: search } },
-                { contact: { name: { contains: search } } },
-            ];
-        }
-
-        const [deals, total] = await Promise.all([
-            prisma.deal.findMany({
-                where,
-                include: {
-                    contact: { select: { id: true, name: true, email: true } },
-                    lead: { select: { id: true, name: true, company: true } },
-                },
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.deal.count({ where }),
-        ]);
-
-        const data = deals.map((deal) => ({
+        const mappedDeal = {
             id: deal.id,
             title: deal.title,
             name: deal.title,
-            value: deal.value,
+            value: Number(deal.value),
             stage: deal.stage,
             probability: deal.probability,
             closeDate: deal.closeDate?.toISOString() || null,
             expectedCloseDate: deal.closeDate?.toISOString() || null,
             notes: deal.notes,
             contactId: deal.contactId,
-            contactName: deal.contact?.name || null,
-            company: deal.lead?.company || deal.contact?.name || null,
             leadId: deal.leadId,
-            leadCompany: deal.lead?.company || null,
-            assignedTo: null,
+            contactName: deal.contact?.name || deal.lead?.name || null,
+            company: deal.contact?.company || deal.lead?.company || null,
             createdAt: deal.createdAt.toISOString(),
-        }));
+            updatedAt: deal.updatedAt.toISOString(),
+        };
 
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        });
+        return NextResponse.json({ success: true, data: mappedDeal });
     } catch (error) {
         return handleApiError(error);
     }
@@ -121,7 +92,7 @@ export async function POST(request: Request) {
         const validatedData = validation.data;
 
         // Tentukan initial stage dari workflow definition
-        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'LEAD';
+        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'DISCOVERY';
         const dealStage = (validatedData.stage || initialStage).toUpperCase().replace(' ', '_');
 
         // Validasi bahwa stage yang diberikan adalah valid dalam workflow

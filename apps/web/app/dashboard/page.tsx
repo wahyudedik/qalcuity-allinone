@@ -32,10 +32,19 @@ import { useToast } from '@/components/ui/toast'
 import { BarChart, PieChart, LineChart } from '@/components/ui/charts'
 
 interface DashboardStats {
+    // Finance
     revenue: { current: number; previous: number; change: number; currency: string }
-    orders: { current: number; previous: number; change: number }
-    customers: { current: number; previous: number; change: number }
-    products: { current: number; previous: number; change: number }
+    outstandingInvoices: { count: number; total: number }
+    expenses: { current: number; previous: number; change: number }
+    // CRM
+    activeDeals: number
+    dealsWon: { current: number; previous: number; change: number }
+    newLeads: { current: number; previous: number; change: number }
+    // HR
+    employees: { total: number; active: number }
+    // Inventory
+    products: { total: number; lowStock: number; lowStockItems: Array<{ id: string; name: string; stock: number; minStock: number }> }
+    // Activity & alerts
     recentActivities: Array<{
         id: string
         icon: string
@@ -238,7 +247,7 @@ export default function DashboardPage() {
         hr: '/dashboard/hr',
     }
 
-    // KPI stat values — use real KPI data from API when available
+    // KPI stat values — use real stats data from API
     const statValues = [
         {
             title: t('dashboard.totalRevenue'),
@@ -246,48 +255,52 @@ export default function DashboardPage() {
             change: kpi?.revenue?.change ?? stats.revenue.change,
         },
         {
-            title: t('dashboard.totalOrders'),
-            value: stats.orders.current.toString(),
-            change: stats.orders.change,
+            title: t('dashboard.outstandingInvoices') || 'Invoice Belum Dibayar',
+            value: stats.outstandingInvoices.count.toString(),
+            subtitle: formatCurrency(stats.outstandingInvoices.total),
         },
         {
-            title: t('dashboard.customers'),
-            value: stats.customers.current.toString(),
-            change: stats.customers.change,
+            title: t('dashboard.activeDeals') || 'Deal Aktif',
+            value: stats.activeDeals.toString(),
         },
         {
-            title: t('dashboard.products'),
-            value: stats.products.current.toString(),
-            change: stats.products.change,
+            title: t('dashboard.totalProducts') || 'Total Produk',
+            value: stats.products.total.toString(),
+            subtitle: stats.products.lowStock > 0 ? `${stats.products.lowStock} low stock` : undefined,
         },
     ]
 
-    // Extended KPI row
-    const extendedKpis = kpi ? [
-        {
-            title: t('dashboard.monthlyProfit'),
-            value: formatCurrency(kpi.profit.current),
-            change: kpi.profit.change,
-            icon: DollarSign,
-        },
+    // Extended KPI row — secondary metrics
+    const extendedKpis = [
         {
             title: t('dashboard.expenses'),
-            value: formatCurrency(kpi.expenses.current),
-            change: kpi.expenses.change,
+            value: formatCurrency(kpi?.expenses?.current ?? stats.expenses.current),
+            change: kpi?.expenses?.change ?? stats.expenses.change,
             icon: Receipt,
+            subtitle: undefined,
         },
         {
-            title: t('dashboard.invoiceOverdue'),
-            value: kpi.outstandingInvoices.count.toString(),
-            subtitle: formatCurrency(kpi.outstandingInvoices.total),
-            icon: FileText,
+            title: t('dashboard.monthlyProfit'),
+            value: formatCurrency((kpi?.revenue?.current ?? stats.revenue.current) - (kpi?.expenses?.current ?? stats.expenses.current)),
+            icon: DollarSign,
+            change: undefined,
+            subtitle: undefined,
         },
         {
-            title: t('dashboard.activeEmployees'),
-            value: kpi.activeEmployees.toString(),
-            icon: Users,
+            title: t('dashboard.dealsWon') || 'Deal Menang',
+            value: stats.dealsWon.current.toString(),
+            change: stats.dealsWon.change,
+            icon: TrendingUp,
+            subtitle: undefined,
         },
-    ] : []
+        {
+            title: t('dashboard.newLeads') || 'Lead Baru',
+            value: stats.newLeads.current.toString(),
+            change: stats.newLeads.change,
+            icon: UserCheck,
+            subtitle: undefined,
+        },
+    ]
 
     const quickActions = [
         { href: '/dashboard/finance/invoices', iconKey: 'invoice', label: t('dashboard.createInvoice') },
@@ -296,8 +309,8 @@ export default function DashboardPage() {
         { href: '/dashboard/finance/payments', iconKey: 'payment', label: t('dashboard.recordPayment') },
     ]
 
-    // AI Insights from real KPI data
-    const revenueChangePercent = kpi?.revenue?.change ?? 0
+    // AI Insights from real stats data
+    const revenueChangePercent = kpi?.revenue?.change ?? stats.revenue.change ?? 0
     const revenueInsightText = revenueChangePercent >= 0
         ? `↑ ${revenueChangePercent}% ${t('dashboard.revenueFromLastMonth')}`
         : `↓ ${Math.abs(revenueChangePercent)}% ${t('dashboard.revenueFromLastMonth')}`
@@ -307,8 +320,8 @@ export default function DashboardPage() {
             ? t('dashboard.revenueGrowthStable')
             : t('dashboard.revenueDeclining')
 
-    const overdueCount = kpi?.outstandingInvoices?.count ?? 0
-    const overdueTotal = kpi?.outstandingInvoices?.total ?? 0
+    const overdueCount = stats.outstandingInvoices.count
+    const overdueTotal = stats.outstandingInvoices.total
     const cashFlowInsightText = overdueCount > 0
         ? `${overdueCount} ${t('dashboard.overdueInvoicesCount')}`
         : t('dashboard.noOverdueInvoices')
@@ -316,8 +329,8 @@ export default function DashboardPage() {
         ? `Total ${formatCurrency(overdueTotal)} ${t('dashboard.overdueFollowUp')}`
         : t('dashboard.allInvoicesOnSchedule')
 
-    const lowStockCount = kpi?.lowStockProducts?.count ?? 0
-    const lowStockNames = kpi?.lowStockProducts?.items?.map((p) => p.name) ?? []
+    const lowStockCount = stats.products.lowStock
+    const lowStockNames = stats.products.lowStockItems?.map((p) => p.name) ?? []
     const stockInsightText = lowStockCount > 0
         ? `${lowStockCount} ${t('dashboard.lowStockCount')}`
         : t('dashboard.allStocksSafe')
@@ -339,16 +352,17 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {statValues.map((stat) => {
                     const Icon = stat === statValues[0] ? DollarSign
-                        : stat === statValues[1] ? ShoppingCart
-                            : stat === statValues[2] ? Users
-                                : ClipboardList
+                        : stat === statValues[1] ? FileText
+                            : stat === statValues[2] ? Briefcase
+                                : Package
                     return (
                         <StatCard
                             key={stat.title}
                             title={stat.title}
                             value={stat.value}
-                            change={`${stat.change >= 0 ? '+' : ''}${stat.change}%`}
-                            changeType={stat.change >= 0 ? 'positive' : 'negative'}
+                            subtitle={stat.subtitle}
+                            change={stat.change !== undefined ? `${stat.change >= 0 ? '+' : ''}${stat.change}%` : undefined}
+                            changeType={stat.change !== undefined ? (stat.change >= 0 ? 'positive' : 'negative') : 'neutral'}
                             icon={Icon}
                         />
                     )

@@ -1,6 +1,6 @@
 {
     "name": "@qalcuity/web",
-    "version": "0.1.0",
+    "version": "11.23.0",
     "private": true,
     "scripts": {
         "dev": "next dev --port 3000",
