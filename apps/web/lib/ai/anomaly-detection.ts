@@ -74,58 +74,40 @@ export interface AnomalyFilter {
     offset?: number;
 }
 
-// ─── Pre-fetched Data Types ──────────────────────────────────────────────────
+// ─── Pre-fetched Data Types (derived from Prisma select for type safety) ─────
 
-type InvoiceRecord = {
-    id: string;
-    invoiceNumber: string;
-    total: number;
-    subtotal: number;
-    taxRate: number;
-    taxAmount: number;
-    contactId: string | null;
-    createdAt: Date;
-    dueDate: Date;
-    status: string;
-    contact?: { name: string } | null;
-};
+type InvoiceRecord = Prisma.InvoiceGetPayload<{
+    select: {
+        id: true, invoiceNumber: true, total: true, subtotal: true,
+        taxRate: true, taxAmount: true, contactId: true, createdAt: true,
+        dueDate: true, status: true,
+        contact: { select: { name: true } },
+    }
+}>;
 
-type PaymentRecord = {
-    id: string;
-    paymentNumber: string;
-    amount: number;
-    paymentDate: Date;
-    method: string;
-    status: string;
-    type: string;
-    createdAt: Date;
-    invoiceId: string | null;
-};
+type PaymentRecord = Prisma.PaymentGetPayload<{
+    select: {
+        id: true, paymentNumber: true, amount: true, paymentDate: true,
+        method: true, status: true, type: true, createdAt: true,
+        invoiceId: true,
+    }
+}>;
 
-type PurchaseOrderRecord = {
-    id: string;
-    poNumber: string;
-    status: string;
-    orderDate: Date;
-    total: number;
-    subtotal: number;
-    taxRate: number;
-    taxAmount: number;
-    supplierId: string | null;
-    createdAt: Date;
-};
+type PurchaseOrderRecord = Prisma.PurchaseOrderGetPayload<{
+    select: {
+        id: true, poNumber: true, status: true, orderDate: true,
+        total: true, subtotal: true, taxRate: true, taxAmount: true,
+        supplierId: true, createdAt: true,
+    }
+}>;
 
-type JournalEntryRecord = {
-    id: string;
-    entryNumber: string;
-    date: Date;
-    description: string;
-    totalDebit: number;
-    totalCredit: number;
-    status: string;
-    sourceType: string;
-    createdAt: Date;
-};
+type JournalEntryRecord = Prisma.JournalEntryGetPayload<{
+    select: {
+        id: true, entryNumber: true, date: true, description: true,
+        totalDebit: true, totalCredit: true, status: true,
+        sourceType: true, createdAt: true,
+    }
+}>;
 
 // ─── Rule Definitions ────────────────────────────────────────────────────────
 
@@ -2119,14 +2101,12 @@ export async function runAnomalyScan(tenantId: string): Promise<AnomalyScanResul
         }),
     ]);
 
-    // Prisma select results are structurally compatible with our local record types,
-    // but TypeScript's Prisma-generated types are nominal and don't directly assign.
-    // Cast via unknown is required. The select clauses above are verified to match
-    // the local type shapes (InvoiceRecord, PaymentRecord, etc.).
-    const invoices = allInvoices as unknown as InvoiceRecord[];
-    const payments = allPayments as unknown as PaymentRecord[];
-    const purchaseOrders = allPurchaseOrders as unknown as PurchaseOrderRecord[];
-    const journalEntries = allJournalEntries as unknown as JournalEntryRecord[];
+    // Prisma GetPayload types (defined above) match the select clauses exactly,
+    // so no type assertion is needed — Prisma infers the correct types.
+    const invoices = allInvoices;
+    const payments = allPayments;
+    const purchaseOrders = allPurchaseOrders;
+    const journalEntries = allJournalEntries;
 
     // ── Run all 12 rule-based + 5 statistical + 3 entity-extension detectors in parallel ──
     const [
