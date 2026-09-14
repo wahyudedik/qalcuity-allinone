@@ -103,6 +103,11 @@ export default function SettingsLayout({
             href: '/dashboard/settings/audit',
             description: t('settings.audit.desc') || 'Catatan aktivitas perubahan data',
         },
+        {
+            name: t('settings.controlEngine.title') || 'Control Engine',
+            href: '/dashboard/settings/control-engine',
+            description: t('settings.controlEngine.description') || 'Kelola semua konfigurasi platform',
+        },
     ]
 
     return (

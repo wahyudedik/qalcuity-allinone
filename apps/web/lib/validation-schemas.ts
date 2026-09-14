@@ -2014,3 +2014,29 @@ export const createSecuritySessionSchema = z.object({
     ipAddress: z.string().max(45, 'IP address maksimal 45 karakter').optional(),
     userAgent: z.string().max(500, 'User agent maksimal 500 karakter').optional(),
 });
+
+// ============================================
+// Control Engine Schemas
+// ============================================
+
+export const controlConfigUpdateSchema = z.object({
+    category: z.enum(['workflow', 'fields', 'modules', 'permissions', 'dashboard', 'approvals'], {
+        message: 'Category harus salah satu dari: workflow, fields, modules, permissions, dashboard, approvals',
+    }),
+    key: z.string().min(1, 'Key wajib diisi').max(100, 'Key maksimal 100 karakter'),
+    value: z.unknown(),
+    reason: z.string().max(500, 'Reason maksimal 500 karakter').optional(),
+});
+
+export const controlConfigImportSchema = z.object({
+    version: z.string().min(1, 'Version wajib diisi'),
+    exportedAt: z.string().min(1, 'Exported at wajib diisi'),
+    tenantId: z.string().min(1, 'Tenant ID wajib diisi'),
+    configs: z.array(z.object({
+        category: z.string(),
+        key: z.string(),
+        value: z.unknown(),
+        scope: z.string(),
+        source: z.string(),
+    })),
+});

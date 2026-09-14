@@ -131,7 +131,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/settings/industry': { permission: 'settings:view', fallbackRole: 'ADMIN' },
     '/api/settings/custom-fields': { permission: 'settings:view', fallbackRole: 'ADMIN' },
     '/api/settings/profile': { permission: 'settings:view', fallbackRole: 'MEMBER' },
-
+    '/api/settings/control-engine': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
     // ─── Billing ──────────────────────────────────────────────────────────────
     '/api/billing/admin': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
     '/api/billing/entitlement': { permission: 'billing:view', fallbackRole: 'ADMIN' },
