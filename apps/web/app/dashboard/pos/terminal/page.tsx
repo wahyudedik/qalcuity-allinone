@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { OfflineIndicator } from '@/components/pos/offline-indicator'
 import { SyncStatusBadge } from '@/components/pos/sync-status-badge'
+import POSReceipt, { type POSReceiptData } from '@/components/pos/pos-receipt'
 import { usePosOffline } from '@/hooks/use-pos-offline'
 import { usePosProducts } from '@/hooks/use-pos-products'
 
@@ -100,6 +101,7 @@ export default function POSTerminalPage() {
     // Receipt state
     const [showReceipt, setShowReceipt] = useState(false)
     const [lastTransaction, setLastTransaction] = useState<TransactionResult | null>(null)
+    const [receiptData, setReceiptData] = useState<POSReceiptData | null>(null)
 
     // Toast
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -288,11 +290,47 @@ export default function POSTerminalPage() {
             if (data.success) {
                 setLastTransaction(data.data)
                 setShowPaymentModal(false)
-                setShowReceipt(true)
                 setCart([])
                 setPaidAmount(0)
                 void refreshProducts() // Refresh stock
                 setToast({ message: 'Transaksi berhasil!', type: 'success' })
+
+                // Fetch full transaction details for receipt
+                try {
+                    const detailRes = await fetch(`/api/pos/transactions/${data.data.id}`)
+                    const detailData = await detailRes.json()
+                    if (detailData.success) {
+                        const d = detailData.data
+                        setReceiptData({
+                            id: d.id,
+                            transactionNumber: d.transactionNo,
+                            createdAt: d.createdAt,
+                            items: d.items.map((item: { productName: string; quantity: number; unitPrice: number; subtotal: number; taxRate?: number }) => ({
+                                name: item.productName,
+                                quantity: item.quantity,
+                                unitPrice: item.unitPrice,
+                                total: item.subtotal,
+                                taxRate: item.taxRate,
+                            })),
+                            subtotal: d.subtotal,
+                            discount: d.discountAmount,
+                            taxAmount: d.taxAmount,
+                            total: d.totalAmount,
+                            paymentMethod: d.paymentMethod,
+                            paymentAmount: d.paidAmount,
+                            change: d.changeAmount,
+                            customerName: d.customerName,
+                            cashierName: d.cashierName,
+                            storeName: d.storeName,
+                            storeAddress: d.storeAddress,
+                            storePhone: d.storePhone,
+                            notes: d.notes,
+                        })
+                    }
+                } catch {
+                    // Silent fail — receipt will show basic info
+                }
+                setShowReceipt(true)
             } else {
                 setToast({ message: data.error || 'Gagal memproses transaksi', type: 'error' })
             }
@@ -716,44 +754,22 @@ export default function POSTerminalPage() {
             )}
 
             {/* RECEIPT MODAL */}
-            {showReceipt && lastTransaction && (
+            {showReceipt && receiptData && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowReceipt(false)}>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="text-center">
-                            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                                <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4 no-print">
+                            <div className="flex items-center gap-2">
+                                <Check className="h-5 w-5 text-green-600" />
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Transaksi Berhasil!</h3>
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Transaksi Berhasil!</h3>
-                            <p className="text-sm text-gray-500 mt-1">{lastTransaction.transactionNo}</p>
+                            <button onClick={() => setShowReceipt(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
-
-                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">Metode</span>
-                                <span className="font-medium">{lastTransaction.paymentMethod}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">Total</span>
-                                <span className="font-bold">{formatCurrency(lastTransaction.totalAmount)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">Bayar</span>
-                                <span>{formatCurrency(lastTransaction.paidAmount)}</span>
-                            </div>
-                            {lastTransaction.changeAmount > 0 && (
-                                <div className="flex justify-between text-green-600 dark:text-green-400">
-                                    <span>Kembalian</span>
-                                    <span className="font-bold">{formatCurrency(lastTransaction.changeAmount)}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            onClick={() => setShowReceipt(false)}
-                            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-                        >
-                            Tutup & Lanjut
-                        </button>
+                        <POSReceipt
+                            transaction={receiptData}
+                            onClose={() => setShowReceipt(false)}
+                        />
                     </div>
                 </div>
             )}

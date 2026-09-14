@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal'
 import { Spinner } from '@qalcuity/ui'
 import { formatCurrency } from '@/lib/utils'
 import { createQuotationSchema } from '@/lib/validation-schemas'
+import { calculateTax, DEFAULT_PPN_RATE } from '@/lib/ppn'
 
 interface QuotationItem {
     description: string
@@ -58,8 +59,11 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-    const ppn = subtotal * 0.11
-    const total = subtotal + ppn
+    // TODO: Fetch active tax rates from /api/finance/tax-rates?active=true
+    // and let user select from dropdown (like invoice-form.tsx does)
+    const taxCalc = calculateTax(subtotal, DEFAULT_PPN_RATE)
+    const ppn = taxCalc.taxAmount
+    const total = taxCalc.total
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

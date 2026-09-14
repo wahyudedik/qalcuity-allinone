@@ -83,6 +83,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.chartOfAccount") || "Chart of Account", href: "/dashboard/finance/accounts" },
                 { label: t("nav.reconciliation") || "Rekonsiliasi", href: "/dashboard/finance/reconciliation" },
                 { label: t("nav.taxRates") || "Pajak", href: "/dashboard/finance/tax-rates" },
+                { label: t("nav.taxReport") || "Laporan Pajak", href: "/dashboard/finance/tax-report" },
                 { label: t("nav.periods") || "Periode", href: "/dashboard/finance/periods" },
                 { label: t("nav.financialReports") || "Laporan Keuangan", href: "/dashboard/finance/reports" },
             ],

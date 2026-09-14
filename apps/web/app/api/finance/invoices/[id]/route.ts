@@ -12,6 +12,7 @@ import { sendInvoiceCreatedEmail } from '@/lib/email';
 import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
 import { generateInvoiceJournalEntry } from '@/lib/auto-journal';
+import { calculateTax } from '@/lib/ppn';
 
 export async function GET(request: Request) {
     try {
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
             0
         );
         const taxRate = validatedData.taxRate || 0;
-        const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
+        const taxAmount = validatedData.taxAmount ?? calculateTax(subtotal, taxRate).taxAmount;
         const total = subtotal + taxAmount;
 
         // Use transaction for atomicity: contact creation + invoice + items
@@ -288,7 +289,7 @@ export async function PUT(request: Request) {
                 0
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
-            const taxAmount = validatedData.taxAmount ?? subtotal * (taxRate / 100);
+            const taxAmount = validatedData.taxAmount ?? calculateTax(subtotal, taxRate).taxAmount;
             data.subtotal = subtotal;
             data.totalBeforeTax = subtotal;
             data.taxAmount = taxAmount;
