@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 14, 2026 (Session 28-29: Sprint 28-29 Complete — v23.0.0)
+**Last Updated:** September 14, 2026 (Session 32: Sprint 32 Critical Fixes + Finance Enhancements — v11.23.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 25.0 — Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 26.0 — Session 32: CRM Pipeline bug fixes, Dashboard real DB queries, Aging Report (AR/AP) production-ready. Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -153,7 +153,7 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 | **Invoices** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, custom template, Zod validation, audit trail |
 | **Quotations** | 🚀 `production_ready` | 2026-08-30 | Convert to invoice, version tracking, Prisma DB |
 | **Payments** | 🚀 `production_ready` | 2026-08-30 | Multi-payment method, partial payment, process endpoint |
-| **Aging Report** | 🔄 `partial` | — | Basic report ada, belum 30/60/90 day buckets lengkap |
+| **Aging Report** | 🚀 `production_ready` | 2026-09-14 | Laporan Umur Piutang & Utang — AR (Invoice) + AP (PurchaseOrder), age buckets (Current, 31-60, 61-90, 90+), color coding, summary cards + detail tables, responsive layout. Auth: `finance:view`, Rate limit: 30 req/min — [`apps/web/app/api/finance/aging-report/route.ts`](apps/web/app/api/finance/aging-report/route.ts), [`apps/web/app/dashboard/finance/aging-report/page.tsx`](apps/web/app/dashboard/finance/aging-report/page.tsx) |
 | **Credit Limit Management** | 📋 `planned` | — | Belum ada kode |
 
 ### 2.3 Accounts Payable
@@ -184,7 +184,7 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 | **PPh 21** | 📋 `planned` | — | Belum ada kode |
 | **PPh 23** | 📋 `planned` | — | Belum ada kode |
 | **PPN** | 📋 `planned` | — | Belum ada kode |
-| **Tax Report** | 📋 `planned` | — | Belum ada kode |
+| **Tax Report** | 🚀 `production_ready` | 2026-09-14 | Laporan Pajak — PPN/PPh summary dengan date range filtering, 4 summary cards (PPN Keluar, PPN Masuk, PPh 21, PPh 23), detail tables, responsive layout. Auth: `finance.reports.view` — [`apps/web/app/api/finance/tax-report/route.ts`](apps/web/app/api/finance/tax-report/route.ts), [`apps/web/app/dashboard/finance/tax-report/page.tsx`](apps/web/app/dashboard/finance/tax-report/page.tsx) |
 
 ### 2.6 Revenue Recognition
 
@@ -488,7 +488,7 @@ Omnichannel support yang terintegrasi.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Dashboard Stats** | ✔️ `verified` | 2026-08-30 | Real-time stats from dynamic API |
+| **Dashboard Stats** | 🚀 `production_ready` | 2026-09-14 | Real DB queries — 16 parallel queries (Revenue, Outstanding, Expenses, Deals, Leads, Employees, Products), change % calculation (current vs previous month), recent activities + alerts. Route permission: `dashboard:view` |
 | **Standard Reports (12 types)** | 🚀 `production_ready` | 2026-08-30 | Finance, Sales, HR, Inventory reports |
 | **Chart Components** | 🚀 `production_ready` | 2026-08-30 | Bar, Pie, Line charts — custom implementation |
 | **Export (CSV/Excel/Print)** | 🚀 `production_ready` | 2026-08-30 | Built-in export utilities |
@@ -1177,7 +1177,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
 | **POS Shift Management** | 🚀 `production_ready` | 2026-09-12 | Sessions page + API, RBAC, tenant isolation, Zod validation |
 | **POS Cashier Management** | 🚀 `production_ready` | 2026-09-12 | Terminals Management page (CRUD), RBAC, tenant isolation |
-| **POS Receipt Printing** | 📋 `planned` | — | Receipt generation dan printing (thermal/regular) |
+| **POS Receipt Printing** | 🚀 `production_ready` | 2026-09-14 | Thermal printer format (80mm), `window.print()` for thermal printer, Web Share API for mobile sharing, download as .txt, Print CSS (`@media print`) — [`apps/web/components/pos/pos-receipt.tsx`](apps/web/components/pos/pos-receipt.tsx) |
 | **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
 | **POS Offline Mode** | 🚀 `production_ready` | 2026-09-12 | Transaksi offline dengan IndexedDB, sync queue, service worker — Phase 5 |
 | **POS Offline — IndexedDB** | ✅ `implemented` | 2026-09-05 | Local storage: products, transactions, sessions via Dexie.js ([`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts)) |
@@ -1496,16 +1496,17 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~85 | ~47% |
+| `production_ready` | 🚀 | ~89 | ~49% |
 | `implemented` | ✅ | ~33 | ~18% |
-| `verified` | ✔️ | 1 | ~1% |
+| `verified` | ✔️ | 0 | 0% |
 | `partial` | 🔄 | ~20 | ~11% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~136 | ~37% |
+| `planned` | 📋 | ~132 | ~36% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~289** | **100%** |
 
+> **Session 32 Impact (14 Sep):** +4 production_ready (Aging Report, Tax Report, Dashboard Stats, POS Receipt), -1 verified → production_ready 85→89, verified 1→0, planned 136→132
 > **Session 14 Impact (13 Sep):** +2 production_ready (Anomaly Detection, usePermission Hook), +1 partial (Analytics Read Model/MVs) → Net: production_ready 83→85, partial 19→20, planned 139→136
 > **Session 9 Impact (12 Sep):** +18 production_ready (POS Terminal, Refunds, Shift Mgmt, Cashier Mgmt, Offline Mode, Audit Trail, Dashboard, Transactions, Sessions, Terminals, Reports, Loyalty, Analytics, Multi-terminal, Kitchen Display, Kitchen API, Table Mgmt, Table API), -15 implemented → Net: production_ready 65→83, implemented 48→33
 > **Session 8 (11 Sep):** POS Products full CRUD (6 entities), 310+ API message constants, i18n backend migration
@@ -1520,6 +1521,27 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v26.0.0 (September 14, 2026) — Session 32: Sprint 32 Critical Fixes + Finance Enhancements
+
+#### Feature Status Updates
+- **feat(finance):** Aging Report upgraded `partial` → `production_ready` — AR/AP with age buckets (Current, 31-60, 61-90, 90+), color coding, summary + detail tables
+- **feat(finance):** Tax Report upgraded `planned` → `production_ready` — PPN/PPh summary with date range filtering, 4 summary cards, detail tables
+- **feat(dashboard):** Dashboard Stats upgraded `verified` → `production_ready` — 16 parallel real DB queries, change % calculation, activities + alerts
+- **feat(pos):** POS Receipt Printing upgraded `planned` → `production_ready` — Thermal printer format (80mm), print/share/download
+
+#### Bug Fixes
+- **fix(crm):** Workflow engine states: `LEAD,QUALIFICATION` → `DISCOVERY,CLOSING` (matches Prisma schema)
+- **fix(crm):** Deal detail API: `findMany` → `findFirst` (returns single deal, not list)
+- **fix(crm):** Pipeline loading: UPPERCASE 6 stages for consistency
+- **fix(crm):** POST response: added field aliases (`name`, `expectedCloseDate`, `company`)
+- **fix(crm):** Detail/edit pages: removed non-existent `currency` field
+
+#### Code Quality
+- TypeScript: 0 errors
+- Code Quality Score: 9.0/10
+
+---
 
 ### v23.0.0 (September 14, 2026) — Session 28-29: Sprint 28-29 Complete
 
@@ -1931,6 +1953,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 14, 2026 (Session 28-29: Sprint 28-29 Complete — v23.0.0)
+**Last Updated:** September 14, 2026 (Session 32: Sprint 32 Critical Fixes + Finance Enhancements — v11.23.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 25.0 — Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser, statistical anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time, batch document extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 26.0 — Session 32: CRM Pipeline bug fixes, Dashboard real DB queries, Aging Report (AR/AP) production-ready, Tax Report production-ready, POS Receipt production-ready. Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser, statistical anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time, batch document extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes

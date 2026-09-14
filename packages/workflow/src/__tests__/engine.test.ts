@@ -330,8 +330,8 @@ describe('WorkflowEngine', () => {
 
         it('should have Deal with correct states and pipeline flow', () => {
             const deal = DEFAULT_WORKFLOWS['DEAL'];
-            expect(deal.states).toEqual(['LEAD', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST']);
-            expect(deal.initialState).toBe('LEAD');
+            expect(deal.states).toEqual(['DISCOVERY', 'PROPOSAL', 'NEGOTIATION', 'CLOSING', 'CLOSED_WON', 'CLOSED_LOST']);
+            expect(deal.initialState).toBe('DISCOVERY');
             expect(deal.finalStates).toContain('CLOSED_WON');
             expect(deal.finalStates).toContain('CLOSED_LOST');
         });
@@ -421,7 +421,7 @@ describe('WorkflowEngine', () => {
     describe('getInitialState / getStates', () => {
         it('should return correct initial state', () => {
             expect(WorkflowEngine.getInitialState('INVOICE')).toBe('DRAFT');
-            expect(WorkflowEngine.getInitialState('DEAL')).toBe('LEAD');
+            expect(WorkflowEngine.getInitialState('DEAL')).toBe('DISCOVERY');
         });
 
         it('should return null for unknown entity type', () => {

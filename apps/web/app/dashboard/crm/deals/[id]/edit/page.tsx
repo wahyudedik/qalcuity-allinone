@@ -13,7 +13,6 @@ interface DealData {
     contactName: string
     contactId: string
     value: number
-    currency: string
     stage: string
     probability: number
     expectedCloseDate: string

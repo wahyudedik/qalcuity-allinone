@@ -1,6 +1,46 @@
-﻿> **Last Updated:** 14 September 2026 (Session 31: Sprint 31 Tax Engine + POS Receipt)
-> **Version:** v11.22.0
-> **Status:** ✅ HEALTHY — Session 30: Sprint 30 quality fixes — TypeScript compilation fix (TS2344 notification-pubsub), Quotation convert route rewrite (actual conversion logic), Anomaly detection type safety (zero `as unknown as` casts), Auth pattern standardization (4 routes → requirePermissionForRoute). Net -250 LOC. TypeScript: 0 errors. Code Quality Score: 8.7/10. Session 28-29: Sprint 28-29 complete — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine. 3 bug fixes: Dashboard 429 rate limit fallback, CRM locale error, CRM setState during render. TypeScript: 0 errors. Code Quality Score: 8.5/10. Session 27: Fixed critical 429 rate limit bug — `checkRateLimit()` sync function was fail-closed in production. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+> **Last Updated:** 14 September 2026 (Session 32: Sprint 32 Critical Fixes + Finance Enhancements)
+> **Version:** v11.23.0
+> **Status:** ✅ HEALTHY — Session 31: Sprint 31 Tax Engine + POS Receipt. Session 30: Sprint 30 quality fixes — TypeScript compilation fix (TS2344 notification-pubsub), Quotation convert route rewrite (actual conversion logic), Anomaly detection type safety (zero `as unknown as` casts), Auth pattern standardization (4 routes → requirePermissionForRoute). Net -250 LOC. TypeScript: 0 errors. Code Quality Score: 8.7/10. Session 28-29: Sprint 28-29 complete — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine. 3 bug fixes: Dashboard 429 rate limit fallback, CRM locale error, CRM setState during render. TypeScript: 0 errors. Code Quality Score: 8.5/10. Session 27: Fixed critical 429 rate limit bug — `checkRateLimit()` sync function was fail-closed in production. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+### Dashboard Stats → Real DB Queries (3 files) ✅
+
+- **Status:** ✅ Complete
+- **Description:** Replaced placeholder dashboard stats with real database queries for accurate, live data.
+- **Queries:** 16 parallel queries covering:
+  - Finance: Revenue, Outstanding, Expenses
+  - CRM: Deals, Leads, Conversion Rate
+  - HR: Employees, Attendance
+  - Inventory: Products, Low Stock
+  - Activity: Recent activities
+  - Alerts: System alerts
+- **Change %:** Calculation comparing current month vs previous month
+- **Route Permission:** `dashboard:view`
+- **Files Modified:** Dashboard stats API route + related files
+
+### Aging Report (AR/AP) (6 files) ✅
+
+- **Status:** ✅ Complete
+- **Description:** New AR/AP Aging Report with age bucketing, color coding, and responsive layout.
+- **API:** `GET /api/finance/aging-report` — Returns AR (Invoice) + AP (PurchaseOrder) with age buckets
+- **Age Buckets:** Current, 31-60, 61-90, 90+ days with color coding (Green/Yellow/Orange/Red)
+- **Page:** `/dashboard/finance/aging-report` — Summary cards + detail tables for AR and AP
+- **Responsive:** Desktop tables + mobile cards layout
+- **Auth:** `finance:view` permission
+- **Rate Limit:** 30 req/min
+- **Files Created:** 2 new files (API route + page)
+- **Files Modified:** 4 files (route-permissions, sidebar, i18n, validation)
+
+### Session 32 Summary
+
+| Metric | Value |
+|--------|-------|
+| Features | 3 (CRM Pipeline fixes, Dashboard real queries, Aging Report) |
+| Files Created | ~8 (aging-report route, page, loading, error + tests) |
+| Files Modified | ~16 (CRM workflow, deals API, pipeline, dashboard stats, sidebar, i18n) |
+| Net LOC Impact | ~500 added |
+| TypeScript | 0 errors |
+| Code Quality Score | 9.0/10 (↑ from 8.8) |
+
+---
 
 ## 🏛️ Session 31 — Sprint 31: Tax Engine + POS Receipt (14 Sep 2026)
 
@@ -64,7 +104,8 @@
 
 > **Focus:** Sprint 30 — 4 quality improvement fixes: TypeScript compilation, Quotation convert rewrite, type safety, auth standardization
 > **Total Files Changed:** 10+ (modified files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Code Quality Score:** 8.7/10 (up from 8.5)
 > **Health Score:** ~100/100
 > **Net Impact:** -250 LOC (code cleanup & quality improvement)
@@ -73,9 +114,13 @@
 
 - **Status:** ✅ Fixed
 - **Risk Level:** 🔴 High (build-breaking compilation error)
-- **Description:** `notifyNewNotification` was incorrectly placed causing TypeScript TS2344 error. Function was moved to [`apps/web/lib/notification-pubsub.ts`](apps/web/lib/notification-pubsub.ts) where it belongs.
-- **Impact:** TypeScript compilation was broken — `npx tsc --noEmit` would fail.
-- **Fix:** Moved `notifyNewNotification` to [`notification-pubsub.ts`](apps/web/lib/notification-pubsub.ts).
+- **Description:** 
+otifyNewNotification` was incorrectly placed causing TypeScript TS2344 error. Function was moved to [`apps/web/lib/notification-pubsub.ts`](apps/web/lib/notification-pubsub.ts) where it belongs.
+- **Impact:** TypeScript compilation was broken — 
+px tsc --noEmit` would fail.
+- **Fix:** Moved 
+otifyNewNotification` to [
+otification-pubsub.ts`](apps/web/lib/notification-pubsub.ts).
 
 ### Fix #2 (P1) — Quotation Convert Route Rewrite ✅
 
@@ -117,7 +162,8 @@
 
 > **Focus:** Sprint 28-29 — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents, Unified Control Engine, 3 bug fixes
 > **Total Files Changed:** 20+ (new files + modified files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Code Quality Score:** 8.5/10
 > **Health Score:** ~100/100
 
@@ -216,14 +262,16 @@
 
 > **Focus:** Fixed critical 429 rate limit bug that broke ALL API routes in production
 > **Total Files Changed:** 1 (modified)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Bug — Dashboard 429 Rate Limit Error (Critical) ✅
 
 - **Status:** ✅ Fixed
 - **Risk Level:** 🔴 High (production-wide impact — ALL API routes returning 429)
-- **Root Cause:** [`checkRateLimit()`](apps/web/lib/rate-limit.ts:153) (sync, in-memory only) had `ENABLE_MEMORY_FALLBACK` defaulting to `false` in production (`NODE_ENV=production`). This caused the sync function to return `{ success: false, remaining: 0 }` for ALL requests — fail-closed behavior that rejected every API call.
+- **Root Cause:** [`checkRateLimit()`](apps/web/lib/rate-limit.ts:153) (sync, in-memory only) had `ENABLE_MEMORY_FALLBACK` defaulting to `false` in production (
+ODE_ENV=production`). This caused the sync function to return `{ success: false, remaining: 0 }` for ALL requests — fail-closed behavior that rejected every API call.
 - **Impact:** 145+ API routes using sync `checkRateLimit()` were all returning HTTP 429. Dashboard showed "Data tidak tersedia" with "Muat Ulang" button.
 - **Affected Routes:** All routes importing `checkRateLimit` from `@/lib/rate-limit` including dashboard stats, approvals, notifications, and all CRUD endpoints.
 - **Fix:** Changed `ENABLE_MEMORY_FALLBACK` default from `!IS_PRODUCTION` (false in production) to `true` (always enabled). In-memory fallback is now active in all environments unless explicitly disabled via `ENABLE_MEMORY_RATE_LIMIT=false`.
@@ -247,7 +295,8 @@
 
 > **Focus:** NLU parser for natural language queries, statistical anomaly detection, AES-256-GCM encryption, batch document extraction enhancements, product restock
 > **Total Files Changed:** 10+ (new files + modified files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — NLU Parser (`apps/web/lib/ai/nlu-parser.ts`) ✅
@@ -319,7 +368,8 @@
 
 > **Focus:** Document extraction batch processing + Xendit payment provider implementation
 > **Total Files Changed:** 10 (5 new files, 5 modified files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — Document Extraction Batch Processing (P2) ✅
@@ -410,7 +460,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Upgrade Notification Center from 30s polling to real-time SSE with polling fallback
 > **Total Files Changed:** 4 (1 new API route, 2 modified lib files, 1 modified component)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — SSE Endpoint `/api/notifications/stream` (P1) ✅
@@ -424,24 +475,31 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
   - Heartbeat: Every 30s to keep connection alive
   - Auto-cleanup: On client disconnect (abort signal)
   - Dead controller cleanup: Automatic removal of closed controllers
-- **Export:** `notifyNewNotification(tenantId, notification?)` — called by notification-creating routes
+- **Export:** 
+otifyNewNotification(tenantId, notification?)` — called by notification-creating routes
 - **Files Created:**
-  - [`apps/web/app/api/notifications/stream/route.ts`](apps/web/app/api/notifications/stream/route.ts) — SSE endpoint + `notifyNewNotification` export
+  - [`apps/web/app/api/notifications/stream/route.ts`](apps/web/app/api/notifications/stream/route.ts) — SSE endpoint + 
+otifyNewNotification` export
 
-### Task #2 — Integrate `notifyNewNotification` (P1) ✅
+### Task #2 — Integrate 
+otifyNewNotification` (P1) ✅
 
 - **Status:** ✅ Complete
 - **Risk Level:** 🟢 Low (additive change, no existing logic modified)
-- **Description:** Integrated `notifyNewNotification()` into all routes that create `InAppNotification` records. After `createMany`, the SSE broadcast pushes real-time updates to connected clients.
+- **Description:** Integrated 
+otifyNewNotification()` into all routes that create `InAppNotification` records. After `createMany`, the SSE broadcast pushes real-time updates to connected clients.
 - **Files Modified:**
-  - [`apps/web/lib/stock-alert.ts`](apps/web/lib/stock-alert.ts) — Added `notifyNewNotification` call after `createMany` (line 88)
-  - [`apps/web/lib/payment-reminder-handler.ts`](apps/web/lib/payment-reminder-handler.ts) — Added `notifyNewNotification` call after `createMany` (line 132)
+  - [`apps/web/lib/stock-alert.ts`](apps/web/lib/stock-alert.ts) — Added 
+otifyNewNotification` call after `createMany` (line 88)
+  - [`apps/web/lib/payment-reminder-handler.ts`](apps/web/lib/payment-reminder-handler.ts) — Added 
+otifyNewNotification` call after `createMany` (line 132)
 
 ### Task #3 — Notification Center SSE Client (P1) ✅
 
 - **Status:** ✅ Complete
 - **Risk Level:** 🟢 Low (client-side only, polling retained as fallback)
-- **Description:** Updated `NotificationCenter` component to use SSE as primary real-time source with polling as fallback (60s interval, up from 30s). Shows toast notification on new events.
+- **Description:** Updated 
+otificationCenter` component to use SSE as primary real-time source with polling as fallback (60s interval, up from 30s). Shows toast notification on new events.
 - **Changes:**
   - Added `EventSource` connection to `/api/notifications/stream`
   - SSE `onmessage` handler: re-fetches notifications + shows toast
@@ -469,7 +527,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Sync Industry Settings UI with `@qalcuity/industry-config` package packs + implement real Product Restock feature
 > **Total Files Changed:** 6 (1 new API route, 3 modified pages/schemas, 1 modified constants, 1 new validation schema)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — Sync Industry Switch UI ↔ Package Packs (P1) ✅
@@ -528,7 +587,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Replace 10s polling with Server-Sent Events (SSE) for real-time kitchen order updates
 > **Total Files Changed:** 4 (1 new SSE endpoint, 2 modified API routes, 1 modified hook)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task — Kitchen Display SSE Real-time ✅
@@ -539,16 +599,20 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 - **Architecture:**
   - SSE endpoint: `GET /api/pos/kitchen/stream` — authenticated via session JWT
   - In-memory subscriber map keyed by `tenantId` — multi-tenant isolated
-  - `notifyKitchenUpdate(tenantId)` exported from stream route for use by CRUD routes
+  - 
+otifyKitchenUpdate(tenantId)` exported from stream route for use by CRUD routes
   - Heartbeat every 30s to keep connections alive
   - Auto-reconnect with exponential backoff on client side (1s → 2s → 4s → ... → 30s max)
   - Polling fallback reduced from 10s to 15s
 - **Impact:** Kitchen display updates now near-instant (<1s vs 10s worst case)
 - **Files Created:**
-  - [`apps/web/app/api/pos/kitchen/stream/route.ts`](apps/web/app/api/pos/kitchen/stream/route.ts) — SSE endpoint + `notifyKitchenUpdate()` export
+  - [`apps/web/app/api/pos/kitchen/stream/route.ts`](apps/web/app/api/pos/kitchen/stream/route.ts) — SSE endpoint + 
+otifyKitchenUpdate()` export
 - **Files Modified:**
-  - [`apps/web/app/api/pos/kitchen/orders/route.ts`](apps/web/app/api/pos/kitchen/orders/route.ts) — Added `notifyKitchenUpdate(tenantId)` call after order creation
-  - [`apps/web/app/api/pos/kitchen/orders/[id]/route.ts`](apps/web/app/api/pos/kitchen/orders/[id]/route.ts) — Added `notifyKitchenUpdate(tenantId)` call after order mutation
+  - [`apps/web/app/api/pos/kitchen/orders/route.ts`](apps/web/app/api/pos/kitchen/orders/route.ts) — Added 
+otifyKitchenUpdate(tenantId)` call after order creation
+  - [`apps/web/app/api/pos/kitchen/orders/[id]/route.ts`](apps/web/app/api/pos/kitchen/orders/[id]/route.ts) — Added 
+otifyKitchenUpdate(tenantId)` call after order mutation
   - [`apps/web/hooks/use-kitchen-orders.ts`](apps/web/hooks/use-kitchen-orders.ts) — Added SSE connection as primary real-time source, polling retained as fallback (15s), exponential backoff reconnect
 
 ### 📊 Session 25 Part 2 Summary
@@ -569,7 +633,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Standardize mobile auth error handling with `handleApiError()` + replace hardcoded error strings with `MSG.*` constants
 > **Total Files Changed:** 8 (4 mobile auth routes, 2 settings security routes, 1 reset-password route, 1 api-messages.ts)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — Mobile Auth Routes → handleApiError() (4 routes) ✅
@@ -621,7 +686,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Encrypt SMTP passwords stored in `TenantIntegration.apiSecret` using AES-256-GCM
 > **Total Files Changed:** 3 (1 new encryption utility, 1 SMTP route updated, 1 .env.example)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — Encryption Utility (`apps/web/lib/encryption.ts`) ✅
@@ -668,7 +734,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Fix remaining code quality bugs — console.log cleanup in 4 files + 1 missing error.tsx + 1 file already using logger
 > **Total Files Changed:** 5 (3 hooks/services, 1 error boundary, 1 env-validation)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task #1 — console.log → structured logger in use-pos-offline.ts ✅
@@ -735,7 +802,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Migrate all remaining `console.error` calls to structured `logger.error()` across client-side components, error boundaries, and server-side files
 > **Total Files Changed:** 20 (11 client-side .tsx, 6 error boundary files, 3 server-side files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Client-Side .tsx Files — console.error → logger.error (11 files, 19 changes) ✅
@@ -800,7 +868,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Fix critical bugs (POST /api/admin/plans 400 error, Search API auth/query issues) + ioredis webpack incompatibility + hide SUPERADMIN from tenant views
 > **Total Files Changed:** 7 (2 validation schemas, 1 search route, 1 next.config.js, 5 SUPERADMIN hidden files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Bug #1 — POST /api/admin/plans 400 Error Fix ✅
@@ -887,7 +956,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Hide SUPERADMIN role from tenant-level views to clarify that SUPERADMIN is a platform-wide role, not a tenant-level assignable role
 > **Total Files Changed:** 5 (approvals page, validation schemas, 2 roles API routes, team API route)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Hide SUPERADMIN from Tenant-Level Views ✅
@@ -931,7 +1001,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Improve remaining `as unknown as` casts, activate `securityAlerts` setting, upgrade platform settings cache to Redis-backed two-tier
 > **Total Files Changed:** ~8 files (i18n.tsx, middleware.ts, document-extraction.ts, api/client.ts, email.ts, forgot-password/route.ts, anomaly-detection.ts, platform-settings.ts)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Remaining `as unknown as` Cast Improvement ✅
@@ -1012,7 +1083,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Refactor 64 unsafe `as unknown as` casts to type-safe `toAuditPayload()` + consume platform settings in middleware, registration, and email
 > **Total Files Changed:** ~47 files (45 cast refactors + platform settings consumers + middleware + email + api-messages)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: `as unknown as` Cast Refactoring ✅
@@ -1085,7 +1157,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Fix 4 copy-paste API routes in Operations module + add bulk endpoint + integrate analytics materialized views into dashboard
 > **Total Files Changed:** 8+ (4 Operations API fixes, 1 bulk endpoint, 1 analytics dashboard update, validation schemas, CURRENT.md)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Operations Module — Fix 4 Copy-Paste API Routes ✅
@@ -1146,7 +1219,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Zod validation schemas (mobile auth, support tickets, security sessions) + pagination limits on unbounded queries + SMTP TLS fix + documentation sync
 > **Total Files Changed:** 11 (6 initial + 5 pagination/TLS)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Mobile Auth Zod Validation ✅
@@ -1221,7 +1295,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Analytics Explorer model whitelist + type-safe audit payload helper + refactor unsafe `as unknown as` casts
 > **Total Files Changed:** 6 (analytics explorer, audit lib, 4 billing/settings routes)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Analytics Explorer — Model Whitelist ✅
@@ -1269,7 +1344,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Migrate platform settings from filesystem (JSON file) to PostgreSQL database
 > **Total Files Changed:** 4+ (Prisma schema, migration, API route rewrite, seed)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Platform Settings — Database Models & Migration ✅
@@ -1333,7 +1409,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 > **Total Files Changed:** 8 ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma), migration `20260913043100_add_entitlement_id_to_billing_payment`, [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts), [`apps/web/app/api/billing/payments/route.ts`](apps/web/app/api/billing/payments/route.ts), [`apps/web/app/api/billing/payments/midtrans/route.ts`](apps/web/app/api/billing/payments/midtrans/route.ts), [`apps/web/app/api/billing/payments/midtrans/callback/route.ts`](apps/web/app/api/billing/payments/midtrans/callback/route.ts), [`apps/web/app/api/billing/admin/payments/[id]/verify/route.ts`](apps/web/app/api/billing/admin/payments/[id]/verify/route.ts), [`apps/web/app/api/billing/admin/payments/route.ts`](apps/web/app/api/billing/admin/payments/route.ts), [`CURRENT.md`](CURRENT.md))
 > **Approach:** Non-breaking — added nullable `entitlementId` FK on BillingPayment → TenantEntitlement, backward compatible with existing `subscriptionId`
 > **Prisma Migration:** `20260913043100_add_entitlement_id_to_billing_payment` (ALTER TABLE ADD COLUMN + UPDATE backfill)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: SubscriptionPlan → Plan Migration Phase 4 ✅
@@ -1367,7 +1444,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Continue SubscriptionPlan → Plan migration — migrate 6 remaining billing files to use new Plan model
 > **Total Files Changed:** 7 ([`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts), [`apps/web/app/api/billing/subscription/route.ts`](apps/web/app/api/billing/subscription/route.ts), [`apps/web/app/api/platform/stats/route.ts`](apps/web/app/api/platform/stats/route.ts), [`apps/web/app/api/platform/billing/route.ts`](apps/web/app/api/platform/billing/route.ts), [`apps/web/app/api/billing/webhook/route.ts`](apps/web/app/api/billing/webhook/route.ts), [`apps/web/app/platform/tenants/[id]/page.tsx`](apps/web/app/platform/tenants/[id]/page.tsx), [`CURRENT.md`](CURRENT.md))
-> **TypeScript:** `npx tsc —noEmit` — 0 errors
+> **TypeScript:** 
+px tsc —noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: SubscriptionPlan → Plan Migration Phase 3 ✅
@@ -1399,7 +1477,8 @@ XENDIT_CALLBACK_TOKEN=your-callback-token
 
 > **Focus:** Harden rate limiter for production — fail-closed behavior, explicit env var control, deprecation warnings
 > **Total Files Changed:** 4 ([`apps/web/lib/rate-limit.ts`](apps/web/lib/rate-limit.ts), [`apps/web/.env.example`](apps/web/.env.example), [`apps/web/.env.production.example`](apps/web/.env.production.example), [`CURRENT.md`](CURRENT.md))
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Rate Limiter Cleanup — Issue #1 ✅
@@ -1462,7 +1541,8 @@ Request Flow:
 
 > **Focus:** Fix all findings from comprehensive global audit — security, validation, query safety
 > **Total Files Changed:** 9 (2 POS session routes, 1 validation-schemas, 2 auth register routes, 4 POS analytics routes)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Fix P1 — POS Sessions Missing tenantId Filter ✅ (CRITICAL)
@@ -1532,7 +1612,8 @@ Request Flow:
 
 > **Focus:** Fix critical permission string format mismatch, migrate 35+ UI pages to granular permission checks, migrate 4 billing admin routes to centralized auth
 > **Total Files Changed:** 42+ (1 route-permissions rewrite, 1 new hook, 35+ UI page updates, 4 billing route migrations, 1 tax-rates fix)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Fix #1 — Permission String Format Mismatch ✅ (CRITICAL)
@@ -1604,7 +1685,8 @@ Request Flow:
 
 > **Focus:** Console logger cleanup (160+ occurrences), POS Permission Engine integration (23 inline role checks removed), unit test infrastructure (Vitest + 189 tests), referential integrity fix (3 form inputs — no schema change)
 > **Total Files Changed:** 64+ (61 console cleanup files, 14 POS route files, 6 test files, 1 vitest config, 3 form input fixes)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Console Logger Cleanup ✅
@@ -1682,7 +1764,8 @@ Request Flow:
 
 > **Focus:** Complete Zod validation coverage for all remaining API mutation routes + rate limiting for all unprotected routes
 > **Total Files Changed:** 31 (16 Zod schemas added to validation-schemas.ts, 15 routes updated with Zod validation, 13 routes updated with rate limiting, 4 documentation files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Zod Validation Coverage (4 Batches) ✅
@@ -1738,7 +1821,8 @@ Request Flow:
 
 > **Focus:** Global codebase audit — updated all documentation with actual numbers from codebase analysis
 > **Total Files Changed:** 4 documentation files (AGENT.md, docs/SECURITY.md, FEATURES.md, CURRENT.md)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors (no code changes — documentation only)
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors (no code changes — documentation only)
 
 ### Task: Global Audit & Documentation Sync ✅
 
@@ -1778,7 +1862,8 @@ Request Flow:
 
 > **Focus:** POS cache invalidation hooks, dashboard Redis caching, database migration sync, rate limit monitoring dashboard
 > **Total Files Changed:** 10 (pos-cache.ts, redis.ts, 4 POS routes, dashboard route, rate-limits API, rate-limits page, rate-limits loading)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: POS Cache Invalidation Hooks ✅
@@ -1861,7 +1946,8 @@ Request Flow:
 
 > **Focus:** POS analytics Redis caching + cache invalidation, RBAC route coverage final audit, E2E test verification
 > **Total Files Changed:** 7 (pos/analytics/route.ts, route-permissions.ts, redis.ts, pos-cache.ts, transactions/route.ts, transactions/[id]/route.ts, refunds/route.ts, refunds/[id]/route.ts)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: POS Analytics Redis Caching ✅
@@ -1929,7 +2015,8 @@ Request Flow:
 
   | Check | Result |
   |-------|--------|
-  | TypeScript (`npx tsc --noEmit`) | ✅ PASS — 0 errors |
+  | TypeScript (
+px tsc --noEmit`) | ✅ PASS — 0 errors |
   | E2E Tests | ⚠️ FAIL — Infrastructure issue (not code regression) |
 
 - **E2E Failure Root Cause:** 4 Prisma migrations not applied to local database:
@@ -1958,7 +2045,8 @@ Request Flow:
 > **Focus:** Structured logging, POS analytics performance optimization, RBAC route coverage hardening, environment config security
 > **Total Files Created:** 2 (logger.ts, .env.production.example)
 > **Total Files Changed:** 14 files (2 new, 1 rewritten, 11 updated)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Task: Environment Configuration Security ✅
@@ -2106,7 +2194,8 @@ Request Flow:
 | Instances Fixed | 125+ (71 console.log + 54 route-permissions entries) |
 | Performance Gain | 5-100x (POS analytics) |
 | Security Coverage | 76% → 98% (RBAC route coverage) |
-| TypeScript Errors | 0 (verified with `npx tsc --noEmit`) |
+| TypeScript Errors | 0 (verified with 
+px tsc --noEmit`) |
 
 ---
 
@@ -2114,7 +2203,8 @@ Request Flow:
 
 > **Focus:** Security fixes, code quality improvements, and documentation synchronization
 > **Total Files Changed:** 12 files (3 new, 9 modified)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 ### Security Fixes
@@ -2133,7 +2223,8 @@ Request Flow:
 
 #### S3: Mobile Auth Fallback
 
-- ✅ **Fixed:** [`apps/web/lib/mobile-auth.ts`](apps/web/lib/mobile-auth.ts) — `JWT_SECRET` is now mandatory in production, no longer falls back to `NEXTAUTH_SECRET`
+- ✅ **Fixed:** [`apps/web/lib/mobile-auth.ts`](apps/web/lib/mobile-auth.ts) — `JWT_SECRET` is now mandatory in production, no longer falls back to 
+EXTAUTH_SECRET`
 - ✅ **Impact:** Mobile authentication uses dedicated secret — prevents cross-auth vulnerability
 
 ### Code Quality Fixes
@@ -2212,7 +2303,8 @@ psql -d qalcuity -f prisma/migrations/20260911151500_add_reset_token_fields/migr
 
 > **Focus:** Complete POS module CRUD — add POST for Products, PUT/DELETE for all 6 POS entities
 > **Total Files Changed:** 8 files (1 new, 7 modified)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** 100/100
 
 ### Changes
@@ -2295,7 +2387,8 @@ Additionally, implicit `any` type parameters in [`apps/web/app/api/ai/anomalies/
 
 ### Fix
 
-Ran `npx prisma generate` in `packages/db/` to regenerate the Prisma client with all new models:
+Ran 
+px prisma generate` in `packages/db/` to regenerate the Prisma client with all new models:
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
@@ -2311,7 +2404,8 @@ Ran `npx prisma generate` in `packages/db/` to regenerate the Prisma client with
 
 | File | Change | Risk |
 |------|--------|------|
-| `node_modules/@prisma/client` | Regenerated with 4 new models | 🟢 Low |
+| 
+ode_modules/@prisma/client` | Regenerated with 4 new models | 🟢 Low |
 
 ---
 
@@ -2360,7 +2454,8 @@ Also registered `/api/admin/plans` in [`route-permissions.ts`](apps/web/lib/rout
 > **Focus:** Fix cron audit gaps — add CRON_SECRET to env files, standardize anomaly endpoints to use `verifyCronAuth()`
 > **Total Files Changed:** 6 files (0 new, 6 modified)
 > **Health Score:** ~99/100 (TypeScript check: PASS)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 
 ### Changes
 
@@ -2378,7 +2473,8 @@ Also registered `/api/admin/plans` in [`route-permissions.ts`](apps/web/lib/rout
 > **Focus:** Automation infrastructure — cron jobs, payment reminders, stock alerts, auto-recurring invoices
 > **Total Files Changed:** 20+ files (12 new, 8+ modified)
 > **Health Score:** ~99/100 (TypeScript check: PASS)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Prisma Generate:** ✅ PASS (3 new models: PaymentReminderLog, RecurringInvoice, RecurringInvoiceItem)
 
 ### Phase 2A: Cron Infrastructure
@@ -2454,7 +2550,8 @@ CRON_SECRET="your-secure-cron-secret"
 > **Focus:** Core ERP integration — product linking, auto journal entries, product search in forms, auto stock update, audit log viewer
 > **Total Files Changed:** 12 files (5 new, 7 modified)
 > **Health Score:** ~99/100 (TypeScript check: PASS)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 
 ### CRITICAL #1: Product FK on InvoiceItem & PurchaseOrderItem
 
@@ -2683,7 +2780,8 @@ Production API routes `/api/tasks`, `/api/projects`, `/api/timesheet` returning 
 | Migration SQL fix | ✅ Pushed to main | `ARRAY[]` → `ARRAY[]::TEXT[]` |
 | AnomalyDetection migration | ✅ Pushed to main | Commit `8515c2d` |
 | VPS pull + build | ⏳ **PENDING** | Run `sudo bash update.sh` on VPS |
-| Migration apply | ⏳ **PENDING** | `npx prisma migrate deploy` after pull |
+| Migration apply | ⏳ **PENDING** | 
+px prisma migrate deploy` after pull |
 | 503 errors resolution | ⏳ **PENDING** | Will resolve after migration applied |
 
 ### How to Deploy
@@ -2750,7 +2848,8 @@ curl https://qalcuity.com/api/timesheet
 
 ### M12: ignoreBuildErrors Removed
 
-- ✅ [`next.config.js`](apps/web/next.config.js) `ignoreBuildErrors: true` → `false`
+- ✅ [
+ext.config.js`](apps/web/next.config.js) `ignoreBuildErrors: true` → `false`
 - ✅ TypeScript build errors now block deployment — prevents shipping broken code
 - ✅ All existing TS errors resolved before enabling this setting
 
@@ -2842,7 +2941,9 @@ anomaly-list.tsx ('use client')
       → validateEnv() — runs in browser!
 ```
 
-[`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts) menjalankan `validateEnv()` yang memeriksa `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `DATABASE_URL` — semua env vars yang hanya ada di server. Saat dieksekusi di browser, env vars tidak ada → error.
+[`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts) menjalankan `validateEnv()` yang memeriksa 
+EXTAUTH_SECRET`, 
+EXTAUTH_URL`, `DATABASE_URL` — semua env vars yang hanya ada di server. Saat dieksekusi di browser, env vars tidak ada → error.
 
 ### Fix (3 files)
 
@@ -2872,7 +2973,8 @@ anomaly-list.tsx ('use client')
 Rule: **Component dengan `'use client'` directive tidak boleh memiliki import chain ke server-only modules** (Prisma, env validation, Node.js built-ins). Gunakan:
 - `typeof window !== 'undefined'` guard untuk env validation
 - Dynamic `require()` dengan window check untuk conditional server imports
-- Jangan masukkan server packages ke `transpilePackages` di `next.config.js`
+- Jangan masukkan server packages ke `transpilePackages` di 
+ext.config.js`
 
 ---
 
@@ -2927,10 +3029,12 @@ Rule: **Component dengan `'use client'` directive tidak boleh memiliki import ch
 
 ### Fix 1: CRM Deals POST 400 — Field Name Mismatch
 
-**Problem:** Konversi lead → deal mengirim field `name` dan `expectedCloseDate` yang tidak sesuai dengan `createDealSchema` (expected `title` dan `closeDate`). Extra fields `company` dan `contactName` juga menyebabkan validasi gagal.
+**Problem:** Konversi lead → deal mengirim field 
+ame` dan `expectedCloseDate` yang tidak sesuai dengan `createDealSchema` (expected `title` dan `closeDate`). Extra fields `company` dan `contactName` juga menyebabkan validasi gagal.
 
 **Fix:**
-- Field `name` → `title` (sesuai `createDealSchema`)
+- Field 
+ame` → `title` (sesuai `createDealSchema`)
 - Field `expectedCloseDate` → `closeDate` (sesuai schema)
 - Hapus extra fields `company` dan `contactName`
 
@@ -2942,7 +3046,8 @@ Rule: **Component dengan `'use client'` directive tidak boleh memiliki import ch
 
 **Fix:**
 - `z.number()` → `z.coerce.number()` di payment schemas (handle Prisma Decimal string)
-- `selectedPlan.priceMonthly` → `Number(selectedPlan.priceMonthly)` di billing page
+- `selectedPlan.priceMonthly` → 
+umber(selectedPlan.priceMonthly)` di billing page
 
 **Files:**
 - [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts)
@@ -2954,7 +3059,8 @@ Rule: **Component dengan `'use client'` directive tidak boleh memiliki import ch
 |------|--------|------|
 | [`apps/web/app/dashboard/crm/leads/[id]/page.tsx`](apps/web/app/dashboard/crm/leads/[id]/page.tsx) | Fixed field names in lead → deal conversion | 🟢 Low |
 | [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) | `z.number()` → `z.coerce.number()` for Decimal compatibility | 🟢 Low |
-| [`apps/web/app/dashboard/settings/billing/page.tsx`](apps/web/app/dashboard/settings/billing/page.tsx) | `Number()` wrapper for priceMonthly | 🟢 Low |
+| [`apps/web/app/dashboard/settings/billing/page.tsx`](apps/web/app/dashboard/settings/billing/page.tsx) | 
+umber()` wrapper for priceMonthly | 🟢 Low |
 
 ---
 
@@ -3020,7 +3126,8 @@ curl https://qalcuity.com/api/health
 
 ### Root Cause (Final)
 
-Root cause sebenarnya adalah **`signIn()` dari `next-auth/react` secara internal mengirim `json: true` di POST body**. Ini menyebabkan NextAuth mengembalikan HTTP 200 JSON response alih-alih HTTP 302 redirect dengan `Set-Cookie` header. Browser tidak pernah menerima session cookie, sehingga login selalu gagal di browser meskipun curl test PASS.
+Root cause sebenarnya adalah **`signIn()` dari 
+ext-auth/react` secara internal mengirim `json: true` di POST body**. Ini menyebabkan NextAuth mengembalikan HTTP 200 JSON response alih-alih HTTP 302 redirect dengan `Set-Cookie` header. Browser tidak pernah menerima session cookie, sehingga login selalu gagal di browser meskipun curl test PASS.
 
 **Faktor tambahan:** Service Worker (`sw.js`) juga dapat mengganggu `Set-Cookie` header processing — SW bypass tetap dipertahankan sebagai defense-in-depth.
 
@@ -3061,7 +3168,8 @@ Root cause sebenarnya adalah **`signIn()` dari `next-auth/react` secara internal
 
 ### Prevention
 
-Rule: **Jangan gunakan `signIn()` dari `next-auth/react` untuk credentials login.** Gunakan direct fetch approach dengan CSRF token + credentials POST tanpa `json: true`. Service Worker bypass tetap dipertahankan sebagai defense-in-depth.
+Rule: **Jangan gunakan `signIn()` dari 
+ext-auth/react` untuk credentials login.** Gunakan direct fetch approach dengan CSRF token + credentials POST tanpa `json: true`. Service Worker bypass tetap dipertahankan sebagai defense-in-depth.
 
 ---
 
@@ -3320,7 +3428,8 @@ Rule: **Jangan gunakan `signIn()` dari `next-auth/react` untuk credentials login
 > **Files Created/Modified:** 10 files
 
 #### Phase 5A: IndexedDB Core
-- **Types** — [`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts) — TypeScript interfaces: `OfflineTransaction`, `OfflineProduct`, `OfflineSession`, `SyncQueueItem`, `SyncStatus`, `NetworkState`
+- **Types** — [`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts) — TypeScript interfaces: `OfflineTransaction`, `OfflineProduct`, `OfflineSession`, `SyncQueueItem`, `SyncStatus`, 
+etworkState`
 - **IndexedDB Manager** — [`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts) — Dexie.js-based IndexedDB wrapper: open/close DB, CRUD operations, product cache, transaction storage, sync queue management
 
 #### Phase 5B: Sync Queue & API Client
@@ -3835,7 +3944,8 @@ Rule: **Jangan gunakan `signIn()` dari `next-auth/react` untuk credentials login
 - [x] **13h:** Analytics dashboards — create modal functional with form validation
 - [x] **13i:** Responsive design — mobile card views added for billing & settings/billing pages
 - [x] **13j:** i18n — Audit & AI pages fully localized with `useTranslation()` (400+ keys total)
-- [x] **13k:** TypeScript verification — `npx tsc --noEmit` PASS (0 errors)
+- [x] **13k:** TypeScript verification — 
+px tsc --noEmit` PASS (0 errors)
 
 ### UI/UX Audit & Fixes (31 Aug 2026)
 - [x] **Security P0:** Password URL exposure — removed dari login page, password tidak lagi di-expose di URL
@@ -4089,8 +4199,10 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 26 | ~~`any` types in rate limiter (CQ-05)~~ | 🟡 Low | Code Quality | ✅ Fixed — proper TypeScript types (Batch N) |
 | 27 | ~~`handleApiError` inconsistent (UI-05)~~ | 🟠 Medium | API | ✅ Fixed — standardized error handling (Batch N), consolidated in 27 routes (Batch 2) |
 | 28 | ~~Missing composite indexes (DB-01)~~ | 🟡 Low | Database | ✅ Fixed — 4 indexes in Prisma schema (Batch N, VPS migration pending) |
-| 29 | **NEXTAUTH_URL must be production URL in `.env`** | 🔴 High | Deployment | ⚠️ `NEXTAUTH_URL` harus `"https://qalcuity.com"` di `.env` VPS (bukan localhost) — jika salah, callback OAuth gagal |
-| 30 | **NEXTAUTH_SECRET must be production value** | 🔴 High | Deployment | ⚠️ `NEXTAUTH_SECRET` harus production-strength value — different dari local dev |
+| 29 | **NEXTAUTH_URL must be production URL in `.env`** | 🔴 High | Deployment | ⚠️ 
+EXTAUTH_URL` harus `"https://qalcuity.com"` di `.env` VPS (bukan localhost) — jika salah, callback OAuth gagal |
+| 30 | **NEXTAUTH_SECRET must be production value** | 🔴 High | Deployment | ⚠️ 
+EXTAUTH_SECRET` harus production-strength value — different dari local dev |
 | 31 | **`.env` file values override PM2/aaPanel env vars** | 🟠 Medium | Deployment | ⚠️ dotenv tidak override — values di `.env` file selalu menang. Pastikan `.env` di VPS berisi production values |
 | 32 | **aaPanel auto-restart after build** | 🟡 Low | Deployment | ⚠️ aaPanel Node.js Project Manager auto-restart app setelah build — tidak perlu restart manual |
 | 33 | ~~Client-side env validation error + HTTP 500 on all API routes~~ | 🔴 Critical | Core/Bundling | ✅ Fixed (7 Sep 2026) — `typeof window` guard + dynamic `require()` + removed from `transpilePackages` |
@@ -4343,7 +4455,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 
 > **Focus:** POS analytics Zod hardening, Workflow PAYROLL REJECTED fix, documentation sync across codebase
 > **Total Files Changed:** 10+ (4 POS analytics routes, 1 workflow definition, documentation files)
-> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **TypeScript:** 
+px tsc --noEmit` — 0 errors
 > **Health Score:** ~100/100
 
 **POS Analytics Zod Hardening (4 schemas, 6 routes):**
@@ -4407,7 +4520,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 > **Login/Register issue yang menjadi blocking issue #1 selama percakapan panjang telah RESOLVED.**
 
 **Root Cause:**
-- `signIn()` dari `next-auth/react` secara internal mengirim `json: true` di POST body
+- `signIn()` dari 
+ext-auth/react` secara internal mengirim `json: true` di POST body
 - NextAuth mengembalikan HTTP 200 JSON alih-alih HTTP 302 redirect dengan `Set-Cookie` header
 - Browser tidak pernah menerima session cookie → login selalu gagal di browser meskipun curl test PASS
 
@@ -4632,7 +4746,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 - ✅ **`.env.production` untracked** — Removed dari git tracking
 - ✅ **`dev.db` untracked** — Removed dari git tracking
 - ✅ **`.env.example` updated** — Updated dengan semua environment variables
-- ✅ **TypeScript Check** — `npx tsc --noEmit` PASS (0 errors)
+- ✅ **TypeScript Check** — 
+px tsc --noEmit` PASS (0 errors)
 - ✅ **Documentation Update** — CURRENT.md, FEATURES.md, ROADMAP.md, AGENT.md updated
 
 ### 1 September 2026 — Phase 13: UI Completeness Fixes
@@ -4646,7 +4761,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 - ✅ **13h:** Analytics dashboards — create modal functional with form validation
 - ✅ **13i:** Responsive design — mobile card views added for billing & settings/billing pages
 - ✅ **13j:** i18n — Audit & AI pages fully localized with `useTranslation()` (400+ keys total)
-- ✅ **13k:** TypeScript verification — `npx tsc --noEmit` PASS (0 errors)
+- ✅ **13k:** TypeScript verification — 
+px tsc --noEmit` PASS (0 errors)
 - ✅ **13l:** Documentation update — CURRENT.md, FEATURES.md updated
 
 ### 1 September 2026 — Phase 9: Foundation Engines Complete
@@ -4665,7 +4781,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 - ✅ **CRM Import** — CSV/Excel parser + import API + import modal ([`apps/web/lib/csv-parser.ts`](apps/web/lib/csv-parser.ts), [`apps/web/lib/excel-parser.ts`](apps/web/lib/excel-parser.ts))
 - ✅ **Settings Real Backend** — Notifications & integrations API connected to Prisma DB
 - ✅ **Mobile Auth Flow** — JWT-based auth: login, register, refresh, me endpoints + AuthContext + Login/Register screens
-- ✅ **TypeScript Check** — `npx tsc --noEmit` PASS (0 errors)
+- ✅ **TypeScript Check** — 
+px tsc --noEmit` PASS (0 errors)
 - ✅ **Documentation Update** — CURRENT.md, FEATURES.md, AGENT.md updated to v5.0
 
 ### 31 Agustus 2026 — Analytics Studio Implementation Sprint
@@ -4726,7 +4843,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 - ✅ **i18n Fix** — Hardcoded Indonesian text diganti i18n keys (header, error pages, error boundary)
 - ✅ **Link Fix** — Dead links: forgot-password disabled, Google register functional
 - ✅ **Functional Fix** — Non-functional secondary buttons (print, stock history, order history)
-- ✅ **TypeScript Check** — `npx tsc --noEmit` PASS (0 errors)
+- ✅ **TypeScript Check** — 
+px tsc --noEmit` PASS (0 errors)
 
 ### 31 Agustus 2026 — Final Review & Security Hardening (30 Issues Fixed)
 - ✅ **Security Hardening Complete** — 30 issues fixed across 4 phases (P0 Critical → P3 Low):
@@ -4742,10 +4860,13 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
   - **Rate Limiting:** Applied to all routes with appropriate limits (5-100 req/min)
   - **Security Headers:** CSP (no `unsafe-eval`), CORS (explicit origin), HSTS, X-Frame-Options, Permissions-Policy
   - **Input Sanitization:** `sanitizeInput()` + `escapeHtml()` + `escapeCSVValue()` across all user inputs
-- ✅ **TypeScript Compilation** — `npx tsc --noEmit` di `apps/web` PASS (0 errors)
+- ✅ **TypeScript Compilation** — 
+px tsc --noEmit` di `apps/web` PASS (0 errors)
 - ✅ **Export XSS Protection** — [`apps/web/lib/export.ts`](apps/web/lib/export.ts) added `escapeHtml()` dan `escapeCSVValue()` untuk mencegah XSS di CSV/Excel export
 - ✅ **Email SMTP Fallback** — [`apps/web/lib/email.ts`](apps/web/lib/email.ts) graceful fallback ke `console.log` jika SMTP tidak dikonfigurasi
-- ✅ **Environment Validation** — [`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts) required vars: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `DATABASE_URL`
+- ✅ **Environment Validation** — [`apps/web/lib/env-validation.ts`](apps/web/lib/env-validation.ts) required vars: 
+EXTAUTH_SECRET`, 
+EXTAUTH_URL`, `DATABASE_URL`
 - ✅ **Prisma Logging Control** — [`apps/web/lib/db.ts`](apps/web/lib/db.ts) toggle via `ENABLE_PRISMA_LOGGING` env var
 - ✅ **Build Safety** — [`apps/web/next.config.js`](apps/web/next.config.js) `ignoreBuildErrors: false`, `poweredByHeader: false`
 
@@ -5027,7 +5148,8 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 ### 3 September 2026 — Sprint 4: Platform Admin + 2FA + Deployment (Batch 1A-4B)
 
 **Batch 4B — Testing + Documentation + Deployment Prep:**
-- ✅ **TypeScript Check** — `npx tsc --noEmit` PASS (0 errors)
+- ✅ **TypeScript Check** — 
+px tsc --noEmit` PASS (0 errors)
 - ✅ **CURRENT.md Updated** — Comprehensive status for all sprints (Sprint 1-4)
 - ✅ **FEATURES.md Updated** — 2FA, security, and new features marked
 - ✅ **deploy-vps.sh** — Production deployment script with rollback, error handling, idempotent
