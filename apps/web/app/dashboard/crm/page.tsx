@@ -79,6 +79,20 @@ const activityIconMap: Record<string, LucideIcon> = {
     deal: Handshake,
 }
 
+function timeAgo(dateStr: string, t: (key: string) => string): string {
+    const now = new Date()
+    const date = new Date(dateStr)
+    const diffMs = now.getTime() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    if (diffMin < 60) return `${diffMin} ${t('crm.overview.minutesAgo')}`
+    const diffHour = Math.floor(diffMin / 60)
+    if (diffHour < 24) return `${diffHour} ${t('crm.overview.hoursAgo')}`
+    const diffDay = Math.floor(diffHour / 24)
+    if (diffDay === 1) return t('crm.overview.yesterday')
+    if (diffDay < 7) return `${diffDay} ${t('crm.overview.daysAgo')}`
+    return date.toLocaleDateString('id-ID')
+}
+
 export default function CrmPage() {
     const { t } = useTranslation()
     const [leads, setLeads] = useState<LeadData[]>([])
@@ -226,20 +240,6 @@ export default function CrmPage() {
 
     const getStageLabel = (stage: string) => t(`crm.deals.stages.${stage}`)
 
-    function timeAgo(dateStr: string): string {
-        const now = new Date()
-        const date = new Date(dateStr)
-        const diffMs = now.getTime() - date.getTime()
-        const diffMin = Math.floor(diffMs / 60000)
-        if (diffMin < 60) return `${diffMin} ${t('crm.overview.minutesAgo')}`
-        const diffHour = Math.floor(diffMin / 60)
-        if (diffHour < 24) return `${diffHour} ${t('crm.overview.hoursAgo')}`
-        const diffDay = Math.floor(diffHour / 24)
-        if (diffDay === 1) return t('crm.overview.yesterday')
-        if (diffDay < 7) return `${diffDay} ${t('crm.overview.daysAgo')}`
-        return date.toLocaleDateString(t('common.locale') || 'id-ID')
-    }
-
     return (
         <div className="space-y-6">
             <div>
@@ -315,7 +315,7 @@ export default function CrmPage() {
                                     <ActivityIcon className="mt-0.5 h-5 w-5 text-gray-400 dark:text-gray-500" />
                                     <div className="flex-1">
                                         <p className="text-sm text-gray-900 dark:text-gray-100">{activity.text}</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{activity.user} · {timeAgo(activity.time)}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{activity.user} · {timeAgo(activity.time, t)}</p>
                                     </div>
                                 </div>
                             )
