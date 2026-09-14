@@ -8,8 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import {
     getControlConfigs,
     getControlConfigsByCategory,
@@ -22,26 +21,20 @@ import {
 } from '@/lib/control-engine';
 import { controlConfigUpdateSchema } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
-import { MSG } from '@/lib/api-messages';
 
 // ─── GET /api/settings/control-engine ───────────────────────────────────────
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ success: false, error: MSG.UNAUTHORIZED }, { status: 401 });
+        const auth = await requirePermissionForRoute(req);
+        if (auth.error || !auth.tenantId) {
+            return NextResponse.json(
+                { success: false, error: auth.error || 'Unauthorized' },
+                { status: auth.status || 401 }
+            );
         }
 
-        const role = session.user?.role;
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json({ success: false, error: MSG.FORBIDDEN }, { status: 403 });
-        }
-
-        const tenantId = session.user?.tenantId;
-        if (!tenantId) {
-            return NextResponse.json({ success: false, error: MSG.FORBIDDEN }, { status: 403 });
-        }
+        const tenantId = auth.tenantId;
 
         const { searchParams } = new URL(req.url);
         const category = searchParams.get('category') as ControlCategory | null;
@@ -76,25 +69,16 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ success: false, error: MSG.UNAUTHORIZED }, { status: 401 });
+        const auth = await requirePermissionForRoute(req);
+        if (auth.error || !auth.tenantId || !auth.userId) {
+            return NextResponse.json(
+                { success: false, error: auth.error || 'Unauthorized' },
+                { status: auth.status || 401 }
+            );
         }
 
-        const role = session.user?.role;
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-            return NextResponse.json({ success: false, error: MSG.FORBIDDEN }, { status: 403 });
-        }
-
-        const tenantId = session.user?.tenantId;
-        if (!tenantId) {
-            return NextResponse.json({ success: false, error: MSG.FORBIDDEN }, { status: 403 });
-        }
-
-        const userId = session.user?.id;
-        if (!userId) {
-            return NextResponse.json({ success: false, error: MSG.FORBIDDEN }, { status: 403 });
-        }
+        const userId = auth.userId;
+        const tenantId = auth.tenantId;
 
         const body = await req.json();
         const { searchParams } = new URL(req.url);

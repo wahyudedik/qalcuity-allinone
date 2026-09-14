@@ -115,6 +115,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/pos/dashboard': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
 
     // ─── POS Kitchen Display ──────────────────────────────────────────────────
+    '/api/pos/kitchen/stream': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/kitchen/orders': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/kitchen/orders/[id]': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/kitchen/stations': { permission: 'pos:view', fallbackRole: 'ADMIN' },
@@ -195,6 +196,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── Notifications & Upload ───────────────────────────────────────────────
     '/api/notifications': { permission: 'notification:view', fallbackRole: 'MEMBER' },
+    '/api/notifications/stream': { permission: 'notification:view', fallbackRole: 'MEMBER' },
     '/api/upload': { permission: 'system:view', fallbackRole: 'MEMBER' },
 
     // ─── AI Features ──────────────────────────────────────────────────────────

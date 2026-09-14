@@ -16,8 +16,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logger } from '@/lib/logger';
 
 // =============================================================================
@@ -76,12 +75,15 @@ export function notifyKitchenUpdate(tenantId: string): void {
 
 export async function GET(request: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.tenantId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const auth = await requirePermissionForRoute(request);
+        if (auth.error || !auth.tenantId) {
+            return NextResponse.json(
+                { success: false, error: auth.error || 'Unauthorized' },
+                { status: auth.status || 401 }
+            );
         }
 
-        const tenantId = session.user.tenantId;
+        const tenantId = auth.tenantId;
 
         const stream = new ReadableStream<Uint8Array>({
             start(controller) {

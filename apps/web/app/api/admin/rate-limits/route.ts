@@ -17,8 +17,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { getRateLimitStats, getRealtimeStats, cleanupOldLogs } from '@/lib/rate-limit-monitor';
 import { getRedisHealth } from '@/lib/redis';
@@ -55,15 +54,12 @@ export async function GET(req: Request) {
             );
         }
 
-        // 1. Auth check - ADMIN or SUPERADMIN
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN') {
+        // 1. Auth check via standardized permission engine
+        const auth = await requirePermissionForRoute(req);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Forbidden: Hanya ADMIN yang dapat mengakses' },
-                { status: 403 }
+                { success: false, error: auth.error },
+                { status: auth.status }
             );
         }
 
@@ -165,15 +161,12 @@ export async function POST(req: Request) {
             );
         }
 
-        // 1. Auth check - SUPERADMIN only
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        if (session.user.role !== 'SUPERADMIN') {
+        // 1. Auth check via standardized permission engine (SUPERADMIN only via route-permissions.ts)
+        const auth = await requirePermissionForRoute(req);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Forbidden: Hanya SUPERADMIN yang dapat melakukan cleanup' },
-                { status: 403 }
+                { success: false, error: auth.error },
+                { status: auth.status }
             );
         }
 
