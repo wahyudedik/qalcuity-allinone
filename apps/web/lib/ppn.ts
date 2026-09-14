@@ -54,14 +54,21 @@ export function reverseCalculateTax(
 }
 
 /**
- * Default PPN rate for Indonesia (as of 2025).
- * Used as fallback when no TaxRate record is configured.
- * 
- * NOTE: This constant exists only as a safety net.
- * The preferred approach is to fetch the default TaxRate from the database
- * via GET /api/finance/tax-rates?active=true and let the user select.
+ * Fallback tax rate when no TaxRate is configured in the database.
+ * Set to 0 (no tax) — user should configure tax rates via /dashboard/finance/tax-rates.
+ *
+ * To set a default tax rate for your tenant:
+ * 1. Go to /dashboard/finance/tax-rates
+ * 2. Create a tax rate (e.g., "PPN 11%", code: "PPN", rate: 11)
+ * 3. Toggle "Default" on that tax rate
+ * 4. All forms will auto-select this default rate
  */
-export const DEFAULT_PPN_RATE = 11;
+export const DEFAULT_TAX_RATE = 0;
+
+/**
+ * @deprecated Use DEFAULT_TAX_RATE instead. Kept for backward compatibility during migration.
+ */
+export const DEFAULT_PPN_RATE = DEFAULT_TAX_RATE;
 
 /**
  * Default PPh 23 rate for Indonesia.

@@ -10,7 +10,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createApprovalRequest } from '@/lib/approval';
 import { sanitizeObject } from '@/lib/sanitize';
 import { handleApiError, apiNotFound } from '@/lib/api-error';
-import { calculateTax, DEFAULT_PPN_RATE } from '@/lib/ppn';
+import { calculateTax } from '@/lib/ppn';
 
 export async function GET(request: Request) {
     try {
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
             (sum, item) => sum + item.quantity * item.unitPrice,
             0
         );
-        const taxRate = validatedData.taxRate || DEFAULT_PPN_RATE;
+        const taxRate = validatedData.taxRate || 0;
         const discount = validatedData.discount || 0;
         const taxCalc = calculateTax(subtotal, taxRate, discount);
         const taxAmount = taxCalc.taxAmount;

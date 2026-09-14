@@ -24,7 +24,10 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { calculateTax, DEFAULT_PPN_RATE } from "../ppn";
+import { calculateTax } from "../ppn";
+
+// Sample PPN rate for demo data (not a fallback — this is intentional sample data)
+const DEMO_PPN_RATE = 11;
 
 const prisma = new PrismaClient();
 
@@ -309,7 +312,7 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
                 continue;
             }
 
-            const taxRate = DEFAULT_PPN_RATE;
+            const taxRate = DEMO_PPN_RATE;
             const taxCalc = calculateTax(inv.subtotal, taxRate);
             const taxAmount = taxCalc.taxAmount;
             const total = taxCalc.total;
@@ -419,7 +422,7 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
                 continue;
             }
 
-            const taxRate = DEFAULT_PPN_RATE;
+            const taxRate = DEMO_PPN_RATE;
             const taxCalc = calculateTax(quo.subtotal, taxRate, quo.discount);
             const taxAmount = taxCalc.taxAmount;
             const total = taxCalc.total;
@@ -474,7 +477,7 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
                 continue;
             }
 
-            const taxRate = DEFAULT_PPN_RATE;
+            const taxRate = DEMO_PPN_RATE;
             const taxCalc = calculateTax(po.subtotal, taxRate);
             const taxAmount = taxCalc.taxAmount;
             const total = taxCalc.total;
