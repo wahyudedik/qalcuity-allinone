@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Bell, CheckCheck, Trash2, X, FileText, CreditCard, Users, Settings, AlertTriangle } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
 
 type InAppNotification = {
     id: string
@@ -27,11 +28,13 @@ const notifTypeConfig: Record<string, { bg: string; icon: React.ReactNode }> = {
 
 export function NotificationCenter() {
     const { data: session } = useSession()
+    const { addToast } = useToast()
     const [notifications, setNotifications] = useState<InAppNotification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const eventSourceRef = useRef<EventSource | null>(null)
 
     const fetchNotifications = useCallback(async () => {
         if (!session?.user) return
@@ -47,10 +50,46 @@ export function NotificationCenter() {
         }
     }, [session?.user])
 
-    // Fetch on mount and every 30 seconds
+    // Primary: Real-time via SSE
+    useEffect(() => {
+        if (!session?.user) return
+
+        const eventSource = new EventSource('/api/notifications/stream')
+        eventSourceRef.current = eventSource
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data)
+                if (data.type === 'new_notification') {
+                    // Re-fetch notifications on new notification
+                    fetchNotifications()
+                    // Show toast for new notification
+                    if (data.notification?.title) {
+                        addToast(`Notifikasi Baru: ${data.notification.title}`, 'info')
+                    }
+                }
+                // 'connected' and 'heartbeat' messages are silently ignored
+            } catch {
+                // Parse error — ignore
+            }
+        }
+
+        eventSource.onerror = () => {
+            // SSE connection error — polling is active as fallback
+            eventSource.close()
+            eventSourceRef.current = null
+        }
+
+        return () => {
+            eventSource.close()
+            eventSourceRef.current = null
+        }
+    }, [session?.user, fetchNotifications, addToast])
+
+    // Fallback: Polling every 60 seconds (SSE may disconnect)
     useEffect(() => {
         fetchNotifications()
-        const interval = setInterval(fetchNotifications, 30000)
+        const interval = setInterval(fetchNotifications, 60_000)
         return () => clearInterval(interval)
     }, [fetchNotifications])
 

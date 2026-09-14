@@ -381,6 +381,12 @@ export const updateProductSchema = z.object({
     isActive: z.boolean().optional(),
 });
 
+export const restockProductSchema = z.object({
+    quantity: z.number().int('Jumlah harus bilangan bulat').positive('Jumlah restock harus lebih dari 0'),
+    warehouseId: z.string().optional().nullable(),
+    notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
+});
+
 export const createCategorySchema = z.object({
     name: z.string().min(1, 'Nama kategori wajib diisi').max(255, 'Nama kategori maksimal 255 karakter'),
     description: z.string().optional().nullable(),
@@ -549,6 +555,23 @@ export const midtransWebhookSchema = z.object({
     expiry_time: z.string().optional(),
 });
 
+/**
+ * Zod schema untuk validasi Xendit webhook notification (Invoice callback).
+ * Hanya field-field yang diperlukan untuk memproses payment callback.
+ * @see https://developers.xendit.co/api-reference/#invoice-callbacks
+ */
+export const xenditWebhookSchema = z.object({
+    id: z.string().min(1, 'Invoice ID wajib diisi'),
+    external_id: z.string().min(1, 'External ID wajib diisi'),
+    status: z.string().min(1, 'Status wajib diisi'),
+    amount: z.number(),
+    currency: z.string().optional(),
+    payer_email: z.string().optional(),
+    description: z.string().optional(),
+    created: z.string().optional(),
+    updated: z.string().optional(),
+});
+
 // ============================================
 // Settings Schemas
 // ============================================
@@ -615,12 +638,12 @@ export const updateIntegrationSchema = z.object({
 export const inviteTeamMemberSchema = z.object({
     email: z.string().email('Format email tidak valid'),
     name: z.string().max(255).optional(),
-    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN']).optional(),
+    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']).optional(),
 });
 
 export const updateTeamMemberSchema = z.object({
     memberId: z.string().min(1, 'Member ID wajib diisi'),
-    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER', 'SUPERADMIN']).optional(),
+    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']).optional(),
     isActive: z.boolean().optional(),
 }).refine((data) => data.role !== undefined || data.isActive !== undefined, {
     message: 'Minimal satu field (role atau isActive) harus diisi',
@@ -697,12 +720,18 @@ export const updateRoleSchema = z.object({
 // ============================================
 
 const industryTypeEnum = z.enum([
+    'restaurant',
     'retail',
     'manufacturing',
-    'services',
-    'construction',
     'healthcare',
+    'construction',
+    'professional-services',
     'education',
+    'agriculture',
+    'logistics',
+    'hospitality',
+    // Legacy values (backward compatibility)
+    'services',
     'food_beverage',
     'general',
 ]);
@@ -843,7 +872,7 @@ export const updateTaxRateSchema = z.object({
 // ============================================
 
 const approvalEntityTypeEnum = z.enum(['INVOICE', 'PURCHASE_ORDER', 'QUOTATION']);
-const approvalRoleEnum = z.enum(['ADMIN', 'MEMBER', 'SUPERADMIN']);
+const approvalRoleEnum = z.enum(['ADMIN', 'MEMBER', 'VIEWER']);
 
 export const createApprovalLevelSchema = z.object({
     entityType: approvalEntityTypeEnum,

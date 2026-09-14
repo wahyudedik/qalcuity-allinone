@@ -68,7 +68,9 @@ export function isServiceWorkerSupported(): boolean {
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
     if (!isServiceWorkerSupported()) {
-        console.warn('[SW] Service Worker not supported in this browser');
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('[SW] Service Worker not supported in this browser');
+        }
         return null;
     }
 
@@ -80,34 +82,48 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
             const newWorker = registration.installing;
             if (!newWorker) return;
 
-            console.log('[SW] New Service Worker installing...');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[SW] New Service Worker installing...');
+            }
 
             newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed') {
                     if (navigator.serviceWorker.controller) {
                         // New SW installed but old one still active — update available
-                        console.log('[SW] New content available — update ready');
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('[SW] New content available — update ready');
+                        }
                     } else {
                         // First SW installed — content is cached
-                        console.log('[SW] Content cached for offline use');
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('[SW] Content cached for offline use');
+                        }
                     }
                 }
 
                 if (newWorker.state === 'activated') {
-                    console.log('[SW] Service Worker activated');
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log('[SW] Service Worker activated');
+                    }
                 }
             });
         });
 
         // Listen for controller change (new SW took over)
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[SW] Service Worker controller changed — page will reload');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[SW] Service Worker controller changed — page will reload');
+            }
         });
 
-        console.log('[SW] Service Worker registered successfully, scope:', registration.scope);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[SW] Service Worker registered successfully, scope:', registration.scope);
+        }
         return registration;
     } catch (error) {
-        console.error('[SW] Service Worker registration failed:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('[SW] Service Worker registration failed:', error);
+        }
         return null;
     }
 }
@@ -130,17 +146,23 @@ export async function unregisterServiceWorker(): Promise<boolean> {
             const success = await registration.unregister();
             if (!success) {
                 allUnregistered = false;
-                console.warn('[SW] Failed to unregister SW:', registration.scope);
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn('[SW] Failed to unregister SW:', registration.scope);
+                }
             }
         }
 
         if (allUnregistered) {
-            console.log('[SW] All Service Workers unregistered');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[SW] All Service Workers unregistered');
+            }
         }
 
         return allUnregistered;
     } catch (error) {
-        console.error('[SW] Error unregistering Service Workers:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('[SW] Error unregistering Service Workers:', error);
+        }
         return false;
     }
 }
@@ -174,7 +196,9 @@ export async function clearAllCaches(): Promise<void> {
     }
 
     await sendMessageToSW({ type: 'CLEAR_ALL_CACHES' });
-    console.log('[SW] All caches cleared');
+    if (process.env.NODE_ENV === 'development') {
+        console.log('[SW] All caches cleared');
+    }
 }
 
 /**
@@ -189,7 +213,9 @@ export async function clearCache(cacheName: string): Promise<void> {
     }
 
     await sendMessageToSW({ type: 'CLEAR_CACHE', payload: { cacheName } });
-    console.log(`[SW] Cache "${cacheName}" cleared`);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[SW] Cache "${cacheName}" cleared`);
+    }
 }
 
 // =============================================================================
@@ -211,11 +237,15 @@ export async function updateServiceWorker(): Promise<void> {
     const registration = await navigator.serviceWorker.getRegistration('/');
     if (registration?.waiting) {
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        console.log('[SW] Skip waiting sent — new SW will activate');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[SW] Skip waiting sent — new SW will activate');
+        }
     } else {
         // No waiting SW — trigger update check
         await registration?.update();
-        console.log('[SW] Update check triggered');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[SW] Update check triggered');
+        }
     }
 }
 

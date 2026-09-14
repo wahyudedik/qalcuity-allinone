@@ -10,6 +10,8 @@ import {
     X,
     ChevronDown,
     Clock,
+    Download,
+    Files,
     type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
@@ -47,6 +49,19 @@ interface ExtractionHistoryItem {
     createdAt: string;
 }
 
+interface BatchResultItem {
+    fileName: string;
+    status: 'success' | 'error';
+    data?: ExtractionResult;
+    error?: string;
+}
+
+interface BatchSummary {
+    total: number;
+    success: number;
+    failed: number;
+}
+
 interface DocumentExtractorProps {
     onExtracted?: (result: ExtractionResult) => void;
     onApplyToForm?: (fields: ExtractedField[]) => void;
@@ -64,16 +79,23 @@ const DOCUMENT_TYPE_KEYS: { value: DocumentType; labelKey: string; descKey: stri
     { value: 'NPWP', labelKey: 'ai.extraction.npwp', descKey: 'ai.extraction.npwpDesc' },
 ];
 
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'application/pdf'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_BATCH_SIZE = 20;
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }: DocumentExtractorProps) {
     const { t } = useTranslation();
     const [dragActive, setDragActive] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
     const [documentType, setDocumentType] = useState<DocumentType>('INVOICE');
     const [isExtracting, setIsExtracting] = useState(false);
     const [result, setResult] = useState<ExtractionResult | null>(null);
+    const [batchResults, setBatchResults] = useState<BatchResultItem[] | null>(null);
+    const [batchSummary, setBatchSummary] = useState<BatchSummary | null>(null);
+    const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<ExtractionHistoryItem[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
@@ -93,8 +115,8 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFiles(Array.from(e.dataTransfer.files));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -141,90 +163,175 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
             method: item.method as 'ai' | 'regex' | 'fallback',
         };
         setResult(reconstructedResult);
+        setBatchResults(null);
+        setBatchSummary(null);
         setError(null);
     };
 
-    const handleFile = (file: File) => {
-        // Validate file type
-        const allowedTypes = ['image/png', 'image/jpeg', 'application/pdf'];
-        if (!allowedTypes.includes(file.type)) {
-            setError(t('ai.extraction.fileTypeError'));
-            return;
+    const validateFile = (file: File): string | null => {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            return t('ai.extraction.fileTypeError');
         }
-
-        // Validate file size (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            setError(t('ai.extraction.fileTooLarge'));
-            return;
+        if (file.size > MAX_FILE_SIZE) {
+            return t('ai.extraction.fileTooLarge');
         }
+        return null;
+    };
 
-        setSelectedFile(file);
+    const handleFiles = (files: File[]) => {
         setError(null);
         setResult(null);
+        setBatchResults(null);
+        setBatchSummary(null);
 
-        // Create preview for images
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => setPreviewUrl(e.target?.result as string);
-            reader.readAsDataURL(file);
-        } else {
-            setPreviewUrl(null);
+        const validFiles: File[] = [];
+        const errors: string[] = [];
+
+        for (const file of files) {
+            const validationError = validateFile(file);
+            if (validationError) {
+                errors.push(`${file.name}: ${validationError}`);
+            } else {
+                validFiles.push(file);
+            }
         }
+
+        if (errors.length > 0) {
+            setError(errors.join('\n'));
+        }
+
+        if (validFiles.length === 0) return;
+
+        // Enforce batch size limit
+        const totalFiles = selectedFiles.length + validFiles.length;
+        if (totalFiles > MAX_BATCH_SIZE) {
+            setError(t('ai.extraction.batchTooLarge') || `Maksimal ${MAX_BATCH_SIZE} file per batch`);
+            return;
+        }
+
+        const newFiles = [...selectedFiles, ...validFiles];
+        setSelectedFiles(newFiles);
+
+        // Create previews for images
+        const newPreviews = { ...previewUrls };
+        for (const file of validFiles) {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setPreviewUrls((prev) => ({
+                        ...prev,
+                        [file.name]: e.target?.result as string,
+                    }));
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    };
+
+    const handleRemoveFile = (index: number) => {
+        const file = selectedFiles[index];
+        setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+        setPreviewUrls((prev) => {
+            const next = { ...prev };
+            delete next[file.name];
+            return next;
+        });
     };
 
     const handleExtract = async () => {
-        if (!selectedFile) return;
+        if (selectedFiles.length === 0) return;
 
         setIsExtracting(true);
         setError(null);
         setResult(null);
+        setBatchResults(null);
+        setBatchSummary(null);
 
         try {
-            // Convert file to base64
-            const base64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const result = reader.result as string;
-                    // Remove data URL prefix
-                    const base64Data = result.split(',')[1];
-                    resolve(base64Data);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(selectedFile);
-            });
+            if (selectedFiles.length === 1) {
+                // ─── Single file mode (backward compatible JSON) ──────
+                const file = selectedFiles[0];
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const result = reader.result as string;
+                        const base64Data = result.split(',')[1];
+                        resolve(base64Data);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
 
-            const response = await fetch('/api/ai/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileBase64: base64,
-                    fileName: selectedFile.name,
-                    documentType,
-                    mimeType: selectedFile.type,
-                }),
-            });
+                const response = await fetch('/api/ai/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileBase64: base64,
+                        fileName: file.name,
+                        documentType,
+                        mimeType: file.type,
+                    }),
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || t('ai.extraction.errorExtract'));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || t('ai.extraction.errorExtract'));
+                }
+
+                setResult(data.data);
+                onExtracted?.(data.data);
+            } else {
+                // ─── Batch mode (FormData) ───────────────────────────
+                const formData = new FormData();
+                for (const file of selectedFiles) {
+                    formData.append('files', file);
+                }
+                formData.append('documentType', documentType);
+
+                setBatchProgress({ current: 0, total: selectedFiles.length });
+
+                const response = await fetch('/api/ai/extract', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || t('ai.extraction.errorExtract'));
+                }
+
+                setBatchResults(data.results);
+                setBatchSummary(data.summary);
+                setBatchProgress(null);
+
+                // Notify parent for each successful result
+                if (data.results) {
+                    for (const item of data.results) {
+                        if (item.status === 'success' && item.data) {
+                            onExtracted?.(item.data);
+                        }
+                    }
+                }
             }
 
-            setResult(data.data);
-            onExtracted?.(data.data);
-            // Refresh history after successful extraction
             refreshHistory();
         } catch (err) {
             setError(err instanceof Error ? err.message : t('ai.extraction.errorGeneric'));
+            setBatchProgress(null);
         } finally {
             setIsExtracting(false);
         }
     };
 
     const handleReset = () => {
-        setSelectedFile(null);
-        setPreviewUrl(null);
+        setSelectedFiles([]);
+        setPreviewUrls({});
         setResult(null);
+        setBatchResults(null);
+        setBatchSummary(null);
+        setBatchProgress(null);
         setError(null);
         if (inputRef.current) inputRef.current.value = '';
     };
@@ -234,6 +341,62 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
         if (confidence >= 0.5) return 'bg-yellow-500';
         return 'bg-red-500';
     };
+
+    const handleDownloadAll = () => {
+        if (!batchResults) return;
+
+        const csvRows: string[] = ['File Name,Status,Document Type,Confidence,Method,Error'];
+
+        for (const item of batchResults) {
+            const status = item.status;
+            const docType = item.data?.documentType || '';
+            const confidence = item.data?.confidence ? `${Math.round(item.data.confidence * 100)}%` : '';
+            const method = item.data?.method || '';
+            const error = item.error || '';
+
+            // Escape CSV fields
+            const escapeCsv = (val: string) => `"${val.replace(/"/g, '""')}"`;
+            csvRows.push([
+                escapeCsv(item.fileName),
+                status,
+                docType,
+                confidence,
+                method,
+                escapeCsv(error),
+            ].join(','));
+        }
+
+        // Add detailed field extraction for successful results
+        csvRows.push('');
+        csvRows.push('--- Detailed Field Extraction ---');
+        csvRows.push('File Name,Field Key,Field Label,Value,Confidence');
+
+        for (const item of batchResults) {
+            if (item.status === 'success' && item.data?.fields) {
+                for (const field of item.data.fields) {
+                    const escapeCsv = (val: string) => `"${val.replace(/"/g, '""')}"`;
+                    csvRows.push([
+                        escapeCsv(item.fileName),
+                        field.key,
+                        escapeCsv(field.label),
+                        escapeCsv(field.value || ''),
+                        `${Math.round(field.confidence * 100)}%`,
+                    ].join(','));
+                }
+            }
+        }
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `extraction-results-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const isBatchMode = selectedFiles.length > 1;
 
     return (
         <div className={`space-y-6 ${className}`}>
@@ -260,12 +423,11 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
             </div>
 
             {/* Upload Area */}
-            {!selectedFile ? (
+            {selectedFiles.length === 0 ? (
                 <div
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
-                    onDrop={handleDrop}
                     onClick={() => inputRef.current?.click()}
                     className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition ${dragActive
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -277,66 +439,109 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                         {t('ai.dragDrop') || 'Drag & drop file atau klik untuk browse'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {t('ai.extraction.fileSizeHint')}
+                        {t('ai.extraction.fileSizeHint')} • {t('ai.extraction.batchHint') || `Maksimal ${MAX_BATCH_SIZE} file`}
                     </p>
                     <input
                         ref={inputRef}
                         type="file"
                         accept="image/png,image/jpeg,application/pdf"
+                        multiple
                         className="hidden"
                         onChange={(e) => {
-                            if (e.target.files?.[0]) handleFile(e.target.files[0]);
+                            if (e.target.files && e.target.files.length > 0) {
+                                handleFiles(Array.from(e.target.files));
+                            }
                         }}
                     />
                 </div>
             ) : (
-                /* File Preview */
-                <div className="relative rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <button
-                        onClick={handleReset}
-                        className="absolute right-2 top-2 rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-700"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-
-                    <div className="flex items-start gap-4">
-                        {previewUrl ? (
-                            <img
-                                src={previewUrl}
-                                alt="Preview"
-                                className="h-24 w-24 rounded object-cover"
-                            />
-                        ) : (
-                            <div className="flex h-24 w-24 items-center justify-center rounded bg-gray-200 dark:bg-gray-700">
-                                <FileText className="h-8 w-8 text-gray-400" />
-                            </div>
-                        )}
-
-                        <div className="flex-1 min-w-0">
-                            <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {selectedFile.name}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {(selectedFile.size / 1024).toFixed(1)} KB • {selectedFile.type}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {t('ai.extraction.typeLabel')} {DOCUMENT_TYPE_KEYS.find((d) => d.value === documentType) ? t(DOCUMENT_TYPE_KEYS.find((d) => d.value === documentType)!.labelKey) : ''}
-                            </p>
-                        </div>
+                /* File List Preview */
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'file'} dipilih
+                            {isBatchMode && (
+                                <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                    (Batch Mode)
+                                </span>
+                            )}
+                        </p>
+                        <button
+                            onClick={handleReset}
+                            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        >
+                            {t('common.clear') || 'Hapus Semua'}
+                        </button>
                     </div>
+
+                    <div className="max-h-48 overflow-y-auto space-y-2 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                        {selectedFiles.map((file, idx) => (
+                            <div
+                                key={`${file.name}-${idx}`}
+                                className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800"
+                            >
+                                {previewUrls[file.name] ? (
+                                    <img
+                                        src={previewUrls[file.name]}
+                                        alt="Preview"
+                                        className="h-10 w-10 rounded object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-200 dark:bg-gray-700">
+                                        <FileText className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        {file.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {(file.size / 1024).toFixed(1)} KB • {file.type}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => handleRemoveFile(idx)}
+                                    className="rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-700"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Add more files button */}
+                    <button
+                        onClick={() => inputRef.current?.click()}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+                    >
+                        <Upload className="h-4 w-4" />
+                        {t('ai.extraction.addMoreFiles') || 'Tambah File Lainnya'}
+                    </button>
+                    <input
+                        ref={inputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,application/pdf"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                                handleFiles(Array.from(e.target.files));
+                            }
+                        }}
+                    />
                 </div>
             )}
 
             {/* Error */}
             {error && (
-                <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    {error}
+                <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <pre className="whitespace-pre-wrap text-xs">{error}</pre>
                 </div>
             )}
 
             {/* Extract Button */}
-            {selectedFile && !result && (
+            {selectedFiles.length > 0 && !result && !batchResults && (
                 <button
                     onClick={handleExtract}
                     disabled={isExtracting}
@@ -345,18 +550,44 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                     {isExtracting ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            {t('ai.extraction.extracting')}
+                            {batchProgress
+                                ? `${t('ai.extraction.extracting')} (${batchProgress.current}/${batchProgress.total})`
+                                : t('ai.extraction.extracting')
+                            }
                         </>
                     ) : (
                         <>
-                            <FileText className="h-4 w-4" />
-                            {t('ai.extraction.extractData')}
+                            {isBatchMode ? <Files className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                            {isBatchMode
+                                ? `${t('ai.extraction.extractData') || 'Ekstrak Data'} (${selectedFiles.length} file)`
+                                : t('ai.extraction.extractData')
+                            }
                         </>
                     )}
                 </button>
             )}
 
-            {/* Extraction Results */}
+            {/* Batch Progress Indicator */}
+            {batchProgress && (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700 dark:text-gray-300">
+                            {t('ai.extraction.processing') || 'Memproses...'}
+                        </span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                            {batchProgress.current}/{batchProgress.total}
+                        </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                            className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                            style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Single Extraction Result */}
             {result && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -424,6 +655,124 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                                 {t('ai.applyToForm') || 'Terapkan ke Form'}
                             </button>
                         )}
+                        <button
+                            onClick={handleReset}
+                            className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
+                            <Upload className="h-4 w-4" />
+                            {t('ai.extractAnother') || 'Ekstrak Lainnya'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Batch Results */}
+            {batchResults && batchSummary && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {t('ai.extraction.batchResults') || 'Hasil Batch'} ({batchSummary.total} file)
+                        </h3>
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                <CheckCircle className="h-3 w-3" />
+                                {batchSummary.success}
+                            </span>
+                            {batchSummary.failed > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {batchSummary.failed}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Batch Results Table */}
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div className="max-h-64 overflow-y-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            {t('ai.extraction.fileName') || 'File'}
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            {t('ai.extraction.status') || 'Status'}
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            {t('ai.extraction.accuracy') || 'Akurasi'}
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            {t('ai.extraction.method') || 'Metode'}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {batchResults.map((item, idx) => (
+                                        <tr
+                                            key={`${item.fileName}-${idx}`}
+                                            className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                        >
+                                            <td className="px-4 py-2">
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                                                    <span className="truncate text-sm text-gray-900 dark:text-gray-100 max-w-[200px]">
+                                                        {item.fileName}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-2">
+                                                {item.status === 'success' ? (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                        <CheckCircle className="h-3 w-3" />
+                                                        {t('ai.extraction.success') || 'Berhasil'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400" title={item.error}>
+                                                        <AlertCircle className="h-3 w-3" />
+                                                        {t('ai.extraction.failed') || 'Gagal'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-2">
+                                                {item.data?.confidence != null ? (
+                                                    <span className="text-xs text-gray-700 dark:text-gray-300">
+                                                        {Math.round(item.data.confidence * 100)}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-2">
+                                                {item.data?.method ? (
+                                                    <span className={`text-xs font-medium ${item.data.method === 'ai'
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : item.data.method === 'regex'
+                                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                                            : 'text-gray-500 dark:text-gray-400'
+                                                        }`}>
+                                                        {item.data.method === 'ai' ? 'AI' : item.data.method === 'regex' ? 'Regex' : 'Fallback'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Batch Actions */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleDownloadAll}
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                        >
+                            <Download className="h-4 w-4" />
+                            {t('ai.extraction.downloadAll') || 'Download Semua (CSV)'}
+                        </button>
                         <button
                             onClick={handleReset}
                             className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"

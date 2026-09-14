@@ -40,16 +40,19 @@ export async function GET(request: Request) {
         })
 
         // Bangun response dengan system roles + custom roles
-        const systemRoles = Object.entries(SYSTEM_ROLE_PERMISSIONS).map(([name, permissions]) => ({
-            id: `system_${name.toLowerCase()}`,
-            name,
-            description: getSystemRoleDescription(name),
-            isSystem: true,
-            permissions: PermissionEngine.resolvePermissions(permissions),
-            userCount: 0, // Will be counted separately if needed
-            createdAt: null,
-            updatedAt: null,
-        }))
+        // Filter out SUPERADMIN — platform owner role, not visible at tenant level
+        const systemRoles = Object.entries(SYSTEM_ROLE_PERMISSIONS)
+            .filter(([name]) => name !== 'SUPERADMIN')
+            .map(([name, permissions]) => ({
+                id: `system_${name.toLowerCase()}`,
+                name,
+                description: getSystemRoleDescription(name),
+                isSystem: true,
+                permissions: PermissionEngine.resolvePermissions(permissions),
+                userCount: 0, // Will be counted separately if needed
+                createdAt: null,
+                updatedAt: null,
+            }))
 
         // Hitung user count per system role
         const usersByRole = await prisma.user.groupBy({
@@ -194,7 +197,6 @@ export async function POST(request: Request) {
 
 function getSystemRoleDescription(roleName: string): string {
     const descriptions: Record<string, string> = {
-        SUPERADMIN: 'Full access ke semua fitur dan pengaturan platform',
         ADMIN: 'Akses penuh ke semua modul bisnis dan pengaturan',
         MEMBER: 'Akses terbatas untuk operasi sehari-hari',
         VIEWER: 'Hanya bisa melihat data, tidak bisa mengubah',

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 export default function Error({
     error,
@@ -11,8 +12,8 @@ export default function Error({
     reset: () => void
 }) {
     useEffect(() => {
-        // Log error to monitoring service
-        console.error('Application error:', error)
+        // TODO: Send to monitoring service (Sentry, etc.)
+        logger.error('[ErrorBoundary] Application error', error)
     }, [error])
 
     return (

@@ -9,6 +9,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { z } from 'zod';
 import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 // --- Zod Schema ---
 
@@ -87,7 +88,7 @@ export async function GET(req: Request) {
             const lastScanTime = dbAnomalies[0]?.detectedAt;
             if (!lastScanTime || (Date.now() - new Date(lastScanTime).getTime()) > ONE_HOUR_MS) {
                 // Fire-and-forget -- don't await, don't block the response
-                runAnomalyScan(tenantId).catch(console.error);
+                runAnomalyScan(tenantId).catch((err) => logger.error('[AI] Anomaly scan failed', err));
             }
         }
 

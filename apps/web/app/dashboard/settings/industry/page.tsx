@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
-import { Factory, Loader2, CheckCircle, X, ShoppingCart, Wrench, Briefcase, Building2, Heart, GraduationCap, Coffee, Building } from 'lucide-react'
+import { Loader2, CheckCircle, X, UtensilsCrossed, ShoppingBag, Factory, Heart, HardHat, Briefcase, GraduationCap, Wheat, Truck, Hotel } from 'lucide-react'
 
-type IndustryType = 'retail' | 'manufacturing' | 'services' | 'construction' | 'healthcare' | 'education' | 'food_beverage' | 'general'
+type IndustryType = 'restaurant' | 'retail' | 'manufacturing' | 'healthcare' | 'construction' | 'professional-services' | 'education' | 'agriculture' | 'logistics' | 'hospitality'
 
 type ModuleConfig = {
     finance: boolean
@@ -24,28 +24,33 @@ type IndustryConfigData = {
 }
 
 const INDUSTRY_ICONS: Record<IndustryType, typeof Factory> = {
-    retail: ShoppingCart,
-    manufacturing: Wrench,
-    services: Briefcase,
-    construction: Building2,
+    restaurant: UtensilsCrossed,
+    retail: ShoppingBag,
+    manufacturing: Factory,
     healthcare: Heart,
+    construction: HardHat,
+    'professional-services': Briefcase,
     education: GraduationCap,
-    food_beverage: Coffee,
-    general: Building,
+    agriculture: Wheat,
+    logistics: Truck,
+    hospitality: Hotel,
 }
 
-function getIndustryLabel(industry: IndustryType, t: (key: string) => string): string {
-    const labels: Record<IndustryType, string> = {
-        retail: t('settings.industry.labelRetail'),
-        manufacturing: t('settings.industry.labelManufacturing'),
-        services: t('settings.industry.labelServices'),
-        construction: t('settings.industry.labelConstruction'),
-        healthcare: t('settings.industry.labelHealthcare'),
-        education: t('settings.industry.labelEducation'),
-        food_beverage: t('settings.industry.labelFoodBeverage'),
-        general: t('settings.industry.labelGeneral'),
-    }
-    return labels[industry]
+const INDUSTRY_LABELS: Record<IndustryType, string> = {
+    restaurant: 'Restaurant & Food Service',
+    retail: 'Retail & E-Commerce',
+    manufacturing: 'Manufacturing',
+    healthcare: 'Healthcare',
+    construction: 'Construction',
+    'professional-services': 'Professional Services',
+    education: 'Education',
+    agriculture: 'Agriculture',
+    logistics: 'Logistics & Transportation',
+    hospitality: 'Hospitality & Tourism',
+}
+
+function getIndustryLabel(industry: IndustryType): string {
+    return INDUSTRY_LABELS[industry] || industry
 }
 
 function getModuleLabel(module: string, t: (key: string) => string): string {
@@ -151,8 +156,8 @@ export default function IndustrySettingsPage() {
                     <div className="h-4 bg-gray-200 rounded w-96"></div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <div className="animate-pulse grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                    <div className="animate-pulse grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                             <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
                         ))}
                     </div>
@@ -176,7 +181,7 @@ export default function IndustrySettingsPage() {
         )
     }
 
-    const industries: IndustryType[] = ['retail', 'manufacturing', 'services', 'construction', 'healthcare', 'education', 'food_beverage', 'general']
+    const industries: IndustryType[] = ['restaurant', 'retail', 'manufacturing', 'healthcare', 'construction', 'professional-services', 'education', 'agriculture', 'logistics', 'hospitality']
 
     return (
         <div className="space-y-6">
@@ -212,7 +217,7 @@ export default function IndustrySettingsPage() {
             {/* Industry Selection */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h3 className="font-semibold text-gray-900 mb-4">{t('settings.industry.selectIndustry')}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {industries.map(industry => {
                         const Icon = INDUSTRY_ICONS[industry]
                         const isSelected = selectedIndustry === industry
@@ -227,7 +232,7 @@ export default function IndustrySettingsPage() {
                             >
                                 <Icon className={`h-8 w-8 mx-auto mb-2 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
                                 <span className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
-                                    {getIndustryLabel(industry, t)}
+                                    {getIndustryLabel(industry)}
                                 </span>
                             </button>
                         )

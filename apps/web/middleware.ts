@@ -57,6 +57,7 @@ function getRateLimitRule(pathname: string): { maxRequests: number; windowMs: nu
 const PUBLIC_API_PATHS = [
     "/api/auth",
     "/api/billing/payments/midtrans/callback",
+    "/api/billing/payments/xendit/callback",
     "/api/health",
 ];
 

@@ -13,6 +13,7 @@ import {
     TrendingUp,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
+import { logger } from '@/lib/logger';
 import { AnomalyList } from '@/components/ai/anomaly-list';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -139,7 +140,7 @@ export default function AnomalyDetectionPage() {
                             : a
                     )
                 );
-                console.error('Failed to update anomaly status');
+                logger.error('[Anomalies] Failed to update anomaly status');
             } else {
                 // Re-fetch to get accurate summary counts
                 fetchAnomalies();
@@ -153,7 +154,7 @@ export default function AnomalyDetectionPage() {
                         : a
                 )
             );
-            console.error('Network error updating anomaly:', error);
+            logger.error('[Anomalies] Network error updating anomaly', error);
         }
     };
 

@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 13, 2026 (Session 19: TypeScript Cleanup + Security Alerts + Redis Cache — v11.9.0)
+**Last Updated:** September 13, 2026 (Session 24: Mobile Auth Error Handling + Hardcoded Error Messages — v11.14.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 18.0 — Session 19: securityAlerts activated, Redis-backed cache, ~11 remaining casts documented, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 23.0 — Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants. Session 23: Console cleanup (28 console.* removed, 14 logger.* added, 14 env-check guards), 1 missing error.tsx created, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -99,7 +99,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Tenant Management** | 🚀 `production_ready` | 2026-08-30 | Multi-tenant isolation, tenantId on all queries |
 | **User Management** | 🚀 `production_ready` | 2026-08-30 | CRUD, role assignment, tenant-scoped |
 | **Auth (NextAuth.js)** | 🚀 `production_ready` | 2026-08-30 | JWT + CredentialsProvider, password bcryptjs |
-| **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN, ADMIN, MEMBER, VIEWER — 3 layers |
+| **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-09-13 | SUPERADMIN (platform admin only, hidden from tenant views since Session 20), ADMIN, MEMBER, VIEWER — 3 layers |
 | **Audit Trail** | 🚀 `production_ready` | 2026-08-30 | 77 audit calls across 10 mutation endpoints |
 | **Settings (6 Pages)** | 🚀 `production_ready` | 2026-08-30 | Company, Profile, Security, Team, Notifications, Billing |
 | **Demo Data** | 🚀 `production_ready` | 2026-08-30 | Comprehensive seed data for all modules |
@@ -439,7 +439,7 @@ Omnichannel support yang terintegrasi.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Email (SMTP)** | 🚀 `production_ready` | 2026-09-01 | Real Nodemailer transport via SMTP settings API, env-based config |
+| **Email (SMTP)** | 🚀 `production_ready` | 2026-09-13 | Real Nodemailer transport via SMTP settings API, env-based config, passwords AES-256-GCM encrypted at rest |
 | **WhatsApp Business** | 📋 `planned` | — | Belum ada kode |
 | **Instagram** | 📋 `planned` | — | Belum ada kode |
 | **Live Chat** | 📋 `planned` | — | Belum ada kode |
@@ -640,7 +640,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Email/SMTP Config** | ✅ `implemented` | — | Real Nodemailer transport, env-based config |
+| **Email/SMTP Config** | ✅ `implemented` | 2026-09-13 | Real Nodemailer transport, env-based config, SMTP passwords encrypted at rest (AES-256-GCM) |
 | **Payment Gateway Config** | ✅ `implemented` | 2026-08-30 | Midtrans Snap integrated, webhook handler, HMAC verification |
 | **API Key Management** | 📋 `planned` | — | Belum ada kode |
 | **Connection Status** | ✅ `implemented` | 2026-08-30 | Dynamic fetch from `/api/settings/integrations` |
@@ -721,7 +721,7 @@ Enterprise-grade security untuk data protection.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN, ADMIN, MEMBER, VIEWER — defense-in-depth |
+| **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN (platform admin only, hidden from tenant views), ADMIN, MEMBER, VIEWER — defense-in-depth |
 | **IP Whitelisting** | 📋 `planned` | — | Belum ada kode |
 | **Data-level Security** | 📋 `planned` | — | Belum ada kode |
 | **Approval Workflow** | ✅ `implemented` | 2026-09-02 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models, configurable per entityType ([`apps/web/app/api/approval/`](apps/web/app/api/approval/)) |
@@ -1506,6 +1506,29 @@ Electron-based desktop application.
 
 ## 📝 Changelog
 
+### v21.0.0 (September 13, 2026) — Session 22: Structured Logger Migration (v11.12.0)
+- **Structured Logger Migration** — 20 files migrated from `console.error`/`console.log` to structured `logger.error()`/`logger.info()`: 11 client-side .tsx components, 6 error boundary files, 3 server-side files
+- **Monitoring TODOs** — 6 error boundary files annotated with monitoring service integration TODOs (Sentry, Datadog)
+- **Files Modified** — 20 files across client components, error boundaries, and server-side modules
+- **Breaking Changes** — None — logging infrastructure change only
+- **Version** — v11.11.0 → v11.12.0
+
+### v20.0.0 (September 13, 2026) — Session 21: Bug Fixes + Search API Security (v11.11.0)
+- **POST /api/admin/plans 400 Fix** — Zod `.nullable().optional()` schema fix for plan-related fields
+- **Search API Auth 401** — Search API now returns proper 401 Unauthorized on auth failure (was 200)
+- **Search API Query Validation** — Search API returns 400 when query is shorter than 2 characters
+- **ioredis Webpack Fix** — Added `ioredis` to `serverExternalPackages` in next.config.js to fix bundling errors
+- **SUPERADMIN Hidden from Tenant Views** — 5 files: approvals page, 3 Zod enums, 3 API routes (roles list, role detail, team list)
+- **Files Modified** — 7 files (2 validation schemas, 1 search route, 1 next.config.js, 5 SUPERADMIN hidden files)
+- **Breaking Changes** — None — API responses now exclude SUPERADMIN from tenant-level lists
+- **Version** — v11.10.0 → v11.11.0
+
+### v19.0.0 (September 13, 2026) — Session 20: Hide SUPERADMIN from Tenant-Level Views (v11.10.0)
+- **SUPERADMIN Hidden from Tenant-Level Views** — SUPERADMIN role no longer appears in team management, role assignments, approval level dropdowns, or tenant-level API responses (platform admin panel only)
+- **Files Modified** — 5 files: approvals page, 3 Zod enum schemas, 3 API routes (roles list, role detail, team list)
+- **Breaking Changes** — None — SUPERADMIN still fully functional, only tenant-level visibility changed
+- **Version** — v11.9.0 → v11.10.0
+
 ### v18.0.0 (September 13, 2026) — Session 19: TypeScript Cleanup + Security Alerts + Redis Cache (v11.9.0)
 - **Remaining `as unknown as` Cast Improvement** — 4 casts removed/fixed, 9 casts documented with explanatory comments, 2 casts intentionally kept (db.ts singleton)
 - **`securityAlerts` Setting Activated** — Security alert emails now controlled by platform setting: forgot-password route + anomaly detection alerts
@@ -1810,6 +1833,24 @@ Electron-based desktop application.
 - **Status Summary** — implemented: 33→36, planned: 156→153, total: 274→277
 - **POS Total** — Phase 1-4 complete: 23 API routes, 12 UI pages, 9 Prisma models, 180+ i18n keys
 
+### v21.0.0 (September 13, 2026) — Session 22: Code Quality — Structured Logger Migration
+- **Logger Migration** — Migrated all remaining `console.error` calls to structured `logger.error()` across 20 files (22+ changes)
+- **Client-Side .tsx** — 11 component files: 19 `console.error` → `logger.error` (POS, operations, UI components)
+- **Error Boundaries** — 6 error boundary files: `console.error` → `logger.error` + monitoring service TODO comments
+- **Server-Side** — 3 files: `.catch(console.error)` → `.catch((err) => logger.error(...))` + `platform-settings.ts` console cleanup
+- **TypeScript** — PASS (0 errors)
+- **Files Modified** — 20 total (11 client-side .tsx, 6 error boundary files, 3 server-side files)
+
+### v20.0.0 (September 13, 2026) — Session 21: Bug Fixes + Search API Security
+- **Bug #1 Fix** — POST /api/admin/plans 400 error: Zod `.nullable().optional()` fix on validation schemas + admin plans route (2 files)
+- **Bug #2 Fix** — Search API auth failure: now returns 401 Unauthorized instead of 200 (security hardening)
+- **Bug #10 Fix** — Search API query too short: now returns 400 Bad Request when query < 2 characters
+- **ioredis Webpack Fix** — Added ioredis to `serverExternalPackages` in next.config.js to fix webpack bundling errors
+- **SUPERADMIN Hidden** — Removed SUPERADMIN from tenant-level views: approvals page, validation schemas (3 enums), 2 roles API routes, team API route (5 files)
+- **TypeScript** — PASS (0 errors)
+- **Files Modified** — 7 total (validation schemas, search route, next.config.js, approvals page, roles routes, team route)
+- **Security** — Search API auth + query validation, SUPERADMIN visibility restriction
+
 ### v11.0.0 (September 5, 2026) — POS Kitchen Display System (KDS)
 - **Kitchen Display System** — Full KDS implementation: database models, API routes, UI components, custom hook, architecture doc
 - **Database** — 3 new Prisma models: `PosKitchenOrder`, `PosKitchenOrderItem`, `PosKitchenStation` + Product extensions (`preparationMinutes`, `isPreparedItem`) + PosTransactionItem extensions (`itemNotes`, `kitchenStatus`)
@@ -1833,6 +1874,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 13, 2026 (Session 19: TypeScript Cleanup + Security Alerts + Redis Cache — v11.9.0)
+**Last Updated:** September 13, 2026 (Session 22: Code Quality — Structured Logger Migration — v11.12.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 18.0 — Session 19: securityAlerts activated, Redis-backed cache, ~11 remaining casts documented, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 21.0 — Session 22: Structured Logger Migration (20 files, 22+ changes: 11 .tsx client, 6 error boundaries, 3 server-side), 153 Zod schemas, 400+ API routes, 165 RBAC routes

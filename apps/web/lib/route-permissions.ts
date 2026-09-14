@@ -245,6 +245,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 //
 // PUBLIC routes (in PUBLIC_API_PATHS middleware bypass):
 //   - /api/billing/payments/midtrans/callback — Midtrans webhook (HMAC signature verification)
+//   - /api/billing/payments/xendit/callback — Xendit webhook (callback token verification)
 //
 // COVERED by prefix matching (getPermissionForRoute()):
 //   - All /api/crm/contacts/*     → covered by /api/crm/contacts

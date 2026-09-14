@@ -21,6 +21,7 @@
 
 import { type PlatformSetting } from '@prisma/client';
 import { getRedisClient, getRedisClientSync } from '@/lib/redis';
+import { logger } from '@/lib/logger';
 
 // ─── Cache Configuration ────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ export async function getPlatformSettings(): Promise<PlatformSetting | null> {
         return settings;
     } catch (error) {
         // If DB fetch fails, return cached value if available (stale is better than nothing)
-        console.error('[PlatformSettings] Failed to fetch from DB:', error);
+        logger.error('[PlatformSettings] Failed to fetch from DB', error);
         return memoryCache;
     }
 }
@@ -178,7 +179,7 @@ export async function checkPlanTenantLimit(
             limit: limit.maxTenants,
         };
     } catch (error) {
-        console.error('[PlanTenantLimit] Failed to check limit:', error);
+        logger.error('[PlanTenantLimit] Failed to check limit', error);
         // On error, allow registration (fail-open for availability)
         return { allowed: true, current: 0, limit: 0 };
     }

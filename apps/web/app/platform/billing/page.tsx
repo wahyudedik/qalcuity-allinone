@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { logger } from "@/lib/logger";
 import {
     CreditCard,
     TrendingUp,
@@ -220,7 +221,7 @@ export default function PlatformBillingPage() {
                 setOverdueInvoices(data.data.overdueInvoices);
             }
         } catch {
-            console.error("Error fetching billing data");
+            logger.error("[PlatformBilling] Failed to fetch billing data");
         } finally {
             setLoading(false);
         }
@@ -234,7 +235,7 @@ export default function PlatformBillingPage() {
                 setPlans(data.data);
             }
         } catch {
-            console.error("Error fetching plans");
+            logger.error("[PlatformBilling] Failed to fetch plans");
         }
     }, []);
 

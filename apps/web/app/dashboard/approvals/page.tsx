@@ -3,6 +3,7 @@ import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { useSession } from 'next-auth/react'
 import { useToast } from '@/components/ui/toast'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -68,7 +69,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 const roleOptions = [
     { value: 'ADMIN', label: 'Admin' },
     { value: 'MEMBER', label: 'Member' },
-    { value: 'SUPERADMIN', label: 'Super Admin' },
+    { value: 'VIEWER', label: 'Viewer' },
 ]
 
 // ─── Main Component ───────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ export default function ApprovalsPage() {
                 setRequests(data.data)
             }
         } catch (error) {
-            console.error('Failed to fetch approval requests:', error);
+            logger.error('[Approvals] Failed to fetch approval requests', error);
         }
     }, [filterEntity, filterStatus])
 
@@ -140,7 +141,7 @@ export default function ApprovalsPage() {
                 setLevels(data.data)
             }
         } catch (error) {
-            console.error('Failed to fetch approval levels:', error);
+            logger.error('[Approvals] Failed to fetch approval levels', error);
         }
     }, [filterEntity])
 

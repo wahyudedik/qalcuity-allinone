@@ -2,9 +2,11 @@
 
 import { useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 export default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error(error); }, [error]);
+  // TODO: Send to monitoring service (Sentry, etc.)
+  useEffect(() => { logger.error('[ErrorBoundary] Platform settings error', error); }, [error]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8">

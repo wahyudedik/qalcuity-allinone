@@ -4,6 +4,7 @@ import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { Search, Plus, Package, AlertTriangle, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
@@ -75,7 +76,7 @@ export default function StockPage() {
                 setWarehouses(data.data)
             }
         } catch (error) {
-            console.error('Failed to fetch warehouses:', error);
+            logger.error('[Stock] Failed to fetch warehouses', error);
         }
     }
 

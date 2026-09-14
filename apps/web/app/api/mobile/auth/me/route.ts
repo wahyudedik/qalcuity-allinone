@@ -17,8 +17,8 @@
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 import { getMobileUserFromToken } from '@/lib/mobile-auth';
-import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
     try {
@@ -47,22 +47,6 @@ export async function GET(request: Request) {
             user,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'An internal server error occurred';
-
-        let status = 500;
-        if (message.includes('invalid signature') || message.includes('jwt malformed') || message.includes('Token')) {
-            status = 401;
-        } else if (message.includes('expired')) {
-            status = 401;
-        } else if (message.includes('not found') || message.includes('dinonaktifkan')) {
-            status = 401;
-        }
-
-        logger.error('[MobileAuth] Get user error:', message);
-
-        return NextResponse.json(
-            { success: false, error: 'Token is invalid or has expired', code: 'INVALID_TOKEN' },
-            { status }
-        );
+        return handleApiError(error);
     }
 }

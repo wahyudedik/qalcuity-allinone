@@ -48,6 +48,6 @@ export function validateEnv() {
     // Debug-level log for optional vars (not a warning — these are expected to be unset in dev)
     const missingOptional = optionalEnvVars.filter(key => !process.env[key]);
     if (missingOptional.length > 0) {
-        console.debug(`ℹ️ Optional env vars not set: ${missingOptional.join(', ')}`);
+        logger.debug(`ℹ️ Optional env vars not set: ${missingOptional.join(', ')}`);
     }
 }

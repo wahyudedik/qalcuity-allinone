@@ -27,6 +27,8 @@ export async function GET(request: Request) {
             where: {
                 tenantId,
                 deletedAt: null,
+                // Filter out SUPERADMIN — platform owner, not visible at tenant level
+                role: { not: 'SUPERADMIN' },
             },
             select: {
                 id: true,
@@ -190,16 +192,6 @@ export async function PUT(request: Request) {
 
         const updateData: Record<string, unknown> = {}
         if (validation.data.role) {
-            // SECURITY: Block ALL SUPERADMIN role assignments â€” no exceptions.
-            // The SUPERADMIN role is exclusively for the platform owner (info@qalcuity.com)
-            // and can ONLY be assigned via direct database operation by the platform owner.
-            // This prevents privilege escalation even by existing SUPERADMIN users.
-            if (validation.data.role === 'SUPERADMIN') {
-                return NextResponse.json(
-                    { success: false, error: 'Cannot assign SUPERADMIN role â€” platform owner only' },
-                    { status: 403 }
-                )
-            }
             updateData.role = validation.data.role
         }
         if (validation.data.isActive !== undefined) {

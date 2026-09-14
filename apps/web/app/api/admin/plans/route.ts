@@ -42,11 +42,11 @@ type PlanWithFeatures = {
 const createPlanSchema = z.object({
     name: z.string().min(1, MSG.NAME_REQUIRED).max(100),
     slug: z.string().min(1, MSG.SLUG_REQUIRED).max(50).regex(/^[a-z0-9-]+$/, MSG.SLUG_ONLY_LOWERCASE_HYPHEN),
-    description: z.string().max(500).optional(),
+    description: z.string().max(500).nullable().optional(),
     priceMonthly: z.number().min(0, 'Price must not be negative'),
-    priceYearly: z.number().min(0).optional(),
+    priceYearly: z.number().min(0).nullable().optional(),
     maxUsers: z.number().int().min(-1, 'Max users must be at least -1 (unlimited)'),
-    maxStorage: z.number().int().min(0).optional(),
+    maxStorage: z.number().int().min(0).nullable().optional(),
     sortOrder: z.number().int().default(0),
     features: z.array(z.object({
         featureKey: z.string().min(1),

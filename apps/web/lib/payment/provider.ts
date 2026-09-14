@@ -9,6 +9,7 @@
  */
 
 import { MidtransProvider } from './midtrans';
+import { XenditProvider } from './xendit';
 import { MockPaymentProvider } from './mock';
 import { logger } from '@/lib/logger';
 
@@ -70,7 +71,7 @@ export interface WebhookResult {
  *
  * Supported providers:
  * - `midtrans`: Integrasi dengan Midtrans (production/sandbox)
- * - `xendit`: Integrasi dengan Xendit (coming soon)
+ * - `xendit`: Integrasi dengan Xendit Invoice API
  * - `mock`: Mock provider untuk development/testing
  *
  * @returns PaymentProvider instance
@@ -82,9 +83,7 @@ export function getPaymentProvider(): PaymentProvider {
         case 'midtrans':
             return new MidtransProvider();
         case 'xendit':
-            // Xendit provider coming soon, fallback to mock
-            logger.warn('[PaymentProvider] Xendit provider not yet implemented, using mock');
-            return new MockPaymentProvider();
+            return new XenditProvider();
         default:
             return new MockPaymentProvider();
     }

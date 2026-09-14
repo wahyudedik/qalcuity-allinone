@@ -19,11 +19,11 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 const updatePlanSchema = z.object({
     name: z.string().min(1, MSG.NAME_REQUIRED).max(100).optional(),
     slug: z.string().min(1, MSG.SLUG_REQUIRED).max(50).regex(/^[a-z0-9-]+$/, MSG.SLUG_ONLY_LOWERCASE_HYPHEN).optional(),
-    description: z.string().max(500).optional(),
+    description: z.string().max(500).nullable().optional(),
     priceMonthly: z.number().min(0, 'Price must not be negative').optional(),
-    priceYearly: z.number().min(0).optional(),
+    priceYearly: z.number().min(0).nullable().optional(),
     maxUsers: z.number().int().min(-1, 'Max users must be at least -1 (unlimited)').optional(),
-    maxStorage: z.number().int().min(0).optional(),
+    maxStorage: z.number().int().min(0).nullable().optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
     features: z.array(z.object({

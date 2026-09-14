@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { FEATURE_GROUPS, FEATURE_LABELS } from '@/lib/entitlements-config'
 import {
     Check,
@@ -194,7 +195,7 @@ export default function BillingSettingsPage() {
             if (entitlementData.success) setEntitlement(entitlementData.data)
             if (usageData.success) setUsage(usageData.data || {})
         } catch {
-            console.error('Error fetching billing data')
+            logger.error('[SettingsBilling] Failed to fetch billing data')
         } finally {
             setLoading(false)
         }

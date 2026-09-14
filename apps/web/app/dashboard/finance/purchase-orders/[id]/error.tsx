@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export default function PurchaseOrderDetailError({
     error,
@@ -10,7 +11,8 @@ export default function PurchaseOrderDetailError({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error(error);
+        // TODO: Send to monitoring service (Sentry, etc.)
+        logger.error('[ErrorBoundary] Purchase order detail error', error);
     }, [error]);
 
     return (

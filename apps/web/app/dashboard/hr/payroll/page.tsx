@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { exportToCSV } from '@/lib/export'
 import {
     Download,
@@ -211,7 +212,7 @@ export default function PayrollPage() {
                 })))
             }
         } catch (error) {
-            console.error('Failed to fetch employees:', error);
+            logger.error('[Payroll] Failed to fetch employees', error);
         } finally {
             setEmployeesLoading(false)
         }

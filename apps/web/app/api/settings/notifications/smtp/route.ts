@@ -7,6 +7,7 @@ import { requirePermissionForRoute } from '@/lib/session'
 import { logAudit } from '@/lib/audit'
 import { handleApiError } from '@/lib/api-error'
 import { updateSmtpConfigSchema } from '@/lib/validation-schemas'
+import { encrypt, safeDecrypt } from '@/lib/encryption'
 
 /**
  * GET /api/settings/notifications/smtp
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
             config: configData,
         }
         if (smtpPassword && smtpPassword !== 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢') {
-            updateData.apiSecret = smtpPassword
+            updateData.apiSecret = encrypt(smtpPassword)
         }
 
         // Upsert SMTP integration
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
                 name: 'smtp',
                 status: 'active',
                 config: configData,
-                apiSecret: smtpPassword || null,
+                apiSecret: smtpPassword ? encrypt(smtpPassword) : null,
             },
             update: updateData,
         })

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { exportToCSV, exportToExcel, printReport } from '@/lib/export'
 import { BarChart, PieChart, LineChart } from '@/components/ui/charts'
 import {
@@ -314,7 +315,7 @@ export default function ReportsPage() {
 
             setData(result.data)
         } catch (err) {
-            console.error('Failed to fetch reports:', err)
+            logger.error('[Reports] Failed to fetch reports', err)
             setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
         } finally {
             setLoading(false)
@@ -339,7 +340,7 @@ export default function ReportsPage() {
 
             setTrialBalanceData(result.data)
         } catch (err) {
-            console.error('Failed to fetch trial balance:', err)
+            logger.error('[Reports] Failed to fetch trial balance', err)
             setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
         } finally {
             setLoading(false)
@@ -363,7 +364,7 @@ export default function ReportsPage() {
 
             setBalanceSheetData(result.data)
         } catch (err) {
-            console.error('Failed to fetch balance sheet:', err)
+            logger.error('[Reports] Failed to fetch balance sheet', err)
             setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
         } finally {
             setLoading(false)
@@ -388,7 +389,7 @@ export default function ReportsPage() {
 
             setIncomeStatementData(result.data)
         } catch (err) {
-            console.error('Failed to fetch income statement:', err)
+            logger.error('[Reports] Failed to fetch income statement', err)
             setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data')
         } finally {
             setLoading(false)
