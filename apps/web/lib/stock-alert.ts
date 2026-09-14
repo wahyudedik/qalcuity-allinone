@@ -5,7 +5,7 @@
 
 import { prisma } from './db';
 import { sendStockAlertEmail } from './email';
-import { notifyNewNotification } from '@/app/api/notifications/stream/route';
+import { notifyNewNotification } from '@/lib/notification-pubsub';
 
 export interface StockAlertResult {
     alerted: boolean;

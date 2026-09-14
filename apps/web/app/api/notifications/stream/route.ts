@@ -16,67 +16,9 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requirePermissionForRoute } from '@/lib/session';
 import { logger } from '@/lib/logger';
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-const encoder = new TextEncoder();
-
-/** Encode a string to Uint8Array for ReadableStream controller */
-function sseEncode(data: string): Uint8Array {
-    return encoder.encode(`data: ${data}\n\n`);
-}
-
-// =============================================================================
-// Subscriber Management
-// =============================================================================
-
-/** In-memory subscribers per tenant — controller set per tenantId */
-const notificationSubscribers = new Map<string, Set<ReadableStreamDefaultController<Uint8Array>>>();
-
-/**
- * Notify all notification subscribers for a given tenant.
- * Called after InAppNotification creation to push real-time updates.
- *
- * @param tenantId - The tenant whose subscribers should be notified
- * @param notification - Optional notification details for the payload
- */
-export function notifyNewNotification(
-    tenantId: string,
-    notification?: { id: string; title: string; type: string }
-): void {
-    const tenantSubscribers = notificationSubscribers.get(tenantId);
-    if (!tenantSubscribers || tenantSubscribers.size === 0) return;
-
-    const payload = JSON.stringify({
-        type: 'new_notification',
-        timestamp: Date.now(),
-        notification,
-    });
-    const encoded = sseEncode(payload);
-    const deadControllers: ReadableStreamDefaultController<Uint8Array>[] = [];
-
-    tenantSubscribers.forEach((controller) => {
-        try {
-            controller.enqueue(encoded);
-        } catch {
-            // Controller already closed — mark for cleanup
-            deadControllers.push(controller);
-        }
-    });
-
-    // Cleanup dead controllers
-    for (const dead of deadControllers) {
-        tenantSubscribers.delete(dead);
-    }
-    if (tenantSubscribers.size === 0) {
-        notificationSubscribers.delete(tenantId);
-    }
-}
+import { notificationSubscribers, sseEncode } from '@/lib/notification-pubsub';
 
 // =============================================================================
 // GET — SSE Stream Handler
@@ -84,12 +26,15 @@ export function notifyNewNotification(
 
 export async function GET(request: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.tenantId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const auth = await requirePermissionForRoute(request);
+        if (auth.error || !auth.tenantId) {
+            return NextResponse.json(
+                { success: false, error: auth.error || 'Unauthorized' },
+                { status: auth.status || 401 }
+            );
         }
 
-        const tenantId = session.user.tenantId;
+        const tenantId = auth.tenantId;
 
         const stream = new ReadableStream<Uint8Array>({
             start(controller) {
