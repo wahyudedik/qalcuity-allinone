@@ -210,6 +210,7 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.customFields") || "Custom Fields", href: "/dashboard/settings/custom-fields" },
                 { label: t("nav.industry") || "Industry", href: "/dashboard/settings/industry" },
                 { label: t("nav.workflow") || "Workflow", href: "/dashboard/settings/workflow" },
+                { label: t("nav.controlEngine") || "Control Engine", href: "/dashboard/settings/control-engine" },
             ],
         },
         // 11. Billing — ADMIN, SUPERADMIN only
