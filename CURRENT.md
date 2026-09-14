@@ -1,6 +1,78 @@
-> **Last Updated:** 13 September 2026 (Session 26 Part 2: Document Extraction Batch + Xendit Payment)
-> **Version:** v11.18.0
-> **Status:** ✅ HEALTHY — Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+﻿> **Last Updated:** 13 September 2026 (Session 26+: NLU Parser + Statistical Anomaly Detection + Encryption)
+> **Version:** v11.19.0
+> **Status:** ✅ HEALTHY — Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+
+## 🚀 Session 26+ — NLU Parser + Statistical Anomaly Detection + Encryption (13 Sep 2026)
+
+> **Focus:** NLU parser for natural language queries, statistical anomaly detection, AES-256-GCM encryption, batch document extraction enhancements, product restock
+> **Total Files Changed:** 10+ (new files + modified files)
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Health Score:** ~100/100
+
+### Task #1 — NLU Parser (`apps/web/lib/ai/nlu-parser.ts`) ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟢 Low (new file, no existing code affected)
+- **Description:** Created Natural Language Understanding (NLU) parser with intent recognition (8 intents), entity extraction (7 entity types), and query normalization for Indonesian language support.
+- **New Files:**
+  - [`apps/web/lib/ai/nlu-parser.ts`](apps/web/lib/ai/nlu-parser.ts) — NLU parser engine
+  - [`apps/web/lib/ai/data-resolver.ts`](apps/web/lib/ai/data-resolver.ts) — Smart data resolver
+  - [`apps/web/lib/ai/conversation-context.ts`](apps/web/lib/ai/conversation-context.ts) — Multi-turn context manager
+
+### Task #2 — Statistical Anomaly Detection (`apps/web/lib/ai/statistical-analysis.ts`) ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟢 Low (new file, extends existing anomaly detection)
+- **Description:** Added 5 statistical analysis rules to anomaly detection engine: outlier detection, trend break, pattern analysis, velocity change, seasonal anomaly.
+- **New File:** [`apps/web/lib/ai/statistical-analysis.ts`](apps/web/lib/ai/statistical-analysis.ts)
+- **Rules Added:** 5 new statistical rules (total now: 12 rule-based + 5 statistical = 17 rules)
+
+### Task #3 — AES-256-GCM Encryption (`apps/web/lib/encryption.ts`) ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟢 Low (new file, SMTP password encryption)
+- **Description:** AES-256-GCM encryption at rest for sensitive data (SMTP passwords). Fernet-compatible format with key derivation.
+- **New File:** [`apps/web/lib/encryption.ts`](apps/web/lib/encryption.ts)
+
+### Task #4 — Xendit Payment Provider (`apps/web/lib/payment/xendit.ts`) ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟡 Medium (new payment provider integration)
+- **Description:** Xendit Invoice API v2 integration with webhook callback verification.
+- **New Files:**
+  - [`apps/web/lib/payment/xendit.ts`](apps/web/lib/payment/xendit.ts) — Xendit API client
+  - [`apps/web/app/api/billing/payments/xendit/route.ts`](apps/web/app/api/billing/payments/xendit/route.ts) — Xendit endpoint
+  - [`apps/web/app/api/billing/payments/xendit/callback/route.ts`](apps/web/app/api/billing/payments/xendit/callback/route.ts) — Webhook handler
+
+### Task #5 — SSE Real-time Routes ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟢 Low (new SSE endpoints)
+- **Description:** Server-Sent Events routes for Kitchen Display and Notification Center real-time updates.
+- **New Files:**
+  - [`apps/web/app/api/notifications/stream/route.ts`](apps/web/app/api/notifications/stream/route.ts) — Notification SSE
+  - [`apps/web/app/api/pos/kitchen/stream/route.ts`](apps/web/app/api/pos/kitchen/stream/route.ts) — Kitchen Display SSE
+
+### Task #6 — Product Restock API + UI ✅
+
+- **Status:** ✅ Complete
+- **Risk Level:** 🟢 Low (new API + UI)
+- **Description:** Product restock endpoint with UI for inventory management.
+
+### Session 26+ Summary
+
+| Metric | Value |
+|--------|-------|
+| Files Created | 10+ new files |
+| NLU Intents | 8 (report, create, update, delete, search, compare, predict, action) |
+| Entity Types | 7 (date, amount, customer, product, account, period, metric) |
+| Statistical Rules | 5 (outlier, trend break, pattern, velocity, seasonal) |
+| Encryption | AES-256-GCM for SMTP passwords |
+| Payment Providers | Xendit added (Midtrans existing) |
+| SSE Routes | 2 (notifications, kitchen display) |
+| TypeScript | 0 errors |
+
+---
 
 ## 🚀 Session 26 Part 2 — Document Extraction Batch + Xendit Payment (13 Sep 2026)
 
@@ -3788,6 +3860,9 @@ Qalcuity akan menggunakan **granular permission engine** sebagai fondasi arsitek
 | 38 | ~~**Platform settings stored on filesystem**~~ | 🟠 Medium | Settings | ✅ Fixed — Migrated to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, Session 17) |
 | 39 | **Unbounded database queries** | 🟠 Medium | API | ✅ Fixed — 5 main unbounded routes now have pagination limits (settings/team, platform/stats, platform/billing, reports ×9 queries) |
 | 40 | **SMTP TLS validation disabled** | 🟡 Low | Email | ✅ Fixed — TLS validation now opt-in via `allowSelfSigned` option (default: secure) |
+| 41 | **NLU Parser — no multi-turn context** | 🟡 Low | AI | ✅ Fixed — conversation-context.ts added for multi-turn query context (Session 26+) |
+| 42 | **SMTP passwords stored in plaintext** | 🟠 Medium | Security | ✅ Fixed — AES-256-GCM encryption via encryption.ts (Session 26+) |
+| 43 | **No Xendit payment provider** | 🟠 Medium | Billing | ✅ Fixed — Xendit Invoice API v2 + webhook integration (Session 26+) |
 
 ---
 
@@ -4814,4 +4889,4 @@ _None currently._ **Previous blocker #1 (Login/Register issue) RESOLVED — 7 Se
 ---
 
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 12.0 — Session 21: Bug fixes + Search API security + SUPERADMIN hidden, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 13.0 — Session 26+: NLU parser, statistical anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time, batch document extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes

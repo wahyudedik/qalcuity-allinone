@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 13, 2026 (Session 24: Mobile Auth Error Handling + Hardcoded Error Messages — v11.14.0)
+**Last Updated:** September 13, 2026 (Session 26+: NLU Parser + Statistical Anomaly Detection + Encryption — v11.19.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 23.0 — Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants. Session 23: Console cleanup (28 console.* removed, 14 logger.* added, 14 env-check guards), 1 missing error.tsx created, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 24.0 — Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -595,7 +595,10 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **NLP Query** | 📋 `planned` | — | Belum ada kode |
+| **NLU Parser** | ✅ `implemented` | 2026-09-13 | Intent recognition (8 intents), entity extraction (7 entity types), query normalization (Indonesian) |
+| **Smart Data Resolver** | ✅ `implemented` | 2026-09-13 | Maps extracted entities to database fields with fallback resolution |
+| **Multi-turn Context** | ✅ `implemented` | 2026-09-13 | Conversation context manager for follow-up queries |
+| **NLP Query (Full NL)** | 🔄 `partial` | — | Full natural language to SQL not yet implemented |
 
 ### 9.4 Smart Document Extraction
 
@@ -608,6 +611,8 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 | **OCR** | 📋 `planned` | — | Belum ada kode |
 | **Auto-validation** | 📋 `planned` | — | Belum ada kode |
 | **Auto-entry** | 📋 `planned` | — | Belum ada kode |
+| **Batch Extraction** | ✅ `implemented` | 2026-09-13 | Multi-file upload (limit 20), batch progress, CSV export, FormData API |
+| **Product Restock** | ✅ `implemented` | 2026-09-13 | Restock API + UI for inventory management |
 
 ### 9.5 AI Template Generator
 
@@ -622,8 +627,9 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Anomaly Detection Engine** | ✅ `implemented` | 2026-09-05 | 12 rule-based detection rules + AI enrichment, severity levels (CRITICAL/HIGH/MEDIUM/LOW) |
-| **Anomaly Detection API** | ✅ `implemented` | 2026-09-05 | GET+POST `/api/ai/anomalies` — scan, filter, pagination, in-memory cache (5min TTL) |
+| **Anomaly Detection Engine** | ✅ `implemented` | 2026-09-13 | 17 detection rules (12 rule-based + 5 statistical: outlier, trend break, pattern, velocity, seasonal) + AI enrichment |
+| **Statistical Analysis** | ✅ `implemented` | 2026-09-13 | [`apps/web/lib/ai/statistical-analysis.ts`](apps/web/lib/ai/statistical-analysis.ts) — 5 statistical rules with Z-score, trend detection |
+| **Anomaly Detection API** | ✅ `implemented` | 2026-09-13 | GET+POST `/api/ai/anomalies` — scan, filter, pagination, in-memory cache (5min TTL) |
 | **Anomaly List UI** | ✅ `implemented` | 2026-09-05 | Expandable cards, severity/status badges, AI risk score, action buttons (Investigate/Dismiss/Block) |
 | **Anomaly Detection Page** | ✅ `implemented` | 2026-09-05 | `/dashboard/ai/anomalies` — severity dashboard, scan now, filters |
 | **Fraud Detection** | 📋 `planned` | — | Belum ada kode |
@@ -651,7 +657,7 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Midtrans** | ✅ `implemented` | 2026-08-30 | Midtrans Snap integrated, webhook handler, HMAC verification |
-| **Xendit** | 📋 `planned` | — | Belum ada kode |
+| **Xendit** | ✅ `implemented` | 2026-09-13 | Invoice API v2 + webhook callback ([`apps/web/lib/payment/xendit.ts`](apps/web/lib/payment/xendit.ts)) |
 
 ### 10.3 Rate Limiter & Security
 
@@ -666,7 +672,14 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 | **Excel/CSV Export** | 🚀 `production_ready` | 2026-08-30 | Any report or data |
 | **Excel/CSV Import** | ✅ `implemented` | 2026-09-01 | CSV/Excel parsers + CRM import API (contacts & leads) |
 
-### 10.5 API & Webhook
+### 10.5 Real-time Features (SSE)
+
+| Feature | Status | Last Verified | Notes |
+|---------|--------|---------------|-------|
+| **Kitchen Display SSE** | ✅ `implemented` | 2026-09-13 | Server-Sent Events for real-time kitchen order updates ([`apps/web/app/api/pos/kitchen/stream/route.ts`](apps/web/app/api/pos/kitchen/stream/route.ts)) |
+| **Notification Center SSE** | ✅ `implemented` | 2026-09-13 | Real-time notifications with 60s polling fallback ([`apps/web/app/api/notifications/stream/route.ts`](apps/web/app/api/notifications/stream/route.ts)) |
+
+### 10.6 API & Webhook
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
@@ -730,7 +743,7 @@ Enterprise-grade security untuk data protection.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Encryption** | 📋 `planned` | — | Belum ada explicit AES-256/TLS config |
+| **Encryption (AES-256-GCM)** | ✅ `implemented` | 2026-09-13 | AES-256-GCM encryption at rest for SMTP passwords ([`apps/web/lib/encryption.ts`](apps/web/lib/encryption.ts)) |
 | **Data Residency** | 📋 `planned` | — | Server config belum ada |
 | **Backup** | 📋 `planned` | — | Belum ada auto-backup |
 | **Data Retention** | 📋 `planned` | — | Belum ada kode |
@@ -1505,6 +1518,20 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v22.0.0 (September 13, 2026) — Session 26+: NLU Parser + Statistical Anomaly Detection + Encryption (v11.19.0)
+- **NLU Parser** — Intent recognition (8 intents: report, create, update, delete, search, compare, predict, action) + entity extraction (7 types: date, amount, customer, product, account, period, metric) + query normalization
+- **Smart Data Resolver** — Maps extracted entities to database fields with fallback resolution
+- **Multi-turn Context** — Conversation context manager for follow-up queries
+- **Statistical Anomaly Detection** — 5 new rules (outlier, trend break, pattern, velocity, seasonal) added to existing 12 rule-based rules (total: 17)
+- **AES-256-GCM Encryption** — Encryption at rest for SMTP passwords (Fernet-compatible format)
+- **Xendit Payment Provider** — Invoice API v2 + webhook callback verification
+- **SSE Real-time Routes** — Kitchen Display SSE + Notification Center SSE (with 60s polling fallback)
+- **Batch Document Extraction** — Multi-file upload (limit 20), batch progress, CSV export
+- **Product Restock API + UI** — Restock endpoint with UI for inventory management
+- **Files Created** — nlu-parser.ts, data-resolver.ts, conversation-context.ts, statistical-analysis.ts, encryption.ts, xendit.ts, 2 SSE routes, 2 Xendit endpoints
+- **Breaking Changes** — None
+- **Version** — v11.18.0 → v11.19.0
 
 ### v21.0.0 (September 13, 2026) — Session 22: Structured Logger Migration (v11.12.0)
 - **Structured Logger Migration** — 20 files migrated from `console.error`/`console.log` to structured `logger.error()`/`logger.info()`: 11 client-side .tsx components, 6 error boundary files, 3 server-side files
