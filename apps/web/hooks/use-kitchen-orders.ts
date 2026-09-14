@@ -3,8 +3,9 @@
 /**
  * Kitchen Display System — Orders React Hook
  *
- * Hook untuk mengelola kitchen orders dengan auto-refresh polling.
- * Polling setiap 10 detik + refresh on window focus.
+ * Hook untuk mengelola kitchen orders dengan real-time updates.
+ * Primary: SSE (Server-Sent Events) untuk push updates instan.
+ * Fallback: Polling setiap 15 detik + refresh on window focus.
  *
  * Ref: plans/pos-kitchen-display-architecture.md Section 7
  */
@@ -101,8 +102,8 @@ export interface UseKitchenOrdersReturn {
 // Constants
 // =============================================================================
 
-/** Polling interval in milliseconds (10 seconds) */
-const POLL_INTERVAL_MS = 10_000;
+/** Polling interval in milliseconds (15 seconds) — fallback when SSE is unavailable */
+const POLL_INTERVAL_MS = 15_000;
 
 /** Stats refresh interval (60 seconds) */
 const STATS_INTERVAL_MS = 60_000;
@@ -112,11 +113,12 @@ const STATS_INTERVAL_MS = 60_000;
 // =============================================================================
 
 /**
- * Kitchen orders hook with auto-refresh polling.
+ * Kitchen orders hook with real-time updates (SSE + polling fallback).
  *
  * Behavior:
  * - Fetches orders based on current filter (status, stationId)
- * - Auto-refreshes every 10 seconds
+ * - Primary: SSE stream for instant push updates from server
+ * - Fallback: Auto-refresh polling every 15 seconds (if SSE unavailable)
  * - Refreshes on window focus
  * - Fetches stations on mount
  * - Fetches stats every 60 seconds
@@ -147,6 +149,7 @@ export function useKitchenOrders(): UseKitchenOrdersReturn {
     const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const statsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const filterRef = useRef<KitchenFilter>(filter);
+    const sseConnectedRef = useRef<boolean>(false);
 
     // Keep filterRef in sync
     useEffect(() => {
@@ -308,7 +311,7 @@ export function useKitchenOrders(): UseKitchenOrdersReturn {
         fetchStations();
         fetchStats();
 
-        // Polling for orders (every 10s)
+        // Polling for orders (every 15s) — acts as fallback when SSE is unavailable
         pollTimerRef.current = setInterval(() => {
             fetchOrders(filterRef.current);
         }, POLL_INTERVAL_MS);
@@ -332,6 +335,68 @@ export function useKitchenOrders(): UseKitchenOrdersReturn {
             window.removeEventListener('focus', handleFocus);
         };
     }, [fetchOrders, fetchStations, fetchStats]);
+
+    // ---------------------------------------------------------------------------
+    // SSE — Real-time updates (primary source)
+    // ---------------------------------------------------------------------------
+    useEffect(() => {
+        let eventSource: EventSource | null = null;
+        let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+        let retryCount = 0;
+        const MAX_RETRY_DELAY = 30_000; // Max 30s between retries
+
+        function connectSSE() {
+            if (!isMountedRef.current) return;
+
+            eventSource = new EventSource('/api/pos/kitchen/stream');
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'update') {
+                        // Re-fetch orders on server-side update
+                        fetchOrders(filterRef.current);
+                        fetchStats();
+                    } else if (data.type === 'connected') {
+                        sseConnectedRef.current = true;
+                        retryCount = 0; // Reset retry count on successful connection
+                    }
+                    // Ignore heartbeat events
+                } catch {
+                    // Malformed data — ignore
+                }
+            };
+
+            eventSource.onerror = () => {
+                sseConnectedRef.current = false;
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+
+                // Exponential backoff reconnect
+                if (isMountedRef.current) {
+                    const delay = Math.min(1000 * Math.pow(2, retryCount), MAX_RETRY_DELAY);
+                    retryCount++;
+                    reconnectTimer = setTimeout(connectSSE, delay);
+                }
+            };
+        }
+
+        connectSSE();
+
+        return () => {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            sseConnectedRef.current = false;
+        };
+    }, [fetchOrders, fetchStats]);
 
     // ---------------------------------------------------------------------------
     // Return

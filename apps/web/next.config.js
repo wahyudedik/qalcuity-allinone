@@ -68,7 +68,22 @@ const nextConfig = {
         optimizePackageImports: ["lucide-react"],
         // Belt-and-suspenders: ensure nodemailer (server-only) is never bundled
         // into client chunks. See: apps/web/components/ai/anomaly-list.tsx fix.
-        serverComponentsExternalPackages: ["nodemailer"],
+        // ioredis v6 uses node:diagnostics_channel which webpack cannot bundle —
+        // externalize it to prevent "UnhandledSchemeError" build failures.
+        serverComponentsExternalPackages: ["nodemailer", "ioredis"],
+    },
+    // Webpack config: externalize ioredis for ALL server-side builds
+    // (server components, API routes, AND middleware Edge Runtime).
+    // serverComponentsExternalPackages only covers Server Components —
+    // this webpack externals config ensures middleware compilation also skips ioredis.
+    webpack: (config, { isServer }) => {
+        if (isServer) {
+            config.externals = config.externals || [];
+            if (Array.isArray(config.externals)) {
+                config.externals.push('ioredis');
+            }
+        }
+        return config;
     },
     // ─── Security Headers ──────────────────────────────────────────────────────
     // See: docs/SECURITY.md — H02 (CSP) & H03 (CORS)

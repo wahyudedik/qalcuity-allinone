@@ -21,12 +21,12 @@
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
 import { generateMobileToken, generateRefreshToken, type MobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/sanitize';
-import { logger } from '@/lib/logger';
 import { mobileRegisterSchema, formatZodError } from '@/lib/validation-schemas';
 import { getPlatformSettings, checkPlanTenantLimit } from '@/lib/platform-settings';
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         const platformSettings = await getPlatformSettings();
         if (platformSettings && !platformSettings.allowRegistration) {
             return NextResponse.json(
-                { success: false, error: 'Registration is currently disabled', code: 'REGISTRATION_DISABLED' },
+                { success: false, error: MSG.REGISTRATION_DISABLED, code: 'REGISTRATION_DISABLED' },
                 { status: 403 }
             );
         }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:mobile-register:${ip}`, 5, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Too many registration attempts. Please try again in 5 minutes.', code: 'RATE_LIMITED' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS, code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
         if (existingUser) {
             return NextResponse.json(
-                { success: false, error: 'Email already registered', code: 'DUPLICATE_EMAIL' },
+                { success: false, error: MSG.EMAIL_ALREADY_REGISTERED, code: 'DUPLICATE_EMAIL' },
                 { status: 400 }
             );
         }
@@ -138,34 +138,7 @@ export async function POST(request: Request) {
             token: generateMobileToken(mobileUser),
             refreshToken: generateRefreshToken(mobileUser),
         }, { status: 201 });
-    } catch (error: unknown) {
-        // Handle Prisma-specific errors
-        if (error && typeof error === 'object' && 'code' in error) {
-            const prismaError = error as { code: string; meta?: Record<string, unknown> };
-
-            if (prismaError.code === 'P2002') {
-                const target = prismaError.meta?.target;
-                const field = Array.isArray(target) ? target[0] : 'field';
-                logger.error(`[MobileAuth] Unique constraint violation on field: ${field}`);
-                return NextResponse.json(
-                    { success: false, error: `Data sudah ada untuk ${String(field)}` },
-                    { status: 400 }
-                );
-            }
-
-            logger.error('[MobileAuth] Prisma error:', prismaError.code);
-            return NextResponse.json(
-                { success: false, error: 'Terjadi kesalahan database' },
-                { status: 500 }
-            );
-        }
-
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan server';
-        logger.error('[MobileAuth] Register error:', message);
-
-        return NextResponse.json(
-            { success: false, error: message },
-            { status: 500 }
-        );
+    } catch (error) {
+        return handleApiError(error);
     }
 }

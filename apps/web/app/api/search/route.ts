@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) {
-            return NextResponse.json({ success: true, data: [] });
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
         // Rate limiting: 30 requests per minute per IP for search
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         const query = searchParams.get('q');
 
         if (!query || query.trim().length < 2) {
-            return NextResponse.json({ success: true, data: [] });
+            return NextResponse.json({ success: false, error: 'Query must be at least 2 characters' }, { status: 400 });
         }
 
         const searchTerm = query.trim();

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { logger } from "@/lib/logger";
 import {
     Activity,
     Server,
@@ -193,7 +194,7 @@ export default function PlatformMonitoringPage() {
                 throw new Error(json.error || "Failed to fetch monitoring data");
             }
         } catch (err) {
-            console.error("[Monitoring Fetch Error]", err);
+            logger.error("[Monitoring] Failed to fetch monitoring data", err);
             setError(err instanceof Error ? err.message : "Failed to load monitoring data");
         } finally {
             setLoading(false);

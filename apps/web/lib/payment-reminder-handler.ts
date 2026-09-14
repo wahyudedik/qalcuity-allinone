@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { sendPaymentReminderEmail } from '@/lib/email';
 import type { CronTaskResult } from '@/lib/cron-scheduler';
 import { logger } from '@/lib/logger';
+import { notifyNewNotification } from '@/app/api/notifications/stream/route';
 
 export async function runPaymentReminder(): Promise<CronTaskResult> {
     const now = new Date();
@@ -128,6 +129,13 @@ export async function runPaymentReminder(): Promise<CronTaskResult> {
                         message: `Invoice ${invoice.invoiceNumber} is ${daysOverdue} days overdue (Rp ${Number(invoice.total).toLocaleString('id-ID')}).`,
                         link: `/dashboard/finance/invoices/${invoice.id}`,
                     })),
+                });
+
+                // Push real-time notification via SSE
+                notifyNewNotification(tenant.id, {
+                    id: `payment_overdue_${invoice.id}`,
+                    title: `Payment Overdue: ${invoice.invoiceNumber}`,
+                    type: 'payment_overdue',
                 });
             }
 

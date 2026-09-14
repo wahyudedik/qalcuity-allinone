@@ -11,6 +11,7 @@ import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { MSG } from '@/lib/api-messages';
 import { logger } from '@/lib/logger';
+import { notifyKitchenUpdate } from '../stream/route';
 
 export async function GET(request: Request) {
     try {
@@ -194,6 +195,9 @@ export async function POST(request: Request) {
             newValues: { orderNumber, status: order.status, priority: order.priority },
             request,
         });
+
+        // Notify SSE subscribers for real-time kitchen display updates
+        notifyKitchenUpdate(tenantId);
 
         return NextResponse.json({
             success: true,

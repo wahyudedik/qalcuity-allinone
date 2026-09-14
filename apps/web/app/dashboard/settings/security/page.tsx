@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { formatDateTime } from '@/lib/utils'
 import {
     Key, Shield, Monitor, AlertTriangle, Loader2, CheckCircle, X,
@@ -119,7 +120,7 @@ export default function SecuritySettingsPage() {
                 setTwoFaStatus(data.data)
             }
         } catch (error) {
-            console.error('Failed to fetch 2FA status:', error);
+            logger.error('[Security] Failed to fetch 2FA status', error);
         }
     }, [])
 
@@ -132,7 +133,7 @@ export default function SecuritySettingsPage() {
                 setSessions(data.data)
             }
         } catch (error) {
-            console.error('Failed to fetch sessions:', error);
+            logger.error('[Security] Failed to fetch sessions', error);
         } finally {
             setSessionsLoading(false)
         }
@@ -148,7 +149,7 @@ export default function SecuritySettingsPage() {
                 setLoginPagination(data.pagination)
             }
         } catch (error) {
-            console.error('Failed to fetch login history:', error);
+            logger.error('[Security] Failed to fetch login history', error);
         } finally {
             setLoginHistoryLoading(false)
         }

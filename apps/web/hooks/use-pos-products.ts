@@ -12,6 +12,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Product } from '@/lib/pos-offline/types';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // Types
@@ -123,7 +124,7 @@ export function usePosProducts(terminalId?: string): UsePosProductsReturn {
 
             const message = err instanceof Error ? err.message : 'Failed to load products';
             setError(message);
-            console.error('[POS-Products Hook] Fetch failed:', err);
+            logger.error('[POS-Products Hook] Fetch failed:', err);
         } finally {
             if (isMountedRef.current) {
                 setLoading(false);
@@ -165,7 +166,7 @@ export function usePosProducts(terminalId?: string): UsePosProductsReturn {
                     p.sku.toLowerCase().includes(trimmedQuery)
             );
         } catch (err) {
-            console.error('[POS-Products Hook] Search failed:', err);
+            logger.error('[POS-Products Hook] Search failed:', err);
 
             // Fallback: filter the currently loaded products
             const trimmedQuery = query.toLowerCase().trim();
@@ -189,7 +190,7 @@ export function usePosProducts(terminalId?: string): UsePosProductsReturn {
         try {
             const isOnline = typeof navigator !== 'undefined' && navigator.onLine;
             if (!isOnline) {
-                console.warn('[POS-Products Hook] Cannot refresh cache while offline');
+                logger.warn('[POS-Products Hook] Cannot refresh cache while offline');
                 return;
             }
 
@@ -218,7 +219,7 @@ export function usePosProducts(terminalId?: string): UsePosProductsReturn {
 
             const message = err instanceof Error ? err.message : 'Failed to refresh cache';
             setError(message);
-            console.error('[POS-Products Hook] Cache refresh failed:', err);
+            logger.error('[POS-Products Hook] Cache refresh failed:', err);
         } finally {
             if (isMountedRef.current) {
                 setLoading(false);
@@ -265,7 +266,7 @@ export function usePosProducts(terminalId?: string): UsePosProductsReturn {
 
         const handleOnline = () => {
             if (isMountedRef.current) {
-                console.log('[POS-Products Hook] Back online, refreshing products');
+                logger.info('[POS-Products Hook] Back online, refreshing products');
                 void handleFetchProducts();
             }
         };

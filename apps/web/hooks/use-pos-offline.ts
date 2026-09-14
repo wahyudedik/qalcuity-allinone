@@ -14,6 +14,7 @@ import type { SyncStatus } from '@/lib/pos-offline/sync';
 import { SyncEngine } from '@/lib/pos-offline/sync';
 import { getPendingTransactions, getCachedProducts, searchCachedProducts } from '@/lib/pos-offline/db';
 import type { Product, PendingTransaction } from '@/lib/pos-offline/types';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // Types
@@ -100,12 +101,12 @@ export function usePosOffline(): UsePosOfflineReturn {
         if (typeof window === 'undefined') return;
 
         const handleOnline = () => {
-            console.log('[POS-Offline Hook] Network restored');
+            logger.info('[POS-Offline Hook] Network restored');
             setIsOnline(true);
         };
 
         const handleOffline = () => {
-            console.log('[POS-Offline Hook] Network lost');
+            logger.info('[POS-Offline Hook] Network lost');
             setIsOnline(false);
         };
 
@@ -170,7 +171,7 @@ export function usePosOffline(): UsePosOfflineReturn {
         const engine = SyncEngine.getInstance();
         void engine.getQueueSize().then((size) => {
             if (size > 0) {
-                console.log(`[POS-Offline Hook] Back online with ${size} pending items, triggering sync`);
+                logger.info(`[POS-Offline Hook] Back online with ${size} pending items, triggering sync`);
                 void engine.processQueue();
             }
         });
@@ -194,7 +195,7 @@ export function usePosOffline(): UsePosOfflineReturn {
             setIsOnline(status.isOnline);
             setPendingCount(status.pendingCount + status.syncingCount);
         } catch (error) {
-            console.error('[POS-Offline Hook] Sync failed:', error);
+            logger.error('[POS-Offline Hook] Sync failed:', error);
         }
     }, []);
 
@@ -205,7 +206,7 @@ export function usePosOffline(): UsePosOfflineReturn {
         try {
             return await getCachedProducts();
         } catch (error) {
-            console.error('[POS-Offline Hook] Failed to get offline products:', error);
+            logger.error('[POS-Offline Hook] Failed to get offline products:', error);
             return [];
         }
     }, []);
@@ -217,7 +218,7 @@ export function usePosOffline(): UsePosOfflineReturn {
         try {
             return await searchCachedProducts(query);
         } catch (error) {
-            console.error('[POS-Offline Hook] Failed to search offline products:', error);
+            logger.error('[POS-Offline Hook] Failed to search offline products:', error);
             return [];
         }
     }, []);
@@ -236,7 +237,7 @@ export function usePosOffline(): UsePosOfflineReturn {
             setSyncStatus(status);
             setPendingCount(status.pendingCount + status.syncingCount);
         } catch (error) {
-            console.error('[POS-Offline Hook] Failed to create offline transaction:', error);
+            logger.error('[POS-Offline Hook] Failed to create offline transaction:', error);
             throw error;
         }
     }, []);
@@ -252,7 +253,7 @@ export function usePosOffline(): UsePosOfflineReturn {
             setIsOnline(status.isOnline);
             setPendingCount(status.pendingCount + status.syncingCount);
         } catch (error) {
-            console.error('[POS-Offline Hook] Failed to refresh sync status:', error);
+            logger.error('[POS-Offline Hook] Failed to refresh sync status:', error);
         }
     }, []);
 

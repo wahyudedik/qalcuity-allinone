@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Package, ClipboardList, AlertTriangle, Trash2, X, Plus } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
@@ -44,6 +44,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showRestockModal, setShowRestockModal] = useState(false)
+    const [restockQuantity, setRestockQuantity] = useState<number>(0)
+    const [restockNotes, setRestockNotes] = useState('')
+    const [restockSaving, setRestockSaving] = useState(false)
     const [editForm, setEditForm] = useState({
         name: '',
         description: '',
@@ -138,6 +142,44 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             }
         } catch {
             setToast({ message: t('inventory.productDetail.deleteError'), type: 'error' })
+        }
+    }
+
+    const handleRestock = async () => {
+        if (restockQuantity <= 0) {
+            setToast({ message: 'Jumlah restock harus lebih dari 0', type: 'error' })
+            return
+        }
+
+        setRestockSaving(true)
+        try {
+            const res = await fetch(`/api/inventory/products/${params.id}/restock`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    quantity: restockQuantity,
+                    notes: restockNotes || null,
+                }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast({ message: data.message || 'Stok berhasil ditambahkan', type: 'success' })
+                setShowRestockModal(false)
+                setRestockQuantity(0)
+                setRestockNotes('')
+                // Refresh product data
+                const updated = await fetch(`/api/inventory/products/${params.id}`)
+                const updatedData = await updated.json()
+                if (updatedData.success) {
+                    setProduct(updatedData.data)
+                }
+            } else {
+                setToast({ message: data.error || 'Gagal melakukan restock', type: 'error' })
+            }
+        } catch {
+            setToast({ message: 'Gagal melakukan restock', type: 'error' })
+        } finally {
+            setRestockSaving(false)
         }
     }
 
@@ -306,10 +348,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                                 <ClipboardList className="h-4 w-4" />
                                 {t('inventory.productDetail.stockHistory')}
                             </button>
-                            <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed" title={t('common.comingSoon')}>
+                            <button
+                                onClick={() => {
+                                    setRestockQuantity(0)
+                                    setRestockNotes('')
+                                    setShowRestockModal(true)
+                                }}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <Package className="h-4 w-4" />
                                 {t('inventory.productDetail.restock')}
-                            </span>
+                            </button>
                             {canMutate && (
                                 <button onClick={handleDelete} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
                                     <Trash2 className="h-4 w-4" />
@@ -341,6 +390,81 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 cancelText="Batal"
                 variant="danger"
             />
+
+            {/* Restock Modal */}
+            {showRestockModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">Restock Produk</h3>
+                            <button onClick={() => setShowRestockModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="mb-4 rounded-lg bg-blue-50 p-3">
+                            <p className="text-sm text-blue-800">
+                                Stok saat ini: <span className="font-bold">{product.stock}</span> {product.unit}
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Jumlah Restock <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    value={restockQuantity || ''}
+                                    onChange={(e) => setRestockQuantity(parseInt(e.target.value) || 0)}
+                                    placeholder="Masukkan jumlah"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                {restockQuantity > 0 && (
+                                    <p className="mt-1 text-sm text-green-600">
+                                        Stok setelah restock: <span className="font-bold">{product.stock + restockQuantity}</span> {product.unit}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Catatan (opsional)
+                                </label>
+                                <textarea
+                                    value={restockNotes}
+                                    onChange={(e) => setRestockNotes(e.target.value)}
+                                    placeholder="Catatan restock..."
+                                    rows={2}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() => setShowRestockModal(false)}
+                                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleRestock}
+                                disabled={restockSaving || restockQuantity <= 0}
+                                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {restockSaving ? (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                ) : (
+                                    <Plus className="h-4 w-4" />
+                                )}
+                                {restockSaving ? 'Menyimpan...' : 'Restock'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

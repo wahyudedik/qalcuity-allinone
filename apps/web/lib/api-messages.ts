@@ -45,6 +45,9 @@ export const MSG = {
     RESET_TOKEN_INVALID_OR_EXPIRED: 'Reset token is invalid or has expired.',
     PASSWORD_RESET_SUCCESS: 'Password has been reset successfully.',
     RESET_TOKEN_REQUIRED: 'Reset token and new password are required.',
+    INVALID_CURRENT_PASSWORD: 'Current password is incorrect',
+    PASSWORD_CHANGED_SUCCESS: 'Password changed successfully',
+    REGISTRATION_DISABLED: 'Registration is currently disabled',
 
     // ---------------------------------------------------------------------------
     // Users / Roles
@@ -97,6 +100,8 @@ export const MSG = {
     WAREHOUSE_NOT_FOUND: 'Warehouse not found',
     WAREHOUSE_DELETED: 'Warehouse deleted successfully',
     STOCK_OPNAME_NOT_FOUND: 'Stock opname not found',
+    RESTOCK_SUCCESS: 'Stock restocked successfully',
+    RESTOCK_FAILED: 'Failed to restock product',
 
     // ---------------------------------------------------------------------------
     // Finance

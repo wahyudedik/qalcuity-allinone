@@ -19,9 +19,9 @@
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 import { authenticateMobileUser } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { logger } from '@/lib/logger';
 import { mobileLoginSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function POST(request: Request) {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:mobile-login:${ip}`, 5, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Too many login attempts. Please try again in 5 minutes.', code: 'RATE_LIMITED' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS, code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -59,21 +59,6 @@ export async function POST(request: Request) {
             refreshToken: result.refreshToken,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'An internal server error occurred';
-
-        // Determine appropriate status code
-        let status = 500;
-        if (message.includes('not registered') || message.includes('Password salah')) {
-            status = 401;
-        } else if (message.includes('dinonaktifkan')) {
-            status = 403;
-        }
-
-        logger.error('[MobileAuth] Login error:', message);
-
-        return NextResponse.json(
-            { success: false, error: message },
-            { status }
-        );
+        return handleApiError(error);
     }
 }

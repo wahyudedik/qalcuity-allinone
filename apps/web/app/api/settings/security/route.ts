@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
         if (!user) {
             return NextResponse.json(
-                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
+                { success: false, error: MSG.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
                 { status: 404 }
             )
         }
@@ -109,7 +109,7 @@ export async function PUT(request: Request) {
 
         if (!user) {
             return NextResponse.json(
-                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
+                { success: false, error: MSG.USER_NOT_FOUND, code: 'USER_NOT_FOUND' },
                 { status: 404 }
             )
         }
@@ -118,7 +118,7 @@ export async function PUT(request: Request) {
         const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash)
         if (!isCurrentPasswordValid) {
             return NextResponse.json(
-                { success: false, error: 'Current password is incorrect', code: 'INVALID_PASSWORD' },
+                { success: false, error: MSG.INVALID_CURRENT_PASSWORD, code: 'INVALID_PASSWORD' },
                 { status: 400 }
             )
         }
@@ -143,7 +143,7 @@ export async function PUT(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: 'Password berhasil diubah',
+            message: MSG.PASSWORD_CHANGED_SUCCESS,
         })
     } catch (error) {
         return handleApiError(error);

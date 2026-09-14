@@ -19,9 +19,9 @@
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
+import { handleApiError } from '@/lib/api-error';
 import { refreshMobileToken } from '@/lib/mobile-auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { logger } from '@/lib/logger';
 import { mobileRefreshSchema, formatZodError } from '@/lib/validation-schemas';
 
 export async function POST(request: Request) {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         const rateLimitResult = checkRateLimit(`api:mobile-refresh:${ip}`, 10, 300000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
-                { success: false, error: 'Too many attempts. Please try again in 5 minutes.', code: 'RATE_LIMITED' },
+                { success: false, error: MSG.TOO_MANY_REQUESTS, code: 'RATE_LIMITED' },
                 { status: 429 }
             );
         }
@@ -57,23 +57,6 @@ export async function POST(request: Request) {
             refreshToken: tokens.refreshToken,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'An internal server error occurred';
-
-        // JWT verification errors
-        let status = 500;
-        if (message.includes('invalid signature') || message.includes('jwt malformed') || message.includes('Token')) {
-            status = 401;
-        } else if (message.includes('expired')) {
-            status = 401;
-        } else if (message.includes('not found') || message.includes('dinonaktifkan')) {
-            status = 401;
-        }
-
-        logger.error('[MobileAuth] Refresh error:', message);
-
-        return NextResponse.json(
-            { success: false, error: 'Token is invalid or has expired', code: 'INVALID_TOKEN' },
-            { status }
-        );
+        return handleApiError(error);
     }
 }

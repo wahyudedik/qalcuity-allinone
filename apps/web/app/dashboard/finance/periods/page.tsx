@@ -3,6 +3,7 @@ import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -146,7 +147,7 @@ export default function PeriodsPage() {
                 setPeriodDetail(data.data)
             }
         } catch (error) {
-            console.error('Failed to fetch period detail:', error);
+            logger.error('[Periods] Failed to fetch period detail', error);
         }
     }
 

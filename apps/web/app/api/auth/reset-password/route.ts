@@ -9,7 +9,7 @@ import { z } from "zod";
 
 // ─── Reset Password Schema ────────────────────
 const resetPasswordSchema = z.object({
-    token: z.string().min(1, "Token is required"),
+    token: z.string().min(1, MSG.TOKEN_REQUIRED),
     newPassword: z.string().min(8, MSG.PASSWORD_MIN_LENGTH),
 });
 

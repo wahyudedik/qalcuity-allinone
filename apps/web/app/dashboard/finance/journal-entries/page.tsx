@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
+import { logger } from '@/lib/logger'
 import { useSession } from 'next-auth/react'
 import {
     Search,
@@ -154,7 +155,7 @@ export default function JournalEntriesPage() {
                 setAccounts(data.data || [])
             }
         } catch (error) {
-            console.error('Failed to fetch accounts:', error);
+            logger.error('[JournalEntries] Failed to fetch accounts', error);
         }
     }
 

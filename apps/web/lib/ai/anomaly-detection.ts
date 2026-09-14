@@ -7,6 +7,19 @@ import { Prisma } from '@prisma/client';
 import { getAIProvider, type AIChatMessage } from './provider';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import {
+    mean,
+    descriptiveStats,
+    percentiles,
+    detectOutliersZScore,
+    detectOutliersIQR,
+    detectSpikes,
+    detectUnusualPatterns,
+    calculateVelocity,
+    detectSeasonality,
+    generateStatisticalSummary,
+    type StatisticalSummary,
+} from './statistical-analysis';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -200,6 +213,42 @@ export const ANOMALY_RULES: AnomalyRule[] = [
         description: 'Invoice dengan dueDate lebih dari 90 hari dari createdAt (indikasi backdating)',
         severity: 'MEDIUM',
         category: 'timing',
+    },
+    // ── Statistical-based rules (enhanced detection) ──
+    {
+        id: 'STATISTICAL_OUTLIER',
+        name: 'Outlier Statistik',
+        description: 'Transaksi yang merupakan outlier berdasarkan Z-score (>2.5) atau IQR method',
+        severity: 'HIGH',
+        category: 'statistical',
+    },
+    {
+        id: 'TREND_BREAK',
+        name: 'Patahan Tren',
+        description: 'Perubahan mendadak dalam pola transaksi (spike/drop > 2σ dari rolling average)',
+        severity: 'HIGH',
+        category: 'statistical',
+    },
+    {
+        id: 'PATTERN_ANOMALY',
+        name: 'Anomali Pola',
+        description: 'Pola tidak biasa (jumlah berturut-turut sama, kluster angka bulat)',
+        severity: 'MEDIUM',
+        category: 'statistical',
+    },
+    {
+        id: 'VELOCITY_ANOMALY',
+        name: 'Anomali Kecepatan',
+        description: 'Jumlah transaksi per hari tidak wajar (lebih/fewer dari rata-rata ± 2σ)',
+        severity: 'MEDIUM',
+        category: 'statistical',
+    },
+    {
+        id: 'SEASONAL_ANOMALY',
+        name: 'Anomali Musiman',
+        description: 'Transaksi yang menyimpang dari pola musiman (misal: aktivitas weekend untuk bisnis weekday-only)',
+        severity: 'MEDIUM',
+        category: 'statistical',
     },
 ];
 
@@ -1014,6 +1063,449 @@ async function detectBackdatedTransactions(
     return anomalies;
 }
 
+// ─── Statistical Detection Functions ──────────────────────────────────────────
+
+/**
+ * Rule: STATISTICAL_OUTLIER
+ * Deteksi transaksi yang merupakan outlier berdasarkan Z-score (>2.5) atau IQR method.
+ * Menggunakan statistical-analysis module untuk analisis yang lebih robust.
+ */
+async function detectStatisticalOutliers(
+    tenantId: string,
+    invoices?: InvoiceRecord[]
+): Promise<AnomalyDetection[]> {
+    const anomalies: AnomalyDetection[] = [];
+
+    try {
+        const data = invoices ?? await prisma.invoice.findMany({
+            where: { tenantId },
+            select: {
+                id: true, invoiceNumber: true, total: true, createdAt: true,
+                subtotal: true, taxRate: true, taxAmount: true,
+                contactId: true, dueDate: true, status: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+        });
+
+        if (data.length < 5) return [];
+
+        const values = data.map(inv => Number(inv.total));
+        const zscoreOutliers = detectOutliersZScore(values, 2.5);
+        const iqrOutliers = detectOutliersIQR(values);
+
+        // Merge outliers from both methods (union)
+        const outlierIndices = new Set<number>();
+        for (const o of zscoreOutliers) outlierIndices.add(o.index);
+        for (const o of iqrOutliers) outlierIndices.add(o.index);
+
+        const stats = descriptiveStats(values);
+
+        for (const idx of outlierIndices) {
+            const inv = data[idx];
+            if (!inv) continue;
+            const amount = Number(inv.total);
+            const zscore = zscoreOutliers.find(o => o.index === idx);
+            const iqrResult = iqrOutliers.find(o => o.index === idx);
+
+            const methodDetail = zscore
+                ? `Z-score: ${zscore.score}`
+                : iqrResult
+                    ? `IQR score: ${iqrResult.score}`
+                    : 'Combined methods';
+
+            anomalies.push({
+                id: `anomaly-${inv.id}-stat-outlier`,
+                ruleId: 'STATISTICAL_OUTLIER',
+                ruleName: 'Outlier Statistik',
+                severity: 'HIGH',
+                entityType: 'INVOICE',
+                entityId: inv.id,
+                entityDescription: `Invoice ${inv.invoiceNumber || inv.id}`,
+                message: `Invoice senilai Rp ${amount.toLocaleString('id-ID')} adalah outlier statistik (${methodDetail}). Rata-rata: Rp ${Math.round(stats.mean).toLocaleString('id-ID')}, StdDev: Rp ${Math.round(stats.standardDeviation).toLocaleString('id-ID')}`,
+                details: {
+                    amount,
+                    mean: Math.round(stats.mean),
+                    median: Math.round(stats.median),
+                    standardDeviation: Math.round(stats.standardDeviation),
+                    zscore: zscore?.score ?? null,
+                    iqrScore: iqrResult?.score ?? null,
+                    method: methodDetail,
+                },
+                suggestedActions: [
+                    'Verifikasi jumlah invoice — nilai menyimpang signifikan dari distribusi normal',
+                    'Cek apakah transaksi ini memiliki justifikasi bisnis yang kuat',
+                ],
+                detectedAt: inv.createdAt.toISOString(),
+                status: 'OPEN',
+            });
+        }
+    } catch (error) {
+        logger.error('[AnomalyDetection] Statistical outlier check failed', error);
+    }
+
+    return anomalies;
+}
+
+/**
+ * Rule: TREND_BREAK
+ * Deteksi spike/drop mendadak (> 2σ dari rolling average 7 hari).
+ */
+async function detectTrendBreaks(
+    tenantId: string,
+    invoices?: InvoiceRecord[]
+): Promise<AnomalyDetection[]> {
+    const anomalies: AnomalyDetection[] = [];
+
+    try {
+        const data = (invoices ?? await prisma.invoice.findMany({
+            where: { tenantId },
+            select: {
+                id: true, invoiceNumber: true, total: true, createdAt: true,
+                subtotal: true, taxRate: true, taxAmount: true,
+                contactId: true, dueDate: true, status: true,
+            },
+            orderBy: { createdAt: 'asc' },
+        })) as InvoiceRecord[];
+
+        if (data.length < 8) return [];
+
+        // Use daily aggregates for trend analysis
+        const dailyMap = new Map<string, { total: number; count: number; records: InvoiceRecord[] }>();
+        for (const inv of data) {
+            const dayKey = inv.createdAt.toISOString().split('T')[0];
+            const existing = dailyMap.get(dayKey);
+            if (existing) {
+                existing.total += Number(inv.total);
+                existing.count++;
+                existing.records.push(inv);
+            } else {
+                dailyMap.set(dayKey, {
+                    total: Number(inv.total),
+                    count: 1,
+                    records: [inv],
+                });
+            }
+        }
+
+        const dailyEntries = Array.from(dailyMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+        const dailyAmounts = dailyEntries.map(([, d]) => d.total);
+
+        // Detect spikes/drops using 7-day rolling window
+        const spikes = detectSpikes(dailyAmounts, 7, 2);
+
+        for (const spike of spikes) {
+            const dayData = dailyEntries[spike.index];
+            if (!dayData) continue;
+            const [, dayInfo] = dayData;
+            const representativeInv = dayInfo.records[0];
+
+            const direction = spike.type === 'spike' ? 'lonjakan' : 'penurunan';
+            anomalies.push({
+                id: `anomaly-${representativeInv.id}-trend-break`,
+                ruleId: 'TREND_BREAK',
+                ruleName: 'Patahan Tren',
+                severity: 'HIGH',
+                entityType: 'INVOICE',
+                entityId: representativeInv.id,
+                entityDescription: `Invoice ${representativeInv.invoiceNumber || representativeInv.id}`,
+                message: `Terdapat ${direction} tajam pada ${dayData[0]}: Rp ${spike.value.toLocaleString('id-ID')} (${spike.deviationMultiple}x Deviasi dari rolling average Rp ${spike.rollingAverage.toLocaleString('id-ID')})`,
+                details: {
+                    dailyTotal: spike.value,
+                    rollingAverage: spike.rollingAverage,
+                    standardDeviation: spike.standardDeviation,
+                    deviationMultiple: spike.deviationMultiple,
+                    direction: spike.type,
+                    date: dayData[0],
+                    invoiceCount: dayInfo.count,
+                },
+                suggestedActions: [
+                    'Investigasi penyebab perubahan mendadak dalam volume transaksi',
+                    'Bandtingkan dengan hari-hari sebelumnya untuk memastikan ini bukan data entry error',
+                ],
+                detectedAt: representativeInv.createdAt.toISOString(),
+                status: 'OPEN',
+            });
+        }
+    } catch (error) {
+        logger.error('[AnomalyDetection] Trend break check failed', error);
+    }
+
+    return anomalies;
+}
+
+/**
+ * Rule: PATTERN_ANOMALY
+ * Deteksi pola tidak biasa: jumlah transaksi berturut-turut sama, kluster angka bulat.
+ */
+async function detectPatternAnomalies(
+    tenantId: string,
+    invoices?: InvoiceRecord[]
+): Promise<AnomalyDetection[]> {
+    const anomalies: AnomalyDetection[] = [];
+
+    try {
+        const data = (invoices ?? await prisma.invoice.findMany({
+            where: { tenantId },
+            select: {
+                id: true, invoiceNumber: true, total: true, createdAt: true,
+                subtotal: true, taxRate: true, taxAmount: true,
+                contactId: true, dueDate: true, status: true,
+            },
+            orderBy: { createdAt: 'asc' },
+            take: 200,
+        })) as InvoiceRecord[];
+
+        if (data.length < 3) return [];
+
+        const values = data.map(inv => Number(inv.total));
+        const patterns = detectUnusualPatterns(values, {
+            consecutiveThreshold: 3,
+            roundNumberDivisor: 100000,
+            clusterThreshold: 3,
+        });
+
+        for (const pattern of patterns) {
+            // Use the last entity in the pattern group as representative
+            const lastIdx = pattern.indices[pattern.indices.length - 1];
+            const representativeInv = data[lastIdx];
+            if (!representativeInv) continue;
+
+            anomalies.push({
+                id: `anomaly-${representativeInv.id}-pattern-${pattern.type}`,
+                ruleId: 'PATTERN_ANOMALY',
+                ruleName: 'Anomali Pola',
+                severity: 'MEDIUM',
+                entityType: 'INVOICE',
+                entityId: representativeInv.id,
+                entityDescription: `Invoice ${representativeInv.invoiceNumber || representativeInv.id}`,
+                message: pattern.description,
+                details: {
+                    patternType: pattern.type,
+                    affectedCount: pattern.indices.length,
+                    totalTransactions: data.length,
+                    percentage: Math.round((pattern.indices.length / data.length) * 100),
+                    sampleValues: pattern.values.slice(0, 5).map(v => v.toLocaleString('id-ID')),
+                },
+                suggestedActions: pattern.type === 'consecutive_identical'
+                    ? [
+                        'Periksa apakah transaksi dengan jumlah sama ini sah',
+                        'Kemungkinan batch processing atau manipulasi data',
+                    ]
+                    : [
+                        'Verifikasi apakah jumlah bulat ini sesuai dengan dokumen asli',
+                        'Pertimbangkan untuk menggunakan persetujuan manual untuk transaksi bulat',
+                    ],
+                detectedAt: representativeInv.createdAt.toISOString(),
+                status: 'OPEN',
+            });
+        }
+    } catch (error) {
+        logger.error('[AnomalyDetection] Pattern anomaly check failed', error);
+    }
+
+    return anomalies;
+}
+
+/**
+ * Rule: VELOCITY_ANOMALY
+ * Deteksi kecepatan transaksi tidak wajar (significantly more/fewer transactions than average).
+ */
+async function detectVelocityAnomalies(
+    tenantId: string,
+    invoices?: InvoiceRecord[]
+): Promise<AnomalyDetection[]> {
+    const anomalies: AnomalyDetection[] = [];
+
+    try {
+        const data = (invoices ?? await prisma.invoice.findMany({
+            where: { tenantId },
+            select: {
+                id: true, invoiceNumber: true, total: true, createdAt: true,
+                subtotal: true, taxRate: true, taxAmount: true,
+                contactId: true, dueDate: true, status: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        })) as InvoiceRecord[];
+
+        if (data.length < 10) return [];
+
+        const timestamps = data.map(inv => inv.createdAt);
+        const velocity = calculateVelocity(timestamps);
+
+        if (velocity.daily.length < 5) return [];
+
+        const velMean = velocity.average;
+        const velStd = velocity.stdDev;
+        if (velStd === 0) return [];
+
+        // Group invoices by day
+        const dayMap = new Map<string, InvoiceRecord[]>();
+        for (const inv of data) {
+            const dayKey = inv.createdAt.toISOString().split('T')[0];
+            const existing = dayMap.get(dayKey);
+            if (existing) {
+                existing.push(inv);
+            } else {
+                dayMap.set(dayKey, [inv]);
+            }
+        }
+
+        // Check each day for velocity anomaly
+        for (const [dayKey, dayInvoices] of dayMap) {
+            const count = dayInvoices.length;
+            const z = (count - velMean) / velStd;
+
+            if (Math.abs(z) > 2) {
+                const representativeInv = dayInvoices[0];
+                const direction = z > 0 ? 'jauh lebih banyak' : 'jauh lebih sedikit';
+                anomalies.push({
+                    id: `anomaly-${representativeInv.id}-velocity`,
+                    ruleId: 'VELOCITY_ANOMALY',
+                    ruleName: 'Anomali Kecepatan',
+                    severity: 'MEDIUM',
+                    entityType: 'INVOICE',
+                    entityId: representativeInv.id,
+                    entityDescription: `Invoice ${representativeInv.invoiceNumber || representativeInv.id}`,
+                    message: `Pada ${dayKey}, terdapat ${count} transaksi — ${direction} dari rata-rata harian (${velMean.toFixed(1)} ± ${velStd.toFixed(1)})`,
+                    details: {
+                        date: dayKey,
+                        transactionCount: count,
+                        dailyAverage: Math.round(velMean * 100) / 100,
+                        dailyStdDev: Math.round(velStd * 100) / 100,
+                        zScore: Math.round(z * 100) / 100,
+                        direction: z > 0 ? 'high' : 'low',
+                    },
+                    suggestedActions: [
+                        'Investigasi penyebab lonjakan/pengurangan volume transaksi',
+                        'Periksa apakah ada batch processing atau data entry error',
+                    ],
+                    detectedAt: representativeInv.createdAt.toISOString(),
+                    status: 'OPEN',
+                });
+            }
+        }
+    } catch (error) {
+        logger.error('[AnomalyDetection] Velocity anomaly check failed', error);
+    }
+
+    return anomalies;
+}
+
+/**
+ * Rule: SEASONAL_ANOMALY
+ * Deteksi transaksi yang menyimpang dari pola musiman
+ * (misal: aktivitas weekend untuk bisnis yang biasanya weekday-only).
+ */
+async function detectSeasonalAnomalies(
+    tenantId: string,
+    invoices?: InvoiceRecord[]
+): Promise<AnomalyDetection[]> {
+    const anomalies: AnomalyDetection[] = [];
+
+    try {
+        const data = (invoices ?? await prisma.invoice.findMany({
+            where: { tenantId },
+            select: {
+                id: true, invoiceNumber: true, total: true, createdAt: true,
+                subtotal: true, taxRate: true, taxAmount: true,
+                contactId: true, dueDate: true, status: true,
+            },
+            orderBy: { createdAt: 'asc' },
+        })) as InvoiceRecord[];
+
+        if (data.length < 14) return [];
+
+        const timestamps = data.map(inv => inv.createdAt);
+        const values = data.map(inv => Number(inv.total));
+        const seasonality = detectSeasonality(timestamps, values);
+
+        if (!seasonality.hasSeasonality) return [];
+
+        // Check for weekend activity when business is predominantly weekday
+        const weekdayAvg = seasonality.dayOfWeekDistribution.slice(1, 6)
+            .reduce((s, v) => s + v, 0) / 5;
+        const weekendAvg = (seasonality.dayOfWeekDistribution[0] + seasonality.dayOfWeekDistribution[6]) / 2;
+
+        // If weekend activity is detected but business is predominantly weekday
+        if (weekdayAvg > 0 && weekendAvg > weekdayAvg * 0.5) {
+            for (const inv of data) {
+                const day = inv.createdAt.getDay();
+                if (day === 0 || day === 6) {
+                    anomalies.push({
+                        id: `anomaly-${inv.id}-seasonal`,
+                        ruleId: 'SEASONAL_ANOMALY',
+                        ruleName: 'Anomali Musiman',
+                        severity: 'MEDIUM',
+                        entityType: 'INVOICE',
+                        entityId: inv.id,
+                        entityDescription: `Invoice ${inv.invoiceNumber || inv.id}`,
+                        message: `Invoice dibuat pada hari ${day === 0 ? 'Minggu' : 'Sabtu'} — aktivitas weekend lebih tinggi dari pola normal bisnis`,
+                        details: {
+                            dayOfWeek: day === 0 ? 'Minggu' : 'Sabtu',
+                            weekdayAverage: Math.round(weekdayAvg * 100) / 100,
+                            weekendAverage: Math.round(weekendAvg * 100) / 100,
+                            seasonalityPattern: seasonality.pattern,
+                            seasonalityConfidence: Math.round(seasonality.confidence * 100) / 100,
+                            createdAt: inv.createdAt.toISOString(),
+                        },
+                        suggestedActions: [
+                            'Pastikan transaksi weekend ini sah dan terdokumentasi',
+                            'Periksa apakah user yang membuat transaksi adalah orang yang tepat',
+                        ],
+                        detectedAt: inv.createdAt.toISOString(),
+                        status: 'OPEN',
+                    });
+                }
+            }
+        }
+
+        // Also check for daily pattern: transactions at unusual hours
+        const hourDistribution = seasonality.hourDistribution;
+        const activeHours = hourDistribution.filter(h => h > 0);
+        if (activeHours.length > 0) {
+            const avgHourlyActivity = mean(activeHours);
+            for (let h = 0; h < 24; h++) {
+                if (hourDistribution[h] > avgHourlyActivity * 3 && (h < 6 || h > 22)) {
+                    // High activity at unusual hours — flag invoices created during these hours
+                    for (const inv of data) {
+                        if (inv.createdAt.getHours() === h) {
+                            anomalies.push({
+                                id: `anomaly-${inv.id}-seasonal-hour`,
+                                ruleId: 'SEASONAL_ANOMALY',
+                                ruleName: 'Anomali Musiman',
+                                severity: 'MEDIUM',
+                                entityType: 'INVOICE',
+                                entityId: inv.id,
+                                entityDescription: `Invoice ${inv.invoiceNumber || inv.id}`,
+                                message: `Invoice dibuat pada pukul ${String(h).padStart(2, '0')}:00 — jam tidak wajar untuk pola aktivitas bisnis ini`,
+                                details: {
+                                    hour: h,
+                                    hourlyActivity: hourDistribution[h],
+                                    averageActivity: Math.round(avgHourlyActivity * 100) / 100,
+                                    ratio: Math.round((hourDistribution[h] / avgHourlyActivity) * 100) / 100,
+                                    createdAt: inv.createdAt.toISOString(),
+                                },
+                                suggestedActions: [
+                                    'Verifikasi apakah transaksi jam malam ini sah',
+                                    'Periksa apakah ada scheduled task atau automasi',
+                                ],
+                                detectedAt: inv.createdAt.toISOString(),
+                                status: 'OPEN',
+                            });
+                            break; // Only flag once per hour bucket
+                        }
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        logger.error('[AnomalyDetection] Seasonal anomaly check failed', error);
+    }
+
+    return anomalies;
+}
+
 // ─── Entity-Extension Detectors (Payment, PO, JournalEntry) ─────────────────
 
 /**
@@ -1446,6 +1938,28 @@ async function analyzeWithAI(
 
     const provider = getAIProvider();
 
+    // ── Build statistical summary for AI context ──
+    const amounts = anomalies
+        .map(a => a.details?.amount as number)
+        .filter((v): v is number => typeof v === 'number' && v > 0);
+
+    let statisticalContext = '';
+    if (amounts.length >= 3) {
+        const stats = descriptiveStats(amounts);
+        const p = percentiles(amounts);
+        const zscoreOutliers = detectOutliersZScore(amounts);
+        statisticalContext = `
+Statistical Summary dari transaksi bermasalah:
+- Jumlah transaksi: ${stats.count}
+- Rata-rata: Rp ${Math.round(stats.mean).toLocaleString('id-ID')}
+- Median: Rp ${Math.round(stats.median).toLocaleString('id-ID')}
+- Standar Deviasi: Rp ${Math.round(stats.standardDeviation).toLocaleString('id-ID')}
+- Min: Rp ${Math.round(stats.min).toLocaleString('id-ID')}, Max: Rp ${Math.round(stats.max).toLocaleString('id-ID')}
+- P25: Rp ${Math.round(p.p25).toLocaleString('id-ID')}, P75: Rp ${Math.round(p.p75).toLocaleString('id-ID')}, P95: Rp ${Math.round(p.p95).toLocaleString('id-ID')}
+- IQR: Rp ${Math.round(p.iqr).toLocaleString('id-ID')}
+- Outlier (Z-score > 2.5): ${zscoreOutliers.length} dari ${amounts.length} transaksi`;
+    }
+
     const anomalySummary = anomalies.slice(0, 10).map((a) => ({
         rule: a.ruleName,
         severity: a.severity,
@@ -1458,9 +1972,10 @@ async function analyzeWithAI(
             role: 'system',
             content: `Anda adalah AI Security Analyst untuk sistem akuntansi bisnis.
 Analisis anomali transaksi berikut dan berikan:
-1. Skor risiko (1-10) untuk setiap anomali
-2. Saran tindakan yang lebih spesifik
-3. Identifikasi pola yang mungkin terlewatkan
+1. Skor risiko (1-10) untuk setiap anomali — pertimbangkan konteks statistik
+2. Saran tindakan yang lebih spesifik berdasarkan data statistik
+3. Identifikasi pola yang mungkin terlewatkan (correlation antar anomali)
+4. Rekomendasi prioritas investigasi berdasarkan risiko
 
 Return dalam format JSON:
 {
@@ -1468,50 +1983,80 @@ Return dalam format JSON:
     {
       "originalIndex": 0,
       "aiRiskScore": 7,
-      "aiSuggestion": "saran spesifik",
+      "aiSuggestion": "saran spesifik dengan justifikasi statistik",
       "additionalFindings": "temuan tambahan jika ada"
     }
   ],
-  "patternAnalysis": "analisis pola umum"
+  "patternAnalysis": "analisis pola umum dengan insight statistik",
+  "statisticalInsight": "ringkasan insight dari data statistik yang tersedia"
 }`,
         },
         {
             role: 'user',
-            content: `Analisis anomali transaksi berikut:\n\n${JSON.stringify(anomalySummary, null, 2)}`,
+            content: `Analisis anomali transaksi berikut:${statisticalContext}\n\nDaftar Anomali:\n${JSON.stringify(anomalySummary, null, 2)}`,
         },
     ];
 
     try {
         const response = await provider.chat(messages, {
             temperature: 0.3,
-            maxTokens: 1500,
+            maxTokens: 2000,
         });
 
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const aiResult = JSON.parse(jsonMatch[0]) as {
-                enhancedAnomalies?: Array<{
-                    originalIndex: number;
-                    aiRiskScore: number;
-                    aiSuggestion: string;
-                }>;
-            };
+        // Robust JSON parsing with fallback
+        interface AIEnhancedAnomaly {
+            originalIndex: number;
+            aiRiskScore: number;
+            aiSuggestion: string;
+            additionalFindings?: string;
+        }
+        interface AIResult {
+            enhancedAnomalies?: AIEnhancedAnomaly[];
+            patternAnalysis?: string;
+            statisticalInsight?: string;
+        }
 
-            // Enrich anomalies with AI insights
-            if (aiResult.enhancedAnomalies) {
-                for (const enhancement of aiResult.enhancedAnomalies) {
-                    if (anomalies[enhancement.originalIndex]) {
-                        anomalies[enhancement.originalIndex].details = {
-                            ...anomalies[enhancement.originalIndex].details,
-                            aiRiskScore: enhancement.aiRiskScore,
-                            aiSuggestion: enhancement.aiSuggestion,
-                        };
-                        // Escalate severity if AI risk score is high
-                        if (enhancement.aiRiskScore >= 8 && anomalies[enhancement.originalIndex].severity !== 'CRITICAL') {
-                            anomalies[enhancement.originalIndex].severity = 'HIGH';
-                        }
+        let aiResult: AIResult | null = null;
+
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                aiResult = JSON.parse(jsonMatch[0]) as AIResult;
+            }
+        } catch (parseError: unknown) {
+            const errMsg = parseError instanceof Error ? parseError.message : String(parseError);
+            logger.warn(`[AnomalyDetection] AI response JSON parsing failed: ${errMsg}`);
+            // Try to extract partial JSON
+            try {
+                const cleaned = response.replace(/[\r\n]+/g, ' ').match(/\{[\s\S]*\}/);
+                if (cleaned) {
+                    aiResult = JSON.parse(cleaned[0]) as AIResult;
+                }
+            } catch {
+                logger.warn('[AnomalyDetection] AI response cleanup also failed — proceeding without AI enrichment');
+            }
+        }
+
+        // Enrich anomalies with AI insights
+        if (aiResult !== null && aiResult.enhancedAnomalies) {
+            for (const enhancement of aiResult.enhancedAnomalies) {
+                if (anomalies[enhancement.originalIndex]) {
+                    anomalies[enhancement.originalIndex].details = {
+                        ...anomalies[enhancement.originalIndex].details,
+                        aiRiskScore: enhancement.aiRiskScore,
+                        aiSuggestion: enhancement.aiSuggestion,
+                        aiAdditionalFindings: enhancement.additionalFindings || null,
+                    };
+                    // Escalate severity if AI risk score is high
+                    if (enhancement.aiRiskScore >= 8 && anomalies[enhancement.originalIndex].severity !== 'CRITICAL') {
+                        anomalies[enhancement.originalIndex].severity = 'HIGH';
                     }
                 }
+            }
+
+            // Log pattern analysis if available
+            if (aiResult.patternAnalysis) {
+                logger.info(`[AnomalyDetection] AI Pattern Analysis: ${aiResult.patternAnalysis}`);
             }
         }
     } catch (error) {
@@ -1583,11 +2128,12 @@ export async function runAnomalyScan(tenantId: string): Promise<AnomalyScanResul
     const purchaseOrders = allPurchaseOrders as unknown as PurchaseOrderRecord[];
     const journalEntries = allJournalEntries as unknown as JournalEntryRecord[];
 
-    // ── Run all 12 rule-based detections + 3 entity-extension detectors in parallel ──
+    // ── Run all 12 rule-based + 5 statistical + 3 entity-extension detectors in parallel ──
     const [
         unusualAmounts, duplicates, weekends, roundNumbers, newVendorLarge,
         invoiceGaps, unusualTimes, largeExpenses, rapidTransactions,
         taxMismatches, roundTrips, backdated,
+        statOutliers, trendBreaks, patternAnomalies, velocityAnomalies, seasonalAnomalies,
         paymentAnomalies, poAnomalies, journalAnomalies,
     ] = await Promise.all([
         detectUnusualAmount(tenantId, invoices),
@@ -1602,6 +2148,11 @@ export async function runAnomalyScan(tenantId: string): Promise<AnomalyScanResul
         detectTaxMismatch(tenantId, invoices),
         detectRoundTripTransactions(tenantId, invoices),
         detectBackdatedTransactions(tenantId, invoices),
+        detectStatisticalOutliers(tenantId, invoices),
+        detectTrendBreaks(tenantId, invoices),
+        detectPatternAnomalies(tenantId, invoices),
+        detectVelocityAnomalies(tenantId, invoices),
+        detectSeasonalAnomalies(tenantId, invoices),
         detectPaymentAnomalies(tenantId, payments),
         detectPurchaseOrderAnomalies(tenantId, purchaseOrders),
         detectJournalEntryAnomalies(tenantId, journalEntries),
@@ -1620,6 +2171,11 @@ export async function runAnomalyScan(tenantId: string): Promise<AnomalyScanResul
         ...taxMismatches,
         ...roundTrips,
         ...backdated,
+        ...statOutliers,
+        ...trendBreaks,
+        ...patternAnomalies,
+        ...velocityAnomalies,
+        ...seasonalAnomalies,
         ...paymentAnomalies,
         ...poAnomalies,
         ...journalAnomalies,
@@ -1703,4 +2259,155 @@ export function getStatusColor(status: AnomalyStatus): string {
         case 'DISMISSED': return 'text-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-gray-400';
         default: return 'text-gray-700 bg-gray-100';
     }
+}
+
+// ─── Statistics Dashboard Data ───────────────────────────────────────────────
+
+export interface AnomalyStatistics {
+    historicalCounts: Array<{ date: string; total: number; critical: number; high: number; medium: number; low: number }>;
+    severityTrend: Array<{ date: string; critical: number; high: number; medium: number; low: number }>;
+    topRules: Array<{ ruleId: string; ruleName: string; count: number; percentage: number }>;
+    resolutionMetrics: {
+        averageResolutionTimeHours: number | null;
+        dismissedCount: number;
+        investigatingCount: number;
+        openCount: number;
+        totalHistorical: number;
+    };
+    statisticalSummary: {
+        meanAnomaliesPerScan: number;
+        trendDirection: 'increasing' | 'decreasing' | 'stable';
+        lastScanDate: string | null;
+    };
+}
+
+/**
+ * Get anomaly statistics for the dashboard.
+ * Returns historical counts, severity trends, top rules, and resolution metrics.
+ * All queries are scoped to the given tenantId.
+ */
+export async function getAnomalyStatistics(tenantId: string): Promise<AnomalyStatistics> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Fetch all anomalies for the last 30 days
+    const anomalies = await prisma.anomalyDetection.findMany({
+        where: {
+            tenantId,
+            detectedAt: { gte: thirtyDaysAgo },
+        },
+        select: {
+            id: true,
+            ruleId: true,
+            ruleName: true,
+            severity: true,
+            status: true,
+            detectedAt: true,
+            updatedAt: true,
+        },
+        orderBy: { detectedAt: 'desc' },
+    });
+
+    // ── Historical counts (grouped by day) ──
+    const dayMap = new Map<string, {
+        total: number; critical: number; high: number; medium: number; low: number;
+    }>();
+
+    // Initialize all 30 days
+    for (let i = 0; i < 30; i++) {
+        const d = new Date(thirtyDaysAgo);
+        d.setDate(d.getDate() + i);
+        const dateKey = d.toISOString().split('T')[0];
+        dayMap.set(dateKey, { total: 0, critical: 0, high: 0, medium: 0, low: 0 });
+    }
+
+    for (const anomaly of anomalies) {
+        const dateKey = anomaly.detectedAt.toISOString().split('T')[0];
+        const entry = dayMap.get(dateKey);
+        if (entry) {
+            entry.total++;
+            if (anomaly.severity === 'CRITICAL') entry.critical++;
+            else if (anomaly.severity === 'HIGH') entry.high++;
+            else if (anomaly.severity === 'MEDIUM') entry.medium++;
+            else entry.low++;
+        }
+    }
+
+    const historicalCounts = Array.from(dayMap.entries())
+        .map(([date, counts]) => ({ date, ...counts }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    // ── Severity trend (same as historical but focused on distribution) ──
+    const severityTrend = historicalCounts.map(({ date, critical, high, medium, low }) => ({
+        date, critical, high, medium, low,
+    }));
+
+    // ── Top rules by frequency ──
+    const ruleCounts = new Map<string, { ruleName: string; count: number }>();
+    for (const anomaly of anomalies) {
+        const existing = ruleCounts.get(anomaly.ruleId);
+        if (existing) {
+            existing.count++;
+        } else {
+            ruleCounts.set(anomaly.ruleId, { ruleName: anomaly.ruleName, count: 1 });
+        }
+    }
+
+    const totalAnomalies = anomalies.length;
+    const topRules = Array.from(ruleCounts.entries())
+        .map(([ruleId, data]) => ({
+            ruleId,
+            ruleName: data.ruleName,
+            count: data.count,
+            percentage: totalAnomalies > 0 ? Math.round((data.count / totalAnomalies) * 10000) / 100 : 0,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    // ── Resolution metrics ──
+    const dismissedAnomalies = anomalies.filter(a => a.status === 'DISMISSED');
+    const investigatingAnomalies = anomalies.filter(a => a.status === 'INVESTIGATING');
+    const openAnomalies = anomalies.filter(a => a.status === 'OPEN');
+
+    // Calculate average resolution time for dismissed/investigated anomalies
+    let averageResolutionTimeHours: number | null = null;
+    const resolvedAnomalies = anomalies.filter(
+        a => a.status === 'DISMISSED' || a.status === 'INVESTIGATING'
+    );
+
+    if (resolvedAnomalies.length > 0) {
+        const totalResolutionMs = resolvedAnomalies.reduce((sum, a) => {
+            const detected = a.detectedAt.getTime();
+            const resolved = a.updatedAt.getTime();
+            return sum + (resolved - detected);
+        }, 0);
+        averageResolutionTimeHours = Math.round((totalResolutionMs / resolvedAnomalies.length / (1000 * 60 * 60)) * 100) / 100;
+    }
+
+    // ── Statistical summary ──
+    const dailyTotals = historicalCounts.map(d => d.total);
+    const avgAnomaliesPerScan = mean(dailyTotals);
+    const trend = (await import('./statistical-analysis')).trendDirection(dailyTotals);
+
+    const lastScanDate = anomalies.length > 0
+        ? anomalies[0].detectedAt.toISOString()
+        : null;
+
+    return {
+        historicalCounts,
+        severityTrend,
+        topRules,
+        resolutionMetrics: {
+            averageResolutionTimeHours,
+            dismissedCount: dismissedAnomalies.length,
+            investigatingCount: investigatingAnomalies.length,
+            openCount: openAnomalies.length,
+            totalHistorical: totalAnomalies,
+        },
+        statisticalSummary: {
+            meanAnomaliesPerScan: Math.round(avgAnomaliesPerScan * 100) / 100,
+            trendDirection: trend.direction,
+            lastScanDate,
+        },
+    };
 }

@@ -5,6 +5,7 @@
 
 import { prisma } from './db';
 import { sendStockAlertEmail } from './email';
+import { notifyNewNotification } from '@/app/api/notifications/stream/route';
 
 export interface StockAlertResult {
     alerted: boolean;
@@ -86,6 +87,13 @@ export async function checkAndSendStockAlert(
     }));
 
     await prisma.inAppNotification.createMany({ data: notifications });
+
+    // Push real-time notification via SSE
+    notifyNewNotification(product.tenantId, {
+        id: `stock_alert_${product.id}`,
+        title: `Low Stock: ${product.name}`,
+        type: 'stock_alert',
+    });
 
     return { alerted: true };
 }

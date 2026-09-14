@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export default function AnomaliesError({
     error,
@@ -10,7 +11,8 @@ export default function AnomaliesError({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error(error);
+        // TODO: Send to monitoring service (Sentry, etc.)
+        logger.error('[ErrorBoundary] AI anomalies error', error);
     }, [error]);
 
     return (
