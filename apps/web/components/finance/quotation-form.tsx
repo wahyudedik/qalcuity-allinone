@@ -1,18 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { z } from 'zod'
 import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { Spinner } from '@qalcuity/ui'
 import { formatCurrency } from '@/lib/utils'
 import { createQuotationSchema } from '@/lib/validation-schemas'
-import { calculateTax, DEFAULT_PPN_RATE } from '@/lib/ppn'
+import { calculateTax } from '@/lib/ppn'
 
 interface QuotationItem {
     description: string
     quantity: number
     unitPrice: number
+}
+
+interface TaxRate {
+    id: string
+    name: string
+    code: string
+    rate: number
+    type: string
+    isDefault: boolean
 }
 
 interface QuotationFormProps {
@@ -25,6 +34,9 @@ interface QuotationFormProps {
         items: QuotationItem[]
         notes: string
         terms: string
+        taxRate?: number
+        taxCode?: string
+        taxAmount?: number
     }) => void
 }
 
@@ -41,6 +53,41 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
     ])
     const [formError, setFormError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Tax rate state
+    const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+    const [selectedTaxRateId, setSelectedTaxRateId] = useState<string>('')
+    const [loadingTaxRates, setLoadingTaxRates] = useState(false)
+
+    // Fetch active tax rates when modal opens (useRef to avoid re-fetching)
+    const taxRatesFetched = useRef(false)
+    useEffect(() => {
+        if (isOpen && !taxRatesFetched.current) {
+            taxRatesFetched.current = true
+            setLoadingTaxRates(true)
+            fetch('/api/finance/tax-rates?active=true')
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success && data.data) {
+                        setTaxRates(data.data)
+                        const defaultVat = data.data.find(
+                            (t: TaxRate) => t.isDefault && t.type === 'VAT'
+                        )
+                        if (defaultVat) {
+                            setSelectedTaxRateId(defaultVat.id)
+                        } else if (data.data.length > 0) {
+                            setSelectedTaxRateId(data.data[0].id)
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Graceful fallback — no tax rates loaded
+                })
+                .finally(() => setLoadingTaxRates(false))
+        }
+    }, [isOpen])
+
+    const selectedTaxRate = taxRates.find((t) => t.id === selectedTaxRateId)
 
     const addItem = () => {
         setItems([...items, { description: '', quantity: 1, unitPrice: 0 }])
@@ -59,9 +106,8 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-    // TODO: Fetch active tax rates from /api/finance/tax-rates?active=true
-    // and let user select from dropdown (like invoice-form.tsx does)
-    const taxCalc = calculateTax(subtotal, DEFAULT_PPN_RATE)
+    const taxPercentage = selectedTaxRate ? Number(selectedTaxRate.rate) : 0
+    const taxCalc = calculateTax(subtotal, taxPercentage)
     const ppn = taxCalc.taxAmount
     const total = taxCalc.total
 
@@ -93,9 +139,16 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
         }
 
         try {
-            onSubmit({ ...formData, items })
+            onSubmit({
+                ...formData,
+                items,
+                taxRate: taxPercentage,
+                taxCode: selectedTaxRate?.code,
+                taxAmount: ppn,
+            })
             setFormData({ customerName: '', customerEmail: '', validUntil: '', notes: '', terms: 'Pembayaran dalam 30 hari setelah invoice diterbitkan' })
             setItems([{ description: '', quantity: 1, unitPrice: 0 }])
+            setSelectedTaxRateId('')
             onClose()
         } finally {
             setIsSubmitting(false)
@@ -222,7 +275,7 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
                             <span className="font-medium">{formatCurrency(subtotal)}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-600">PPN (11%)</span>
+                            <span className="text-gray-600">PPN ({taxPercentage}%)</span>
                             <span className="font-medium">{formatCurrency(ppn)}</span>
                         </div>
                         <div className="flex justify-between border-t border-gray-200 pt-2">
@@ -230,6 +283,24 @@ export function QuotationForm({ isOpen, onClose, onSubmit }: QuotationFormProps)
                             <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Tax Rate Selector */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak (PPN)</label>
+                    <select
+                        value={selectedTaxRateId}
+                        onChange={(e) => setSelectedTaxRateId(e.target.value)}
+                        disabled={loadingTaxRates}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    >
+                        <option value="">{loadingTaxRates ? 'Memuat tarif pajak...' : 'Tanpa Pajak'}</option>
+                        {taxRates.map((tr) => (
+                            <option key={tr.id} value={tr.id}>
+                                {tr.name} ({tr.rate}%)
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Terms & Notes */}

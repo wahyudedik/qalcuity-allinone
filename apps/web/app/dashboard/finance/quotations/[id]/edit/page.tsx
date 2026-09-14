@@ -5,12 +5,21 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { calculateTax, DEFAULT_PPN_RATE } from '@/lib/ppn'
+import { calculateTax } from '@/lib/ppn'
 
 interface QuotationItem {
     description: string
     quantity: number
     unitPrice: number
+}
+
+interface TaxRate {
+    id: string
+    name: string
+    code: string
+    rate: number
+    type: string
+    isDefault: boolean
 }
 
 interface QuotationData {
@@ -22,6 +31,7 @@ interface QuotationData {
     items: Array<{ description: string; quantity: number; unitPrice: number }>
     subtotal: number
     tax: number
+    taxRate: number
     total: number
     status: string
     validUntil: string
@@ -47,7 +57,26 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
         { description: '', quantity: 1, unitPrice: 0 },
     ])
 
+    // Tax rate state
+    const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+    const [selectedTaxRateId, setSelectedTaxRateId] = useState<string>('')
+    const [loadingTaxRates, setLoadingTaxRates] = useState(false)
+
     useEffect(() => {
+        // Fetch active tax rates
+        setLoadingTaxRates(true)
+        fetch('/api/finance/tax-rates?active=true')
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success && data.data) {
+                    setTaxRates(data.data)
+                }
+            })
+            .catch(() => {
+                // Graceful fallback — no tax rates loaded
+            })
+            .finally(() => setLoadingTaxRates(false))
+
         const fetchQuotation = async () => {
             try {
                 setLoading(true)
@@ -68,6 +97,12 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
                             unitPrice: Number(item.unitPrice),
                         })))
                     }
+                    // Pre-select tax rate: first try taxRateId, then match by percentage
+                    if (q.taxRateId) {
+                        setSelectedTaxRateId(q.taxRateId)
+                    } else if (q.taxRate !== undefined && q.taxRate !== null) {
+                        // Will be matched after tax rates are loaded via effect below
+                    }
                 } else {
                     setError('Quotation tidak ditemukan')
                 }
@@ -79,6 +114,24 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
         }
         fetchQuotation()
     }, [params.id])
+
+    // Pre-select tax rate once both tax rates and quotation data are loaded
+    useEffect(() => {
+        if (taxRates.length > 0 && quotation && !selectedTaxRateId) {
+            if (quotation.taxRate !== undefined && quotation.taxRate !== null) {
+                const match = taxRates.find((t) => Number(t.rate) === Number(quotation.taxRate))
+                if (match) {
+                    setSelectedTaxRateId(match.id)
+                } else if (taxRates.length > 0) {
+                    // Fallback: select default VAT rate
+                    const defaultVat = taxRates.find((t) => t.isDefault && t.type === 'VAT')
+                    if (defaultVat) {
+                        setSelectedTaxRateId(defaultVat.id)
+                    }
+                }
+            }
+        }
+    }, [taxRates, quotation, selectedTaxRateId])
 
     useEffect(() => {
         if (toast) {
@@ -104,9 +157,9 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-    // TODO: Fetch active tax rates from /api/finance/tax-rates?active=true
-    // and let user select from dropdown (like invoice-form.tsx does)
-    const taxCalc = calculateTax(subtotal, DEFAULT_PPN_RATE)
+    const selectedTaxRate = taxRates.find((t) => t.id === selectedTaxRateId)
+    const taxPercentage = selectedTaxRate ? Number(selectedTaxRate.rate) : 0
+    const taxCalc = calculateTax(subtotal, taxPercentage)
     const ppn = taxCalc.taxAmount
     const total = taxCalc.total
 
@@ -129,6 +182,7 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
                     validUntil: formData.validUntil || undefined,
                     notes: formData.notes || undefined,
                     terms: formData.terms || undefined,
+                    taxRate: taxPercentage,
                     items: items.map(item => ({
                         description: item.description,
                         quantity: item.quantity,
@@ -284,7 +338,7 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
                                 <span className="font-medium">{formatCurrency(subtotal)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">PPN (11%)</span>
+                                <span className="text-gray-600">PPN ({taxPercentage}%)</span>
                                 <span className="font-medium">{formatCurrency(ppn)}</span>
                             </div>
                             <div className="flex justify-between border-t border-gray-200 pt-2">
@@ -292,6 +346,24 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
                                 <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Tax Rate Selector */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Pajak (PPN)</label>
+                        <select
+                            value={selectedTaxRateId}
+                            onChange={(e) => setSelectedTaxRateId(e.target.value)}
+                            disabled={loadingTaxRates}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        >
+                            <option value="">{loadingTaxRates ? 'Memuat tarif pajak...' : 'Tanpa Pajak'}</option>
+                            {taxRates.map((tr) => (
+                                <option key={tr.id} value={tr.id}>
+                                    {tr.name} ({tr.rate}%)
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Terms & Notes */}
