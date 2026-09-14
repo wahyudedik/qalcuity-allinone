@@ -2,10 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Shield, Sparkles } from 'lucide-react';
+import { Bot, FileText, Shield, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
 const AI_NAV_ITEMS = [
+    {
+        label: 'AI Agents',
+        href: '/dashboard/ai/agents',
+        icon: Bot,
+    },
     {
         label: 'Document Extraction',
         href: '/dashboard/ai/documents',
@@ -34,7 +39,7 @@ export default function AILayout({ children }: { children: React.ReactNode }) {
                         {t('ai.title') || 'AI Features'}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('ai.subtitle') || 'Ekstraksi dokumen dan deteksi anomali'}
+                        {t('ai.subtitle') || 'AI Agents, ekstraksi dokumen, dan deteksi anomali'}
                     </p>
                 </div>
             </div>
@@ -49,8 +54,8 @@ export default function AILayout({ children }: { children: React.ReactNode }) {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${isActive
-                                    ? 'bg-white text-blue-700 shadow-sm dark:bg-gray-700 dark:text-blue-400'
-                                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
+                                ? 'bg-white text-blue-700 shadow-sm dark:bg-gray-700 dark:text-blue-400'
+                                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
                                 }`}
                         >
                             <Icon className="h-4 w-4" />
