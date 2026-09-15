@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api-error';
-import { requirePermission, requireMutateAuth } from '@/lib/session';
+import { requirePermissionForRoute, requireMutateAuth } from '@/lib/session';
 import { MSG } from '@/lib/api-messages';
 import { updateRecurringInvoiceSchema } from '@/lib/validation-schemas';
 
@@ -14,7 +14,8 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const auth = await requirePermission('finance.invoice');
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
 
         const recurringInvoice = await prisma.recurringInvoice.findFirst({

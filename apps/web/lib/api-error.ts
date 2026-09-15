@@ -91,6 +91,14 @@ export function handleApiError(error: unknown): NextResponse {
     if (error instanceof Error) {
         const message = error.message;
 
+        // Forbidden errors (from requirePermissionForRoute)
+        if (message.startsWith('Forbidden:')) {
+            return NextResponse.json(
+                { success: false, error: { code: 'FORBIDDEN', message } },
+                { status: 403 }
+            );
+        }
+
         // WorkflowEngine errors
         if (message.includes('Workflow') || message.includes('workflow') || message.includes('transition')) {
             return NextResponse.json(

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api-error';
 import { sendPaymentReminderEmail } from '@/lib/email';
-import { requirePermission } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { MSG } from '@/lib/api-messages';
 
 // ─── POST: Manual trigger payment reminder for a specific invoice ────────────
@@ -15,7 +15,8 @@ export async function POST(
 ) {
     try {
         // Auth check — requires finance.update permission
-        const auth = await requirePermission('finance.invoice');
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
         const invoiceId = params.id;
 
