@@ -30,6 +30,10 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/aging-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/periods': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/recurring-invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/bills': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/bills/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/expenses': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/expenses/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
 
     // ─── Finance Reports ──────────────────────────────────────────────────────
     '/api/finance/reports/balance-sheet': { permission: 'reports:view', fallbackRole: 'ADMIN' },
@@ -82,6 +86,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/pos/refunds/[id]': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/sessions': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/sessions/[id]': { permission: 'pos:view', fallbackRole: 'ADMIN' },
+    '/api/pos/sessions/[id]/closing-report': { permission: 'pos:view', fallbackRole: 'ADMIN' },
 
     // ─── POS Products & Terminals ─────────────────────────────────────────────
     '/api/pos/products': { permission: 'pos:view', fallbackRole: 'ADMIN' },
@@ -236,6 +241,9 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/cron/payment-reminder': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/stock-alert': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+
+    // ─── WhatsApp Business API ────────────────────────────────────────────────
+    '/api/settings/integrations/whatsapp/test': { permission: 'system:admin', fallbackRole: 'ADMIN' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────

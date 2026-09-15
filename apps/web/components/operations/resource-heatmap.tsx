@@ -12,6 +12,7 @@
 
 import { useMemo } from 'react';
 import { Users, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -52,11 +53,11 @@ export interface ResourceData {
 // =============================================================================
 
 const HEATMAP_LEVELS = [
-    { max: 0, color: 'bg-gray-100 dark:bg-gray-800', label: 'Tidak ada' },
-    { max: 50, color: 'bg-green-200 dark:bg-green-900/40', label: 'Tersedia' },
-    { max: 75, color: 'bg-yellow-200 dark:bg-yellow-900/40', label: 'Moderat' },
-    { max: 100, color: 'bg-orange-200 dark:bg-orange-900/40', label: 'Tinggi' },
-    { max: Infinity, color: 'bg-red-200 dark:bg-red-900/40', label: 'Over-capacity' },
+    { max: 0, color: 'bg-gray-100 dark:bg-gray-800', labelKey: 'operations.heatmap.none' },
+    { max: 50, color: 'bg-green-200 dark:bg-green-900/40', labelKey: 'operations.heatmap.available' },
+    { max: 75, color: 'bg-yellow-200 dark:bg-yellow-900/40', labelKey: 'operations.heatmap.moderate' },
+    { max: 100, color: 'bg-orange-200 dark:bg-orange-900/40', labelKey: 'operations.heatmap.high' },
+    { max: Infinity, color: 'bg-red-200 dark:bg-red-900/40', labelKey: 'operations.heatmap.overCapacityLevel' },
 ];
 
 // =============================================================================
@@ -70,11 +71,11 @@ function getHeatmapColor(allocation: number): string {
     return HEATMAP_LEVELS[0].color;
 }
 
-function getHeatmapLabel(allocation: number): string {
+function getHeatmapLabel(allocation: number, t: (key: string) => string): string {
     for (const level of HEATMAP_LEVELS) {
-        if (allocation <= level.max) return level.label;
+        if (allocation <= level.max) return t(level.labelKey);
     }
-    return HEATMAP_LEVELS[0].label;
+    return t(HEATMAP_LEVELS[0].labelKey);
 }
 
 function formatWeekLabel(date: Date): string {
@@ -112,6 +113,7 @@ interface ResourceHeatmapProps {
 }
 
 export function ResourceHeatmap({ data, loading }: ResourceHeatmapProps) {
+    const { t } = useTranslation();
     // Generate weeks for the heatmap (current month)
     const weeks = useMemo(() => {
         const now = new Date();
@@ -175,8 +177,8 @@ export function ResourceHeatmap({ data, loading }: ResourceHeatmapProps) {
         return (
             <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
                 <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Belum ada alokasi sumber daya</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tambahkan alokasi karyawan untuk melihat heatmap</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('operations.heatmap.noAllocations')}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('operations.heatmap.noAllocationsDescription')}</p>
             </div>
         );
     }
@@ -189,17 +191,17 @@ export function ResourceHeatmap({ data, loading }: ResourceHeatmapProps) {
         <div className="space-y-6">
             {/* Summary Stats */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <StatCard icon={Users} label="Karyawan" value={data.summary.uniqueEmployees} color="text-blue-500" />
-                <StatCard icon={TrendingUp} label="Total Alokasi" value={`${data.summary.totalAllocationPct}%`} color="text-green-500" />
+                <StatCard icon={Users} label={t('operations.heatmap.employees')} value={data.summary.uniqueEmployees} color="text-blue-500" />
+                <StatCard icon={TrendingUp} label={t('operations.heatmap.totalAllocation')} value={`${data.summary.totalAllocationPct}%`} color="text-green-500" />
                 <StatCard
                     icon={AlertTriangle}
-                    label="Over-capacity"
+                    label={t('operations.heatmap.overCapacity')}
                     value={overloaded}
                     color={overloaded > 0 ? 'text-red-500' : 'text-gray-400'}
                 />
                 <StatCard
                     icon={CheckCircle2}
-                    label="Utilisasi"
+                    label={t('operations.heatmap.utilization')}
                     value={totalCapacity > 0 ? `${Math.round((data.summary.totalAllocationPct / totalCapacity) * 100)}%` : '0%'}
                     color="text-purple-500"
                 />
@@ -211,7 +213,7 @@ export function ResourceHeatmap({ data, loading }: ResourceHeatmapProps) {
                     <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
-                                Karyawan
+                                {t('operations.heatmap.employees')}
                             </th>
                             {weeks.map((week, i) => (
                                 <th key={i} className="px-3 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -219,7 +221,7 @@ export function ResourceHeatmap({ data, loading }: ResourceHeatmapProps) {
                                 </th>
                             ))}
                             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
-                                Rata-rata
+                                {t('operations.heatmap.average')}
                             </th>
                         </tr>
                     </thead>
@@ -286,16 +288,16 @@ export function ResourceHeatmap({ data, loading }: ResourceHeatmapProps) {
 
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-medium">Legenda:</span>
+                <span className="font-medium">{t('operations.heatmap.legend')}:</span>
                 {HEATMAP_LEVELS.slice(0, -1).map((level, i) => (
                     <div key={i} className="flex items-center gap-1">
                         <div className={`h-3 w-3 rounded ${level.color}`} />
-                        <span>{level.label}</span>
+                        <span>{t(level.labelKey)}</span>
                     </div>
                 ))}
                 <div className="flex items-center gap-1">
                     <div className={`h-3 w-3 rounded ${HEATMAP_LEVELS[4].color}`} />
-                    <span>{HEATMAP_LEVELS[4].label}</span>
+                    <span>{t(HEATMAP_LEVELS[4].labelKey)}</span>
                 </div>
             </div>
         </div>

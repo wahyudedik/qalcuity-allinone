@@ -89,6 +89,14 @@
             "title": "Kesalahan Checklist",
             "description": "Terjadi kesalahan pada modul checklist. Silakan coba lagi."
         },
+        "financeBills": {
+            "title": "Gagal Memuat Tagihan",
+            "description": "Terjadi kesalahan saat memuat data tagihan. Silakan coba lagi."
+        },
+        "financeExpenses": {
+            "title": "Gagal Memuat Pengeluaran",
+            "description": "Terjadi kesalahan saat memuat data pengeluaran. Silakan coba lagi."
+        },
         "financeReports": {
             "title": "Kesalahan Laporan Keuangan",
             "description": "Terjadi kesalahan saat memuat laporan keuangan. Silakan coba lagi."
@@ -119,6 +127,8 @@
         "finance": "Keuangan",
         "overview": "Ringkasan",
         "invoices": "Faktur",
+        "bills": "Tagihan",
+        "expenses": "Pengeluaran",
         "quotations": "Penawaran",
         "payments": "Pembayaran",
         "purchaseOrders": "Pesanan Pembelian",
@@ -375,6 +385,78 @@
             "lineTotal": "Total",
             "markAsPaid": "Tandai Dibayar",
             "sendReminder": "Kirim Pengingat"
+        },
+        "bills": {
+            "title": "Tagihan (Bills)",
+            "subtitle": "Kelola tagihan dari vendor dan supplier",
+            "createBill": "Buat Tagihan",
+            "searchPlaceholder": "Cari tagihan...",
+            "stats": {
+                "totalBills": "Total Tagihan",
+                "pendingApproval": "Menunggu Persetujuan",
+                "overdue": "Jatuh Tempo",
+                "paid": "Sudah Dibayar"
+            },
+            "table": {
+                "number": "Nomor",
+                "vendor": "Vendor",
+                "invoiceNumber": "Invoice #",
+                "dueDate": "Jatuh Tempo",
+                "amount": "Jumlah",
+                "status": "Status",
+                "action": "Aksi"
+            },
+            "filter": {
+                "allStatus": "Semua Status",
+                "draft": "Draft",
+                "pendingApproval": "Menunggu Persetujuan",
+                "approved": "Disetujui",
+                "paid": "Dibayar",
+                "cancelled": "Dibatalkan"
+            },
+            "empty": "Tidak ada tagihan ditemukan",
+            "error": "Gagal memuat data tagihan",
+            "retry": "Coba Lagi"
+        },
+        "expenses": {
+            "title": "Pengeluaran",
+            "subtitle": "Kelola pengeluaran operasional bisnis",
+            "createExpense": "Catat Pengeluaran",
+            "searchPlaceholder": "Cari pengeluaran...",
+            "stats": {
+                "totalExpenses": "Total Pengeluaran",
+                "thisMonth": "Bulan Ini",
+                "pendingApproval": "Menunggu Persetujuan"
+            },
+            "table": {
+                "number": "Nomor",
+                "description": "Deskripsi",
+                "category": "Kategori",
+                "date": "Tanggal",
+                "amount": "Jumlah",
+                "status": "Status",
+                "action": "Aksi"
+            },
+            "filter": {
+                "allStatus": "Semua Status",
+                "allCategories": "Semua Kategori",
+                "draft": "Draft",
+                "pendingApproval": "Menunggu Persetujuan",
+                "approved": "Disetujui",
+                "rejected": "Ditolak"
+            },
+            "categories": {
+                "OFFICE": "Kantor",
+                "TRAVEL": "Perjalanan",
+                "UTILITIES": "Utilitas",
+                "MARKETING": "Pemasaran",
+                "SALARIES": "Gaji",
+                "MAINTENANCE": "Pemeliharaan",
+                "OTHER": "Lainnya"
+            },
+            "empty": "Tidak ada pengeluaran ditemukan",
+            "error": "Gagal memuat data pengeluaran",
+            "retry": "Coba Lagi"
         },
         "payments": {
             "title": "Pembayaran",
@@ -5547,5 +5629,77 @@
     "noLeaveRequests": "Belum ada pengajuan cuti",
     "birthdayNotAvailable": "Data ulang tahun belum tersedia",
     "birthdayFieldMissing": "Field dateOfBirth belum ada di data karyawan",
-    "loadError": "Gagal memuat data HR"
+    "loadError": "Gagal memuat data HR",
+    "operations": {
+        "budget": {
+            "totalBudget": "Total Anggaran",
+            "spent": "Terpakai",
+            "overBudget": "Melebihi Anggaran",
+            "remaining": "Sisa",
+            "overBudgetBy": "Melebihi anggaran {amount}",
+            "usagePercentage": "Persentase Penggunaan",
+            "categoryBreakdown": "Breakdown per Kategori",
+            "item": "item",
+            "budgetDetails": "Detail Anggaran",
+            "planned": "Rencana",
+            "actual": "Aktual",
+            "labor": "Tenaga Kerja",
+            "material": "Material",
+            "equipment": "Peralatan",
+            "travel": "Perjalanan",
+            "software": "Perangkat Lunak",
+            "other": "Lainnya"
+        },
+        "gantt": {
+            "task": "Tugas",
+            "tasks": "tugas",
+            "completed": "selesai",
+            "progress": "Progres",
+            "noTasks": "Belum ada tugas untuk ditampilkan",
+            "noTasksDescription": "Buat tugas terlebih dahulu untuk melihat Gantt chart",
+            "hasDependency": "Memiliki dependency"
+        },
+        "timeline": {
+            "projectTimeline": "Timeline Proyek",
+            "totalDays": "{count} hari total",
+            "startDate": "Mulai",
+            "endDate": "Selesai",
+            "progress": "Progres",
+            "dayOf": "Hari ke-{current} dari {total}",
+            "daysAgo": "{count} hari lalu",
+            "today": "Hari ini",
+            "tomorrow": "Besok",
+            "daysLeft": "{count} hari lagi",
+            "milestoneTasks": "Tugas Milestone",
+            "noTimeline": "Belum ada timeline",
+            "noTimelineDescription": "Atur tanggal mulai/selesai proyek untuk melihat timeline",
+            "currentDay": "Hari ini"
+        },
+        "heatmap": {
+            "employees": "Karyawan",
+            "totalAllocation": "Total Alokasi",
+            "overCapacity": "Kapasitas Berlebih",
+            "utilization": "Utilisasi",
+            "average": "Rata-rata",
+            "legend": "Legenda",
+            "noAllocations": "Belum ada alokasi sumber daya",
+            "noAllocationsDescription": "Tambahkan alokasi karyawan untuk melihat heatmap",
+            "none": "Tidak ada",
+            "available": "Tersedia",
+            "moderate": "Sedang",
+            "high": "Tinggi",
+            "overCapacityLevel": "Kapasitas Berlebih"
+        },
+        "dependency": {
+            "circularDependencyError": "Tidak dapat membuat dependency yang mengarah ke tugas ini (circular dependency)",
+            "setDependency": "Atur Dependency",
+            "noDependency": "Tidak ada dependency",
+            "saving": "Menyimpan...",
+            "save": "Simpan",
+            "removeDependency": "Hapus Dependency",
+            "waitingFor": "Menunggu",
+            "changeDependency": "Ubah dependency",
+            "addDependency": "Tambah Dependency"
+        }
+    }
 }

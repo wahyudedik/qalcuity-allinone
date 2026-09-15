@@ -85,6 +85,8 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.taxRates") || "Pajak", href: "/dashboard/finance/tax-rates" },
                 { label: t("nav.taxReport") || "Laporan Pajak", href: "/dashboard/finance/tax-report" },
                 { label: t("nav.agingReport") || "Laporan Umur Piutang", href: "/dashboard/finance/aging-report" },
+                { label: t("nav.bills") || "Tagihan (Bills)", href: "/dashboard/finance/bills" },
+                { label: t("nav.expenses") || "Pengeluaran", href: "/dashboard/finance/expenses" },
                 { label: t("nav.periods") || "Periode", href: "/dashboard/finance/periods" },
                 { label: t("nav.financialReports") || "Laporan Keuangan", href: "/dashboard/finance/reports" },
             ],

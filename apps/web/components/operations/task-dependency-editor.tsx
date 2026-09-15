@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import { ArrowRight, X, Link2, Unlink, AlertTriangle } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -107,6 +108,7 @@ export function TaskDependencyEditor({
     allTasks,
     onUpdate,
 }: TaskDependencyEditorProps) {
+    const { t } = useTranslation();
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState<string>(currentDependsOnId || '');
     const [saving, setSaving] = useState(false);
@@ -132,7 +134,7 @@ export function TaskDependencyEditor({
         if (selectedId) {
             const chain = findDependencyChain(selectedId, allTasks);
             if (chain.includes(taskId)) {
-                setError('Tidak dapat membuat dependency yang mengarah ke task ini (circular dependency)');
+                setError(t('operations.dependency.circularDependencyError'));
                 setSaving(false);
                 return;
             }
@@ -159,7 +161,7 @@ export function TaskDependencyEditor({
         return (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Atur Dependency</span>
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">{t('operations.dependency.setDependency')}</span>
                     <button
                         onClick={() => { setIsEditing(false); setError(null); }}
                         className="rounded p-1 text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800"
@@ -173,7 +175,7 @@ export function TaskDependencyEditor({
                     onChange={(e) => { setSelectedId(e.target.value); setError(null); }}
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white mb-2"
                 >
-                    <option value="">Tidak ada dependency</option>
+                    <option value="">{t('operations.dependency.noDependency')}</option>
                     {availableTasks.map((t) => (
                         <option key={t.id} value={t.id}>
                             {t.title} ({t.status})
@@ -194,7 +196,7 @@ export function TaskDependencyEditor({
                         disabled={saving}
                         className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {saving ? 'Menyimpan...' : 'Simpan'}
+                        {saving ? t('operations.dependency.saving') : t('operations.dependency.save')}
                     </button>
                     {currentDependsOnId && (
                         <button
@@ -202,7 +204,7 @@ export function TaskDependencyEditor({
                             disabled={saving}
                             className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400"
                         >
-                            Hapus Dependency
+                            {t('operations.dependency.removeDependency')}
                         </button>
                     )}
                 </div>
@@ -216,12 +218,12 @@ export function TaskDependencyEditor({
                 <div className="flex items-center gap-1.5 rounded-full bg-yellow-100 px-2 py-1 text-xs dark:bg-yellow-900/30">
                     <Link2 className="h-3 w-3 text-yellow-600 dark:text-yellow-400" />
                     <span className="text-yellow-700 dark:text-yellow-300">
-                        Menunggu: {blockerTask.title}
+                        {t('operations.dependency.waitingFor')}: {blockerTask.title}
                     </span>
                     <button
                         onClick={() => setIsEditing(true)}
                         className="ml-1 rounded-full p-0.5 text-yellow-500 hover:bg-yellow-200 dark:hover:bg-yellow-800"
-                        title="Ubah dependency"
+                        title={t('operations.dependency.changeDependency')}
                     >
                         <X className="h-2.5 w-2.5" />
                     </button>
@@ -232,7 +234,7 @@ export function TaskDependencyEditor({
                     className="flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2 py-1 text-[10px] text-gray-400 hover:border-blue-400 hover:text-blue-500 dark:border-gray-600 dark:hover:border-blue-500"
                 >
                     <Link2 className="h-2.5 w-2.5" />
-                    Tambah Dependency
+                    {t('operations.dependency.addDependency')}
                 </button>
             )}
         </div>

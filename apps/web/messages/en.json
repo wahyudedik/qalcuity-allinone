@@ -89,6 +89,14 @@
             "title": "Checklists Error",
             "description": "An error occurred in the checklists module. Please try again."
         },
+        "financeBills": {
+            "title": "Failed to Load Bills",
+            "description": "An error occurred while loading bills data. Please try again."
+        },
+        "financeExpenses": {
+            "title": "Failed to Load Expenses",
+            "description": "An error occurred while loading expenses data. Please try again."
+        },
         "financeReports": {
             "title": "Financial Reports Error",
             "description": "An error occurred while loading financial reports. Please try again."
@@ -119,6 +127,8 @@
         "finance": "Finance",
         "overview": "Overview",
         "invoices": "Invoices",
+        "bills": "Bills",
+        "expenses": "Expenses",
         "quotations": "Quotations",
         "payments": "Payments",
         "purchaseOrders": "Purchase Orders",
@@ -375,6 +385,78 @@
             "lineTotal": "Total",
             "markAsPaid": "Mark as Paid",
             "sendReminder": "Send Reminder"
+        },
+        "bills": {
+            "title": "Bills",
+            "subtitle": "Manage bills from vendors and suppliers",
+            "createBill": "Create Bill",
+            "searchPlaceholder": "Search bills...",
+            "stats": {
+                "totalBills": "Total Bills",
+                "pendingApproval": "Pending Approval",
+                "overdue": "Overdue",
+                "paid": "Paid"
+            },
+            "table": {
+                "number": "Number",
+                "vendor": "Vendor",
+                "invoiceNumber": "Invoice #",
+                "dueDate": "Due Date",
+                "amount": "Amount",
+                "status": "Status",
+                "action": "Action"
+            },
+            "filter": {
+                "allStatus": "All Status",
+                "draft": "Draft",
+                "pendingApproval": "Pending Approval",
+                "approved": "Approved",
+                "paid": "Paid",
+                "cancelled": "Cancelled"
+            },
+            "empty": "No bills found",
+            "error": "Failed to load bills",
+            "retry": "Retry"
+        },
+        "expenses": {
+            "title": "Expenses",
+            "subtitle": "Manage operational business expenses",
+            "createExpense": "Record Expense",
+            "searchPlaceholder": "Search expenses...",
+            "stats": {
+                "totalExpenses": "Total Expenses",
+                "thisMonth": "This Month",
+                "pendingApproval": "Pending Approval"
+            },
+            "table": {
+                "number": "Number",
+                "description": "Description",
+                "category": "Category",
+                "date": "Date",
+                "amount": "Amount",
+                "status": "Status",
+                "action": "Action"
+            },
+            "filter": {
+                "allStatus": "All Status",
+                "allCategories": "All Categories",
+                "draft": "Draft",
+                "pendingApproval": "Pending Approval",
+                "approved": "Approved",
+                "rejected": "Rejected"
+            },
+            "categories": {
+                "OFFICE": "Office",
+                "TRAVEL": "Travel",
+                "UTILITIES": "Utilities",
+                "MARKETING": "Marketing",
+                "SALARIES": "Salaries",
+                "MAINTENANCE": "Maintenance",
+                "OTHER": "Other"
+            },
+            "empty": "No expenses found",
+            "error": "Failed to load expenses",
+            "retry": "Retry"
         },
         "payments": {
             "title": "Payments",
@@ -5547,5 +5629,77 @@
     "noLeaveRequests": "No leave requests yet",
     "birthdayNotAvailable": "Birthday data not available",
     "birthdayFieldMissing": "dateOfBirth field not available in employee data",
-    "loadError": "Failed to load HR data"
+    "loadError": "Failed to load HR data",
+    "operations": {
+        "budget": {
+            "totalBudget": "Total Budget",
+            "spent": "Spent",
+            "overBudget": "Over Budget",
+            "remaining": "Remaining",
+            "overBudgetBy": "Over budget by {amount}",
+            "usagePercentage": "Usage Percentage",
+            "categoryBreakdown": "Breakdown by Category",
+            "item": "item",
+            "budgetDetails": "Budget Details",
+            "planned": "Planned",
+            "actual": "Actual",
+            "labor": "Labor",
+            "material": "Material",
+            "equipment": "Equipment",
+            "travel": "Travel",
+            "software": "Software",
+            "other": "Other"
+        },
+        "gantt": {
+            "task": "Task",
+            "tasks": "tasks",
+            "completed": "completed",
+            "progress": "Progress",
+            "noTasks": "No tasks to display yet",
+            "noTasksDescription": "Create tasks first to view the Gantt chart",
+            "hasDependency": "Has dependency"
+        },
+        "timeline": {
+            "projectTimeline": "Project Timeline",
+            "totalDays": "{count} total days",
+            "startDate": "Start",
+            "endDate": "End",
+            "progress": "Progress",
+            "dayOf": "Day {current} of {total}",
+            "daysAgo": "{count} days ago",
+            "today": "Today",
+            "tomorrow": "Tomorrow",
+            "daysLeft": "{count} days left",
+            "milestoneTasks": "Milestone Tasks",
+            "noTimeline": "No timeline yet",
+            "noTimelineDescription": "Set project start/end dates to view the timeline",
+            "currentDay": "Today"
+        },
+        "heatmap": {
+            "employees": "Employees",
+            "totalAllocation": "Total Allocation",
+            "overCapacity": "Over-capacity",
+            "utilization": "Utilization",
+            "average": "Average",
+            "legend": "Legend",
+            "noAllocations": "No resource allocations yet",
+            "noAllocationsDescription": "Add employee allocations to view the heatmap",
+            "none": "None",
+            "available": "Available",
+            "moderate": "Moderate",
+            "high": "High",
+            "overCapacityLevel": "Over-capacity"
+        },
+        "dependency": {
+            "circularDependencyError": "Cannot create a dependency that points to this task (circular dependency)",
+            "setDependency": "Set Dependency",
+            "noDependency": "No dependency",
+            "saving": "Saving...",
+            "save": "Save",
+            "removeDependency": "Remove Dependency",
+            "waitingFor": "Waiting for",
+            "changeDependency": "Change dependency",
+            "addDependency": "Add Dependency"
+        }
+    }
 }

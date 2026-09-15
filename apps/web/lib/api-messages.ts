@@ -335,6 +335,14 @@ export const MSG = {
     // Platform / Tenant Limits
     // -----------------------------------------------------------------------
     TENANT_LIMIT_REACHED: 'Tenant limit reached for this plan. Please upgrade or contact support.',
+
+    // -----------------------------------------------------------------------
+    // WhatsApp Business API
+    // -----------------------------------------------------------------------
+    WHATSAPP_NOT_CONFIGURED: 'WhatsApp Business API is not configured for this tenant',
+    WHATSAPP_SEND_FAILED: 'Failed to send WhatsApp message',
+    WHATSAPP_SENT_SUCCESS: 'WhatsApp test message sent successfully',
+    WHATSAPP_INVALID_PHONE: 'Invalid phone number format. Use international format (e.g., +628123456789)',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

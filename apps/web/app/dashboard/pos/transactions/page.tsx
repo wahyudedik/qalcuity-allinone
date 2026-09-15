@@ -64,6 +64,7 @@ export default function POSTransactionsPage() {
     const [showVoidModal, setShowVoidModal] = useState(false)
     const [voidingId, setVoidingId] = useState<string | null>(null)
     const [voiding, setVoiding] = useState(false)
+    const [voidReason, setVoidReason] = useState('')
 
     // Receipt modal
     const [showReceipt, setShowReceipt] = useState(false)
@@ -115,19 +116,20 @@ export default function POSTransactionsPage() {
     })
 
     const handleVoid = async () => {
-        if (!voidingId) return
+        if (!voidingId || !voidReason.trim()) return
         setVoiding(true)
         try {
             const response = await fetch(`/api/pos/transactions/${voidingId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'VOIDED' }),
+                body: JSON.stringify({ reason: voidReason.trim() }),
             })
             const data = await response.json()
             if (data.success) {
                 setToast({ message: t('pos.transactions.successVoid') || 'Transaksi berhasil dibatalkan', type: 'success' })
                 setShowVoidModal(false)
                 setVoidingId(null)
+                setVoidReason('')
                 fetchTransactions()
             } else {
                 setToast({ message: data.error || (t('pos.transactions.errorVoid') || 'Gagal membatalkan transaksi'), type: 'error' })
@@ -518,9 +520,12 @@ export default function POSTransactionsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !voiding && setShowVoidModal(false)}>
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.transactions.voidTitle') || 'Batalkan Transaksi'}</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Ban className="h-5 w-5 text-red-500" />
+                                {t('pos.transactions.voidTitle') || 'Batalkan Transaksi'}
+                            </h3>
                             {!voiding && (
-                                <button onClick={() => setShowVoidModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <button onClick={() => { setShowVoidModal(false); setVoidReason('') }} className="text-gray-400 hover:text-gray-600">
                                     <X className="h-5 w-5" />
                                 </button>
                             )}
@@ -528,9 +533,23 @@ export default function POSTransactionsPage() {
                         <p className="text-sm text-gray-500">
                             {t('pos.transactions.voidConfirm') || 'Apakah Anda yakin ingin membatalkan transaksi ini? Tindakan ini tidak dapat dibatalkan.'}
                         </p>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('pos.transactions.voidReason') || 'Alasan Pembatalan'} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={voidReason}
+                                onChange={(e) => setVoidReason(e.target.value)}
+                                placeholder={t('pos.transactions.voidReasonPlaceholder') || 'Masukkan alasan pembatalan...'}
+                                disabled={voiding}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                                autoFocus
+                            />
+                        </div>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setShowVoidModal(false)}
+                                onClick={() => { setShowVoidModal(false); setVoidReason('') }}
                                 disabled={voiding}
                                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
                             >
@@ -538,7 +557,7 @@ export default function POSTransactionsPage() {
                             </button>
                             <button
                                 onClick={handleVoid}
-                                disabled={voiding}
+                                disabled={voiding || !voidReason.trim()}
                                 className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                             >
                                 {voiding ? (t('pos.transactions.voiding') || 'Membatalkan...') : (t('pos.transactions.voidConfirmButton') || 'Ya, Batalkan')}

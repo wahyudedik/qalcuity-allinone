@@ -372,3 +372,107 @@ export async function POST(request: Request) {
         return handleApiError(error);
     }
 }
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:transactions:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        const { id } = params;
+
+        // Get transaction by id + tenantId
+        const transaction = await prisma.posTransaction.findFirst({
+            where: { id, tenantId },
+            include: {
+                items: { select: { id: true, productId: true, quantity: true } },
+            },
+        });
+        if (!transaction) {
+            return NextResponse.json(
+                { success: false, error: MSG.TRANSACTION_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Validate: transaction must be COMPLETED
+        if (transaction.status !== 'COMPLETED') {
+            return NextResponse.json(
+                { success: false, error: MSG.TRANSACTION_ONLY_COMPLETED_CAN_VOID },
+                { status: 400 }
+            );
+        }
+
+        const body = await request.json();
+        const { reason } = body;
+
+        if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Reason is required for voiding a transaction' },
+                { status: 400 }
+            );
+        }
+
+        // Update transaction + restore stock atomically
+        await prisma.$transaction(async (tx) => {
+            // Update transaction: status=VOIDED
+            await tx.posTransaction.update({
+                where: { id },
+                data: {
+                    status: 'VOIDED',
+                    notes: `[VOIDED] ${reason.trim()}`,
+                },
+            });
+
+            // Restore stock: for each item with productId
+            for (const item of transaction.items) {
+                if (item.productId) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { increment: Number(item.quantity) } },
+                    });
+                }
+            }
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'PosTransaction',
+            entityId: transaction.id,
+            oldValues: { status: 'COMPLETED' },
+            newValues: {
+                status: 'VOIDED',
+                reason: reason.trim(),
+            },
+            request,
+        });
+
+        // Fire-and-forget: invalidate POS analytics + dashboard cache
+        invalidatePosAnalyticsCache(tenantId).catch(() => { });
+        invalidatePosDashboardCache(tenantId).catch(() => { });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: transaction.id,
+                transactionNo: transaction.transactionNo,
+                totalAmount: Number(transaction.totalAmount),
+                status: 'VOIDED',
+                reason: reason.trim(),
+            },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
