@@ -1,6 +1,58 @@
-﻿> **Last Updated:** 14 September 2026 (Session 35: Sprint 34 POS Void Fix + Operations i18n + Bills & Expenses + WhatsApp Foundation)
-> **Version:** v11.25.0
-> **Status:** ✅ HEALTHY — Session 35: Sprint 34 — POS Void UI fix, Operations i18n (50 keys), Bills & Expenses module (Bill + Expense CRUD), WhatsApp Business API foundation. Session 31: Sprint 31 Tax Engine + POS Receipt. Session 30: Sprint 30 quality fixes — TypeScript compilation fix (TS2344 notification-pubsub), Quotation convert route rewrite (actual conversion logic), Anomaly detection type safety (zero `as unknown as` casts), Auth pattern standardization (4 routes → requirePermissionForRoute). Net -250 LOC. TypeScript: 0 errors. Code Quality Score: 8.7/10. Session 28-29: Sprint 28-29 complete — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine. 3 bug fixes: Dashboard 429 rate limit fallback, CRM locale error, CRM setState during render. TypeScript: 0 errors. Code Quality Score: 8.5/10. Session 27: Fixed critical 429 rate limit bug — `checkRateLimit()` sync function was fail-closed in production. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+﻿> **Last Updated:** 15 September 2026 (Post Session 35: POS 503 Migration Fix)
+> **Version:** v11.25.2
+> **Status:** ✅ HEALTHY — POS 503 fix: migration timestamp conflict resolved, 4 missing POS indexes added. Ready for VPS deploy. Session 35: Sprint 34 — POS Void UI fix, Operations i18n (50 keys), Bills & Expenses module (Bill + Expense CRUD), WhatsApp Business API foundation. Session 31: Sprint 31 Tax Engine + POS Receipt. Session 30: Sprint 30 quality fixes — TypeScript compilation fix (TS2344 notification-pubsub), Quotation convert route rewrite (actual conversion logic), Anomaly detection type safety (zero `as unknown as` casts), Auth pattern standardization (4 routes → requirePermissionForRoute). Net -250 LOC. TypeScript: 0 errors. Code Quality Score: 8.7/10. Session 28-29: Sprint 28-29 complete — Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine. 3 bug fixes: Dashboard 429 rate limit fallback, CRM locale error, CRM setState during render. TypeScript: 0 errors. Code Quality Score: 8.5/10. Session 27: Fixed critical 429 rate limit bug — `checkRateLimit()` sync function was fail-closed in production. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, batch document extraction, product restock API + UI. Session 26: Notification Center upgraded from 30s polling to real-time SSE with polling fallback (60s). Session 24: Mobile auth error handling standardized (4 routes → handleApiError), hardcoded error messages replaced with MSG.* constants (3 routes, 3 new constants). Session 23: Console cleanup (28 removed, 14 logger, 14 env-check), 1 error.tsx created. Session 22: Structured Logger Migration (20 files, 22+ changes). Session 21: Bug fixes (POST /api/admin/plans Zod fix, Search API auth 401, Search API query length 400, ioredis webpack fix), Search API security hardened (auth + query validation), SUPERADMIN hidden from tenant views (5 files). Session 20: SUPERADMIN role hidden from tenant-level views (team management, role assignments, approval levels) — platform admin only. Session 18: 64 `as unknown as` casts refactored to `toAuditPayload()` across 45 files, platform settings now consumed (maintenanceMode in middleware, allowRegistration in registration, emailNotifications in email), in-memory cache with TTL 60s, PlanTenantLimit enforcement during registration. Session 17: Platform settings migrated from filesystem to PostgreSQL database (PlatformSetting + PlanTenantLimit models, upsert pattern, race condition eliminated). Session 16: Security hardening (Analytics Explorer model whitelist, toAuditPayload() helper for type-safe audit casts, 7 unsafe casts refactored in 4 routes). Session 15: Security hardening (4 Zod schemas: mobile auth, support tickets, security sessions) + SMTP TLS fix + pagination limits on 5 unbounded routes (11 files), documentation sync (CURRENT.md, AGENT.md, FEATURES.md). Session 14: Operations API fixes (4 copy-paste routes corrected + bulk endpoint added), Analytics materialized views integrated (mv_daily_revenue in dashboard with fallback). Session 13: Issue #37 Phase 4 complete — all billing payment files migrated, Prisma schema updated (entitlementId FK), 20260913043100 migration (ALTER + backfill). Session 12: SubscriptionPlan → Plan migration Phase 3 — 6 billing files migrated. Session 11: Rate limiter hardened — fail-closed in production without Redis, ENABLE_MEMORY_RATE_LIMIT env var, sync checkRateLimit() deprecation warning. Session 10: POS Zod hardening (4 schemas, 6 routes), Workflow PAYROLL REJECTED fix, documentation sync. Session 9: Global audit findings fixed — POS tenantId isolation (2 files), auth register Zod schemas (2 routes), $queryRawUnsafe→$queryRaw migration (4 files, 14 queries). Session 8: Permission string format mismatch fixed (module.entity→module:action), 35+ UI pages migrated to usePermission() hook, 4 billing admin routes migrated to requirePermissionForRoute(). Session 7: 189 unit tests (all PASS), Vitest framework, 160+ console cleanup, 23 inline role checks removed, referential integrity fix (3 form inputs). Session 6: Zod validation complete (128→144→146 schemas), rate limiting 100% coverage (13 additional routes). TypeScript check: 0 errors. Health score: ~100/100.
+## 🔧 Bug Fix: POS 503 Migration Issue (15 Sep 2026)
+
+> **Focus:** Fix POS 503 errors caused by duplicate migration timestamp + add missing POS indexes
+> **Total Files Changed:** 2 (1 renamed migration, 1 new migration SQL)
+> **TypeScript:** No code changes (migration only)
+> **Health Score:** ~100/100
+
+### Root Cause
+
+- **Problem:** Duplicate migration timestamp `20260905210000` caused Prisma to skip the `add_table_management` migration (which creates `PosTable` and `PosTableReservation` tables)
+- **Impact:** POS module returned HTTP 503 errors when accessing table management features because the required database tables did not exist
+- **Detection:** Prisma migration status showed `add_table_management` as unapplied despite being present in the migrations directory
+
+### Fix 1: Migration Timestamp Rename ✅
+
+- **Status:** ✅ Fixed
+- **Description:** Renamed migration directory from `20260905210000_add_table_management` to `20260905210100_add_table_management` to resolve the duplicate timestamp conflict with `20260905210000_add_operations_phase_b`
+- **Fix:** `mv 20260905210000_add_table_management 20260905210100_add_table_management`
+- **Impact:** Prisma can now correctly detect and apply the `add_table_management` migration, creating `PosTable` and `PosTableReservation` tables
+
+### Fix 2: Missing POS Indexes ✅
+
+- **Status:** ✅ Fixed
+- **Description:** Created new migration to add 4 missing database indexes for POS order query performance
+- **Migration:** `20260915074300_add_pos_indexes/migration.sql`
+- **Indexes Added:**
+  1. `PosOrder_tenantId_idx` — `PosOrder("tenantId")` — Improves tenant-scoped order queries
+  2. `PosOrder_sessionId_idx` — `PosOrder("sessionId")` — Improves session-based order lookups
+  3. `PosOrder_createdAt_idx` — `PosOrder("createdAt")` — Improves date-range order queries
+  4. `PosOrderItem_orderId_idx` — `PosOrderItem("orderId")` — Improves order item joins
+- **Impact:** Faster POS order queries, especially for analytics, reporting, and session closing operations
+
+### Deployment Status
+
+| Item | Status |
+|------|--------|
+| Migration rename | ✅ Ready |
+| POS indexes migration | ✅ Ready |
+| VPS deploy | ⏳ Pending — run `bash update.sh` + `cd packages/db && npx prisma migrate deploy` |
+
+### Session 36 Summary
+
+| Metric | Value |
+|--------|-------|
+| Fixes | 2 (migration timestamp conflict, missing POS indexes) |
+| Files Changed | 2 (1 renamed, 1 new migration SQL) |
+| Indexes Added | 4 (PosOrder × 3, PosOrderItem × 1) |
+| TypeScript Errors | N/A (migration only) |
+| Breaking Changes | None |
+
+---
+
 ## 🏛️ Session 35 — Sprint 34: POS Void Fix + Operations i18n + Bills & Expenses + WhatsApp Foundation (14 Sep 2026)
 
 > **Focus:** Sprint 34 — Fix POS void bug, i18n migration, new Bills & Expenses module, WhatsApp Business API foundation
