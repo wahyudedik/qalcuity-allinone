@@ -17,7 +17,7 @@
 // Cache Versioning
 // =============================================================================
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `qalcuity-static-${CACHE_VERSION}`;
 const API_PRODUCTS_CACHE = `qalcuity-api-products-${CACHE_VERSION}`;
 const API_SESSIONS_CACHE = `qalcuity-api-sessions-${CACHE_VERSION}`;
