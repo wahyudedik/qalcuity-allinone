@@ -20,8 +20,10 @@ import {
 import { ResourceHeatmap, type ResourceData } from '@/components/operations/resource-heatmap';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatDate } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 export default function ResourcesPage() {
+    const { t } = useTranslation();
     const params = useParams();
     const router = useRouter();
     const projectId = params?.id as string;
@@ -420,9 +422,9 @@ export default function ResourcesPage() {
             {!error && !loading && resourceData && resourceData.data.length === 0 && (
                 <EmptyState
                     icon={Users}
-                    title="Belum ada alokasi resource"
-                    description="Mulai alokasikan karyawan ke project ini untuk melacak pemanfaatan resource."
-                    actionLabel="Tambah Alokasi"
+                    title={t('dashboard.projects.resourcesTab.emptyTitle')}
+                    description={t('dashboard.projects.resourcesTab.emptyDescription')}
+                    actionLabel={t('dashboard.projects.resourcesTab.addAllocation')}
                     onAction={() => setShowForm(true)}
                 />
             )}

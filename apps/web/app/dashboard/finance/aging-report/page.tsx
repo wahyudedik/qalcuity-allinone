@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { useTranslation } from '@/lib/i18n'
 import {
     Clock,
     ArrowUpRight,
@@ -72,63 +73,86 @@ function formatDate(iso: string): string {
     })
 }
 
+function getBucketKey(bucket: string): string {
+    return bucket.toLowerCase().replace('+', 'plus').replace('-', '_')
+}
+
 function getBucketColor(bucket: string): string {
-    switch (bucket) {
-        case 'current':
-            return 'bg-green-50 border-green-200 text-green-800'
-        case '31-60':
-            return 'bg-yellow-50 border-yellow-200 text-yellow-800'
-        case '61-90':
-            return 'bg-orange-50 border-orange-200 text-orange-800'
-        case '90+':
-            return 'bg-red-50 border-red-200 text-red-800'
-        default:
-            return 'bg-gray-50 border-gray-200 text-gray-800'
-    }
+    const key = getBucketKey(bucket)
+    if (key === 'current') return 'bg-green-50 border-green-200 text-green-800'
+    if (key === '31_60') return 'bg-yellow-50 border-yellow-200 text-yellow-800'
+    if (key === '61_90') return 'bg-orange-50 border-orange-200 text-orange-800'
+    if (key === '90plus') return 'bg-red-50 border-red-200 text-red-800'
+    return 'bg-gray-50 border-gray-200 text-gray-800'
 }
 
 function getBucketDotColor(bucket: string): string {
-    switch (bucket) {
-        case 'current':
-            return 'bg-green-500'
-        case '31-60':
-            return 'bg-yellow-500'
-        case '61-90':
-            return 'bg-orange-500'
-        case '90+':
-            return 'bg-red-500'
-        default:
-            return 'bg-gray-500'
-    }
+    const key = getBucketKey(bucket)
+    if (key === 'current') return 'bg-green-500'
+    if (key === '31_60') return 'bg-yellow-500'
+    if (key === '61_90') return 'bg-orange-500'
+    if (key === '90plus') return 'bg-red-500'
+    return 'bg-gray-500'
 }
 
 function getBucketTextColor(bucket: string): string {
-    switch (bucket) {
-        case 'current':
-            return 'text-green-600'
-        case '31-60':
-            return 'text-yellow-600'
-        case '61-90':
-            return 'text-orange-600'
-        case '90+':
-            return 'text-red-600'
-        default:
-            return 'text-gray-600'
-    }
+    const key = getBucketKey(bucket)
+    if (key === 'current') return 'text-green-600'
+    if (key === '31_60') return 'text-yellow-600'
+    if (key === '61_90') return 'text-orange-600'
+    if (key === '90plus') return 'text-red-600'
+    return 'text-gray-600'
+}
+
+function exportToCsv(details: AgingDetail[], type: 'AR' | 'AP', t: (key: string) => string): void {
+    const headers = [
+        t('finance.reports.aging.invoiceNumber'),
+        type === 'AR' ? t('finance.reports.aging.customer') : t('finance.reports.aging.vendor'),
+        t('finance.reports.aging.total'),
+        type === 'AR' ? t('finance.reports.aging.paid') : '',
+        t('finance.reports.aging.balance'),
+        t('finance.reports.aging.dueDate'),
+        t('finance.reports.aging.daysOverdue'),
+        t('finance.reports.aging.bucket'),
+    ].filter(Boolean)
+
+    const rows = details.map((d) => [
+        d.number,
+        d.contactName,
+        d.total,
+        type === 'AR' ? d.paid : '',
+        d.balance,
+        d.referenceDate,
+        d.ageDays,
+        d.bucket,
+    ])
+
+    const csvContent = [
+        headers.join(','),
+        ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `aging-report-${type.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function AgingReportPage() {
     const { data: session } = useSession()
+    const { t } = useTranslation()
 
     const [data, setData] = useState<AgingReportData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    // Collapsible sections
-    const [showAR, setShowAR] = useState(true)
-    const [showAP, setShowAP] = useState(true)
+    // Tab state
+    const [activeTab, setActiveTab] = useState<'receivables' | 'payables'>('receivables')
 
     const fetchReport = useCallback(async () => {
         try {
@@ -139,14 +163,14 @@ export default function AgingReportPage() {
             if (json.success) {
                 setData(json.data)
             } else {
-                setError(json.error || 'Gagal memuat laporan umur piutang & utang')
+                setError(json.error || t('finance.reports.aging.fetchError'))
             }
         } catch {
-            setError('Gagal memuat laporan umur piutang & utang')
+            setError(t('finance.reports.aging.fetchError'))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         if (session) {
@@ -154,9 +178,14 @@ export default function AgingReportPage() {
         }
     }, [session, fetchReport])
 
-    const handlePrint = () => {
-        window.print()
-    }
+    const handleExportCsv = useCallback(() => {
+        if (!data) return
+        if (activeTab === 'receivables') {
+            exportToCsv(data.accountsReceivable.details, 'AR', t)
+        } else {
+            exportToCsv(data.accountsPayable.details, 'AP', t)
+        }
+    }, [data, activeTab, t])
 
     // ─── Loading State ──────────────────────────────────────────────────
 
@@ -166,17 +195,15 @@ export default function AgingReportPage() {
                 <div className="animate-pulse space-y-6">
                     <div className="h-8 w-72 rounded bg-gray-200" />
                     <div className="mt-2 h-4 w-48 rounded bg-gray-100" />
-                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="h-24 rounded-lg bg-gray-100" />
-                        ))}
+                    <div className="flex gap-2">
+                        <div className="h-10 w-32 rounded bg-gray-200" />
+                        <div className="h-10 w-32 rounded bg-gray-200" />
                     </div>
                     <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="h-24 rounded-lg bg-gray-100" />
                         ))}
                     </div>
-                    <div className="h-64 rounded-lg bg-gray-100" />
                     <div className="h-64 rounded-lg bg-gray-100" />
                 </div>
             </div>
@@ -190,14 +217,14 @@ export default function AgingReportPage() {
             <div className="flex flex-col items-center justify-center p-12 text-center">
                 <Clock className="mb-4 h-12 w-12 text-red-400" />
                 <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                    Gagal Memuat Laporan
+                    {t('finance.reports.aging.loadError')}
                 </h3>
                 <p className="mb-4 text-sm text-gray-500">{error}</p>
                 <button
                     onClick={fetchReport}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                    Coba Lagi
+                    {t('common.tryAgain')}
                 </button>
             </div>
         )
@@ -212,44 +239,25 @@ export default function AgingReportPage() {
     ) {
         return (
             <div className="space-y-6 p-6">
-                {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between no-print">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            Laporan Umur Piutang & Utang
+                            {t('finance.reports.aging.title')}
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
-                            Ringkasan umur piutang (AR) dan utang (AP) berdasarkan jatuh tempo
+                            {t('finance.reports.aging.description')}
                         </p>
                     </div>
                 </div>
 
-                {/* Empty State */}
                 <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-12 text-center">
                     <Inbox className="mb-4 h-12 w-12 text-gray-300" />
                     <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                        Tidak Ada Data Aging
+                        {t('finance.reports.aging.noData')}
                     </h3>
                     <p className="mb-4 max-w-md text-sm text-gray-500">
-                        Belum ada Invoice yang belum lunas atau Purchase Order yang belum
-                        dibayar. Data aging akan muncul setelah ada transaksi dengan status
-                        yang sesuai.
+                        {t('finance.reports.aging.noDataDescription')}
                     </p>
-                    <div className="rounded-lg bg-gray-50 p-4 text-left text-sm text-gray-600">
-                        <p className="font-medium text-gray-700">Catatan:</p>
-                        <ul className="mt-2 space-y-1">
-                            <li>
-                                • Piutang (AR): Invoice dengan status{' '}
-                                <span className="font-medium">Dikirim</span> atau{' '}
-                                <span className="font-medium">Jatuh Tempo</span>
-                            </li>
-                            <li>
-                                • Utang (AP): Purchase Order dengan status{' '}
-                                <span className="font-medium">Dikirim</span> atau{' '}
-                                <span className="font-medium">Diterima</span>
-                            </li>
-                        </ul>
-                    </div>
                 </div>
             </div>
         )
@@ -257,15 +265,12 @@ export default function AgingReportPage() {
 
     // ─── Helper: Render Summary Cards ────────────────────────────────────
 
-    function renderSummaryCards(
-        summary: AgingSummary,
-        type: 'AR' | 'AP'
-    ) {
+    function renderSummaryCards(summary: AgingSummary) {
         const buckets = [
-            { key: 'current', label: 'Current (0-30)', data: summary.current },
-            { key: '31-60', label: '31-60 Hari', data: summary.days31_60 },
-            { key: '61-90', label: '61-90 Hari', data: summary.days61_90 },
-            { key: '90+', label: '90+ Hari', data: summary.days90plus },
+            { key: 'Current', label: t('finance.reports.aging.current'), data: summary.current },
+            { key: '31-60', label: t('finance.reports.aging.days31to60'), data: summary.days31_60 },
+            { key: '61-90', label: t('finance.reports.aging.days61to90'), data: summary.days61_90 },
+            { key: '90+', label: t('finance.reports.aging.over90'), data: summary.days90plus },
         ]
 
         return (
@@ -291,7 +296,7 @@ export default function AgingReportPage() {
                 ))}
                 {/* Total */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <span className="text-xs font-medium text-gray-500">Total</span>
+                    <span className="text-xs font-medium text-gray-500">{t('finance.reports.aging.total')}</span>
                     <p className="mt-2 text-lg font-bold text-gray-900">
                         {formatIDR(summary.total.total)}
                     </p>
@@ -310,7 +315,7 @@ export default function AgingReportPage() {
             return (
                 <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
                     <Inbox className="mb-3 h-8 w-8 text-gray-300" />
-                    <p className="text-sm text-gray-500">Tidak ada data</p>
+                    <p className="text-sm text-gray-500">{t('finance.reports.aging.noData')}</p>
                 </div>
             )
         }
@@ -321,30 +326,30 @@ export default function AgingReportPage() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Nomor
+                                {type === 'AR' ? t('finance.reports.aging.invoiceNumber') : t('finance.reports.aging.billNumber')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                                {type === 'AR' ? 'Customer' : 'Supplier'}
+                                {type === 'AR' ? t('finance.reports.aging.customer') : t('finance.reports.aging.vendor')}
                             </th>
                             <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Total
+                                {t('finance.reports.aging.total')}
                             </th>
                             {type === 'AR' && (
                                 <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                                    Dibayar
+                                    {t('finance.reports.aging.paid')}
                                 </th>
                             )}
                             <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Saldo
+                                {t('finance.reports.aging.balance')}
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Tgl Jatuh Tempo
+                                {t('finance.reports.aging.dueDate')}
                             </th>
                             <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Umur (Hari)
+                                {t('finance.reports.aging.daysOverdue')}
                             </th>
                             <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Bucket
+                                {t('finance.reports.aging.bucket')}
                             </th>
                         </tr>
                     </thead>
@@ -398,7 +403,7 @@ export default function AgingReportPage() {
             return (
                 <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
                     <Inbox className="mb-3 h-8 w-8 text-gray-300" />
-                    <p className="text-sm text-gray-500">Tidak ada data</p>
+                    <p className="text-sm text-gray-500">{t('finance.reports.aging.noData')}</p>
                 </div>
             )
         }
@@ -427,27 +432,27 @@ export default function AgingReportPage() {
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                             <div>
-                                <p className="text-xs text-gray-500">Saldo</p>
+                                <p className="text-xs text-gray-500">{t('finance.reports.aging.balance')}</p>
                                 <p className="font-medium text-gray-900">
                                     {formatIDR(detail.balance)}
                                 </p>
                             </div>
                             {type === 'AR' && (
                                 <div>
-                                    <p className="text-xs text-gray-500">Dibayar</p>
+                                    <p className="text-xs text-gray-500">{t('finance.reports.aging.paid')}</p>
                                     <p className="text-gray-700">{formatIDR(detail.paid)}</p>
                                 </div>
                             )}
                             <div>
-                                <p className="text-xs text-gray-500">Jatuh Tempo</p>
+                                <p className="text-xs text-gray-500">{t('finance.reports.aging.dueDate')}</p>
                                 <p className="text-gray-700">
                                     {formatDate(detail.referenceDate)}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Umur</p>
+                                <p className="text-xs text-gray-500">{t('finance.reports.aging.daysOverdue')}</p>
                                 <p className={getBucketTextColor(detail.bucket)}>
-                                    {detail.ageDays} hari
+                                    {detail.ageDays} {t('finance.reports.aging.days')}
                                 </p>
                             </div>
                         </div>
@@ -459,146 +464,94 @@ export default function AgingReportPage() {
 
     // ─── Main Render ────────────────────────────────────────────────────
 
+    const arData = data.accountsReceivable
+    const apData = data.accountsPayable
+    const currentData = activeTab === 'receivables' ? arData : apData
+
     return (
         <div className="space-y-6 p-6">
             {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between no-print">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">
-                        Laporan Umur Piutang & Utang
+                        {t('finance.reports.aging.title')}
                     </h1>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
                         <Calendar className="h-3.5 w-3.5" />
-                        Per per: {formatDate(data.asOf)}
+                        {t('finance.reports.aging.asOf')} {formatDate(data.asOf)}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={handlePrint}
-                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        onClick={handleExportCsv}
+                        disabled={currentData.details.length === 0}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Download className="h-4 w-4" />
-                        Cetak / Export
+                        {t('finance.reports.aging.exportCsv')}
                     </button>
                 </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                ACCOUNTS RECEIVABLE (AR)
-            ═══════════════════════════════════════════════════════════════ */}
-            <div className="rounded-xl border border-gray-200 bg-white">
-                {/* Section Header */}
-                <button
-                    onClick={() => setShowAR(!showAR)}
-                    className="flex w-full items-center justify-between px-6 py-4 text-left"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                            <ArrowUpRight className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900">
-                                Piutang (Accounts Receivable)
-                            </h2>
-                            <p className="text-sm text-gray-500">
-                                {data.accountsReceivable.summary.total.count} invoice
-                                belum lunas — {formatIDR(data.accountsReceivable.summary.total.total)}
-                            </p>
-                        </div>
-                    </div>
-                    {showAR ? (
-                        <ChevronUp className="h-5 w-5 text-gray-400" />
-                    ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
-                    )}
-                </button>
+            {/* Tabs */}
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-1" aria-label="Aging report tabs">
+                    <button
+                        onClick={() => setActiveTab('receivables')}
+                        className={`inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'receivables'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                            }`}
+                    >
+                        <ArrowUpRight className="h-4 w-4" />
+                        {t('finance.reports.aging.receivables')}
+                        <span className="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                            {arData.summary.total.count}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('payables')}
+                        className={`inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'payables'
+                            ? 'border-purple-600 text-purple-600'
+                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                            }`}
+                    >
+                        <ArrowDownRight className="h-4 w-4" />
+                        {t('finance.reports.aging.payables')}
+                        <span className="ml-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
+                            {apData.summary.total.count}
+                        </span>
+                    </button>
+                </nav>
+            </div>
 
-                {showAR && (
-                    <div className="space-y-4 border-t border-gray-100 px-6 pb-6 pt-4">
-                        {/* Warning banner if 90+ exists */}
-                        {data.accountsReceivable.summary.days90plus.count > 0 && (
-                            <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-                                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                                <span>
-                                    {data.accountsReceivable.summary.days90plus.count} invoice
-                                    telah melewati 90 hari — perhatian segera diperlukan.
-                                </span>
-                            </div>
-                        )}
+            {/* Warning banner if 90+ exists */}
+            {currentData.summary.days90plus.count > 0 && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <span>
+                        {currentData.summary.days90plus.count} {activeTab === 'receivables' ? 'invoice' : 'PO'}{' '}
+                        {t('finance.reports.aging.overdueWarning')}
+                    </span>
+                </div>
+            )}
 
-                        {/* Summary Cards */}
-                        {renderSummaryCards(data.accountsReceivable.summary, 'AR')}
+            {/* Summary Cards */}
+            {renderSummaryCards(currentData.summary)}
 
-                        {/* Detail Table — Desktop */}
-                        <div className="hidden md:block">
-                            {renderDesktopTable(data.accountsReceivable.details, 'AR')}
-                        </div>
-
-                        {/* Detail Cards — Mobile */}
-                        <div className="md:hidden">
-                            {renderMobileCards(data.accountsReceivable.details, 'AR')}
-                        </div>
-                    </div>
+            {/* Detail Table — Desktop */}
+            <div className="hidden md:block">
+                {renderDesktopTable(
+                    currentData.details,
+                    activeTab === 'receivables' ? 'AR' : 'AP'
                 )}
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                ACCOUNTS PAYABLE (AP)
-            ═══════════════════════════════════════════════════════════════ */}
-            <div className="rounded-xl border border-gray-200 bg-white">
-                {/* Section Header */}
-                <button
-                    onClick={() => setShowAP(!showAP)}
-                    className="flex w-full items-center justify-between px-6 py-4 text-left"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                            <ArrowDownRight className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900">
-                                Utang (Accounts Payable)
-                            </h2>
-                            <p className="text-sm text-gray-500">
-                                {data.accountsPayable.summary.total.count} PO belum
-                                dibayar —{' '}
-                                {formatIDR(data.accountsPayable.summary.total.total)}
-                            </p>
-                        </div>
-                    </div>
-                    {showAP ? (
-                        <ChevronUp className="h-5 w-5 text-gray-400" />
-                    ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
-                    )}
-                </button>
-
-                {showAP && (
-                    <div className="space-y-4 border-t border-gray-100 px-6 pb-6 pt-4">
-                        {/* Warning banner if 90+ exists */}
-                        {data.accountsPayable.summary.days90plus.count > 0 && (
-                            <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-                                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                                <span>
-                                    {data.accountsPayable.summary.days90plus.count} PO
-                                    telah melewati 90 hari — segera lakukan pembayaran.
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Summary Cards */}
-                        {renderSummaryCards(data.accountsPayable.summary, 'AP')}
-
-                        {/* Detail Table — Desktop */}
-                        <div className="hidden md:block">
-                            {renderDesktopTable(data.accountsPayable.details, 'AP')}
-                        </div>
-
-                        {/* Detail Cards — Mobile */}
-                        <div className="md:hidden">
-                            {renderMobileCards(data.accountsPayable.details, 'AP')}
-                        </div>
-                    </div>
+            {/* Detail Cards — Mobile */}
+            <div className="md:hidden">
+                {renderMobileCards(
+                    currentData.details,
+                    activeTab === 'receivables' ? 'AR' : 'AP'
                 )}
             </div>
         </div>

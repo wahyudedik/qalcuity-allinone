@@ -107,10 +107,10 @@ export default function AuditLogPage() {
             if (dateTo) params.set('dateTo', dateTo)
 
             const res = await fetch(`/api/audit/logs?${params.toString()}`)
-            if (!res.ok) throw new Error('Gagal memuat audit log')
+            if (!res.ok) throw new Error(t('audit.loadError') || 'Gagal memuat audit log')
 
             const json = await res.json()
-            if (!json.success) throw new Error(json.error || 'Gagal memuat audit log')
+            if (!json.success) throw new Error(json.error || t('audit.loadError') || 'Gagal memuat audit log')
 
             setLogs(json.data || [])
             setPagination({
@@ -120,7 +120,7 @@ export default function AuditLogPage() {
                 totalPages: json.totalPages || 0,
             })
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
+            setError(err instanceof Error ? err.message : (t('audit.networkError') || 'Terjadi kesalahan'))
         } finally {
             setLoading(false)
         }
@@ -182,7 +182,7 @@ export default function AuditLogPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Filter</span>
+                    <span className="text-sm font-medium text-gray-700">{t('audit.filter') || 'Filter'}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                     {/* Search */}
@@ -190,7 +190,7 @@ export default function AuditLogPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari..."
+                            placeholder={t('audit.searchPlaceholder') || 'Cari...'}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
@@ -204,7 +204,7 @@ export default function AuditLogPage() {
                         onChange={(e) => setEntityFilter(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                        <option value="all">Semua Entitas</option>
+                        <option value="all">{t('audit.allEntities') || 'Semua Entitas'}</option>
                         {entityOptions.map((entity) => (
                             <option key={entity} value={entity}>{entity}</option>
                         ))}
@@ -216,7 +216,7 @@ export default function AuditLogPage() {
                         onChange={(e) => setActionFilter(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                        <option value="all">Semua Aksi</option>
+                        <option value="all">{t('audit.allActions') || 'Semua Aksi'}</option>
                         <option value="CREATE">CREATE</option>
                         <option value="UPDATE">UPDATE</option>
                         <option value="DELETE">DELETE</option>
@@ -228,7 +228,7 @@ export default function AuditLogPage() {
                         value={dateFrom}
                         onChange={(e) => setDateFrom(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        title="Tanggal Mulai"
+                        title={t('audit.startDate') || 'Tanggal Mulai'}
                     />
 
                     {/* Date to */}
@@ -237,7 +237,7 @@ export default function AuditLogPage() {
                         value={dateTo}
                         onChange={(e) => setDateTo(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        title="Tanggal Akhir"
+                        title={t('audit.endDate') || 'Tanggal Akhir'}
                     />
                 </div>
                 <div className="flex items-center gap-2 mt-3">
@@ -245,23 +245,23 @@ export default function AuditLogPage() {
                         onClick={handleFilter}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
-                        Terapkan Filter
+                        {t('audit.applyFilter') || 'Terapkan Filter'}
                     </button>
                     <button
                         onClick={handleResetFilter}
                         className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                     >
-                        Reset
+                        {t('audit.resetFilter') || 'Reset'}
                     </button>
                     <button
                         onClick={() => fetchLogs(pagination.page)}
                         className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-                        title="Muat Ulang"
+                        title={t('audit.reload') || 'Muat Ulang'}
                     >
                         <RefreshCw className="h-4 w-4" />
                     </button>
                     <span className="text-sm text-gray-500 ml-auto">
-                        {pagination.total.toLocaleString()} total entri
+                        {pagination.total.toLocaleString()} {t('audit.totalEntries') || 'total entri'}
                     </span>
                 </div>
             </div>
@@ -275,7 +275,7 @@ export default function AuditLogPage() {
                         onClick={() => fetchLogs(pagination.page)}
                         className="ml-auto text-sm text-red-600 hover:text-red-800 font-medium"
                     >
-                        Coba Lagi
+                        {t('audit.retry') || 'Coba Lagi'}
                     </button>
                 </div>
             )}
@@ -285,7 +285,7 @@ export default function AuditLogPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-8">
                     <div className="flex flex-col items-center justify-center">
                         <Loader2 className="h-8 w-8 text-blue-600 animate-spin mb-3" />
-                        <p className="text-sm text-gray-500">Memuat audit log...</p>
+                        <p className="text-sm text-gray-500">{t('audit.loadingLog') || 'Memuat audit log...'}</p>
                     </div>
                 </div>
             )}
@@ -295,9 +295,9 @@ export default function AuditLogPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-8">
                     <div className="flex flex-col items-center text-center">
                         <History className="h-12 w-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Audit Log</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('audit.empty') || 'Belum Ada Audit Log'}</h3>
                         <p className="text-gray-600">
-                            Aktivitas perubahan data akan tercatat di sini.
+                            {t('audit.emptyDescription') || 'Aktivitas perubahan data akan tercatat di sini.'}
                         </p>
                     </div>
                 </div>
@@ -311,13 +311,13 @@ export default function AuditLogPage() {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-gray-50 border-b border-gray-200">
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Waktu</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Entitas</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Detail</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">IP Address</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.timestamp') || 'Waktu'}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.user') || 'User'}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.action') || 'Aksi'}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.entity') || 'Entitas'}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.detail') || 'Detail'}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.ipAddress') || 'IP Address'}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('audit.table.actions') || 'Aksi'}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -364,7 +364,7 @@ export default function AuditLogPage() {
                                                 <button
                                                     onClick={() => openDetail(log)}
                                                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Lihat Detail"
+                                                    title={t('audit.details') || 'Lihat Detail'}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </button>
@@ -422,7 +422,7 @@ export default function AuditLogPage() {
                     {pagination.totalPages > 1 && (
                         <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3">
                             <div className="text-sm text-gray-600">
-                                Halaman {pagination.page} dari {pagination.totalPages}
+                                {(t('audit.pagination') || 'Halaman {page} dari {totalPages}').replace('{page}', String(pagination.page)).replace('{totalPages}', String(pagination.totalPages))}
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
@@ -467,7 +467,7 @@ export default function AuditLogPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDetail(false)}>
                     <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">Detail Audit Log</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t('audit.detail.title') || 'Detail Audit Log'}</h3>
                             <button
                                 onClick={() => setShowDetail(false)}
                                 className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"
@@ -478,18 +478,18 @@ export default function AuditLogPage() {
                         <div className="p-4 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">Waktu</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.timestamp') || 'Waktu'}</label>
                                     <p className="text-sm text-gray-900 mt-0.5">{formatDateTime(selectedLog.timestamp)}</p>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">User</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.user') || 'User'}</label>
                                     <p className="text-sm text-gray-900 mt-0.5 flex items-center gap-2">
                                         <User className="h-3.5 w-3.5 text-gray-400" />
                                         {selectedLog.userName}
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">Aksi</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.action') || 'Aksi'}</label>
                                     <p className="mt-0.5">
                                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionBadgeColor(selectedLog.action)}`}>
                                             {getActionIcon(selectedLog.action)}
@@ -498,7 +498,7 @@ export default function AuditLogPage() {
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">Entitas</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.entity') || 'Entitas'}</label>
                                     <p className="mt-0.5">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEntityBadgeColor(selectedLog.entity)}`}>
                                             {selectedLog.entity}
@@ -509,7 +509,7 @@ export default function AuditLogPage() {
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">IP Address</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.ipAddress') || 'IP Address'}</label>
                                     <p className="text-sm text-gray-900 mt-0.5 flex items-center gap-1">
                                         <Globe className="h-3.5 w-3.5 text-gray-400" />
                                         {selectedLog.ipAddress}
@@ -520,7 +520,7 @@ export default function AuditLogPage() {
                             {/* New Values */}
                             {selectedLog.details && (
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">Nilai Baru (JSON)</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.newValue') || 'Nilai Baru (JSON)'}</label>
                                     <pre className="mt-1 p-3 bg-gray-50 rounded-lg text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap break-all">
                                         {(() => {
                                             try {
@@ -536,7 +536,7 @@ export default function AuditLogPage() {
                             {/* Old Values */}
                             {selectedLog.oldValues && (
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500 uppercase">Nilai Lama (JSON)</label>
+                                    <label className="text-xs font-medium text-gray-500 uppercase">{t('audit.detail.oldValue') || 'Nilai Lama (JSON)'}</label>
                                     <pre className="mt-1 p-3 bg-gray-50 rounded-lg text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap break-all">
                                         {(() => {
                                             try {
@@ -554,7 +554,7 @@ export default function AuditLogPage() {
                                 onClick={() => setShowDetail(false)}
                                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                             >
-                                Tutup
+                                {t('audit.detail.close') || 'Tutup'}
                             </button>
                         </div>
                     </div>

@@ -102,6 +102,9 @@ export const MSG = {
     STOCK_OPNAME_NOT_FOUND: 'Stock opname not found',
     RESTOCK_SUCCESS: 'Stock restocked successfully',
     RESTOCK_FAILED: 'Failed to restock product',
+    STOCK_ADJUSTMENT_SUCCESS: 'Stock adjusted successfully',
+    STOCK_ADJUSTMENT_FAILED: 'Failed to adjust stock',
+    INSUFFICIENT_STOCK: 'Insufficient stock for this adjustment',
 
     // ---------------------------------------------------------------------------
     // Finance
@@ -207,6 +210,9 @@ export const MSG = {
     KITCHEN_STATION_ADMIN_ONLY_UPDATE: 'Only admin can update kitchen stations',
     KITCHEN_STATION_ADMIN_ONLY_DELETE: 'Only admin can delete kitchen stations',
     KITCHEN_STATION_CANNOT_DELETE_ACTIVE_ORDERS: 'Cannot delete station with active orders. Wait for all orders to complete.',
+    PROMO_CODE_INVALID: 'Promo code is invalid',
+    PROMO_MIN_ORDER_NOT_MET: 'Minimum order amount not met for this promo',
+    PROMO_DISCOUNT_EXCEEDS_TOTAL: 'Promo discount cannot exceed the subtotal',
     KITCHEN_ORDER_NOT_FOUND: 'Kitchen order not found',
     KITCHEN_ORDER_TRANSITION_INVALID: 'Invalid transition',
     KITCHEN_ORDER_ADMIN_ONLY_CREATE: 'Only admin can create kitchen orders',
@@ -343,6 +349,13 @@ export const MSG = {
     WHATSAPP_SEND_FAILED: 'Failed to send WhatsApp message',
     WHATSAPP_SENT_SUCCESS: 'WhatsApp test message sent successfully',
     WHATSAPP_INVALID_PHONE: 'Invalid phone number format. Use international format (e.g., +628123456789)',
+
+    // -----------------------------------------------------------------------
+    // Password Policy
+    // -----------------------------------------------------------------------
+    PASSWORD_DOES_NOT_MEET_POLICY: 'Password does not meet the tenant password policy requirements',
+    PASSWORD_REUSED: 'Password was recently used and cannot be reused',
+    PASSWORD_POLICY_UPDATED: 'Password policy updated successfully',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Bell, CheckCheck, Trash2, X, FileText, CreditCard, Users, Settings, AlertTriangle } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
+import { useTranslation } from '@/lib/i18n'
 
 type InAppNotification = {
     id: string
@@ -29,6 +30,7 @@ const notifTypeConfig: Record<string, { bg: string; icon: React.ReactNode }> = {
 export function NotificationCenter() {
     const { data: session } = useSession()
     const { addToast } = useToast()
+    const { t } = useTranslation()
     const [notifications, setNotifications] = useState<InAppNotification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [isOpen, setIsOpen] = useState(false)
@@ -65,7 +67,7 @@ export function NotificationCenter() {
                     fetchNotifications()
                     // Show toast for new notification
                     if (data.notification?.title) {
-                        addToast(`Notifikasi Baru: ${data.notification.title}`, 'info')
+                        addToast(`${t('notification.newNotification')}: ${data.notification.title}`, 'info')
                     }
                 }
                 // 'connected' and 'heartbeat' messages are silently ignored
@@ -169,12 +171,12 @@ export function NotificationCenter() {
         const diff = now.getTime() - date.getTime()
         const minutes = Math.floor(diff / (1000 * 60))
 
-        if (minutes < 1) return 'Baru saja'
-        if (minutes < 60) return `${minutes}m lalu`
+        if (minutes < 1) return t('notification.justNow')
+        if (minutes < 60) return t('notification.minutesAgo').replace('{n}', String(minutes))
         const hours = Math.floor(minutes / 60)
-        if (hours < 24) return `${hours}j lalu`
+        if (hours < 24) return t('notification.hoursAgo').replace('{n}', String(hours))
         const days = Math.floor(hours / 24)
-        if (days < 7) return `${days}h lalu`
+        if (days < 7) return t('notification.daysAgo').replace('{n}', String(days))
         return formatDateTime(timestamp)
     }
 
@@ -184,7 +186,7 @@ export function NotificationCenter() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="relative rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                aria-label="Notifications"
+                aria-label={t('notification.title')}
             >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
@@ -201,7 +203,7 @@ export function NotificationCenter() {
                     <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                Notifikasi
+                                {t('notification.title')}
                             </h3>
                             {unreadCount > 0 && (
                                 <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-red-900/30 dark:text-red-400">
@@ -222,7 +224,7 @@ export function NotificationCenter() {
                         {notifications.length === 0 ? (
                             <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                 <Bell className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
-                                <p>Tidak ada notifikasi</p>
+                                <p>{t('notification.empty')}</p>
                             </div>
                         ) : (
                             notifications.map((notif) => {
@@ -286,7 +288,7 @@ export function NotificationCenter() {
                                         className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 disabled:opacity-50"
                                     >
                                         <CheckCheck className="h-3.5 w-3.5" />
-                                        Tandai semua dibaca
+                                        {t('notification.markAllRead')}
                                     </button>
                                 )}
                                 <button
@@ -295,7 +297,7 @@ export function NotificationCenter() {
                                     className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 disabled:opacity-50 ml-auto"
                                 >
                                     <Trash2 className="h-3.5 w-3.5" />
-                                    Hapus semua
+                                    {t('notification.clearAll')}
                                 </button>
                             </div>
                         </div>

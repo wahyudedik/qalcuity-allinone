@@ -1,7 +1,7 @@
 'use client'
 
 import { usePermission } from '@/lib/use-permission'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, Wallet, Trash2, Check, X } from 'lucide-react'
@@ -25,28 +25,21 @@ type Expense = {
     createdAt: string
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
-    pending_approval: { label: 'Menunggu Persetujuan', color: 'bg-yellow-100 text-yellow-700' },
-    approved: { label: 'Disetujui', color: 'bg-green-100 text-green-700' },
-    rejected: { label: 'Ditolak', color: 'bg-red-100 text-red-700' },
+const STATUS_COLORS: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-700',
+    pending_approval: 'bg-yellow-100 text-yellow-700',
+    approved: 'bg-green-100 text-green-700',
+    rejected: 'bg-red-100 text-red-700',
 }
 
-const categoryConfig: Record<string, { label: string; color: string }> = {
-    OFFICE: { label: 'Kantor', color: 'bg-blue-100 text-blue-700' },
-    TRAVEL: { label: 'Perjalanan', color: 'bg-purple-100 text-purple-700' },
-    UTILITIES: { label: 'Utilitas', color: 'bg-yellow-100 text-yellow-700' },
-    MARKETING: { label: 'Pemasaran', color: 'bg-pink-100 text-pink-700' },
-    SALARIES: { label: 'Gaji', color: 'bg-green-100 text-green-700' },
-    MAINTENANCE: { label: 'Pemeliharaan', color: 'bg-orange-100 text-orange-700' },
-    OTHER: { label: 'Lainnya', color: 'bg-gray-100 text-gray-700' },
-}
-
-const paymentMethodLabels: Record<string, string> = {
-    CASH: 'Tunai',
-    BANK_TRANSFER: 'Transfer Bank',
-    QRIS: 'QRIS',
-    CREDIT_CARD: 'Kartu Kredit',
+const CATEGORY_COLORS: Record<string, string> = {
+    OFFICE: 'bg-blue-100 text-blue-700',
+    TRAVEL: 'bg-purple-100 text-purple-700',
+    UTILITIES: 'bg-yellow-100 text-yellow-700',
+    MARKETING: 'bg-pink-100 text-pink-700',
+    SALARIES: 'bg-green-100 text-green-700',
+    MAINTENANCE: 'bg-orange-100 text-orange-700',
+    OTHER: 'bg-gray-100 text-gray-700',
 }
 
 export default function ExpensesPage() {
@@ -78,6 +71,30 @@ export default function ExpensesPage() {
         paymentMethod: 'CASH',
     })
 
+    const statusConfig: Record<string, { label: string; color: string }> = useMemo(() => ({
+        draft: { label: t('finance.expenses.statusLabels.draft'), color: STATUS_COLORS.draft },
+        pending_approval: { label: t('finance.expenses.statusLabels.pendingApproval'), color: STATUS_COLORS.pending_approval },
+        approved: { label: t('finance.expenses.statusLabels.approved'), color: STATUS_COLORS.approved },
+        rejected: { label: t('finance.expenses.statusLabels.rejected'), color: STATUS_COLORS.rejected },
+    }), [t])
+
+    const categoryConfig: Record<string, { label: string; color: string }> = useMemo(() => ({
+        OFFICE: { label: t('finance.expenses.categories.OFFICE'), color: CATEGORY_COLORS.OFFICE },
+        TRAVEL: { label: t('finance.expenses.categories.TRAVEL'), color: CATEGORY_COLORS.TRAVEL },
+        UTILITIES: { label: t('finance.expenses.categories.UTILITIES'), color: CATEGORY_COLORS.UTILITIES },
+        MARKETING: { label: t('finance.expenses.categories.MARKETING'), color: CATEGORY_COLORS.MARKETING },
+        SALARIES: { label: t('finance.expenses.categories.SALARIES'), color: CATEGORY_COLORS.SALARIES },
+        MAINTENANCE: { label: t('finance.expenses.categories.MAINTENANCE'), color: CATEGORY_COLORS.MAINTENANCE },
+        OTHER: { label: t('finance.expenses.categories.OTHER'), color: CATEGORY_COLORS.OTHER },
+    }), [t])
+
+    const paymentMethodLabels = useMemo(() => ({
+        CASH: t('finance.expenses.paymentMethods.CASH'),
+        BANK_TRANSFER: t('finance.expenses.paymentMethods.BANK_TRANSFER'),
+        QRIS: t('finance.expenses.paymentMethods.QRIS'),
+        CREDIT_CARD: t('finance.expenses.paymentMethods.CREDIT_CARD'),
+    }), [t])
+
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 3000)
@@ -97,10 +114,10 @@ export default function ExpensesPage() {
             if (data.success) {
                 setExpenses(data.data)
             } else {
-                setError('Gagal memuat data pengeluaran')
+                setError(t('finance.expenses.errorLoad'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('finance.expenses.errorLoadGeneric'))
         } finally {
             setLoading(false)
         }
@@ -148,30 +165,30 @@ export default function ExpensesPage() {
                 setShowCreateModal(false)
                 setCreateForm({ category: 'OTHER', description: '', amount: '', taxAmount: '0', totalAmount: '', expenseDate: '', paymentMethod: 'CASH' })
                 fetchExpenses()
-                setToast({ message: 'Pengeluaran berhasil dibuat', type: 'success' })
+                setToast({ message: t('finance.expenses.create.success'), type: 'success' })
             } else {
-                setToast({ message: `Gagal membuat pengeluaran: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('finance.expenses.create.error')}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Terjadi kesalahan saat membuat pengeluaran', type: 'error' })
+            setToast({ message: t('finance.expenses.create.errorGeneric'), type: 'error' })
         }
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Hapus Pengeluaran')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus pengeluaran ini?')
+        setConfirmTitle(t('finance.expenses.delete.title'))
+        setConfirmMessage(t('finance.expenses.delete.message'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/finance/expenses/${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchExpenses()
-                    setToast({ message: 'Pengeluaran berhasil dihapus', type: 'success' })
+                    setToast({ message: t('finance.expenses.delete.success'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus pengeluaran: ${result.error}`, type: 'error' })
+                    setToast({ message: `${t('finance.expenses.delete.error')}: ${result.error}`, type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Terjadi kesalahan saat menghapus pengeluaran', type: 'error' })
+                setToast({ message: t('finance.expenses.delete.errorGeneric'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -202,7 +219,7 @@ export default function ExpensesPage() {
                         onClick={fetchExpenses}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('finance.expenses.retry')}
                     </button>
                 </div>
             </div>
@@ -214,8 +231,8 @@ export default function ExpensesPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Pengeluaran</h1>
-                    <p className="text-gray-500">Kelola pengeluaran operasional bisnis</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.expenses.title')}</h1>
+                    <p className="text-gray-500">{t('finance.expenses.subtitle')}</p>
                 </div>
                 {canMutate && (
                     <button
@@ -223,7 +240,7 @@ export default function ExpensesPage() {
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
                         <Plus className="h-4 w-4" />
-                        Catat Pengeluaran
+                        {t('finance.expenses.createButton')}
                     </button>
                 )}
             </div>
@@ -231,19 +248,19 @@ export default function ExpensesPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Pengeluaran</p>
+                    <p className="text-sm text-gray-500">{t('finance.expenses.stats.totalExpenses')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{stats.count} transaksi</p>
+                    <p className="text-xs text-gray-400 mt-1">{stats.count} {t('finance.expenses.transactionsCount')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Bulan Ini</p>
+                    <p className="text-sm text-gray-500">{t('finance.expenses.stats.thisMonth')}</p>
                     <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.thisMonth)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{expenses.filter(e => new Date(e.expenseDate) >= thisMonthStart).length} transaksi</p>
+                    <p className="text-xs text-gray-400 mt-1">{expenses.filter(e => new Date(e.expenseDate) >= thisMonthStart).length} {t('finance.expenses.transactionsCount')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Menunggu Persetujuan</p>
+                    <p className="text-sm text-gray-500">{t('finance.expenses.stats.pendingApproval')}</p>
                     <p className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.pendingApproval)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{expenses.filter(e => e.status === 'pending_approval').length} transaksi</p>
+                    <p className="text-xs text-gray-400 mt-1">{expenses.filter(e => e.status === 'pending_approval').length} {t('finance.expenses.transactionsCount')}</p>
                 </div>
             </div>
 
@@ -254,7 +271,7 @@ export default function ExpensesPage() {
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari pengeluaran..."
+                            placeholder={t('finance.expenses.searchPlaceholder')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
@@ -266,7 +283,7 @@ export default function ExpensesPage() {
                     onChange={(e) => setCategoryFilter(e.target.value)}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Kategori</option>
+                    <option value="all">{t('finance.expenses.filter.allCategories')}</option>
                     {Object.entries(categoryConfig).map(([key, config]) => (
                         <option key={key} value={key}>{config.label}</option>
                     ))}
@@ -276,11 +293,11 @@ export default function ExpensesPage() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="pending_approval">Menunggu Persetujuan</option>
-                    <option value="approved">Disetujui</option>
-                    <option value="rejected">Ditolak</option>
+                    <option value="all">{t('finance.expenses.filter.allStatus')}</option>
+                    <option value="draft">{t('finance.expenses.filter.draft')}</option>
+                    <option value="pending_approval">{t('finance.expenses.filter.pendingApproval')}</option>
+                    <option value="approved">{t('finance.expenses.filter.approved')}</option>
+                    <option value="rejected">{t('finance.expenses.filter.rejected')}</option>
                 </select>
             </div>
 
@@ -289,8 +306,8 @@ export default function ExpensesPage() {
                 {filteredExpenses.length === 0 ? (
                     <EmptyState
                         icon={Wallet}
-                        title="Belum ada pengeluaran"
-                        description="Catat pengeluaran pertama Anda"
+                        title={t('finance.expenses.empty.title')}
+                        description={t('finance.expenses.empty.description')}
                     />
                 ) : (
                     filteredExpenses.map((expense) => (
@@ -308,15 +325,15 @@ export default function ExpensesPage() {
                                 <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${categoryConfig[expense.category]?.color || 'bg-gray-100 text-gray-700'}`}>
                                     {categoryConfig[expense.category]?.label || expense.category}
                                 </span>
-                                <span className="text-xs text-gray-500">{paymentMethodLabels[expense.paymentMethod] || expense.paymentMethod}</span>
+                                <span className="text-xs text-gray-500">{paymentMethodLabels[expense.paymentMethod as keyof typeof paymentMethodLabels] || expense.paymentMethod}</span>
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                 <div>
-                                    <span className="text-gray-500">Jumlah:</span>
+                                    <span className="text-gray-500">{t('finance.expenses.card.amount')}</span>
                                     <span className="ml-1 font-medium">{formatCurrency(expense.totalAmount)}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500">Tanggal:</span>
+                                    <span className="text-gray-500">{t('finance.expenses.card.date')}</span>
                                     <span className="ml-1">{formatDate(expense.expenseDate)}</span>
                                 </div>
                             </div>
@@ -326,7 +343,7 @@ export default function ExpensesPage() {
                                         onClick={() => handleDelete(expense.id)}
                                         className="text-sm text-red-600 hover:text-red-800"
                                     >
-                                        Hapus
+                                        {t('finance.expenses.card.delete')}
                                     </button>
                                 )}
                             </div>
@@ -341,13 +358,13 @@ export default function ExpensesPage() {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nomor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Deskripsi</th>
-                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Kategori</th>
-                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tanggal</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Jumlah</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                                <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Aksi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.number')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.description')}</th>
+                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.category')}</th>
+                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.date')}</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.amount')}</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.status')}</th>
+                                <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.expenses.table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -356,8 +373,8 @@ export default function ExpensesPage() {
                                     <td colSpan={7} className="px-6 py-12">
                                         <EmptyState
                                             icon={Wallet}
-                                            title="Belum ada pengeluaran"
-                                            description="Catat pengeluaran pertama Anda"
+                                            title={t('finance.expenses.empty.title')}
+                                            description={t('finance.expenses.empty.description')}
                                         />
                                     </td>
                                 </tr>
@@ -385,7 +402,7 @@ export default function ExpensesPage() {
                                                 <button
                                                     onClick={() => handleDelete(expense.id)}
                                                     className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                    title={t('finance.expenses.card.delete')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -404,7 +421,7 @@ export default function ExpensesPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold">Catat Pengeluaran Baru</h2>
+                            <h2 className="text-lg font-bold">{t('finance.expenses.create.title')}</h2>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
@@ -412,7 +429,7 @@ export default function ExpensesPage() {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.category')}</label>
                                     <select
                                         value={createForm.category}
                                         onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
@@ -424,32 +441,32 @@ export default function ExpensesPage() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Metode Pembayaran</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.paymentMethod')}</label>
                                     <select
                                         value={createForm.paymentMethod}
                                         onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value })}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                     >
-                                        <option value="CASH">Tunai</option>
-                                        <option value="BANK_TRANSFER">Transfer Bank</option>
-                                        <option value="QRIS">QRIS</option>
-                                        <option value="CREDIT_CARD">Kartu Kredit</option>
+                                        <option value="CASH">{t('finance.expenses.paymentMethods.CASH')}</option>
+                                        <option value="BANK_TRANSFER">{t('finance.expenses.paymentMethods.BANK_TRANSFER')}</option>
+                                        <option value="QRIS">{t('finance.expenses.paymentMethods.QRIS')}</option>
+                                        <option value="CREDIT_CARD">{t('finance.expenses.paymentMethods.CREDIT_CARD')}</option>
                                     </select>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.description')}</label>
                                 <input
                                     type="text"
                                     value={createForm.description}
                                     onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Deskripsi pengeluaran"
+                                    placeholder={t('finance.expenses.create.descriptionPlaceholder')}
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.amount')}</label>
                                     <input
                                         type="number"
                                         value={createForm.amount}
@@ -460,7 +477,7 @@ export default function ExpensesPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.tax')}</label>
                                     <input
                                         type="number"
                                         value={createForm.taxAmount}
@@ -472,7 +489,7 @@ export default function ExpensesPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Total *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.total')}</label>
                                 <input
                                     type="number"
                                     value={createForm.totalAmount}
@@ -483,7 +500,7 @@ export default function ExpensesPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Pengeluaran</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.expenses.create.expenseDate')}</label>
                                 <input
                                     type="date"
                                     value={createForm.expenseDate}
@@ -497,14 +514,14 @@ export default function ExpensesPage() {
                                 onClick={() => setShowCreateModal(false)}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
                             >
-                                Batal
+                                {t('finance.expenses.create.cancel')}
                             </button>
                             <button
                                 onClick={handleCreateExpense}
                                 disabled={!createForm.description || !createForm.amount}
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Catat Pengeluaran
+                                {t('finance.expenses.create.submit')}
                             </button>
                         </div>
                     </div>
@@ -528,8 +545,8 @@ export default function ExpensesPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('finance.expenses.delete.confirm')}
+                cancelText={t('finance.expenses.delete.cancel')}
                 variant="danger"
             />
         </div>

@@ -94,6 +94,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/pos/terminals': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/terminals/[id]': { permission: 'pos:view', fallbackRole: 'ADMIN' },
     '/api/pos/terminals/status': { permission: 'pos:view', fallbackRole: 'ADMIN' },
+    '/api/pos/stock-adjustment': { permission: 'pos:view', fallbackRole: 'ADMIN' },
 
     // ─── POS Table Management ─────────────────────────────────────────────────
     '/api/pos/tables': { permission: 'pos:view', fallbackRole: 'ADMIN' },
@@ -140,6 +141,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/settings/custom-fields': { permission: 'settings:view', fallbackRole: 'ADMIN' },
     '/api/settings/profile': { permission: 'settings:view', fallbackRole: 'MEMBER' },
     '/api/settings/control-engine': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
+    '/api/settings/password-policy': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
     // ─── Billing ──────────────────────────────────────────────────────────────
     '/api/billing/admin': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
     '/api/billing/entitlement': { permission: 'billing:view', fallbackRole: 'ADMIN' },
@@ -188,6 +190,9 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/dashboard/charts': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/kpi': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/recent-activity': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
+
+    // ─── Inbox ──────────────────────────────────────────────────────────────
+    '/api/inbox': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
 
     // ─── Operations Module ────────────────────────────────────────────────────
     '/api/projects': { permission: 'project:view', fallbackRole: 'MEMBER' },
@@ -244,6 +249,9 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── WhatsApp Business API ────────────────────────────────────────────────
     '/api/settings/integrations/whatsapp/test': { permission: 'system:admin', fallbackRole: 'ADMIN' },
+
+    // ─── Auth (Change Password) ──────────────────────────────────────────────
+    '/api/auth/change-password': { permission: 'settings:view', fallbackRole: 'MEMBER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────

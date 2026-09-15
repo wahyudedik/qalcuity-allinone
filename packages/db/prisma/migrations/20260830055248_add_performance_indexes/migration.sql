@@ -1,0 +1,2 @@
+-- Stub: This migration was applied directly to the database.
+-- Performance indexes were already created in a previous session.

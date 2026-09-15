@@ -1,7 +1,7 @@
 'use client'
 
 import { usePermission } from '@/lib/use-permission'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { Search, Plus, Receipt, Trash2, Check, X } from 'lucide-react'
@@ -24,12 +24,12 @@ type Bill = {
     createdAt: string
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-    draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700' },
-    pending_approval: { label: 'Menunggu Persetujuan', color: 'bg-yellow-100 text-yellow-700' },
-    approved: { label: 'Disetujui', color: 'bg-blue-100 text-blue-700' },
-    paid: { label: 'Dibayar', color: 'bg-green-100 text-green-700' },
-    cancelled: { label: 'Dibatalkan', color: 'bg-red-100 text-red-700' },
+const STATUS_COLORS: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-700',
+    pending_approval: 'bg-yellow-100 text-yellow-700',
+    approved: 'bg-blue-100 text-blue-700',
+    paid: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-700',
 }
 
 export default function BillsPage() {
@@ -60,6 +60,14 @@ export default function BillsPage() {
         notes: '',
     })
 
+    const statusConfig: Record<string, { label: string; color: string }> = useMemo(() => ({
+        draft: { label: t('finance.bills.statusLabels.draft'), color: STATUS_COLORS.draft },
+        pending_approval: { label: t('finance.bills.statusLabels.pendingApproval'), color: STATUS_COLORS.pending_approval },
+        approved: { label: t('finance.bills.statusLabels.approved'), color: STATUS_COLORS.approved },
+        paid: { label: t('finance.bills.statusLabels.paid'), color: STATUS_COLORS.paid },
+        cancelled: { label: t('finance.bills.statusLabels.cancelled'), color: STATUS_COLORS.cancelled },
+    }), [t])
+
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 3000)
@@ -79,10 +87,10 @@ export default function BillsPage() {
             if (data.success) {
                 setBills(data.data)
             } else {
-                setError('Gagal memuat data tagihan')
+                setError(t('finance.bills.errorLoad'))
             }
         } catch {
-            setError('Terjadi kesalahan saat memuat data')
+            setError(t('finance.bills.errorLoadGeneric'))
         } finally {
             setLoading(false)
         }
@@ -127,30 +135,30 @@ export default function BillsPage() {
                 setShowCreateModal(false)
                 setCreateForm({ vendorName: '', invoiceNumber: '', subtotal: '', taxAmount: '0', totalAmount: '', dueDate: '', notes: '' })
                 fetchBills()
-                setToast({ message: 'Tagihan berhasil dibuat', type: 'success' })
+                setToast({ message: t('finance.bills.create.success'), type: 'success' })
             } else {
-                setToast({ message: `Gagal membuat tagihan: ${result.error}`, type: 'error' })
+                setToast({ message: `${t('finance.bills.create.error')}: ${result.error}`, type: 'error' })
             }
         } catch {
-            setToast({ message: 'Terjadi kesalahan saat membuat tagihan', type: 'error' })
+            setToast({ message: t('finance.bills.create.errorGeneric'), type: 'error' })
         }
     }
 
     const handleDelete = async (id: string) => {
-        setConfirmTitle('Hapus Tagihan')
-        setConfirmMessage('Apakah Anda yakin ingin menghapus tagihan ini?')
+        setConfirmTitle(t('finance.bills.delete.title'))
+        setConfirmMessage(t('finance.bills.delete.message'))
         setConfirmAction(() => async () => {
             try {
                 const response = await fetch(`/api/finance/bills/${id}`, { method: 'DELETE' })
                 const result = await response.json()
                 if (result.success) {
                     fetchBills()
-                    setToast({ message: 'Tagihan berhasil dihapus', type: 'success' })
+                    setToast({ message: t('finance.bills.delete.success'), type: 'success' })
                 } else {
-                    setToast({ message: `Gagal menghapus tagihan: ${result.error}`, type: 'error' })
+                    setToast({ message: `${t('finance.bills.delete.error')}: ${result.error}`, type: 'error' })
                 }
             } catch {
-                setToast({ message: 'Terjadi kesalahan saat menghapus tagihan', type: 'error' })
+                setToast({ message: t('finance.bills.delete.errorGeneric'), type: 'error' })
             }
         })
         setShowConfirmDialog(true)
@@ -181,7 +189,7 @@ export default function BillsPage() {
                         onClick={fetchBills}
                         className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
-                        Coba Lagi
+                        {t('finance.bills.retry')}
                     </button>
                 </div>
             </div>
@@ -193,8 +201,8 @@ export default function BillsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Tagihan (Bills)</h1>
-                    <p className="text-gray-500">Kelola tagihan dari vendor dan supplier</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('finance.bills.title')}</h1>
+                    <p className="text-gray-500">{t('finance.bills.subtitle')}</p>
                 </div>
                 {canMutate && (
                     <button
@@ -202,7 +210,7 @@ export default function BillsPage() {
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
                         <Plus className="h-4 w-4" />
-                        Buat Tagihan
+                        {t('finance.bills.createButton')}
                     </button>
                 )}
             </div>
@@ -210,24 +218,24 @@ export default function BillsPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Total Tagihan</p>
+                    <p className="text-sm text-gray-500">{t('finance.bills.stats.totalBills')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{bills.length} tagihan</p>
+                    <p className="text-xs text-gray-400 mt-1">{bills.length} {t('finance.bills.billsCount')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Menunggu Persetujuan</p>
+                    <p className="text-sm text-gray-500">{t('finance.bills.stats.pendingApproval')}</p>
                     <p className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.pending)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{bills.filter(b => b.status === 'pending_approval').length} tagihan</p>
+                    <p className="text-xs text-gray-400 mt-1">{bills.filter(b => b.status === 'pending_approval').length} {t('finance.bills.billsCount')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Jatuh Tempo</p>
+                    <p className="text-sm text-gray-500">{t('finance.bills.stats.overdue')}</p>
                     <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{bills.filter(b => b.status !== 'paid' && b.status !== 'cancelled' && b.dueDate && new Date(b.dueDate) < new Date()).length} tagihan</p>
+                    <p className="text-xs text-gray-400 mt-1">{bills.filter(b => b.status !== 'paid' && b.status !== 'cancelled' && b.dueDate && new Date(b.dueDate) < new Date()).length} {t('finance.bills.billsCount')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <p className="text-sm text-gray-500">Sudah Dibayar</p>
+                    <p className="text-sm text-gray-500">{t('finance.bills.stats.paid')}</p>
                     <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</p>
-                    <p className="text-xs text-gray-400 mt-1">{bills.filter(b => b.status === 'paid').length} tagihan</p>
+                    <p className="text-xs text-gray-400 mt-1">{bills.filter(b => b.status === 'paid').length} {t('finance.bills.billsCount')}</p>
                 </div>
             </div>
 
@@ -238,7 +246,7 @@ export default function BillsPage() {
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari tagihan..."
+                            placeholder={t('finance.bills.searchPlaceholder')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
@@ -250,12 +258,12 @@ export default function BillsPage() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
-                    <option value="all">Semua Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="pending_approval">Menunggu Persetujuan</option>
-                    <option value="approved">Disetujui</option>
-                    <option value="paid">Dibayar</option>
-                    <option value="cancelled">Dibatalkan</option>
+                    <option value="all">{t('finance.bills.filter.allStatus')}</option>
+                    <option value="draft">{t('finance.bills.filter.draft')}</option>
+                    <option value="pending_approval">{t('finance.bills.filter.pendingApproval')}</option>
+                    <option value="approved">{t('finance.bills.filter.approved')}</option>
+                    <option value="paid">{t('finance.bills.filter.paid')}</option>
+                    <option value="cancelled">{t('finance.bills.filter.cancelled')}</option>
                 </select>
             </div>
 
@@ -264,8 +272,8 @@ export default function BillsPage() {
                 {filteredBills.length === 0 ? (
                     <EmptyState
                         icon={Receipt}
-                        title="Belum ada tagihan"
-                        description="Buat tagihan pertama Anda dari vendor/supplier"
+                        title={t('finance.bills.empty.title')}
+                        description={t('finance.bills.empty.description')}
                     />
                 ) : (
                     filteredBills.map((bill) => (
@@ -281,11 +289,11 @@ export default function BillsPage() {
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                                 <div>
-                                    <span className="text-gray-500">Jumlah:</span>
+                                    <span className="text-gray-500">{t('finance.bills.card.amount')}</span>
                                     <span className="ml-1 font-medium">{formatCurrency(bill.totalAmount)}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500">Jatuh Tempo:</span>
+                                    <span className="text-gray-500">{t('finance.bills.card.dueDate')}</span>
                                     <span className="ml-1">{bill.dueDate ? formatDate(bill.dueDate) : '-'}</span>
                                 </div>
                             </div>
@@ -295,7 +303,7 @@ export default function BillsPage() {
                                         onClick={() => handleDelete(bill.id)}
                                         className="text-sm text-red-600 hover:text-red-800"
                                     >
-                                        Hapus
+                                        {t('finance.bills.card.delete')}
                                     </button>
                                 )}
                             </div>
@@ -310,13 +318,13 @@ export default function BillsPage() {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nomor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Vendor</th>
-                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Invoice #</th>
-                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Jatuh Tempo</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Jumlah</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                                <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Aksi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.number')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.vendor')}</th>
+                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.invoiceNumber')}</th>
+                                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.dueDate')}</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.amount')}</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.status')}</th>
+                                <th className="hidden md:table-cell px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">{t('finance.bills.table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -325,8 +333,8 @@ export default function BillsPage() {
                                     <td colSpan={7} className="px-6 py-12">
                                         <EmptyState
                                             icon={Receipt}
-                                            title="Belum ada tagihan"
-                                            description="Buat tagihan pertama Anda dari vendor/supplier"
+                                            title={t('finance.bills.empty.title')}
+                                            description={t('finance.bills.empty.description')}
                                         />
                                     </td>
                                 </tr>
@@ -350,7 +358,7 @@ export default function BillsPage() {
                                                 <button
                                                     onClick={() => handleDelete(bill.id)}
                                                     className="text-red-500 hover:text-red-700"
-                                                    title="Hapus"
+                                                    title={t('finance.bills.card.delete')}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -369,35 +377,35 @@ export default function BillsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold">Buat Tagihan Baru</h2>
+                            <h2 className="text-lg font-bold">{t('finance.bills.create.title')}</h2>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Vendor *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.vendorName')}</label>
                                 <input
                                     type="text"
                                     value={createForm.vendorName}
                                     onChange={(e) => setCreateForm({ ...createForm, vendorName: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Masukkan nama vendor"
+                                    placeholder={t('finance.bills.create.vendorNamePlaceholder')}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Invoice Vendor</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.invoiceNumber')}</label>
                                 <input
                                     type="text"
                                     value={createForm.invoiceNumber}
                                     onChange={(e) => setCreateForm({ ...createForm, invoiceNumber: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                    placeholder="Nomor invoice dari vendor"
+                                    placeholder={t('finance.bills.create.invoiceNumberPlaceholder')}
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.subtotal')}</label>
                                     <input
                                         type="number"
                                         value={createForm.subtotal}
@@ -408,7 +416,7 @@ export default function BillsPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pajak</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.tax')}</label>
                                     <input
                                         type="number"
                                         value={createForm.taxAmount}
@@ -420,7 +428,7 @@ export default function BillsPage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Total *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.total')}</label>
                                 <input
                                     type="number"
                                     value={createForm.totalAmount}
@@ -431,7 +439,7 @@ export default function BillsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Jatuh Tempo</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.dueDate')}</label>
                                 <input
                                     type="date"
                                     value={createForm.dueDate}
@@ -440,13 +448,13 @@ export default function BillsPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.bills.create.notes')}</label>
                                 <textarea
                                     value={createForm.notes}
                                     onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                     rows={3}
-                                    placeholder="Catatan tambahan..."
+                                    placeholder={t('finance.bills.create.notesPlaceholder')}
                                 />
                             </div>
                         </div>
@@ -455,14 +463,14 @@ export default function BillsPage() {
                                 onClick={() => setShowCreateModal(false)}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
                             >
-                                Batal
+                                {t('finance.bills.create.cancel')}
                             </button>
                             <button
                                 onClick={handleCreateBill}
                                 disabled={!createForm.vendorName || !createForm.subtotal}
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Buat Tagihan
+                                {t('finance.bills.create.submit')}
                             </button>
                         </div>
                     </div>
@@ -486,8 +494,8 @@ export default function BillsPage() {
                 onConfirm={async () => { if (confirmAction) await confirmAction(); setShowConfirmDialog(false); setConfirmAction(null) }}
                 title={confirmTitle}
                 message={confirmMessage}
-                confirmText="Hapus"
-                cancelText="Batal"
+                confirmText={t('finance.bills.delete.confirm')}
+                cancelText={t('finance.bills.delete.cancel')}
                 variant="danger"
             />
         </div>

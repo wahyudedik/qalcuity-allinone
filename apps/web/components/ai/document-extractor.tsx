@@ -459,10 +459,10 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'file'} dipilih
+                            {selectedFiles.length} {t('common.filesSelected')}
                             {isBatchMode && (
                                 <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
-                                    (Batch Mode)
+                                    ({t('common.batchMode')})
                                 </span>
                             )}
                         </p>
@@ -483,7 +483,7 @@ export function DocumentExtractor({ onExtracted, onApplyToForm, className = '' }
                                 {previewUrls[file.name] ? (
                                     <img
                                         src={previewUrls[file.name]}
-                                        alt="Preview"
+                                        alt={t('common.preview')}
                                         className="h-10 w-10 rounded object-cover"
                                     />
                                 ) : (

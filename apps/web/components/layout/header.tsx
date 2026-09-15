@@ -128,7 +128,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                     {/* Breadcrumbs */}
                     <nav className="flex items-center gap-2 text-sm overflow-x-auto">
                         <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 whitespace-nowrap dark:text-gray-500 dark:hover:text-gray-300">
-                            {t("common.home") || "Home"}
+                            {t("common.home")}
                         </Link>
                         {breadcrumbs.map((crumb, index) => (
                             <span key={crumb.href} className="flex items-center gap-2 whitespace-nowrap">
@@ -152,7 +152,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                         className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 transition hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300"
                     >
                         <Search className="h-4 w-4" />
-                        <span className="hidden sm:inline">{t("common.search") || "Search..."}</span>
+                        <span className="hidden sm:inline">{t("common.search")}</span>
                         <kbd className="hidden rounded border border-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-400 dark:border-gray-700 dark:text-gray-500 sm:inline">
                             ⌘K
                         </kbd>
@@ -162,7 +162,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                     <button
                         onClick={toggleTheme}
                         className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                        aria-label={isDark ? (t("common.switchToLight") || "Switch to light mode") : (t("common.switchToDark") || "Switch to dark mode")}
+                        aria-label={isDark ? t("common.switchToLight") : t("common.switchToDark")}
                     >
                         {mounted && isDark ? (
                             <Sun className="h-5 w-5" />
@@ -196,14 +196,14 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                 className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                             >
                                 <Settings className="h-4 w-4" />
-                                {t("common.settings") || "Pengaturan"}
+                                {t("common.settings")}
                             </Link>
                             <button
                                 onClick={() => signOut({ callbackUrl: '/login' })}
                                 className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                             >
                                 <LogOut className="h-4 w-4" />
-                                {t("common.logout") || "Keluar"}
+                                {t("common.logout")}
                             </button>
                         </div>
                     </div>

@@ -416,11 +416,11 @@ export default function SuppliersPage() {
                                     <span className="ml-1 font-medium">{supplier.totalOrders}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500">Email:</span>
+                                    <span className="text-gray-500">{t('inventory.suppliers.emailLabel') || 'Email:'}</span>
                                     <span className="ml-1 text-xs">{supplier.email}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500">Telp:</span>
+                                    <span className="text-gray-500">{t('inventory.suppliers.phoneLabel') || 'Telp:'}</span>
                                     <span className="ml-1 text-xs">{supplier.phone}</span>
                                 </div>
                             </div>
@@ -627,7 +627,7 @@ export default function SuppliersPage() {
                                     value={formData.city}
                                     onChange={(e) => handleFormChange('city', e.target.value)}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Kota"
+                                    placeholder={t('inventory.suppliers.cityPlaceholder') || 'Kota'}
                                 />
                             </div>
 

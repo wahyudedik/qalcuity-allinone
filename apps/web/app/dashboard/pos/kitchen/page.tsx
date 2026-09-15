@@ -252,10 +252,10 @@ export default function KitchenDisplayPage() {
                                 onChange={(e) => setFilter({ tableNumber: e.target.value })}
                                 className="appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-8 pr-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                             >
-                                <option value="ALL">Semua Meja</option>
+                                <option value="ALL">{t('pos.kitchen.allTables')}</option>
                                 {uniqueTables.map(([num, name]) => (
                                     <option key={num} value={num}>
-                                        Meja {num}{name ? ` (${name})` : ''}
+                                        {t('pos.kitchen.tablePrefix')} {num}{name ? ` (${name})` : ''}
                                     </option>
                                 ))}
                             </select>
@@ -270,7 +270,7 @@ export default function KitchenDisplayPage() {
                                     ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
                                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                                 }`}
-                            title="Grid View"
+                            title={t('pos.kitchen.gridView')}
                         >
                             <LayoutGrid className="h-3.5 w-3.5" />
                         </button>
@@ -280,7 +280,7 @@ export default function KitchenDisplayPage() {
                                     ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
                                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                                 }`}
-                            title="Per Meja"
+                            title={t('pos.kitchen.byTable')}
                         >
                             <LayoutList className="h-3.5 w-3.5" />
                         </button>
@@ -364,7 +364,7 @@ export default function KitchenDisplayPage() {
                                     <h3 className="text-sm font-bold text-gray-900 dark:text-white">
                                         {tableNum === 'NO_TABLE'
                                             ? (t('pos.kitchen.noTable') || 'Tanpa Meja')
-                                            : `Meja ${tableNum}${group.tableName ? ` — ${group.tableName}` : ''}`
+                                            : `${t('pos.kitchen.tablePrefix')} ${tableNum}${group.tableName ? ` — ${group.tableName}` : ''}`
                                         }
                                     </h3>
                                     {group.zone && (
@@ -372,7 +372,7 @@ export default function KitchenDisplayPage() {
                                     )}
                                 </div>
                                 <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
-                                    {group.orders.length} {group.orders.length === 1 ? 'pesanan' : 'pesanan'}
+                                    {group.orders.length} {t('pos.kitchen.ordersCount')}
                                 </span>
                             </div>
                             {/* Orders in this table */}

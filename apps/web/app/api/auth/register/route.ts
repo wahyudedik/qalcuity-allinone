@@ -10,6 +10,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { logger } from '@/lib/logger';
 import { registerSchema, formatZodError } from '@/lib/validation-schemas';
 import { getPlatformSettings, checkPlanTenantLimit } from '@/lib/platform-settings';
+import { validatePassword, type PasswordPolicyConfig } from '@/lib/password-policy';
 
 export async function POST(request: Request) {
     try {
@@ -67,6 +68,38 @@ export async function POST(request: Request) {
         if (existingUser) {
             return NextResponse.json(
                 { error: "Email already registered", code: 'DUPLICATE_EMAIL' },
+                { status: 400 }
+            );
+        }
+
+        // Validate password against default policy (new tenants use default policy)
+        const defaultPolicy: PasswordPolicyConfig = {
+            id: '',
+            tenantId: '',
+            minLength: 8,
+            maxLength: 128,
+            requireUppercase: false,
+            requireLowercase: false,
+            requireNumbers: false,
+            requireSpecialChars: false,
+            specialChars: '!@#$%^&*()_+-=[]{}|;:,.<>?',
+            preventReuse: 0,
+            expiryDays: 0,
+            warnBeforeExpiryDays: 7,
+            maxFailedAttempts: 5,
+            lockoutDurationMinutes: 30,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+        const passwordCheck = validatePassword(password, defaultPolicy);
+        if (!passwordCheck.valid) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.PASSWORD_DOES_NOT_MEET_POLICY,
+                    code: 'PASSWORD_POLICY_VIOLATION',
+                    details: { errors: passwordCheck.errors },
+                },
                 { status: 400 }
             );
         }

@@ -265,3 +265,97 @@ export async function DELETE(request: Request) {
         return handleApiError(error);
     }
 }
+
+/**
+ * PATCH /api/settings/security/2fa — Regenerate backup codes
+ *
+ * Requires 2FA to be enabled. Generates new backup codes and invalidates old ones.
+ * Requires password verification for security.
+ *
+ * Body: { password: string }
+ */
+export async function PATCH(request: Request) {
+    try {
+        const auth = await requirePermissionForRoute(request)
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+        const { userId, tenantId } = auth
+
+        const body = await request.json()
+
+        const validation = disable2faSchema.safeParse(body)
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            )
+        }
+
+        const { password } = validation.data
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                passwordHash: true,
+                twoFactorEnabled: true,
+            },
+        })
+
+        if (!user) {
+            return NextResponse.json(
+                { success: false, error: 'User not found', code: 'USER_NOT_FOUND' },
+                { status: 404 }
+            )
+        }
+
+        if (!user.twoFactorEnabled) {
+            return NextResponse.json(
+                { success: false, error: '2FA is not enabled', code: '2FA_NOT_ENABLED' },
+                { status: 400 }
+            )
+        }
+
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+        if (!isPasswordValid) {
+            return NextResponse.json(
+                { success: false, error: 'Incorrect password', code: 'INVALID_PASSWORD' },
+                { status: 400 }
+            )
+        }
+
+        // Generate new backup codes (old ones are automatically invalidated)
+        const backupCodes = generateBackupCodes()
+        const hashedBackupCodes = await hashBackupCodes(backupCodes)
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                twoFactorBackupCodes: hashedBackupCodes,
+            },
+        })
+
+        // Audit log
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'User',
+            entityId: userId,
+            oldValues: { twoFactorBackupCodes: '[regenerated]' },
+            newValues: { twoFactorBackupCodes: '[regenerated]' },
+            request,
+        })
+
+        return NextResponse.json({
+            success: true,
+            message: 'Backup codes regenerated successfully',
+            data: {
+                backupCodes, // Plain text — only shown once
+                backupCodesCount: backupCodes.length,
+            },
+        })
+    } catch (error) {
+        return handleApiError(error);
+    }
+}

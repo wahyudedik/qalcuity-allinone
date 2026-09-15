@@ -1,7 +1,5 @@
--- CreateIndex for PosOrder
-CREATE INDEX "PosOrder_tenantId_idx" ON "PosOrder"("tenantId");
-CREATE INDEX "PosOrder_sessionId_idx" ON "PosOrder"("sessionId");
-CREATE INDEX "PosOrder_createdAt_idx" ON "PosOrder"("createdAt");
+-- CreateIndex: PosTransaction (status index not in init)
+CREATE INDEX "PosTransaction_tenantId_status_idx" ON "PosTransaction"("tenantId", "status");
 
--- CreateIndex for PosOrderItem
-CREATE INDEX "PosOrderItem_orderId_idx" ON "PosOrderItem"("orderId");
+-- CreateIndex: PosTransactionItem (productId index not in init)
+CREATE INDEX "PosTransactionItem_tenantId_productId_idx" ON "PosTransactionItem"("tenantId", "productId");

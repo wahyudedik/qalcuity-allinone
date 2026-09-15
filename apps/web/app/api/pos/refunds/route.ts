@@ -69,6 +69,8 @@ export async function GET(request: Request) {
             paymentMethod: r.transaction.paymentMethod,
             amount: Number(r.amount),
             reason: r.reason,
+            restockItem: r.restockItem,
+            restockedAt: r.restockedAt?.toISOString() || null,
             status: r.status,
             approvedBy: r.approvedBy,
             approvedAt: r.approvedAt?.toISOString() || null,
@@ -146,6 +148,7 @@ export async function POST(request: Request) {
                 refundNo,
                 amount: validatedData.amount,
                 reason: validatedData.reason,
+                restockItem: validatedData.restockItem ?? false,
                 createdBy: userId,
             },
         });
@@ -161,6 +164,7 @@ export async function POST(request: Request) {
                 transactionId: validatedData.transactionId,
                 amount: validatedData.amount,
                 reason: validatedData.reason,
+                restockItem: validatedData.restockItem ?? false,
             },
             request,
         });

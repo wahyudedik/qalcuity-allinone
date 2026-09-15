@@ -5,23 +5,12 @@ import { usePathname } from 'next/navigation';
 import { Bot, FileText, Shield, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
-const AI_NAV_ITEMS = [
-    {
-        label: 'AI Agents',
-        href: '/dashboard/ai/agents',
-        icon: Bot,
-    },
-    {
-        label: 'Document Extraction',
-        href: '/dashboard/ai/documents',
-        icon: FileText,
-    },
-    {
-        label: 'Anomaly Detection',
-        href: '/dashboard/ai/anomalies',
-        icon: Shield,
-    },
-];
+// AI_NAV_ITEMS labels use i18n — defined inside component via t()
+const AI_NAV_KEYS = [
+    { key: 'ai.agents', href: '/dashboard/ai/agents', icon: Bot },
+    { key: 'ai.documents', href: '/dashboard/ai/documents', icon: FileText },
+    { key: 'ai.anomalies', href: '/dashboard/ai/anomalies', icon: Shield },
+] as const;
 
 export default function AILayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -46,7 +35,7 @@ export default function AILayout({ children }: { children: React.ReactNode }) {
 
             {/* AI Navigation Tabs */}
             <div className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
-                {AI_NAV_ITEMS.map((item) => {
+                {AI_NAV_KEYS.map((item) => {
                     const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                     const Icon = item.icon;
                     return (
@@ -59,7 +48,7 @@ export default function AILayout({ children }: { children: React.ReactNode }) {
                                 }`}
                         >
                             <Icon className="h-4 w-4" />
-                            {item.label}
+                            {t(item.key)}
                         </Link>
                     );
                 })}

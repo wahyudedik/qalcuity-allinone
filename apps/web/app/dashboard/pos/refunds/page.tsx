@@ -21,6 +21,8 @@ type Refund = {
     paymentMethod: string
     amount: number
     reason: string
+    restockItem: boolean
+    restockedAt: string | null
     status: string
     approvedBy: string | null
     approvedAt: string | null
@@ -233,6 +235,7 @@ export default function POSRefundsPage() {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.transactionNo') || 'No Transaksi'}</th>
                                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.amount') || 'Jumlah'}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.reason') || 'Alasan'}</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.restock') || 'Restock'}</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.status') || 'Status'}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.date') || 'Tanggal'}</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('pos.refunds.actions') || 'Aksi'}</th>
@@ -245,6 +248,11 @@ export default function POSRefundsPage() {
                                         <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{r.transactionNo}</td>
                                         <td className="px-4 py-3 text-sm text-right font-semibold text-red-600">{formatCurrency(r.amount)}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-[200px] truncate">{r.reason}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${r.restockItem ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                                {r.restockItem ? (t('pos.refunds.restockYes') || 'Ya') : (t('pos.refunds.restockNo') || 'Tidak')}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${r.status === 'APPROVED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                                                 r.status === 'REJECTED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
@@ -311,6 +319,10 @@ export default function POSRefundsPage() {
                                     </span>
                                     <span className="text-gray-400">•</span>
                                     <span className="text-gray-500">{r.customerName}</span>
+                                    <span className="text-gray-400">•</span>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${r.restockItem ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                                        {r.restockItem ? (t('pos.refunds.restockYes') || 'Ya') : (t('pos.refunds.restockNo') || 'Tidak')}
+                                    </span>
                                 </div>
                                 <div className="mt-2 text-sm text-gray-500 truncate">{r.reason}</div>
                                 <div className="mt-2 flex items-center justify-between">
@@ -427,6 +439,18 @@ export default function POSRefundsPage() {
                                 <span className="text-gray-500">{t('pos.refunds.reason') || 'Alasan'}</span>
                                 <span className="text-right max-w-[60%]">{detailRefund.reason}</span>
                             </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">{t('pos.refunds.restock') || 'Restock'}</span>
+                                <span className={`font-medium ${detailRefund.restockItem ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    {detailRefund.restockItem ? (t('pos.refunds.restockYes') || 'Ya') : (t('pos.refunds.restockNo') || 'Tidak')}
+                                </span>
+                            </div>
+                            {detailRefund.restockItem && detailRefund.restockedAt && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">{t('pos.refunds.restockedAt') || 'Stok dikembalikan'}</span>
+                                    <span>{formatDateTime(detailRefund.restockedAt)}</span>
+                                </div>
+                            )}
                             {detailRefund.approvedAt && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-500">{t('pos.refunds.approvedAt') || 'Disetujui pada'}</span>
@@ -476,10 +500,18 @@ export default function POSRefundsPage() {
                                 <span className="text-gray-500">{t('pos.refunds.amount') || 'Jumlah'}</span>
                                 <span className="font-bold">{formatCurrency(actionModal.refund.amount)}</span>
                             </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">{t('pos.refunds.restock') || 'Restock'}</span>
+                                <span className={`font-medium ${actionModal.refund.restockItem ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    {actionModal.refund.restockItem ? (t('pos.refunds.restockYes') || 'Ya') : (t('pos.refunds.restockNo') || 'Tidak')}
+                                </span>
+                            </div>
                         </div>
                         <p className="text-sm text-gray-500">
                             {actionModal.type === 'APPROVED'
-                                ? (t('pos.refunds.approveConfirmText') || 'Dengan menyetujui refund ini, status transaksi akan diubah menjadi REFUNDED.')
+                                ? (actionModal.refund.restockItem
+                                    ? (t('pos.refunds.approveConfirmTextWithRestock') || 'Dengan menyetujui refund ini, status transaksi akan diubah menjadi REFUNDED dan stok barang akan dikembalikan ke inventori.')
+                                    : (t('pos.refunds.approveConfirmText') || 'Dengan menyetujui refund ini, status transaksi akan diubah menjadi REFUNDED.'))
                                 : (t('pos.refunds.rejectConfirmText') || 'Apakah Anda yakin ingin menolak permintaan refund ini?')}
                         </p>
                         <div className="flex gap-3">

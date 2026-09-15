@@ -70,10 +70,10 @@ export default function DocumentExtractionPage() {
                         </div>
                         <div>
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {t('ai.extractDocument') || 'Ekstraksi Dokumen'}
+                                {t('ai.extractDocument')}
                             </h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Upload dokumen untuk mengekstrak data secara otomatis
+                                {t('ai.documentUploadDesc')}
                             </p>
                         </div>
                     </div>
@@ -99,11 +99,11 @@ export default function DocumentExtractionPage() {
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-gray-500" />
                             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                {t('ai.recentExtractions') || 'Ekstraksi Terakhir'}
+                                {t('ai.recentExtractions')}
                             </h3>
                         </div>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {history.length} dokumen
+                            {history.length} {t('ai.documentCount')}
                         </span>
                     </div>
 
@@ -115,7 +115,7 @@ export default function DocumentExtractionPage() {
                             onChange={(e) => setFilterType(e.target.value as DocumentType | 'ALL')}
                             className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                         >
-                            <option value="ALL">Semua Tipe</option>
+                            <option value="ALL">{t('ai.allTypes')}</option>
                             <option value="INVOICE">Invoice</option>
                             <option value="PURCHASE_ORDER">Purchase Order</option>
                             <option value="RECEIPT">Receipt</option>
@@ -129,7 +129,7 @@ export default function DocumentExtractionPage() {
                         <div className="py-8 text-center">
                             <FileText className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {t('ai.noExtractions') || 'Belum ada ekstraksi'}
+                                {t('ai.noExtractions')}
                             </p>
                         </div>
                     ) : (
@@ -145,8 +145,8 @@ export default function DocumentExtractionPage() {
                                         </span>
                                         <span
                                             className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${item.method === 'ai'
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                 }`}
                                         >
                                             {item.method.toUpperCase()}
@@ -154,7 +154,7 @@ export default function DocumentExtractionPage() {
                                     </div>
                                     <div className="mt-1 flex items-center justify-between">
                                         <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            {item.fieldCount} field terisi
+                                            {item.fieldCount} {t('ai.fieldsFilled')}
                                         </span>
                                         <span className="text-[11px] text-gray-500 dark:text-gray-400">
                                             {Math.round(item.confidence * 100)}%

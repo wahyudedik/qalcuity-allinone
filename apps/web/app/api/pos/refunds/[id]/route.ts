@@ -69,6 +69,8 @@ export async function GET(request: Request) {
             paymentMethod: r.transaction.paymentMethod,
             amount: Number(r.amount),
             reason: r.reason,
+            restockItem: r.restockItem,
+            restockedAt: r.restockedAt?.toISOString() || null,
             status: r.status,
             approvedBy: r.approvedBy,
             approvedAt: r.approvedAt?.toISOString() || null,
@@ -146,6 +148,7 @@ export async function POST(request: Request) {
                 refundNo,
                 amount: validatedData.amount,
                 reason: validatedData.reason,
+                restockItem: validatedData.restockItem ?? false,
                 createdBy: userId,
             },
         });
@@ -161,6 +164,7 @@ export async function POST(request: Request) {
                 transactionId: validatedData.transactionId,
                 amount: validatedData.amount,
                 reason: validatedData.reason,
+                restockItem: validatedData.restockItem ?? false,
             },
             request,
         });
@@ -227,7 +231,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
 
         if (status === 'APPROVED') {
-            // Update refund + update transaction + restore stock atomically
+            // Update refund + update transaction + conditionally restore stock atomically
+            const shouldRestock = refund.restockItem;
             await prisma.$transaction(async (tx) => {
                 // Update refund: status=APPROVED
                 await tx.posRefund.update({
@@ -236,6 +241,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
                         status: 'APPROVED',
                         approvedBy: userId,
                         approvedAt: new Date(),
+                        ...(shouldRestock ? { restockedAt: new Date() } : {}),
                     },
                 });
 
@@ -245,18 +251,20 @@ export async function PUT(request: Request, { params }: { params: { id: string }
                     data: { status: 'REFUNDED' },
                 });
 
-                // Restore stock: query transaction items, for each item with productId
-                const items = await tx.posTransactionItem.findMany({
-                    where: { transactionId: refund.transactionId },
-                    select: { productId: true, quantity: true },
-                });
+                // Conditionally restore stock based on restockItem flag
+                if (shouldRestock) {
+                    const items = await tx.posTransactionItem.findMany({
+                        where: { transactionId: refund.transactionId },
+                        select: { productId: true, quantity: true },
+                    });
 
-                for (const item of items) {
-                    if (item.productId) {
-                        await tx.product.update({
-                            where: { id: item.productId },
-                            data: { stock: { increment: Number(item.quantity) } },
-                        });
+                    for (const item of items) {
+                        if (item.productId) {
+                            await tx.product.update({
+                                where: { id: item.productId },
+                                data: { stock: { increment: Number(item.quantity) } },
+                            });
+                        }
                     }
                 }
             });
@@ -316,6 +324,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
                 transactionNo: updatedRefund!.transaction.transactionNo,
                 amount: Number(updatedRefund!.amount),
                 reason: updatedRefund!.reason,
+                restockItem: updatedRefund!.restockItem,
+                restockedAt: updatedRefund!.restockedAt?.toISOString() || null,
                 status: updatedRefund!.status,
                 approvedBy: updatedRefund!.approvedBy,
                 approvedAt: updatedRefund!.approvedAt?.toISOString() || null,

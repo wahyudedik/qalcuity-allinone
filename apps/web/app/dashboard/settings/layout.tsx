@@ -99,6 +99,11 @@ export default function SettingsLayout({
             description: t('settings.securityDesc') || 'Password dan keamanan akun',
         },
         {
+            name: t('settings.passwordPolicy.title') || 'Kebijakan Sandi',
+            href: '/dashboard/settings/password-policy',
+            description: t('settings.passwordPolicy.description') || 'Aturan keamanan sandi per tenant',
+        },
+        {
             name: t('settings.audit.title') || 'Audit Log',
             href: '/dashboard/settings/audit',
             description: t('settings.audit.desc') || 'Catatan aktivitas perubahan data',

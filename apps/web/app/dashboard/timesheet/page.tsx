@@ -22,6 +22,7 @@ import {
 import { useProjects, type TimesheetData, type TimeLogEntry } from '@/hooks/use-projects';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Constants
@@ -29,8 +30,24 @@ import { useToast } from '@/components/ui/toast';
 
 type ViewMode = 'weekly' | 'monthly';
 
-const DAY_NAMES = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-const DAY_NAMES_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+const DAY_I18N_KEYS = [
+    'dashboard.timesheet.dayNames.sun',
+    'dashboard.timesheet.dayNames.mon',
+    'dashboard.timesheet.dayNames.tue',
+    'dashboard.timesheet.dayNames.wed',
+    'dashboard.timesheet.dayNames.thu',
+    'dashboard.timesheet.dayNames.fri',
+    'dashboard.timesheet.dayNames.sat',
+];
+const DAY_NAMES_FULL_I18N_KEYS = [
+    'dashboard.timesheet.dayNamesFull.sun',
+    'dashboard.timesheet.dayNamesFull.mon',
+    'dashboard.timesheet.dayNamesFull.tue',
+    'dashboard.timesheet.dayNamesFull.wed',
+    'dashboard.timesheet.dayNamesFull.thu',
+    'dashboard.timesheet.dayNamesFull.fri',
+    'dashboard.timesheet.dayNamesFull.sat',
+];
 
 // =============================================================================
 // Helpers
@@ -106,6 +123,8 @@ function TimesheetGrid({
     days: Date[];
     viewMode: ViewMode;
 }) {
+    const { t } = useTranslation();
+    const DAY_NAMES = useMemo(() => DAY_I18N_KEYS.map(k => t(k)), [t]);
     // Build grid data: project -> date -> hours
     const gridData = useMemo(() => {
         const grid: Record<string, Record<string, number>> = {};
@@ -156,8 +175,8 @@ function TimesheetGrid({
         return (
             <EmptyState
                 icon={Clock}
-                title="Belum ada data timesheet"
-                description="Mulai catat waktu pada task untuk melihat data di sini."
+                title={t('dashboard.timesheet.emptyTitle')}
+                description={t('dashboard.timesheet.emptyDescription')}
             />
         );
     }
@@ -169,7 +188,7 @@ function TimesheetGrid({
                     <thead className="bg-gray-50 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                         <tr>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[200px]">
-                                Proyek / Task
+                                {t('dashboard.timesheet.grid.projectTask')}
                             </th>
                             {days.map((day, i) => {
                                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -187,7 +206,7 @@ function TimesheetGrid({
                                 );
                             })}
                             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[80px]">
-                                Total
+                                {t('dashboard.timesheet.grid.total')}
                             </th>
                         </tr>
                     </thead>
@@ -231,7 +250,7 @@ function TimesheetGrid({
                         ))}
                         {/* Total row */}
                         <tr className="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 font-semibold">
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Total</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{t('dashboard.timesheet.grid.total')}</td>
                             {days.map((day, i) => {
                                 const dateKey = getDateKey(day);
                                 const total = columnTotals[dateKey];
@@ -264,6 +283,7 @@ function TimesheetGrid({
 // =============================================================================
 
 export default function TimesheetPage() {
+    const { t } = useTranslation();
     const { timesheet, loading, error, fetchTimesheet } = useProjects();
     const { addToast } = useToast();
     const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -397,7 +417,7 @@ export default function TimesheetPage() {
                         onClick={goToday}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
-                        Hari Ini
+                        {t('dashboard.timesheet.today')}
                     </button>
                 </div>
             </div>
@@ -406,19 +426,19 @@ export default function TimesheetPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <SummaryCard
                     icon={Clock}
-                    label="Total Jam"
+                    label={t('dashboard.timesheet.summary.totalHours')}
                     value={`${timesheet?.grandTotal || 0}h`}
                     color="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"
                 />
                 <SummaryCard
                     icon={Briefcase}
-                    label="Proyek Aktif"
+                    label={t('dashboard.timesheet.summary.activeProjects')}
                     value={projectBreakdown.length}
                     color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                 />
                 <SummaryCard
                     icon={Calendar}
-                    label={viewMode === 'weekly' ? 'Jam/Hari' : 'Jam/Hari'}
+                    label={t('dashboard.timesheet.summary.hoursPerDay')}
                     value={
                         timesheet && days.length > 0
                             ? `${(timesheet.grandTotal / days.length).toFixed(1)}h`
@@ -428,7 +448,7 @@ export default function TimesheetPage() {
                 />
                 <SummaryCard
                     icon={CheckCircle2}
-                    label="Hari Terisi"
+                    label={t('dashboard.timesheet.summary.filledDays')}
                     value={
                         timesheet
                             ? `${new Set(
@@ -446,7 +466,7 @@ export default function TimesheetPage() {
             {projectBreakdown.length > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                        Breakdown per Proyek
+                        {t('dashboard.timesheet.breakdown.title')}
                     </h3>
                     <div className="space-y-2">
                         {projectBreakdown.map((item) => {
