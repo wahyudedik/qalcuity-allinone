@@ -265,6 +265,14 @@ build_app() {
     print_step "8/9" "Build aplikasi"
 
     cd "$APP_DIR"
+
+    # Bersihkan build cache .next untuk menghindari stale cache errors
+    if [ -d "apps/web/.next" ]; then
+        print_warning "Menghapus folder .next cache..."
+        rm -rf apps/web/.next
+        print_success "Folder .next cache berhasil dihapus"
+    fi
+
     pnpm build
 
     print_success "Build berhasil"
