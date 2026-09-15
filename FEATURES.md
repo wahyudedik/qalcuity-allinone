@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 14, 2026 (Session 33: Sprint 33 POS Critical Fixes + Daily Closing Report — v11.24.0)
+**Last Updated:** September 14, 2026 (Session 35: Sprint 34 POS Void Fix + Operations i18n + Bills & Expenses + WhatsApp Foundation — v11.25.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 27.0 — Session 33: POS critical fixes (Close Session, Approve Refund, Void Transaction with stock restoration), Daily Closing Report. Session 32: CRM Pipeline bug fixes, Dashboard real DB queries, Aging Report (AR/AP) production-ready. Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 28.0 — Session 35: Sprint 34 — POS Void UI fix (voidReason input), Operations i18n (50 keys), Bills & Expenses module (Bill + Expense CRUD), WhatsApp Business API foundation (client + templates + webhook). Session 33: POS critical fixes (Close Session, Approve Refund, Void Transaction with stock restoration), Daily Closing Report. Session 32: CRM Pipeline bug fixes, Dashboard real DB queries, Aging Report (AR/AP) production-ready. Session 28-29: Industry Packs activation UI, POS Kitchen × Table integration, AI Agents (Finance/Sales/Inventory), Unified Control Engine, 3 bug fixes. Session 26+: NLU parser (8 intents, 7 entity types), statistical anomaly detection (5 rules), AES-256-GCM encryption, Xendit payment, SSE real-time routes, batch document extraction, product restock. Session 24: Mobile auth error handling standardized. Session 23: Console cleanup, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -19,6 +19,7 @@
 
 | Status | Icon | Arti |
 |--------|------|------|
+| `foundation_complete` | 🔄 | Foundation code selesai (types, client, routes) tapi belum integrasi penuh |
 | `planned` | 📋 | Belum ada kode sama sekali — baru direncanakan |
 | `in_progress` | 🔨 | Mulai ditulis tapi belum fungsional |
 | `partial` | 🔄 | Ada kode tapi tidak lengkap (placeholder/mock/incomplete) |
@@ -161,7 +162,7 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Purchase Orders** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, approval workflow, Zod validation |
-| **Bills & Expenses** | 🔄 `partial` | — | Basic expense tracking, belum AI categorization |
+| **Bills & Expenses** | 🚀 `production_ready` | 2026-09-14 | Full CRUD: Bill + Expense models, 4 API routes, 2 UI pages, 4 Zod schemas, RBAC, tenant isolation, sidebar navigation |
 | **Payment Processing** | 🔄 `partial` | — | Basic payment processing, belum batch/scheduled |
 | **Supplier Management** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, rating, performance tracking |
 
@@ -440,7 +441,7 @@ Omnichannel support yang terintegrasi.
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Email (SMTP)** | 🚀 `production_ready` | 2026-09-13 | Real Nodemailer transport via SMTP settings API, env-based config, passwords AES-256-GCM encrypted at rest |
-| **WhatsApp Business** | 📋 `planned` | — | Belum ada kode |
+| **WhatsApp Business** | 🔄 `foundation_complete` | 2026-09-14 | Foundation: types.ts, client.ts (Meta Cloud API), templates.ts, webhook handler, test endpoint, WhatsAppMessageLog model — belum full UI integration |
 | **Instagram** | 📋 `planned` | — | Belum ada kode |
 | **Live Chat** | 📋 `planned` | — | Belum ada kode |
 | **Facebook** | 📋 `planned` | — | Belum ada kode |
@@ -1169,7 +1170,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Terminal (Cashier)** | 🚀 `production_ready` | 2026-09-12 | Terminal/Cashier page + API, RBAC, tenant isolation, Zod validation (Phase 2) |
 | **POS Returns** | 📋 `planned` | — | Pengembalian barang partial/full |
 | **POS Refunds** | 🚀 `production_ready` | 2026-09-14 | Refunds page + 2 API routes, PUT handler with stock restoration, RBAC, tenant isolation, Zod validation (Phase 3) |
-| **POS Void Transaction** | 🚀 `production_ready` | 2026-09-14 | Void PUT handler with stock restoration, `prisma.$transaction` atomicity, RBAC, tenant isolation — [`apps/web/app/api/pos/transactions/[id]/void/route.ts`](apps/web/app/api/pos/transactions/[id]/void/route.ts) |
+| **POS Void Transaction** | 🚀 `production_ready` | 2026-09-14 | Void UI fix (voidReason input field + state), PUT handler with stock restoration, `prisma.$transaction` atomicity, RBAC, tenant isolation — [`apps/web/app/api/pos/transactions/[id]/void/route.ts`](apps/web/app/api/pos/transactions/[id]/void/route.ts) |
 | **POS Discounts** | 📋 `planned` | — | Diskon per item/transaksi, configurable max % |
 | **POS Promotions** | 📋 `planned` | — | Promosi berbasis waktu/quantity/bundle |
 | **POS Products** | 🚀 `production_ready` | 2026-09-11 | Products full CRUD — GET list, GET by ID, POST, PUT, DELETE (Phase 2 Batch 1) |
@@ -1497,16 +1498,18 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~90 | ~49% |
+| `production_ready` | 🚀 | ~91 | ~49% |
 | `implemented` | ✅ | ~33 | ~18% |
 | `verified` | ✔️ | 0 | 0% |
-| `partial` | 🔄 | ~20 | ~11% |
+| `partial` | 🔄 | ~19 | ~10% |
+| `foundation_complete` | 🔄 | ~1 | ~1% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~131 | ~36% |
+| `planned` | 📋 | ~130 | ~36% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~290** | **100%** |
 
+> **Session 35 Impact (14 Sep):** +1 production_ready (Bills & Expenses full CRUD), +1 foundation_complete (WhatsApp Business API foundation), POS Void notes updated (UI fix), Operations i18n completion note → production_ready 90→91, partial 20→19, planned 131→130, foundation_complete 0→1
 > **Session 33 Impact (14 Sep):** +1 production_ready (POS Void Transaction new entry), POS Refunds + POS Shift Management notes updated (stock restoration, closing report, expected cash) → production_ready 89→90, planned 132→131
 > **Session 32 Impact (14 Sep):** +4 production_ready (Aging Report, Tax Report, Dashboard Stats, POS Receipt), -1 verified → production_ready 85→89, verified 1→0, planned 136→132
 > **Session 14 Impact (13 Sep):** +2 production_ready (Anomaly Detection, usePermission Hook), +1 partial (Analytics Read Model/MVs) → Net: production_ready 83→85, partial 19→20, planned 139→136
@@ -1523,6 +1526,34 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v27.0.0 (September 14, 2026) — Session 35: Sprint 34 POS Void Fix + Operations i18n + Bills & Expenses + WhatsApp Foundation (v11.25.0)
+
+#### Feature Status Updates
+- **feat(finance):** Bills & Expenses upgraded `partial` → `production_ready` — Bill + Expense models, 4 API routes, 2 UI pages, 4 Zod schemas, RBAC, tenant isolation, sidebar navigation
+- **feat(comms):** WhatsApp Business upgraded `planned` → `foundation_complete` — types, Meta Cloud API client, templates, webhook handler, test endpoint, WhatsAppMessageLog model
+- **feat(pos):** POS Void Transaction notes updated — UI fix: voidReason input field replacing empty body `{ status: 'VOIDED' }` bug
+- **feat(ops):** Operations i18n completion — ~50 hardcoded strings converted to i18n keys across 7 component files
+
+#### Bug Fixes
+- **fix(pos):** Void transaction was sending wrong body `{ status: 'VOIDED' }` instead of `{ reason: voidReason }` — added `voidReason` state + reason input field
+
+#### New Files
+- `apps/web/app/api/bills/route.ts` — Bills CRUD API
+- `apps/web/app/api/expenses/route.ts` — Expenses CRUD API
+- `apps/web/app/dashboard/finance/bills/page.tsx` — Bills UI page
+- `apps/web/app/dashboard/finance/expenses/page.tsx` — Expenses UI page
+- `packages/types/src/whatsapp.ts` — WhatsApp Business API types
+- `apps/web/lib/whatsapp/client.ts` — Meta Cloud API client
+- `apps/web/lib/whatsapp/templates.ts` — Message templates
+- `apps/web/app/api/whatsapp/webhook/route.ts` — Webhook handler
+- `apps/web/app/api/whatsapp/test/route.ts` — Test endpoint
+
+#### Code Quality
+- TypeScript: 0 errors
+- i18n: 50 new keys added to messages/id.json + messages/en.json
+
+---
 
 ### v26.0.0 (September 14, 2026) — Session 32: Sprint 32 Critical Fixes + Finance Enhancements
 

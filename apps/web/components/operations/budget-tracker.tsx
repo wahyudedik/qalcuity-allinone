@@ -12,6 +12,7 @@
 
 import { DollarSign, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2, Package } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -50,13 +51,13 @@ export interface BudgetData {
 // Constants
 // =============================================================================
 
-const CATEGORY_LABELS: Record<string, string> = {
-    LABOR: 'Tenaga Kerja',
-    MATERIAL: 'Material',
-    EQUIPMENT: 'Peralatan',
-    TRAVEL: 'Perjalanan',
-    SOFTWARE: 'Perangkat Lunak',
-    OTHER: 'Lainnya',
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+    LABOR: 'operations.budget.labor',
+    MATERIAL: 'operations.budget.material',
+    EQUIPMENT: 'operations.budget.equipment',
+    TRAVEL: 'operations.budget.travel',
+    SOFTWARE: 'operations.budget.software',
+    OTHER: 'operations.budget.other',
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -100,6 +101,7 @@ function BudgetCard({ icon: Icon, label, value, color, bgColor }: {
 }
 
 function ProgressBar({ planned, actual, color }: { planned: number; actual: number; color: string }) {
+    const { t } = useTranslation();
     const percent = planned > 0 ? Math.min((actual / planned) * 100, 100) : 0;
     const isOverBudget = actual > planned;
 
@@ -113,7 +115,7 @@ function ProgressBar({ planned, actual, color }: { planned: number; actual: numb
             </div>
             {isOverBudget && (
                 <p className="mt-1 text-[10px] font-medium text-red-500">
-                    Melebihi anggaran {formatCurrency(actual - planned)}
+                    {t('operations.budget.overBudgetBy').replace('{amount}', formatCurrency(actual - planned))}
                 </p>
             )}
         </div>
@@ -130,6 +132,7 @@ interface BudgetTrackerProps {
 }
 
 export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
+    const { t } = useTranslation();
     if (loading) {
         return (
             <div className="space-y-4">
@@ -154,21 +157,21 @@ export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <BudgetCard
                     icon={DollarSign}
-                    label="Total Anggaran"
+                    label={t('operations.budget.totalBudget')}
                     value={summary.totalPlanned > 0 ? formatCurrency(summary.totalPlanned) : '-'}
                     color="text-blue-700 dark:text-blue-300"
                     bgColor="bg-blue-50 dark:bg-blue-900/20"
                 />
                 <BudgetCard
                     icon={TrendingDown}
-                    label="Terpakai"
+                    label={t('operations.budget.spent')}
                     value={formatCurrency(summary.totalActual)}
                     color="text-orange-700 dark:text-orange-300"
                     bgColor="bg-orange-50 dark:bg-orange-900/20"
                 />
                 <BudgetCard
                     icon={isOverBudget ? AlertTriangle : CheckCircle2}
-                    label={isOverBudget ? 'Melebihi Anggaran' : 'Sisa'}
+                    label={isOverBudget ? t('operations.budget.overBudget') : t('operations.budget.remaining')}
                     value={isOverBudget ? formatCurrency(summary.totalActual - summary.totalPlanned) : formatCurrency(summary.totalRemaining)}
                     color={isOverBudget ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}
                     bgColor={isOverBudget ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'}
@@ -179,7 +182,7 @@ export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
             {summary.totalPlanned > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Persentase Penggunaan</span>
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('operations.budget.usagePercentage')}</span>
                         <span className={`text-sm font-bold ${isOverBudget ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                             {summary.percentUsed}%
                         </span>
@@ -196,10 +199,10 @@ export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
             {/* Category Breakdown */}
             {Object.keys(byCategory).length > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Breakdown per Kategori</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('operations.budget.categoryBreakdown')}</h3>
                     <div className="space-y-4">
                         {Object.entries(byCategory).map(([category, stats]) => {
-                            const catLabel = CATEGORY_LABELS[category] || category;
+                            const catLabel = t(CATEGORY_LABEL_KEYS[category]) !== CATEGORY_LABEL_KEYS[category] ? t(CATEGORY_LABEL_KEYS[category]) : category;
                             const catColor = CATEGORY_COLORS[category] || 'bg-gray-500';
                             const catIcon = CATEGORY_ICONS[category] || 'bg-gray-100 text-gray-600';
                             const isOver = stats.actual > stats.planned;
@@ -212,7 +215,7 @@ export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
                                                 <Package className="h-3 w-3" />
                                             </div>
                                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{catLabel}</span>
-                                            <span className="text-[10px] text-gray-400 dark:text-gray-500">({stats.count} item)</span>
+                                            <span className="text-[10px] text-gray-400 dark:text-gray-500">({stats.count} {t('operations.budget.item')})</span>
                                         </div>
                                         <div className="text-right">
                                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -237,7 +240,7 @@ export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
             {data.data.length > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                     <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Detail Anggaran</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('operations.budget.budgetDetails')}</h3>
                     </div>
                     <div className="divide-y divide-gray-100 dark:divide-gray-700">
                         {data.data.map((item) => {
@@ -247,16 +250,16 @@ export function BudgetTracker({ data, loading }: BudgetTrackerProps) {
                                     <div className="min-w-0">
                                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</p>
                                         <p className="text-xs text-gray-400 dark:text-gray-500">
-                                            {CATEGORY_LABELS[item.category] || item.category}
+                                            {t(CATEGORY_LABEL_KEYS[item.category]) !== CATEGORY_LABEL_KEYS[item.category] ? t(CATEGORY_LABEL_KEYS[item.category]) : item.category}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-4 shrink-0">
                                         <div className="text-right">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Rencana</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('operations.budget.planned')}</p>
                                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formatCurrency(item.planned)}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Aktual</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('operations.budget.actual')}</p>
                                             <p className={`text-sm font-bold ${isOver ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                                                 {formatCurrency(item.actual)}
                                             </p>

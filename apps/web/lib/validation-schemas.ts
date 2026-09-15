@@ -2040,3 +2040,67 @@ export const controlConfigImportSchema = z.object({
         source: z.string(),
     })),
 });
+
+// ============================================
+// Bills & Expenses Schemas
+// ============================================
+
+export const createBillSchema = z.object({
+    vendorName: z.string().min(1, 'Nama vendor wajib diisi').max(255, 'Nama vendor maksimal 255 karakter'),
+    vendorId: z.string().optional().nullable(),
+    invoiceNumber: z.string().max(100).optional().nullable(),
+    subtotal: z.number().min(0, 'Subtotal minimal 0'),
+    taxAmount: z.number().min(0).default(0),
+    totalAmount: z.number().min(0, 'Total minimal 0'),
+    dueDate: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+});
+
+export const updateBillSchema = z.object({
+    vendorName: z.string().min(1).max(255).optional(),
+    vendorId: z.string().optional().nullable(),
+    invoiceNumber: z.string().max(100).optional().nullable(),
+    subtotal: z.number().min(0).optional(),
+    taxAmount: z.number().min(0).optional(),
+    totalAmount: z.number().min(0).optional(),
+    paidAmount: z.number().min(0).optional(),
+    status: z.enum(['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PAID', 'CANCELLED']).optional(),
+    dueDate: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+});
+
+export const createExpenseSchema = z.object({
+    category: z.enum(['OFFICE', 'TRAVEL', 'UTILITIES', 'MARKETING', 'SALARIES', 'MAINTENANCE', 'OTHER'], {
+        message: 'Kategori harus salah satu dari: OFFICE, TRAVEL, UTILITIES, MARKETING, SALARIES, MAINTENANCE, OTHER',
+    }),
+    description: z.string().min(1, 'Deskripsi wajib diisi').max(500, 'Deskripsi maksimal 500 karakter'),
+    amount: z.number().min(0, 'Jumlah minimal 0'),
+    taxAmount: z.number().min(0).default(0),
+    totalAmount: z.number().min(0, 'Total minimal 0'),
+    expenseDate: z.string().optional().nullable(),
+    paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'QRIS', 'CREDIT_CARD']).default('CASH'),
+    receiptUrl: z.string().url('URL tidak valid').optional().nullable(),
+});
+
+export const updateExpenseSchema = z.object({
+    category: z.enum(['OFFICE', 'TRAVEL', 'UTILITIES', 'MARKETING', 'SALARIES', 'MAINTENANCE', 'OTHER']).optional(),
+    description: z.string().min(1).max(500).optional(),
+    amount: z.number().min(0).optional(),
+    taxAmount: z.number().min(0).optional(),
+    totalAmount: z.number().min(0).optional(),
+    status: z.enum(['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED']).optional(),
+    expenseDate: z.string().optional().nullable(),
+    paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'QRIS', 'CREDIT_CARD']).optional(),
+    receiptUrl: z.string().url().optional().nullable(),
+});
+
+// ============================================
+// WhatsApp Schemas
+// ============================================
+
+export const whatsappTestSchema = z.object({
+    phone: z.string().regex(
+        /^\+?[1-9]\d{6,14}$/,
+        'Format nomor telepon tidak valid. Gunakan format internasional (contoh: +628123456789)'
+    ),
+});

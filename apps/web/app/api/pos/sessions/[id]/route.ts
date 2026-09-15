@@ -183,3 +183,138 @@ export async function POST(request: Request) {
         return handleApiError(error);
     }
 }
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:sessions:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        const { id } = params;
+
+        // Get session by id + tenantId
+        const posSession = await prisma.posSession.findFirst({
+            where: { id, tenantId },
+        });
+        if (!posSession) {
+            return NextResponse.json(
+                { success: false, error: MSG.SESSION_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Validate: session must be OPEN
+        if (posSession.status !== 'OPEN') {
+            return NextResponse.json(
+                { success: false, error: MSG.SESSION_ONLY_OPEN_CAN_CLOSE },
+                { status: 400 }
+            );
+        }
+
+        const body = await request.json();
+        const { closingCash } = body;
+
+        if (closingCash === undefined || closingCash === null || typeof closingCash !== 'number' || closingCash < 0) {
+            return NextResponse.json(
+                { success: false, error: 'closingCash is required and must be a non-negative number' },
+                { status: 400 }
+            );
+        }
+
+        // Calculate expectedCash:
+        // Query all COMPLETED transactions in this session where paymentMethod = 'CASH'
+        const cashTransactions = await prisma.posTransaction.findMany({
+            where: {
+                sessionId: id,
+                tenantId,
+                status: 'COMPLETED',
+                paymentMethod: 'CASH',
+            },
+            select: {
+                totalAmount: true,
+                changeAmount: true,
+            },
+        });
+
+        // Query cash refunds for transactions in this session
+        const cashRefunds = await prisma.posRefund.findMany({
+            where: {
+                tenantId,
+                status: 'APPROVED',
+                transaction: {
+                    sessionId: id,
+                    paymentMethod: 'CASH',
+                },
+            },
+            select: { amount: true },
+        });
+
+        const cashSales = cashTransactions.reduce(
+            (sum, t) => sum + Number(t.totalAmount) - Number(t.changeAmount),
+            0
+        );
+        const cashRefundTotal = cashRefunds.reduce((sum, r) => sum + Number(r.amount), 0);
+        const expectedCash = Number(posSession.openingCash) + cashSales - cashRefundTotal;
+        const variance = closingCash - expectedCash;
+
+        // Update session: status=CLOSED
+        const updatedSession = await prisma.posSession.update({
+            where: { id },
+            data: {
+                status: 'CLOSED',
+                closingCash,
+                expectedCash,
+                variance,
+                closedAt: new Date(),
+            },
+            include: {
+                terminal: { select: { name: true, code: true } },
+            },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'PosSession',
+            entityId: updatedSession.id,
+            oldValues: { status: 'OPEN' },
+            newValues: {
+                status: 'CLOSED',
+                closingCash,
+                expectedCash,
+                variance,
+            },
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: updatedSession.id,
+                terminalId: updatedSession.terminalId,
+                terminalName: updatedSession.terminal.name,
+                terminalCode: updatedSession.terminal.code,
+                cashierName: updatedSession.cashierName,
+                status: updatedSession.status,
+                openingCash: Number(updatedSession.openingCash),
+                closingCash: Number(updatedSession.closingCash),
+                expectedCash: Number(updatedSession.expectedCash),
+                variance: Number(updatedSession.variance),
+                openedAt: updatedSession.openedAt.toISOString(),
+                closedAt: updatedSession.closedAt?.toISOString(),
+            },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}

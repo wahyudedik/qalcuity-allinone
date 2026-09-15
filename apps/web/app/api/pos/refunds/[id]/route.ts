@@ -174,3 +174,155 @@ export async function POST(request: Request) {
         return handleApiError(error);
     }
 }
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:pos:refunds:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        const { id } = params;
+
+        // Get refund by id + tenantId
+        const refund = await prisma.posRefund.findFirst({
+            where: { id, tenantId },
+            include: {
+                transaction: {
+                    select: { id: true, status: true },
+                },
+            },
+        });
+        if (!refund) {
+            return NextResponse.json(
+                { success: false, error: MSG.REFUND_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Validate: refund must be PENDING
+        if (refund.status !== 'PENDING') {
+            return NextResponse.json(
+                { success: false, error: MSG.REFUND_ALREADY_PROCESSED },
+                { status: 400 }
+            );
+        }
+
+        const body = await request.json();
+        const { status, notes } = body;
+
+        if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
+            return NextResponse.json(
+                { success: false, error: MSG.REFUND_STATUS_INVALID },
+                { status: 400 }
+            );
+        }
+
+        if (status === 'APPROVED') {
+            // Update refund + update transaction + restore stock atomically
+            await prisma.$transaction(async (tx) => {
+                // Update refund: status=APPROVED
+                await tx.posRefund.update({
+                    where: { id },
+                    data: {
+                        status: 'APPROVED',
+                        approvedBy: userId,
+                        approvedAt: new Date(),
+                    },
+                });
+
+                // Update transaction: status=REFUNDED
+                await tx.posTransaction.update({
+                    where: { id: refund.transactionId },
+                    data: { status: 'REFUNDED' },
+                });
+
+                // Restore stock: query transaction items, for each item with productId
+                const items = await tx.posTransactionItem.findMany({
+                    where: { transactionId: refund.transactionId },
+                    select: { productId: true, quantity: true },
+                });
+
+                for (const item of items) {
+                    if (item.productId) {
+                        await tx.product.update({
+                            where: { id: item.productId },
+                            data: { stock: { increment: Number(item.quantity) } },
+                        });
+                    }
+                }
+            });
+        } else {
+            // REJECTED: just update refund status
+            await prisma.posRefund.update({
+                where: { id },
+                data: {
+                    status: 'REJECTED',
+                    approvedBy: userId,
+                    approvedAt: new Date(),
+                },
+            });
+        }
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'PosRefund',
+            entityId: refund.id,
+            oldValues: { status: 'PENDING' },
+            newValues: {
+                status,
+                approvedBy: userId,
+                notes: notes || null,
+            },
+            request,
+        });
+
+        // Fire-and-forget: invalidate POS analytics + dashboard cache
+        invalidatePosAnalyticsCache(tenantId).catch(() => { });
+        invalidatePosDashboardCache(tenantId).catch(() => { });
+
+        // Fetch updated refund
+        const updatedRefund = await prisma.posRefund.findFirst({
+            where: { id },
+            include: {
+                transaction: {
+                    select: {
+                        id: true,
+                        transactionNo: true,
+                        totalAmount: true,
+                        customerName: true,
+                        paymentMethod: true,
+                    },
+                },
+            },
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: updatedRefund!.id,
+                refundNo: updatedRefund!.refundNo,
+                transactionId: updatedRefund!.transactionId,
+                transactionNo: updatedRefund!.transaction.transactionNo,
+                amount: Number(updatedRefund!.amount),
+                reason: updatedRefund!.reason,
+                status: updatedRefund!.status,
+                approvedBy: updatedRefund!.approvedBy,
+                approvedAt: updatedRefund!.approvedAt?.toISOString() || null,
+                createdAt: updatedRefund!.createdAt.toISOString(),
+            },
+        });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}

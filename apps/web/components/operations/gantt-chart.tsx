@@ -13,6 +13,7 @@
 
 import { useMemo } from 'react';
 import { Calendar, ArrowRight, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -111,8 +112,9 @@ function StatusIcon({ status }: { status: string }) {
 }
 
 function DependencyArrow() {
+    const { t } = useTranslation();
     return (
-        <div className="flex items-center text-gray-400 dark:text-gray-500" title="Memiliki dependency">
+        <div className="flex items-center text-gray-400 dark:text-gray-500" title={t('operations.gantt.hasDependency')}>
             <ArrowRight className="h-3 w-3" />
         </div>
     );
@@ -128,12 +130,13 @@ function DesktopGanttView({ tasks, projectStart, totalDays, dayWidth }: {
     totalDays: number;
     dayWidth: number;
 }) {
+    const { t } = useTranslation();
     return (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             {/* Timeline header */}
             <div className="flex border-b border-gray-200 dark:border-gray-700">
                 <div className="w-64 min-w-[256px] shrink-0 border-r border-gray-200 px-4 py-2 text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Task
+                    {t('operations.gantt.task')}
                 </div>
                 <div className="flex min-w-0">
                     {Array.from({ length: totalDays }, (_, i) => {
@@ -216,6 +219,7 @@ function DesktopGanttView({ tasks, projectStart, totalDays, dayWidth }: {
 // =============================================================================
 
 function MobileGanttView({ tasks }: { tasks: GanttTask[] }) {
+    const { t } = useTranslation();
     return (
         <div className="space-y-3">
             {tasks.map((task) => {
@@ -242,7 +246,7 @@ function MobileGanttView({ tasks }: { tasks: GanttTask[] }) {
                                 </span>
                             )}
                             {task.progress > 0 && (
-                                <span>{task.progress}% selesai</span>
+                                <span>{task.progress}% {t('operations.gantt.completed')}</span>
                             )}
                         </div>
                         {task.progress > 0 && task.status !== 'DONE' && (
@@ -272,6 +276,7 @@ interface GanttChartProps {
 }
 
 export function GanttChart({ data, loading }: GanttChartProps) {
+    const { t } = useTranslation();
     // Calculate timeline bounds
     const { projectStart, totalDays, dayWidth } = useMemo(() => {
         if (!data || !data.tasks || data.tasks.length === 0) {
@@ -315,8 +320,8 @@ export function GanttChart({ data, loading }: GanttChartProps) {
         return (
             <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
                 <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Belum ada task untuk ditampilkan</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Buat task terlebih dahulu untuk melihat Gantt chart</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('operations.gantt.noTasks')}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('operations.gantt.noTasksDescription')}</p>
             </div>
         );
     }
@@ -325,9 +330,9 @@ export function GanttChart({ data, loading }: GanttChartProps) {
         <div className="space-y-4">
             {/* Summary bar */}
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                <span>{data.summary?.totalTasks ?? 0} task</span>
-                <span>{data.summary?.completedTasks ?? 0} selesai</span>
-                <span className="font-medium text-blue-600 dark:text-blue-400">Progres: {data.summary?.autoProgress ?? 0}%</span>
+                <span>{data.summary?.totalTasks ?? 0} {t('operations.gantt.tasks')}</span>
+                <span>{data.summary?.completedTasks ?? 0} {t('operations.gantt.completed')}</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400">{t('operations.gantt.progress')}: {data.summary?.autoProgress ?? 0}%</span>
             </div>
 
             {/* Desktop view */}

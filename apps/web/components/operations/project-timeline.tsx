@@ -13,6 +13,7 @@
 
 import { useMemo } from 'react';
 import { Calendar, Flag, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -81,15 +82,15 @@ function formatDateShort(date: Date): string {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 }
 
-function formatDateRelative(date: Date): string {
+function formatDateRelative(date: Date, t: (key: string) => string): string {
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
 
-    if (diffDays < 0) return `${Math.abs(diffDays)} hari lalu`;
-    if (diffDays === 0) return 'Hari ini';
-    if (diffDays === 1) return 'Besok';
-    return `${diffDays} hari lagi`;
+    if (diffDays < 0) return t('operations.timeline.daysAgo').replace('{count}', String(Math.abs(diffDays)));
+    if (diffDays === 0) return t('operations.timeline.today');
+    if (diffDays === 1) return t('operations.timeline.tomorrow');
+    return t('operations.timeline.daysLeft').replace('{count}', String(diffDays));
 }
 
 // =============================================================================
@@ -102,6 +103,7 @@ interface ProjectTimelineProps {
 }
 
 export function ProjectTimeline({ data, loading }: ProjectTimelineProps) {
+    const { t } = useTranslation();
     // Sort tasks by date
     const sortedTasks = useMemo(() => {
         if (!data) return [];
@@ -148,21 +150,21 @@ export function ProjectTimeline({ data, loading }: ProjectTimelineProps) {
             {hasDates && (
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Timeline Proyek</h3>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{stats.totalDays} hari total</span>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('operations.timeline.projectTimeline')}</h3>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('operations.timeline.totalDays').replace('{count}', String(stats.totalDays))}</span>
                     </div>
 
                     <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
                         {data.project.startDate && (
                             <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                <span>Mulai: {formatDateShort(new Date(data.project.startDate))}</span>
+                                <span>{t('operations.timeline.startDate')}: {formatDateShort(new Date(data.project.startDate))}</span>
                             </div>
                         )}
                         {data.project.endDate && (
                             <div className="flex items-center gap-1">
                                 <Flag className="h-3 w-3" />
-                                <span>Selesai: {formatDateShort(new Date(data.project.endDate))}</span>
+                                <span>{t('operations.timeline.endDate')}: {formatDateShort(new Date(data.project.endDate))}</span>
                             </div>
                         )}
                     </div>
@@ -186,14 +188,14 @@ export function ProjectTimeline({ data, loading }: ProjectTimelineProps) {
                             <div
                                 className="absolute -top-1 h-5 w-0.5 bg-red-500"
                                 style={{ left: `${stats.percentElapsed}%` }}
-                                title="Hari ini"
+                                title={t('operations.timeline.currentDay')}
                             />
                         )}
                     </div>
 
                     <div className="flex items-center justify-between mt-2 text-[10px] text-gray-400 dark:text-gray-500">
-                        <span>Progres: {data.project.progress}%</span>
-                        <span>Hari ke-{stats.elapsedDays} dari {stats.totalDays}</span>
+                        <span>{t('operations.timeline.progress')}: {data.project.progress}%</span>
+                        <span>{t('operations.timeline.dayOf').replace('{current}', String(stats.elapsedDays)).replace('{total}', String(stats.totalDays))}</span>
                     </div>
                 </div>
             )}
@@ -201,7 +203,7 @@ export function ProjectTimeline({ data, loading }: ProjectTimelineProps) {
             {/* Task Timeline */}
             {sortedTasks.length > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Milestone Tasks</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('operations.timeline.milestoneTasks')}</h3>
 
                     <div className="relative">
                         {/* Vertical line */}
@@ -236,7 +238,7 @@ export function ProjectTimeline({ data, loading }: ProjectTimelineProps) {
                                                     </div>
                                                     {date && (
                                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                            {formatDateShort(date)} ({formatDateRelative(date)})
+                                                            {formatDateShort(date)} ({formatDateRelative(date, t)})
                                                         </p>
                                                     )}
                                                 </div>
@@ -267,8 +269,8 @@ export function ProjectTimeline({ data, loading }: ProjectTimelineProps) {
             {sortedTasks.length === 0 && !hasDates && (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
                     <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Belum ada timeline</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Atur tanggal mulai/selesai proyek untuk melihat timeline</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('operations.timeline.noTimeline')}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('operations.timeline.noTimelineDescription')}</p>
                 </div>
             )}
         </div>

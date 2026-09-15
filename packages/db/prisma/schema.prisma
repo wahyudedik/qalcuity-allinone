@@ -154,6 +154,13 @@ model Tenant {
 
   // Phase 2: Recurring Invoices
   recurringInvoiceTemplates RecurringInvoice[]
+
+  // Bills & Expenses
+  bills     Bill[]
+  expenses  Expense[]
+
+  // WhatsApp Message Logs
+  whatsappMessageLogs WhatsAppMessageLog[]
 }
 
 model User {
@@ -494,6 +501,58 @@ model QuotationItem {
   quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
 
   @@index([quotationId])
+}
+
+model Bill {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  billNumber      String
+  vendorId        String?
+  vendorName      String
+  invoiceNumber   String?
+  status          String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, PAID, CANCELLED
+  subtotal        Decimal   @db.Decimal(19, 4)
+  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
+  totalAmount     Decimal   @db.Decimal(19, 4)
+  paidAmount      Decimal   @default(0) @db.Decimal(19, 4)
+  dueDate         DateTime?
+  notes           String?
+  createdBy       String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, billNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+}
+
+model Expense {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  expenseNumber   String
+  category        String    // OFFICE, TRAVEL, UTILITIES, MARKETING, SALARIES, MAINTENANCE, OTHER
+  description     String
+  amount          Decimal   @db.Decimal(19, 4)
+  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
+  totalAmount     Decimal   @db.Decimal(19, 4)
+  expenseDate     DateTime  @default(now())
+  paymentMethod   String    @default("CASH") // CASH, BANK_TRANSFER, QRIS, CREDIT_CARD
+  receiptUrl      String?
+  status          String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, expenseNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+  @@index([tenantId, expenseDate])
 }
 
 // ============================================
@@ -2664,4 +2723,31 @@ model PlanTenantLimit {
   maxTenants Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ============================================
+// WHATSAPP BUSINESS API
+// ============================================
+
+model WhatsAppMessageLog {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  messageId    String?   // Meta API message ID
+  to           String    // Recipient phone number
+  type         String    // 'text', 'template', 'image', 'document'
+  templateName String?   // Template name if using pre-approved templates
+  status       String    @default("sent") // 'sent', 'delivered', 'read', 'failed'
+  channel      String    // 'invoice', 'payment_reminder', 'overdue', 'order_confirmation'
+  entityType   String?   // 'Invoice', 'Payment', 'Order'
+  entityId     String?   // Related entity ID
+  error        String?   // Error message if failed
+  sentAt       DateTime  @default(now())
+  deliveredAt  DateTime?
+  readAt       DateTime?
+
+  @@unique([tenantId, messageId])
+  @@index([tenantId])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, sentAt])
 }

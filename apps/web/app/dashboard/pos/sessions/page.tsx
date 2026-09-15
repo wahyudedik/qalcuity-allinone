@@ -6,7 +6,8 @@ import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
 import {
-    Search, BookOpen, Loader2, Check, X, AlertCircle, Lock, Unlock, ArrowUpDown,
+    Search, BookOpen, Loader2, Check, X, AlertCircle, Lock, Unlock,
+    BarChart3, CreditCard, Package, AlertTriangle, Banknote,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 
@@ -29,6 +30,31 @@ type Session = {
     createdAt: string
 }
 
+type ClosingReport = {
+    sessionId: string
+    terminal: { name: string; code: string }
+    cashier: { name: string }
+    period: { openedAt: string; closedAt: string | null }
+    sales: {
+        totalTransactions: number
+        grossSales: number
+        totalDiscounts: number
+        totalTax: number
+        netSales: number
+        totalRevenue: number
+    }
+    paymentMethods: { method: string; count: number; total: number }[]
+    topProducts: { name: string; quantity: number; total: number }[]
+    refunds: { count: number; total: number }
+    voids: { count: number; total: number }
+    cashSummary: {
+        openingCash: number
+        cashSales: number
+        cashRefunds: number
+        expectedCash: number
+    }
+}
+
 export default function POSSessionsPage() {
     const { t } = useTranslation()
     const { data: session } = useSession()
@@ -47,6 +73,11 @@ export default function POSSessionsPage() {
     const [closingSessionId, setClosingSessionId] = useState<string | null>(null)
     const [closingCash, setClosingCash] = useState<number>(0)
     const [closing, setClosing] = useState(false)
+
+    // Closing report
+    const [closingReport, setClosingReport] = useState<ClosingReport | null>(null)
+    const [loadingReport, setLoadingReport] = useState(false)
+    const [reportError, setReportError] = useState<string | null>(null)
 
     useEffect(() => {
         if (toast) {
@@ -89,6 +120,31 @@ export default function POSSessionsPage() {
         )
     })
 
+    const handleOpenCloseModal = async (sessionId: string) => {
+        setClosingSessionId(sessionId)
+        setClosingReport(null)
+        setClosingCash(0)
+        setReportError(null)
+        setShowCloseModal(true)
+        setLoadingReport(true)
+
+        try {
+            const response = await fetch(`/api/pos/sessions/${sessionId}/closing-report`)
+            const data = await response.json()
+            if (data.success) {
+                setClosingReport(data.data)
+                // Pre-fill closingCash with expected cash
+                setClosingCash(data.data.cashSummary.expectedCash)
+            } else {
+                setReportError(data.error || 'Gagal memuat laporan penutupan')
+            }
+        } catch {
+            setReportError('Gagal memuat laporan penutupan. Periksa koneksi jaringan.')
+        } finally {
+            setLoadingReport(false)
+        }
+    }
+
     const handleCloseSession = async () => {
         if (!closingSessionId) return
         setClosing(true)
@@ -104,6 +160,7 @@ export default function POSSessionsPage() {
                 setShowCloseModal(false)
                 setClosingSessionId(null)
                 setClosingCash(0)
+                setClosingReport(null)
                 fetchSessions()
             } else {
                 setToast({ message: data.error || (t('pos.sessions.errorClose') || 'Gagal menutup sesi'), type: 'error' })
@@ -113,6 +170,20 @@ export default function POSSessionsPage() {
         } finally {
             setClosing(false)
         }
+    }
+
+    // Calculate variance from report
+    const variance = closingReport ? closingCash - closingReport.cashSummary.expectedCash : 0
+
+    const formatPaymentMethod = (method: string) => {
+        const labels: Record<string, string> = {
+            CASH: 'Tunai',
+            CARD: 'Kartu',
+            QRIS: 'QRIS',
+            E_WALLET: 'E-Wallet',
+            BANK_TRANSFER: 'Transfer Bank',
+        }
+        return labels[method] || method
     }
 
     return (
@@ -225,11 +296,7 @@ export default function POSSessionsPage() {
                                         <td className="px-4 py-3 text-center">
                                             {s.status === 'OPEN' && canManage && (
                                                 <button
-                                                    onClick={() => {
-                                                        setClosingSessionId(s.id)
-                                                        setClosingCash(s.totalSales + s.openingCash)
-                                                        setShowCloseModal(true)
-                                                    }}
+                                                    onClick={() => handleOpenCloseModal(s.id)}
                                                     className="inline-flex items-center gap-1 rounded-lg bg-orange-100 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400"
                                                 >
                                                     <Lock className="h-3 w-3" />
@@ -281,11 +348,7 @@ export default function POSSessionsPage() {
                                 </div>
                                 {s.status === 'OPEN' && canManage && (
                                     <button
-                                        onClick={() => {
-                                            setClosingSessionId(s.id)
-                                            setClosingCash(s.totalSales + s.openingCash)
-                                            setShowCloseModal(true)
-                                        }}
+                                        onClick={() => handleOpenCloseModal(s.id)}
                                         className="mt-3 w-full inline-flex items-center justify-center gap-1 rounded-lg bg-orange-100 px-3 py-2 text-xs font-medium text-orange-700 hover:bg-orange-200"
                                     >
                                         <Lock className="h-3 w-3" />
@@ -298,43 +361,246 @@ export default function POSSessionsPage() {
                 </>
             )}
 
-            {/* Close Session Modal */}
+            {/* Close Session Modal with Closing Report */}
             {showCloseModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !closing && setShowCloseModal(false)}>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('pos.sessions.closeModalTitle') || 'Tutup Sesi'}</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !closing && setShowCloseModal(false)}>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 rounded-t-xl z-10">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <BarChart3 className="h-5 w-5 text-blue-600" />
+                                {t('pos.sessions.closingReportTitle') || 'Laporan Penutupan'}
+                            </h3>
                             {!closing && (
-                                <button onClick={() => setShowCloseModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <button onClick={() => setShowCloseModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                     <X className="h-5 w-5" />
                                 </button>
                             )}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.sessions.closingCashLabel') || 'Uang Tutup (Closing Cash)'}</label>
-                            <input
-                                type="number"
-                                value={closingCash || ''}
-                                onChange={(e) => setClosingCash(Number(e.target.value))}
-                                min="0"
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowCloseModal(false)}
-                                disabled={closing}
-                                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
-                            >
-                                {t('pos.sessions.cancel') || 'Batal'}
-                            </button>
-                            <button
-                                onClick={handleCloseSession}
-                                disabled={closing}
-                                className="flex-1 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
-                            >
-                                {closing ? (t('pos.sessions.closing') || 'Menutup...') : (t('pos.sessions.closeSession') || 'Tutup Sesi')}
-                            </button>
+
+                        <div className="p-6 space-y-5">
+                            {/* Loading State */}
+                            {loadingReport && (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+                                    <p className="text-sm text-gray-500">Memuat laporan penutupan...</p>
+                                </div>
+                            )}
+
+                            {/* Error State */}
+                            {reportError && (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
+                                    <p className="text-sm text-red-600 dark:text-red-400">{reportError}</p>
+                                    <button
+                                        onClick={() => closingSessionId && handleOpenCloseModal(closingSessionId)}
+                                        className="mt-3 text-sm text-blue-600 hover:underline"
+                                    >
+                                        Coba Lagi
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Report Content */}
+                            {closingReport && !loadingReport && (
+                                <>
+                                    {/* Session Info */}
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        Session #{closingReport.sessionId.slice(-8).toUpperCase()} • {closingReport.terminal.name} ({closingReport.terminal.code}) • {closingReport.cashier.name}
+                                    </div>
+
+                                    {/* Sales Summary Cards */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4">
+                                            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">{t('pos.sessions.revenue') || 'Total Pendapatan'}</p>
+                                            <p className="text-xl font-bold text-blue-700 dark:text-blue-300 mt-1">{formatCurrency(closingReport.sales.totalRevenue)}</p>
+                                        </div>
+                                        <div className="rounded-lg bg-green-50 dark:bg-green-900/20 p-4">
+                                            <p className="text-xs text-green-600 dark:text-green-400 font-medium">{t('pos.sessions.totalTransactions') || 'Total Transaksi'}</p>
+                                            <p className="text-xl font-bold text-green-700 dark:text-green-300 mt-1">{closingReport.sales.totalTransactions}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Sales Breakdown */}
+                                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('pos.sessions.salesBreakdown') || 'Rincian Penjualan'}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500 dark:text-gray-400">{t('pos.sessions.grossSales') || 'Penjualan Kotor'}</span>
+                                                <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(closingReport.sales.grossSales)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500 dark:text-gray-400">{t('pos.sessions.discounts') || 'Diskon'}</span>
+                                                <span className="font-medium text-red-600 dark:text-red-400">-{formatCurrency(closingReport.sales.totalDiscounts)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500 dark:text-gray-400">{t('pos.sessions.tax') || 'Pajak'}</span>
+                                                <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(closingReport.sales.totalTax)}</span>
+                                            </div>
+                                            <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
+                                                <span className="font-semibold text-gray-900 dark:text-white">{t('pos.sessions.netSales') || 'Penjualan Bersih'}</span>
+                                                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(closingReport.sales.netSales)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment Methods */}
+                                    {closingReport.paymentMethods.length > 0 && (
+                                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                                <CreditCard className="h-4 w-4" />
+                                                {t('pos.sessions.paymentMethods') || 'Metode Pembayaran'}
+                                            </h4>
+                                            <div className="space-y-2">
+                                                {closingReport.paymentMethods.map((pm) => (
+                                                    <div key={pm.method} className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-600 dark:text-gray-400">{formatPaymentMethod(pm.method)}</span>
+                                                        <div className="text-right">
+                                                            <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(pm.total)}</span>
+                                                            <span className="text-gray-400 ml-2">({pm.count})</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Top Products */}
+                                    {closingReport.topProducts.length > 0 && (
+                                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                                <Package className="h-4 w-4" />
+                                                {t('pos.sessions.topProducts') || 'Produk Terlaris'}
+                                            </h4>
+                                            <div className="space-y-2">
+                                                {closingReport.topProducts.slice(0, 5).map((product, idx) => (
+                                                    <div key={product.name} className="flex items-center justify-between text-sm">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-gray-400 text-xs font-medium w-5">{idx + 1}.</span>
+                                                            <span className="text-gray-700 dark:text-gray-300">{product.name}</span>
+                                                            <span className="text-gray-400 text-xs">({product.quantity})</span>
+                                                        </div>
+                                                        <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(product.total)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Refunds & Voids */}
+                                    {(closingReport.refunds.count > 0 || closingReport.voids.count > 0) && (
+                                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                                <AlertTriangle className="h-4 w-4" />
+                                                {t('pos.sessions.refundsAndVoids') || 'Refund & Void'}
+                                            </h4>
+                                            <div className="space-y-2 text-sm">
+                                                {closingReport.refunds.count > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-500 dark:text-gray-400">Refund ({closingReport.refunds.count})</span>
+                                                        <span className="font-medium text-red-600 dark:text-red-400">-{formatCurrency(closingReport.refunds.total)}</span>
+                                                    </div>
+                                                )}
+                                                {closingReport.voids.count > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-500 dark:text-gray-400">Void ({closingReport.voids.count})</span>
+                                                        <span className="font-medium text-orange-600 dark:text-orange-400">{formatCurrency(closingReport.voids.total)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Cash Summary */}
+                                    <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                            <Banknote className="h-4 w-4" />
+                                            {t('pos.sessions.cashSummary') || 'Ringkasan Kas'}
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600 dark:text-gray-400">{t('pos.sessions.openingCash') || 'Uang Awal'}</span>
+                                                <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(closingReport.cashSummary.openingCash)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600 dark:text-gray-400">{t('pos.sessions.cashSales') || 'Penjualan Tunai'}</span>
+                                                <span className="font-medium text-green-600 dark:text-green-400">+{formatCurrency(closingReport.cashSummary.cashSales)}</span>
+                                            </div>
+                                            {closingReport.cashSummary.cashRefunds > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600 dark:text-gray-400">{t('pos.sessions.cashRefunds') || 'Refund Tunai'}</span>
+                                                    <span className="font-medium text-red-600 dark:text-red-400">-{formatCurrency(closingReport.cashSummary.cashRefunds)}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between border-t border-amber-300 dark:border-amber-700 pt-2">
+                                                <span className="font-semibold text-gray-900 dark:text-white">{t('pos.sessions.expectedCash') || 'Kas yang Diharapkan'}</span>
+                                                <span className="font-bold text-amber-700 dark:text-amber-300">{formatCurrency(closingReport.cashSummary.expectedCash)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Closing Cash Input */}
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pos.sessions.closingCashLabel') || 'Uang Tutup (Closing Cash)'}</label>
+                                            <input
+                                                type="number"
+                                                value={closingCash || ''}
+                                                onChange={(e) => setClosingCash(Number(e.target.value))}
+                                                min="0"
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                            />
+                                        </div>
+
+                                        {/* Variance Display */}
+                                        <div className={`flex items-center justify-between rounded-lg px-4 py-3 ${variance === 0
+                                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                            : variance > 0
+                                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                                            }`}>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('pos.sessions.variance') || 'Selisih'}</span>
+                                            <span className={`text-sm font-bold ${variance === 0
+                                                ? 'text-green-700 dark:text-green-400'
+                                                : variance > 0
+                                                    ? 'text-blue-700 dark:text-blue-400'
+                                                    : 'text-red-700 dark:text-red-400'
+                                                }`}>
+                                                {variance >= 0 ? '+' : ''}{formatCurrency(variance)}
+                                                {variance === 0 ? ' ✓' : variance > 0 ? ' (Lebih)' : ' (Kurang)'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowCloseModal(false)}
+                                    disabled={closing}
+                                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 disabled:opacity-50"
+                                >
+                                    {t('pos.sessions.cancel') || 'Batal'}
+                                </button>
+                                <button
+                                    onClick={handleCloseSession}
+                                    disabled={closing || loadingReport || !closingReport}
+                                    className="flex-1 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {closing ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            {t('pos.sessions.closing') || 'Menutup...'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Lock className="h-4 w-4" />
+                                            {t('pos.sessions.closeSession') || 'Tutup Sesi'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
