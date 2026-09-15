@@ -269,7 +269,7 @@ export default function StockPage() {
                             onChange={(e) => setFilterWarehouse(e.target.value)}
                             className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium focus:border-blue-500 focus:outline-none"
                         >
-                            <option value="all">Semua Gudang</option>
+                            <option value="all">{t('inventory.stock.allWarehouses') || 'Semua Gudang'}</option>
                             {warehouses.map((w) => (
                                 <option key={w.id} value={w.id}>{w.name}</option>
                             ))}

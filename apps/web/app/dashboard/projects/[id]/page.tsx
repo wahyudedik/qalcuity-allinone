@@ -168,46 +168,46 @@ function OverviewTab({ project }: { project: ProjectDetail }) {
         <div className="space-y-6">
             {/* Project Info */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Informasi Proyek</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.projects.detail.projectInfo')}</h3>
                 {project.description && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{project.description}</p>
                 )}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Tanggal Mulai</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.projects.detail.startDate')}</span>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {project.startDate ? formatDate(project.startDate) : '-'}
                         </p>
                     </div>
                     <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Tanggal Selesai</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.projects.detail.endDate')}</span>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {project.endDate ? formatDate(project.endDate) : '-'}
                         </p>
                     </div>
                     <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Anggaran</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.projects.detail.budgetLabel')}</span>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {project.budget ? formatCurrency(project.budget) : '-'}
                         </p>
                     </div>
                     <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Terpakai</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.projects.detail.spent')}</span>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {formatCurrency(project.spent)}
                         </p>
                     </div>
                 </div>
                 <div className="mt-4">
-                    <ProgressBar value={project.progress} label="Progres" />
+                    <ProgressBar value={project.progress} label={t('dashboard.projects.detail.progressLabel')} />
                 </div>
             </div>
 
             {/* Task Summary */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Ringkasan Task</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.projects.detail.taskSummary')}</h3>
                 {totalTasks === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Belum ada task</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.projects.detail.noTasks')}</p>
                 ) : (
                     <div className="space-y-3">
                         {/* Simple bar chart */}
@@ -320,7 +320,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                     className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     <Plus className="h-4 w-4" />
-                    Tambah Task
+                    {t('dashboard.tasks.addTask')}
                 </button>
             </div>
 
@@ -329,7 +329,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                 <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
                     <input
                         type="text"
-                        placeholder="Judul task baru..."
+                        placeholder={t('dashboard.tasks.newTaskPlaceholder')}
                         value={newTaskTitle}
                         onChange={(e) => setNewTaskTitle(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && void handleAddTask()}
@@ -340,13 +340,13 @@ function TasksTab({ projectId }: { projectId: string }) {
                         onClick={() => void handleAddTask()}
                         className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                        Simpan
+                        {t('common.save')}
                     </button>
                     <button
                         onClick={() => { setShowAddForm(false); setNewTaskTitle(''); }}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
                     >
-                        Batal
+                        {t('common.cancel')}
                     </button>
                 </div>
             )}
@@ -409,7 +409,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                                         onClick={() => void handleStatusChange(task.id, 'IN_PROGRESS')}
                                         className="rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300"
                                     >
-                                        Mulai
+                                        {t('dashboard.tasks.start')}
                                     </button>
                                 )}
                                 {task.status === 'IN_PROGRESS' && (
@@ -417,7 +417,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                                         onClick={() => void handleStatusChange(task.id, 'IN_REVIEW')}
                                         className="rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300"
                                     >
-                                        Review
+                                        {t('dashboard.tasks.review')}
                                     </button>
                                 )}
                                 {task.status === 'IN_REVIEW' && (
@@ -425,7 +425,7 @@ function TasksTab({ projectId }: { projectId: string }) {
                                         onClick={() => void handleStatusChange(task.id, 'DONE')}
                                         className="rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300"
                                     >
-                                        Selesai
+                                        {t('dashboard.tasks.done')}
                                     </button>
                                 )}
                             </div>
@@ -459,7 +459,7 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
     };
 
     const handleRemoveMember = async (memberId: string) => {
-        if (!confirm('Hapus anggota ini dari proyek?')) return;
+        if (!confirm(t('dashboard.projects.membersTab.removeConfirm'))) return;
         const success = await removeMember(project.id, memberId);
         if (success) onRefresh();
     };
@@ -478,7 +478,7 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                     className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     <UserPlus className="h-4 w-4" />
-                    Tambah Anggota
+                    {t('dashboard.projects.membersTab.addMember')}
                 </button>
             </div>
 
@@ -487,7 +487,7 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                 <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
                     <input
                         type="text"
-                        placeholder="Employee ID..."
+                        placeholder={t('dashboard.projects.membersTab.employeeIdPlaceholder')}
                         value={newMemberId}
                         onChange={(e) => setNewMemberId(e.target.value)}
                         className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -506,13 +506,13 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                         onClick={() => void handleAddMember()}
                         className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                     >
-                        Simpan
+                        {t('common.save')}
                     </button>
                     <button
                         onClick={() => { setShowAddForm(false); setNewMemberId(''); }}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
                     >
-                        Batal
+                        {t('common.cancel')}
                     </button>
                 </div>
             )}
@@ -521,8 +521,8 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
             {project.members.length === 0 ? (
                 <EmptyState
                     icon={Users}
-                    title="Belum ada anggota"
-                    description="Tambahkan anggota tim ke proyek ini."
+                    title={t('dashboard.projects.membersTab.emptyTitle')}
+                    description={t('dashboard.projects.membersTab.emptyDescription')}
                 />
             ) : (
                 <div className="space-y-2">
@@ -540,7 +540,7 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                                         {member.employeeId}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        Bergabung {formatDate(member.joinedAt)}
+                                        {t('dashboard.projects.membersTab.joinedAt')} {formatDate(member.joinedAt)}
                                     </p>
                                 </div>
                             </div>
@@ -557,7 +557,7 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
                                 <button
                                     onClick={() => void handleRemoveMember(member.id)}
                                     className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                                    title="Hapus anggota"
+                                    title={t('dashboard.projects.membersTab.removeTitle')}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
@@ -575,6 +575,7 @@ function MembersTab({ project, onRefresh }: { project: ProjectDetail; onRefresh:
 // =============================================================================
 
 function BudgetTab({ project }: { project: ProjectDetail }) {
+    const { t } = useTranslation();
     const budget = project.budget || 0;
     const spent = project.spent || 0;
     const remaining = budget - spent;
@@ -584,23 +585,23 @@ function BudgetTab({ project }: { project: ProjectDetail }) {
         <div className="space-y-6">
             {/* Budget overview */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Ringkasan Anggaran</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.projects.budgetTab.title')}</h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Anggaran</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">{t('dashboard.projects.budgetTab.totalBudget')}</p>
                         <p className="text-xl font-bold text-blue-700 dark:text-blue-300 mt-1">
                             {budget > 0 ? formatCurrency(budget) : '-'}
                         </p>
                     </div>
                     <div className="rounded-lg bg-orange-50 p-4 dark:bg-orange-900/20">
-                        <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Terpakai</p>
+                        <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">{t('dashboard.projects.budgetTab.spent')}</p>
                         <p className="text-xl font-bold text-orange-700 dark:text-orange-300 mt-1">
                             {formatCurrency(spent)}
                         </p>
                     </div>
                     <div className={`rounded-lg p-4 ${remaining >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
                         <p className={`text-xs font-medium ${remaining >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            Sisa
+                            {t('dashboard.projects.budgetTab.remaining')}
                         </p>
                         <p className={`text-xl font-bold mt-1 ${remaining >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                             {budget > 0 ? formatCurrency(remaining) : '-'}
@@ -610,7 +611,7 @@ function BudgetTab({ project }: { project: ProjectDetail }) {
 
                 {budget > 0 && (
                     <div className="mt-6">
-                        <ProgressBar value={percentUsed} label="Persentase Penggunaan" />
+                        <ProgressBar value={percentUsed} label={t('dashboard.projects.budgetTab.usagePercent')} />
                     </div>
                 )}
             </div>
@@ -623,6 +624,7 @@ function BudgetTab({ project }: { project: ProjectDetail }) {
 // =============================================================================
 
 function GanttTab({ projectId }: { projectId: string }) {
+    const { t } = useTranslation();
     const [ganttData, setGanttData] = useState<GanttData | null>(null);
     const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -636,7 +638,7 @@ function GanttTab({ projectId }: { projectId: string }) {
                 const response = await fetch(`/api/projects/${projectId}/gantt`);
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.error || 'Gagal memuat data Gantt');
+                    throw new Error(errData.error || t('dashboard.projects.detail.errorGantt'));
                 }
                 const data = await response.json();
                 setGanttData(data);
@@ -656,7 +658,7 @@ function GanttTab({ projectId }: { projectId: string }) {
                     });
                 }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+                setError(err instanceof Error ? err.message : t('dashboard.projects.detail.errorGeneric'));
             } finally {
                 setLoading(false);
             }
@@ -699,12 +701,12 @@ function ResourcesTab({ projectId }: { projectId: string }) {
                 const response = await fetch(`/api/projects/${projectId}/resources?active=true`);
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.error || 'Gagal memuat data resource');
+                    throw new Error(errData.error || t('dashboard.projects.resourcesTab.errorLoad'));
                 }
                 const data = await response.json();
                 setResourceData(data);
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+                setError(err instanceof Error ? err.message : t('dashboard.projects.resourcesTab.errorGeneric'));
             } finally {
                 setLoading(false);
             }
@@ -727,16 +729,16 @@ function ResourcesTab({ projectId }: { projectId: string }) {
             {!loading && resourceData && resourceData.data.length > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                     <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Detail Alokasi</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('dashboard.projects.resourcesTab.detailAllocation')}</h3>
                     </div>
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Karyawan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Peran</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Alokasi</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Periode</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('dashboard.projects.resourcesTab.employee')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('dashboard.projects.resourcesTab.role')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('dashboard.projects.resourcesTab.allocation')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('dashboard.projects.resourcesTab.period')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -744,7 +746,7 @@ function ResourcesTab({ projectId }: { projectId: string }) {
                                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                         <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.employeeId}</td>
                                         <td className="px-6 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                            {item.role === 'MANAGER' ? t('dashboard.projects.roles.MANAGER') : item.role === 'CONSULTANT' ? 'Konsultan' : t('dashboard.projects.roles.MEMBER')}
+                                            {item.role === 'MANAGER' ? t('dashboard.projects.roles.MANAGER') : item.role === 'CONSULTANT' ? t('dashboard.projects.roles.CONSULTANT') : t('dashboard.projects.roles.MEMBER')}
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center gap-2">
@@ -816,7 +818,7 @@ export default function ProjectDetailPage() {
                     onClick={() => router.push('/dashboard/projects')}
                     className="mt-4 text-sm text-blue-600 hover:text-blue-700"
                 >
-                    Kembali ke daftar proyek
+                    {t('dashboard.projects.error.backToList')}
                 </button>
             </div>
         );
@@ -850,14 +852,14 @@ export default function ProjectDetailPage() {
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                     >
                         <BarChart3 className="h-4 w-4" />
-                        Board
+                        {t('dashboard.projects.detail.board')}
                     </button>
                     <button
                         onClick={() => router.push(`/dashboard/projects/${projectId}/edit`)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                     >
                         <Edit className="h-4 w-4" />
-                        Edit
+                        {t('common.edit')}
                     </button>
                 </div>
             </div>

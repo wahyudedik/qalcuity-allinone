@@ -14,6 +14,7 @@ import {
     Zap,
     ArrowRight,
 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ const PRIORITY_STYLES: Record<string, string> = {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export default function AgentsPage() {
+    const { t } = useTranslation();
     const [agents, setAgents] = useState<AgentInfo[]>([]);
     const [suggestions, setSuggestions] = useState<AgentSuggestion[]>([]);
     const [loading, setLoading] = useState(true);
@@ -108,11 +110,12 @@ export default function AgentsPage() {
                 setSuggestions(data.suggestions || []);
             }
         } catch {
-            setError('Gagal memuat data agent');
+            setError(t('ai.errorLoadingAgents'));
         } finally {
             setLoading(false);
         }
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [t]);
 
     useEffect(() => {
         fetchAgents();
@@ -142,10 +145,10 @@ export default function AgentsPage() {
             if (data.success) {
                 setResponse(data);
             } else {
-                setError(data.error || 'Terjadi kesalahan');
+                setError(data.error || t('ai.errorQuery'));
             }
         } catch {
-            setError('Gagal menghubungi AI Agent. Silakan coba lagi.');
+            setError(t('ai.errorQueryAgent'));
         } finally {
             setQueryLoading(false);
         }
@@ -190,10 +193,10 @@ export default function AgentsPage() {
             {/* Header */}
             <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    AI Agents
+                    {t('ai.agentsTitle')}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Agent AI yang membantu analisis bisnis secara otomatis
+                    {t('ai.agentsSubtitle')}
                 </p>
             </div>
 
@@ -226,7 +229,7 @@ export default function AgentsPage() {
                                         </h3>
                                         <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                                             <CheckCircle className="h-3 w-3" />
-                                            Active
+                                            {t('common.active')}
                                         </span>
                                     </div>
                                 </div>
@@ -247,7 +250,7 @@ export default function AgentsPage() {
                                     ))}
                                     {agent.actions.length > 3 && (
                                         <span className="inline-flex items-center rounded-md px-2.5 py-1 text-xs text-gray-500 dark:text-gray-400">
-                                            +{agent.actions.length - 3} lainnya
+                                            +{agent.actions.length - 3}
                                         </span>
                                     )}
                                 </div>
@@ -262,7 +265,7 @@ export default function AgentsPage() {
                 <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                     <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
                         <AlertTriangle className="h-5 w-5 text-amber-500" />
-                        Saran Aktif
+                        {t('ai.suggestions')}
                     </h3>
                     <div className="space-y-3">
                         {suggestions.map((suggestion, idx) => (
@@ -283,7 +286,7 @@ export default function AgentsPage() {
                                             {suggestion.label}
                                         </span>
                                         <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PRIORITY_STYLES[suggestion.priority]}`}>
-                                            {suggestion.priority}
+                                            {suggestion.priority === 'high' ? t('ai.priorityHigh') : suggestion.priority === 'medium' ? t('ai.priorityMedium') : t('ai.priorityLow')}
                                         </span>
                                         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                                             {suggestion.agent}
@@ -309,7 +312,7 @@ export default function AgentsPage() {
             {/* Query Input */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                 <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-100">
-                    Tanya AI Agent
+                    {t('ai.agentsTitle')}
                 </h3>
                 <div className="flex gap-3">
                     <div className="flex-1">
@@ -318,7 +321,7 @@ export default function AgentsPage() {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && !queryLoading && handleQuery()}
-                            placeholder="Contoh: Prediksi cash flow 30 hari, Skor lead, Prediksi stok habis..."
+                            placeholder={t('ai.queryPlaceholder')}
                             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-400"
                             disabled={queryLoading}
                         />
@@ -333,7 +336,7 @@ export default function AgentsPage() {
                         ) : (
                             <Send className="h-4 w-4" />
                         )}
-                        Kirim
+                        {queryLoading ? t('ai.sending') : t('ai.send')}
                     </button>
                 </div>
             </div>
@@ -354,7 +357,7 @@ export default function AgentsPage() {
                     <div className="mb-4 flex items-center gap-2">
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                            Hasil Analisis
+                            {t('ai.queryResult')}
                         </h3>
                         <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                             {response.agent}
@@ -374,7 +377,7 @@ export default function AgentsPage() {
                     {/* Detailed Result */}
                     <details className="group">
                         <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
-                            Lihat detail data ▸
+                            {t('common.view')} {t('common.description').toLowerCase()} ▸
                         </summary>
                         <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">
                             {formatResult(response.result)}

@@ -11,6 +11,7 @@ import {
     BookOpen,
     ArrowUpDown,
     Repeat,
+    Clock,
     type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
@@ -30,6 +31,7 @@ const financeTabs: TabItem[] = [
     { href: '/dashboard/finance/accounts', labelKey: 'finance.layout.tabs.accounts', icon: BookOpen },
     { href: '/dashboard/finance/reconciliation', labelKey: 'finance.layout.tabs.reconciliation', icon: ArrowUpDown },
     { href: '/dashboard/finance/recurring-invoices', labelKey: 'finance.layout.tabs.recurringInvoices', icon: Repeat },
+    { href: '/dashboard/finance/aging-report', labelKey: 'finance.layout.tabs.agingReport', icon: Clock },
 ]
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {

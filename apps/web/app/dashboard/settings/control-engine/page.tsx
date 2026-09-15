@@ -76,15 +76,17 @@ interface Toast {
 
 // ─── Tab Configuration ──────────────────────────────────────────────────────
 
-const TABS: { key: TabType; label: string; icon: typeof Settings }[] = [
-    { key: 'modules', label: 'Modules', icon: Package },
-    { key: 'workflow', label: 'Workflow', icon: GitBranch },
-    { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
-    { key: 'fields', label: 'Fields', icon: Sliders },
-    { key: 'dashboard', label: 'Widgets', icon: LayoutGrid },
-    { key: 'permissions', label: 'Permissions', icon: Shield },
-    { key: 'history', label: 'History', icon: History },
-]
+function getTabs(t: (key: string) => string): { key: TabType; label: string; icon: typeof Settings }[] {
+    return [
+        { key: 'modules', label: t('controlEngine.tabs.modules') || 'Modules', icon: Package },
+        { key: 'workflow', label: t('controlEngine.tabs.workflow') || 'Workflow', icon: GitBranch },
+        { key: 'approvals', label: t('controlEngine.tabs.approvals') || 'Approvals', icon: ClipboardCheck },
+        { key: 'fields', label: t('controlEngine.tabs.fields') || 'Fields', icon: Sliders },
+        { key: 'dashboard', label: t('controlEngine.tabs.widgets') || 'Widgets', icon: LayoutGrid },
+        { key: 'permissions', label: t('controlEngine.tabs.permissions') || 'Permissions', icon: Shield },
+        { key: 'history', label: t('controlEngine.tabs.history') || 'History', icon: History },
+    ]
+}
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -116,11 +118,11 @@ export default function ControlEnginePage() {
                 setConfigs(data.data)
             }
         } catch {
-            setToast({ message: 'Gagal memuat konfigurasi', type: 'error' })
+            setToast({ message: t('controlEngine.loadError') || 'Gagal memuat konfigurasi', type: 'error' })
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     // Fetch history
     const fetchHistory = useCallback(async () => {
@@ -131,9 +133,9 @@ export default function ControlEnginePage() {
                 setHistory(data.data)
             }
         } catch {
-            setToast({ message: 'Gagal memuat riwayat', type: 'error' })
+            setToast({ message: t('controlEngine.loadHistoryError') || 'Gagal memuat riwayat', type: 'error' })
         }
-    }, [])
+    }, [t])
 
     useEffect(() => {
         fetchConfigs()
@@ -153,14 +155,14 @@ export default function ControlEnginePage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Konfigurasi berhasil diupdate', type: 'success' })
+                setToast({ message: t('controlEngine.saveSuccess') || 'Konfigurasi berhasil diupdate', type: 'success' })
                 fetchConfigs()
                 if (activeTab === 'history') fetchHistory()
             } else {
-                setToast({ message: data.error || 'Gagal update konfigurasi', type: 'error' })
+                setToast({ message: data.error || t('controlEngine.saveError') || 'Gagal update konfigurasi', type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal update konfigurasi', type: 'error' })
+            setToast({ message: t('controlEngine.saveErrorCategory') || 'Gagal update konfigurasi', type: 'error' })
         } finally {
             setSaving(false)
         }
@@ -179,13 +181,13 @@ export default function ControlEnginePage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast({ message: 'Berhasil direset ke defaults', type: 'success' })
+                setToast({ message: t('controlEngine.resetSuccess') || 'Berhasil direset ke defaults', type: 'success' })
                 fetchConfigs()
             } else {
-                setToast({ message: data.error || 'Gagal reset', type: 'error' })
+                setToast({ message: data.error || t('controlEngine.resetError') || 'Gagal reset', type: 'error' })
             }
         } catch {
-            setToast({ message: 'Gagal reset konfigurasi', type: 'error' })
+            setToast({ message: t('controlEngine.resetErrorCategory') || 'Gagal reset konfigurasi', type: 'error' })
         } finally {
             setSaving(false)
         }
@@ -204,10 +206,10 @@ export default function ControlEnginePage() {
                 a.download = `control-engine-config-${new Date().toISOString().slice(0, 10)}.json`
                 a.click()
                 URL.revokeObjectURL(url)
-                setToast({ message: 'Konfigurasi berhasil di-export', type: 'success' })
+                setToast({ message: t('controlEngine.exportSuccess') || 'Konfigurasi berhasil di-export', type: 'success' })
             }
         } catch {
-            setToast({ message: 'Gagal export konfigurasi', type: 'error' })
+            setToast({ message: t('controlEngine.exportError') || 'Gagal export konfigurasi', type: 'error' })
         }
     }
 
@@ -231,13 +233,13 @@ export default function ControlEnginePage() {
                 })
                 const result = await res.json()
                 if (result.success) {
-                    setToast({ message: `Berhasil import ${result.data.imported} konfigurasi`, type: 'success' })
+                    setToast({ message: (t('controlEngine.importSuccess') || 'Berhasil import {count} konfigurasi').replace('{count}', String(result.data.imported)), type: 'success' })
                     fetchConfigs()
                 } else {
-                    setToast({ message: result.error || 'Gagal import', type: 'error' })
+                    setToast({ message: result.error || t('controlEngine.importError') || 'Gagal import', type: 'error' })
                 }
             } catch {
-                setToast({ message: 'File tidak valid', type: 'error' })
+                setToast({ message: t('controlEngine.importInvalidFile') || 'File tidak valid', type: 'error' })
             } finally {
                 setSaving(false)
             }
@@ -283,7 +285,7 @@ export default function ControlEnginePage() {
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         <Download className="h-4 w-4" />
-                        Export
+                        {t('controlEngine.exportButton') || 'Export'}
                     </button>
                     <button
                         onClick={handleImport}
@@ -291,7 +293,7 @@ export default function ControlEnginePage() {
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
                         <Upload className="h-4 w-4" />
-                        Import
+                        {t('controlEngine.importButton') || 'Import'}
                     </button>
                     <button
                         onClick={() => handleReset()}
@@ -299,7 +301,7 @@ export default function ControlEnginePage() {
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                     >
                         <RotateCcw className="h-4 w-4" />
-                        Reset All
+                        {t('controlEngine.resetAllButton') || 'Reset All'}
                     </button>
                 </div>
             </div>
@@ -307,7 +309,7 @@ export default function ControlEnginePage() {
             {/* Tabs */}
             <div className="border-b border-gray-200">
                 <nav className="flex gap-1 overflow-x-auto">
-                    {TABS.map((tab) => {
+                    {getTabs(t).map((tab) => {
                         const Icon = tab.icon
                         return (
                             <button
@@ -330,7 +332,7 @@ export default function ControlEnginePage() {
             {loading ? (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                    <span className="ml-2 text-gray-600">Memuat konfigurasi...</span>
+                    <span className="ml-2 text-gray-600">{t('controlEngine.loading') || 'Memuat konfigurasi...'}</span>
                 </div>
             ) : (
                 <div className="bg-white rounded-xl border border-gray-200">
@@ -342,6 +344,7 @@ export default function ControlEnginePage() {
                             saving={saving}
                             expandedModule={expandedModule}
                             setExpandedModule={setExpandedModule}
+                            t={t}
                         />
                     )}
 
@@ -352,6 +355,7 @@ export default function ControlEnginePage() {
                             updateConfig={updateConfig}
                             saving={saving}
                             onReset={() => handleReset('workflow')}
+                            t={t}
                         />
                     )}
 
@@ -361,6 +365,7 @@ export default function ControlEnginePage() {
                             configs={configs}
                             updateConfig={updateConfig}
                             saving={saving}
+                            t={t}
                         />
                     )}
 
@@ -370,6 +375,7 @@ export default function ControlEnginePage() {
                             configs={configs}
                             updateConfig={updateConfig}
                             saving={saving}
+                            t={t}
                         />
                     )}
 
@@ -379,6 +385,7 @@ export default function ControlEnginePage() {
                             configs={configs}
                             updateConfig={updateConfig}
                             saving={saving}
+                            t={t}
                         />
                     )}
 
@@ -388,12 +395,13 @@ export default function ControlEnginePage() {
                             configs={configs}
                             updateConfig={updateConfig}
                             saving={saving}
+                            t={t}
                         />
                     )}
 
                     {/* History Tab */}
                     {activeTab === 'history' && (
-                        <HistoryTab history={history} />
+                        <HistoryTab history={history} t={t} />
                     )}
                 </div>
             )}
@@ -409,31 +417,33 @@ function ModulesTab({
     saving,
     expandedModule,
     setExpandedModule,
+    t,
 }: {
     configs: ControlConfig[]
     updateConfig: (category: ControlCategory, key: string, value: unknown) => Promise<void>
     saving: boolean
     expandedModule: string | null
     setExpandedModule: (module: string | null) => void
+    t: (key: string) => string
 }) {
     const modules = [
-        { key: 'finance', name: 'Finance', description: 'Invoice, quotation, payment, purchase order', isCore: true },
-        { key: 'crm', name: 'Sales & CRM', description: 'Leads, contacts, deals, pipeline', isCore: true },
-        { key: 'hr', name: 'Human Resources', description: 'Employees, attendance, leaves, payroll', isCore: true },
-        { key: 'inventory', name: 'Inventory', description: 'Products, stock, categories, suppliers', isCore: true },
-        { key: 'pos', name: 'Point of Sale', description: 'POS transactions, tables, kitchen display', isCore: false },
-        { key: 'projects', name: 'Operations', description: 'Projects, tasks, gantt charts', isCore: false },
-        { key: 'analytics', name: 'Analytics', description: 'Dashboards, reports, KPIs', isCore: false },
-        { key: 'ai', name: 'AI Features', description: 'AI chat, insights, anomaly detection', isCore: false },
-        { key: 'field-service', name: 'Field Service', description: 'Field jobs, technician scheduling', isCore: false },
-        { key: 'operations', name: 'Operations', description: 'Budget tracking, resource management', isCore: false },
+        { key: 'finance', name: t('controlEngine.modules.finance') || 'Finance', description: t('controlEngine.modules.financeDesc') || 'Invoice, quotation, payment, purchase order', isCore: true },
+        { key: 'crm', name: t('controlEngine.modules.crm') || 'Sales & CRM', description: t('controlEngine.modules.crmDesc') || 'Leads, contacts, deals, pipeline', isCore: true },
+        { key: 'hr', name: t('controlEngine.modules.hr') || 'Human Resources', description: t('controlEngine.modules.hrDesc') || 'Employees, attendance, leaves, payroll', isCore: true },
+        { key: 'inventory', name: t('controlEngine.modules.inventory') || 'Inventory', description: t('controlEngine.modules.inventoryDesc') || 'Products, stock, categories, suppliers', isCore: true },
+        { key: 'pos', name: t('controlEngine.modules.pos') || 'Point of Sale', description: t('controlEngine.modules.posDesc') || 'POS transactions, tables, kitchen display', isCore: false },
+        { key: 'projects', name: t('controlEngine.modules.projects') || 'Operations', description: t('controlEngine.modules.projectsDesc') || 'Projects, tasks, gantt charts', isCore: false },
+        { key: 'analytics', name: t('controlEngine.modules.analytics') || 'Analytics', description: t('controlEngine.modules.analyticsDesc') || 'Dashboards, reports, KPIs', isCore: false },
+        { key: 'ai', name: t('controlEngine.modules.aiFeatures') || 'AI Features', description: t('controlEngine.modules.aiFeaturesDesc') || 'AI chat, insights, anomaly detection', isCore: false },
+        { key: 'field-service', name: t('controlEngine.modules.fieldService') || 'Field Service', description: t('controlEngine.modules.fieldServiceDesc') || 'Field jobs, technician scheduling', isCore: false },
+        { key: 'operations', name: t('controlEngine.modules.operations') || 'Operations', description: t('controlEngine.modules.operationsDesc') || 'Budget tracking, resource management', isCore: false },
     ]
 
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Module Activation</h2>
-                <p className="text-sm text-gray-500">Aktifkan atau nonaktifkan modul untuk platform Anda</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.modules.title') || 'Module Activation'}</h2>
+                <p className="text-sm text-gray-500">{t('controlEngine.modules.subtitle') || 'Aktifkan atau nonaktifkan modul untuk platform Anda'}</p>
             </div>
             <div className="space-y-3">
                 {modules.map((mod) => {
@@ -454,7 +464,7 @@ function ModulesTab({
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium text-gray-900">{mod.name}</span>
                                             {mod.isCore && (
-                                                <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">Core</span>
+                                                <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">{t('controlEngine.core') || 'Core'}</span>
                                             )}
                                         </div>
                                         <p className="text-sm text-gray-500">{mod.description}</p>
@@ -465,7 +475,7 @@ function ModulesTab({
                                     disabled={saving || mod.isCore}
                                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${enabled ? 'bg-blue-600' : 'bg-gray-200'
                                         }`}
-                                    title={mod.isCore ? 'Core module tidak bisa dinonaktifkan' : ''}
+                                    title={mod.isCore ? (t('controlEngine.modules.coreDisabled') || 'Core module tidak bisa dinonaktifkan') : ''}
                                 >
                                     <span
                                         className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'
@@ -475,10 +485,10 @@ function ModulesTab({
                             </div>
                             {isExpanded && (
                                 <div className="px-4 pb-4 border-t border-gray-100 pt-3">
-                                    <p className="text-xs text-gray-500 mb-2">Fitur dalam modul ini:</p>
+                                    <p className="text-xs text-gray-500 mb-2">{t('controlEngine.modules.featuresInModule') || 'Fitur dalam modul ini:'}</p>
                                     <div className="flex flex-wrap gap-2">
                                         <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                                            {mod.name} Module
+                                            {mod.name}
                                         </span>
                                     </div>
                                 </div>
@@ -498,11 +508,13 @@ function WorkflowTab({
     updateConfig,
     saving,
     onReset,
+    t,
 }: {
     configs: ControlConfig[]
     updateConfig: (category: ControlCategory, key: string, value: unknown) => Promise<void>
     saving: boolean
     onReset: () => void
+    t: (key: string) => string
 }) {
     const entities = ['invoice', 'quotation', 'purchase_order', 'leave_request', 'payroll', 'deal']
 
@@ -510,15 +522,15 @@ function WorkflowTab({
         <div className="p-6">
             <div className="flex items-center justify-between mb-4">
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Workflow Configuration</h2>
-                    <p className="text-sm text-gray-500">Konfigurasi alur kerja per entitas</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.workflow.title') || 'Workflow Configuration'}</h2>
+                    <p className="text-sm text-gray-500">{t('controlEngine.workflow.subtitle') || 'Konfigurasi alur kerja per entitas'}</p>
                 </div>
                 <button
                     onClick={onReset}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                 >
                     <RotateCcw className="h-3.5 w-3.5" />
-                    Reset
+                    {t('controlEngine.workflow.resetButton') || 'Reset'}
                 </button>
             </div>
             <div className="space-y-3">
@@ -533,7 +545,7 @@ function WorkflowTab({
                             </div>
                             <div className="flex items-center gap-4">
                                 <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <span>Auto Transition</span>
+                                    <span>{t('controlEngine.workflow.autoTransition') || 'Auto Transition'}</span>
                                     <button
                                         onClick={() => updateConfig('workflow', `${entity}.autoTransition`, !autoTransition)}
                                         disabled={saving}
@@ -572,10 +584,12 @@ function ApprovalsTab({
     configs,
     updateConfig,
     saving,
+    t,
 }: {
     configs: ControlConfig[]
     updateConfig: (category: ControlCategory, key: string, value: unknown) => Promise<void>
     saving: boolean
+    t: (key: string) => string
 }) {
     const enabled = configs.find(c => c.category === 'approvals' && c.key === 'enabled')?.value ?? true
     const maxLevels = configs.find(c => c.category === 'approvals' && c.key === 'maxLevels')?.value ?? 3
@@ -584,15 +598,15 @@ function ApprovalsTab({
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Approval Rules</h2>
-                <p className="text-sm text-gray-500">Konfigurasi aturan approval transaksi</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.approvals.title') || 'Approval Rules'}</h2>
+                <p className="text-sm text-gray-500">{t('controlEngine.approvals.subtitle') || 'Konfigurasi aturan approval transaksi'}</p>
             </div>
             <div className="space-y-4">
                 {/* Enable/Disable */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                        <span className="font-medium text-gray-900">Approval System</span>
-                        <p className="text-sm text-gray-500">Aktifkan atau nonaktifkan sistem approval</p>
+                        <span className="font-medium text-gray-900">{t('controlEngine.approvals.approvalSystem') || 'Approval System'}</span>
+                        <p className="text-sm text-gray-500">{t('controlEngine.approvals.approvalSystemDesc') || 'Aktifkan atau nonaktifkan sistem approval'}</p>
                     </div>
                     <button
                         onClick={() => updateConfig('approvals', 'enabled', !enabled)}
@@ -610,8 +624,8 @@ function ApprovalsTab({
                 {/* Max Levels */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                        <span className="font-medium text-gray-900">Max Approval Levels</span>
-                        <p className="text-sm text-gray-500">Jumlah maksimal level approval</p>
+                        <span className="font-medium text-gray-900">{t('controlEngine.approvals.maxLevels') || 'Max Approval Levels'}</span>
+                        <p className="text-sm text-gray-500">{t('controlEngine.approvals.maxLevelsDesc') || 'Jumlah maksimal level approval'}</p>
                     </div>
                     <select
                         value={Number(maxLevels)}
@@ -628,8 +642,8 @@ function ApprovalsTab({
                 {/* Require Comments */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                        <span className="font-medium text-gray-900">Require Comments</span>
-                        <p className="text-sm text-gray-500">Wajibkan komentar saat approve/reject</p>
+                        <span className="font-medium text-gray-900">{t('controlEngine.approvals.requireComments') || 'Require Comments'}</span>
+                        <p className="text-sm text-gray-500">{t('controlEngine.approvals.requireCommentsDesc') || 'Wajibkan komentar saat approve/reject'}</p>
                     </div>
                     <button
                         onClick={() => updateConfig('approvals', 'requireComments', !requireComments)}
@@ -654,18 +668,20 @@ function FieldsTab({
     configs,
     updateConfig,
     saving,
+    t,
 }: {
     configs: ControlConfig[]
     updateConfig: (category: ControlCategory, key: string, value: unknown) => Promise<void>
     saving: boolean
+    t: (key: string) => string
 }) {
     const entities = ['product', 'invoice', 'contact', 'employee']
 
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Custom Fields Configuration</h2>
-                <p className="text-sm text-gray-500">Aktifkan atau nonaktifkan custom fields per entitas</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.fields.title') || 'Custom Fields Configuration'}</h2>
+                <p className="text-sm text-gray-500">{t('controlEngine.fields.subtitle') || 'Aktifkan atau nonaktifkan custom fields per entitas'}</p>
             </div>
             <div className="space-y-3">
                 {entities.map((entity) => {
@@ -675,7 +691,7 @@ function FieldsTab({
                         <div key={entity} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                             <div>
                                 <span className="font-medium text-gray-900 capitalize">{entity}</span>
-                                <p className="text-sm text-gray-500">Custom fields untuk {entity}</p>
+                                <p className="text-sm text-gray-500">{t(`controlEngine.fields.${entity}`) || `Custom fields untuk ${entity}`}</p>
                             </div>
                             <button
                                 onClick={() => updateConfig('fields', `${entity}.customFieldsEnabled`, !enabled)}
@@ -702,29 +718,31 @@ function DashboardTab({
     configs,
     updateConfig,
     saving,
+    t,
 }: {
     configs: ControlConfig[]
     updateConfig: (category: ControlCategory, key: string, value: unknown) => Promise<void>
     saving: boolean
+    t: (key: string) => string
 }) {
     const widgets = [
-        { id: 'revenue-chart', title: 'Revenue Chart', module: 'finance' },
-        { id: 'expense-chart', title: 'Expense Chart', module: 'finance' },
-        { id: 'cash-flow', title: 'Cash Flow', module: 'finance' },
-        { id: 'pipeline', title: 'Sales Pipeline', module: 'crm' },
-        { id: 'stock-levels', title: 'Stock Levels', module: 'inventory' },
-        { id: 'employee-count', title: 'Employee Count', module: 'hr' },
-        { id: 'recent-transactions', title: 'Recent Transactions', module: 'finance' },
-        { id: 'top-products', title: 'Top Products', module: 'inventory' },
-        { id: 'overdue-invoices', title: 'Overdue Invoices', module: 'finance' },
-        { id: 'attendance-overview', title: 'Attendance Overview', module: 'hr' },
+        { id: 'revenue-chart', titleKey: 'controlEngine.dashboard.revenueChart', fallbackTitle: 'Revenue Chart', module: 'finance' },
+        { id: 'expense-chart', titleKey: 'controlEngine.dashboard.expenseChart', fallbackTitle: 'Expense Chart', module: 'finance' },
+        { id: 'cash-flow', titleKey: 'controlEngine.dashboard.cashFlow', fallbackTitle: 'Cash Flow', module: 'finance' },
+        { id: 'pipeline', titleKey: 'controlEngine.dashboard.salesPipeline', fallbackTitle: 'Sales Pipeline', module: 'crm' },
+        { id: 'stock-levels', titleKey: 'controlEngine.dashboard.stockLevels', fallbackTitle: 'Stock Levels', module: 'inventory' },
+        { id: 'employee-count', titleKey: 'controlEngine.dashboard.employeeCount', fallbackTitle: 'Employee Count', module: 'hr' },
+        { id: 'recent-transactions', titleKey: 'controlEngine.dashboard.recentTransactions', fallbackTitle: 'Recent Transactions', module: 'finance' },
+        { id: 'top-products', titleKey: 'controlEngine.dashboard.topProducts', fallbackTitle: 'Top Products', module: 'inventory' },
+        { id: 'overdue-invoices', titleKey: 'controlEngine.dashboard.overdueInvoices', fallbackTitle: 'Overdue Invoices', module: 'finance' },
+        { id: 'attendance-overview', titleKey: 'controlEngine.dashboard.attendanceOverview', fallbackTitle: 'Attendance Overview', module: 'hr' },
     ]
 
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Dashboard Widgets</h2>
-                <p className="text-sm text-gray-500">Kelola visibilitas widget dashboard</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.dashboard.title') || 'Dashboard Widgets'}</h2>
+                <p className="text-sm text-gray-500">{t('controlEngine.dashboard.subtitle') || 'Kelola visibilitas widget dashboard'}</p>
             </div>
             <div className="space-y-2">
                 {widgets.map((widget) => {
@@ -737,7 +755,7 @@ function DashboardTab({
                             <div className="flex items-center gap-3">
                                 <GripVertical className="h-4 w-4 text-gray-400" />
                                 <div>
-                                    <span className="font-medium text-gray-900 text-sm">{widget.title}</span>
+                                    <span className="font-medium text-gray-900 text-sm">{t(widget.titleKey) || widget.fallbackTitle}</span>
                                     <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{widget.module}</span>
                                 </div>
                             </div>
@@ -748,16 +766,16 @@ function DashboardTab({
                                     disabled={saving}
                                     className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500"
                                 >
-                                    <option value="sm">Small</option>
-                                    <option value="md">Medium</option>
-                                    <option value="lg">Large</option>
+                                    <option value="sm">{t('controlEngine.dashboard.sizeSmall') || 'Small'}</option>
+                                    <option value="md">{t('controlEngine.dashboard.sizeMedium') || 'Medium'}</option>
+                                    <option value="lg">{t('controlEngine.dashboard.sizeLarge') || 'Large'}</option>
                                 </select>
                                 <button
                                     onClick={() => updateConfig('dashboard', widget.id, { ...widgetConfig, visible: !visible })}
                                     disabled={saving}
                                     className={`p-1.5 rounded-lg transition-colors ${visible ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-400 hover:bg-gray-100'
                                         }`}
-                                    title={visible ? 'Sembunyikan widget' : 'Tampilkan widget'}
+                                    title={visible ? (t('controlEngine.dashboard.hideWidget') || 'Sembunyikan widget') : (t('controlEngine.dashboard.showWidget') || 'Tampilkan widget')}
                                 >
                                     {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                 </button>
@@ -776,21 +794,23 @@ function PermissionsTab({
     configs,
     updateConfig,
     saving,
+    t,
 }: {
     configs: ControlConfig[]
     updateConfig: (category: ControlCategory, key: string, value: unknown) => Promise<void>
     saving: boolean
+    t: (key: string) => string
 }) {
     const permissions = [
-        { key: 'viewerCanExport', label: 'Viewer Can Export', description: 'Izinkan role Viewer untuk export data' },
-        { key: 'memberCanDelete', label: 'Member Can Delete', description: 'Izinkan role Member untuk menghapus data' },
+        { key: 'viewerCanExport', label: t('controlEngine.permissions.viewerCanExport') || 'Viewer Can Export', description: t('controlEngine.permissions.viewerCanExportDesc') || 'Izinkan role Viewer untuk export data' },
+        { key: 'memberCanDelete', label: t('controlEngine.permissions.memberCanDelete') || 'Member Can Delete', description: t('controlEngine.permissions.memberCanDeleteDesc') || 'Izinkan role Member untuk menghapus data' },
     ]
 
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Permission Overrides</h2>
-                <p className="text-sm text-gray-500">Override permission default untuk role tertentu</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.permissions.title') || 'Permission Overrides'}</h2>
+                <p className="text-sm text-gray-500">{t('controlEngine.permissions.subtitle') || 'Override permission default untuk role tertentu'}</p>
             </div>
             <div className="space-y-3">
                 {permissions.map((perm) => {
@@ -823,12 +843,12 @@ function PermissionsTab({
 
 // ─── History Tab ────────────────────────────────────────────────────────────
 
-function HistoryTab({ history }: { history: ControlChange[] }) {
+function HistoryTab({ history, t }: { history: ControlChange[]; t: (key: string) => string }) {
     if (history.length === 0) {
         return (
             <div className="p-6 text-center py-12">
                 <History className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Belum ada riwayat perubahan</p>
+                <p className="text-gray-500">{t('controlEngine.history.empty') || 'Belum ada riwayat perubahan'}</p>
             </div>
         )
     }
@@ -836,8 +856,8 @@ function HistoryTab({ history }: { history: ControlChange[] }) {
     return (
         <div className="p-6">
             <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Change History</h2>
-                <p className="text-sm text-gray-500">Riwayat perubahan konfigurasi</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('controlEngine.history.title') || 'Change History'}</h2>
+                <p className="text-sm text-gray-500">{t('controlEngine.history.subtitle') || 'Riwayat perubahan konfigurasi'}</p>
             </div>
             <div className="space-y-2">
                 {[...history].reverse().slice(0, 50).map((change) => (
@@ -855,7 +875,7 @@ function HistoryTab({ history }: { history: ControlChange[] }) {
                             <span className="font-medium text-gray-700">{JSON.stringify(change.newValue)}</span>
                         </div>
                         {change.reason && (
-                            <p className="text-xs text-gray-400 mt-1">Reason: {change.reason}</p>
+                            <p className="text-xs text-gray-400 mt-1">{t('controlEngine.history.reason') || 'Reason'}: {change.reason}</p>
                         )}
                         <p className="text-xs text-gray-400 mt-1">
                             {new Date(change.changedAt).toLocaleString('id-ID')}

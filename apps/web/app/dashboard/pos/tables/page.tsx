@@ -395,7 +395,7 @@ export default function TablesPage() {
                                     <td className="px-4 py-3 text-sm">
                                         {table.activeKitchenOrderCount > 0 ? (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
-                                                {table.activeKitchenOrderCount} pesanan
+                                                {table.activeKitchenOrderCount} {t('pos.tables.orders')}
                                             </span>
                                         ) : (
                                             <span className="text-gray-400">-</span>

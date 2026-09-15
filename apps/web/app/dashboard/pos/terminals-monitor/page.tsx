@@ -62,10 +62,10 @@ export default function TerminalsMonitorPage() {
                 setLastUpdated(new Date())
                 setError(null)
             } else {
-                setError(result.error || 'Gagal memuat status terminal')
+                setError(result.error || t('pos.monitor.errorLoad'))
             }
         } catch {
-            setError('Gagal memuat status terminal. Periksa koneksi jaringan Anda.')
+            setError(t('pos.monitor.errorLoadNetwork'))
         } finally {
             setLoading(false)
         }

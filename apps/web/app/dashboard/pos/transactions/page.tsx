@@ -7,7 +7,7 @@ import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
 import {
     Search, Receipt, Loader2, Check, X, AlertCircle, Eye, Ban,
-    ChevronLeft, ChevronRight, Printer,
+    ChevronLeft, ChevronRight, Printer, PackageCheck,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import POSReceipt, { type POSReceiptData } from '@/components/pos/pos-receipt'
@@ -70,6 +70,13 @@ export default function POSTransactionsPage() {
     const [showReceipt, setShowReceipt] = useState(false)
     const [receiptData, setReceiptData] = useState<POSReceiptData | null>(null)
     const [loadingReceipt, setLoadingReceipt] = useState(false)
+
+    // Return modal
+    const [showReturnModal, setShowReturnModal] = useState(false)
+    const [returningTransaction, setReturningTransaction] = useState<Transaction | null>(null)
+    const [returning, setReturning] = useState(false)
+    const [returnReason, setReturnReason] = useState('')
+    const [returnRestock, setReturnRestock] = useState(true)
 
     useEffect(() => {
         if (toast) {
@@ -192,6 +199,38 @@ export default function POSTransactionsPage() {
             setToast({ message: t('pos.transactions.errorLoadDetail') || 'Gagal memuat data struk', type: 'error' })
         } finally {
             setLoadingReceipt(false)
+        }
+    }
+
+    const handleReturn = async () => {
+        if (!returningTransaction || !returnReason.trim()) return
+        setReturning(true)
+        try {
+            const response = await fetch('/api/pos/refunds', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transactionId: returningTransaction.id,
+                    amount: returningTransaction.totalAmount,
+                    reason: returnReason.trim(),
+                    restockItem: returnRestock,
+                }),
+            })
+            const data = await response.json()
+            if (data.success) {
+                setToast({ message: t('pos.refunds.returnSuccess') || 'Return berhasil, stok telah dikembalikan', type: 'success' })
+                setShowReturnModal(false)
+                setReturningTransaction(null)
+                setReturnReason('')
+                setReturnRestock(true)
+                fetchTransactions()
+            } else {
+                setToast({ message: data.error || (t('pos.refunds.errorProcess') || 'Gagal memproses return'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('pos.refunds.errorProcess') || 'Gagal memproses return', type: 'error' })
+        } finally {
+            setReturning(false)
         }
     }
 
@@ -331,6 +370,15 @@ export default function POSTransactionsPage() {
                                                         {t('pos.transactions.voidBtn') || 'Void'}
                                                     </button>
                                                 )}
+                                                {tr.status === 'COMPLETED' && canManage && (
+                                                    <button
+                                                        onClick={() => { setReturningTransaction(tr); setShowReturnModal(true) }}
+                                                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                                    >
+                                                        <PackageCheck className="h-3.5 w-3.5" />
+                                                        {t('pos.refunds.returnItem') || 'Return'}
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -387,6 +435,15 @@ export default function POSTransactionsPage() {
                                                 className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                             >
                                                 {t('pos.transactions.voidBtn') || 'Void'}
+                                            </button>
+                                        )}
+                                        {tr.status === 'COMPLETED' && canManage && (
+                                            <button
+                                                onClick={() => { setReturningTransaction(tr); setShowReturnModal(true) }}
+                                                className="rounded-lg px-3 py-1.5 text-xs font-medium text-orange-600 hover:bg-orange-50"
+                                            >
+                                                <PackageCheck className="h-3.5 w-3.5 inline mr-0.5" />
+                                                {t('pos.refunds.returnItem') || 'Return'}
                                             </button>
                                         )}
                                     </div>
@@ -581,6 +638,90 @@ export default function POSTransactionsPage() {
                             transaction={receiptData}
                             onClose={() => setShowReceipt(false)}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* Return Modal */}
+            {showReturnModal && returningTransaction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !returning && setShowReturnModal(false)}>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <PackageCheck className="h-5 w-5 text-orange-500" />
+                                {t('pos.refunds.returnItem') || 'Return Barang'}
+                            </h3>
+                            {!returning && (
+                                <button onClick={() => setShowReturnModal(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            )}
+                        </div>
+                        <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 text-sm space-y-1">
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">{t('pos.transactions.number') || 'Nomor'}</span>
+                                <span className="font-mono">{returningTransaction.transactionNo}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">{t('pos.transactions.total') || 'Total'}</span>
+                                <span className="font-bold">{formatCurrency(returningTransaction.totalAmount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">{t('pos.transactions.item') || 'Item'}</span>
+                                <span>{returningTransaction.itemCount} {t('pos.transactions.itemCount') || 'item'}</span>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                            {t('pos.refunds.returnDescription') || 'Kembalikan barang dan pulihkan stok'}
+                        </p>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('pos.refunds.returnReason') || 'Alasan Return'} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={returnReason}
+                                onChange={(e) => setReturnReason(e.target.value)}
+                                placeholder={t('pos.refunds.returnReasonPlaceholder') || 'Masukkan alasan return...'}
+                                disabled={returning}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="returnRestock"
+                                checked={returnRestock}
+                                onChange={(e) => setReturnRestock(e.target.checked)}
+                                disabled={returning}
+                                className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                            />
+                            <label htmlFor="returnRestock" className="text-sm text-gray-700 dark:text-gray-300">
+                                {t('pos.refunds.restock') || 'Kembalikan Stok'}
+                            </label>
+                        </div>
+                        {returnRestock && (
+                            <p className="text-xs text-gray-400 -mt-2">
+                                {t('pos.refunds.restockDescription') || 'Barang akan dikembalikan ke inventori'}
+                            </p>
+                        )}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowReturnModal(false); setReturnReason(''); setReturnRestock(true) }}
+                                disabled={returning}
+                                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-600"
+                            >
+                                {t('pos.refunds.cancel') || 'Batal'}
+                            </button>
+                            <button
+                                onClick={handleReturn}
+                                disabled={returning || !returnReason.trim()}
+                                className="flex-1 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                            >
+                                {returning ? (t('pos.refunds.processing') || 'Memproses...') : (t('pos.refunds.returnItem') || 'Return Barang')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

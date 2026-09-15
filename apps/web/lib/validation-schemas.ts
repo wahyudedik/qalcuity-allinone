@@ -387,6 +387,15 @@ export const restockProductSchema = z.object({
     notes: z.string().max(500, 'Catatan maksimal 500 karakter').optional().nullable(),
 });
 
+export const posStockAdjustmentSchema = z.object({
+    productId: z.string().min(1, 'Product ID wajib diisi'),
+    adjustmentType: z.enum(['SPOILAGE', 'SAMPLE', 'DAMAGE', 'THEFT', 'OTHER'], {
+        message: 'Jenis penyesuaian tidak valid',
+    }),
+    quantity: z.number().int('Jumlah harus bilangan bulat').refine((val) => val !== 0, 'Jumlah tidak boleh 0'),
+    notes: z.string().min(1, 'Catatan wajib diisi').max(500, 'Catatan maksimal 500 karakter'),
+});
+
 export const createCategorySchema = z.object({
     name: z.string().min(1, 'Nama kategori wajib diisi').max(255, 'Nama kategori maksimal 255 karakter'),
     description: z.string().optional().nullable(),
@@ -998,14 +1007,29 @@ export const posTransactionItemSchema = z.object({
     taxRate: z.number().min(0, 'Tarif pajak tidak boleh negatif').optional(),
 });
 
+export const posPaymentEntrySchema = z.object({
+    method: z.enum(['CASH', 'CARD', 'QRIS', 'E_WALLET', 'BANK_TRANSFER'], { message: 'Metode pembayaran tidak valid' }),
+    amount: z.number().min(0.01, 'Jumlah pembayaran harus lebih dari 0'),
+});
+
+export const posDiscountTypeEnum = z.enum(['PERCENTAGE', 'FIXED']);
+
+export const posApplyPromoSchema = z.object({
+    code: z.string().min(1, 'Kode promo wajib diisi').max(50, 'Kode promo maksimal 50 karakter'),
+});
+
 export const createPosTransactionSchema = z.object({
     sessionId: z.string().min(1, 'ID sesi wajib diisi'),
     customerName: z.string().max(255, 'Nama pelanggan maksimal 255 karakter').optional().nullable(),
     customerPhone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
     items: z.array(posTransactionItemSchema).min(1, 'Minimal 1 item dalam transaksi'),
     paymentMethod: z.enum(['CASH', 'CARD', 'QRIS', 'E_WALLET', 'BANK_TRANSFER'], { message: 'Metode pembayaran tidak valid' }).optional(),
+    payments: z.array(posPaymentEntrySchema).min(2, 'Minimal 2 metode pembayaran untuk split payment').max(5, 'Maksimal 5 metode pembayaran').optional(),
     discountAmount: z.number().min(0, 'Diskon tidak boleh negatif').optional(),
     discountPercent: z.number().min(0, 'Persentase diskon tidak boleh negatif').max(100, 'Persentase diskon maksimal 100').optional().nullable(),
+    discountType: posDiscountTypeEnum.optional(),
+    discountValue: z.number().min(0, 'Nilai diskon tidak boleh negatif').optional(),
+    promoCode: z.string().max(50, 'Kode promo maksimal 50 karakter').optional().nullable(),
     paidAmount: z.number().min(0, 'Jumlah bayar tidak boleh negatif'),
     notes: z.string().optional().nullable(),
 });
@@ -1014,6 +1038,7 @@ export const createPosRefundSchema = z.object({
     transactionId: z.string().min(1, 'ID transaksi wajib diisi'),
     amount: z.number().min(0.01, 'Jumlah refund harus lebih dari 0'),
     reason: z.string().min(1, 'Alasan refund wajib diisi').max(500, 'Alasan refund maksimal 500 karakter'),
+    restockItem: z.boolean().optional().default(false),
 });
 
 // ============================================
@@ -2103,4 +2128,39 @@ export const whatsappTestSchema = z.object({
         /^\+?[1-9]\d{6,14}$/,
         'Format nomor telepon tidak valid. Gunakan format internasional (contoh: +628123456789)'
     ),
+});
+
+// ============================================
+// Password Policy Schemas
+// ============================================
+
+export const updatePasswordPolicySchema = z.object({
+    minLength: z.number().int().min(4).max(64).optional(),
+    maxLength: z.number().int().min(8).max(256).optional(),
+    requireUppercase: z.boolean().optional(),
+    requireLowercase: z.boolean().optional(),
+    requireNumbers: z.boolean().optional(),
+    requireSpecialChars: z.boolean().optional(),
+    specialChars: z.string().max(255).optional(),
+    preventReuse: z.number().int().min(0).max(24).optional(),
+    expiryDays: z.number().int().min(0).max(365).optional(),
+    warnBeforeExpiryDays: z.number().int().min(0).max(90).optional(),
+    maxFailedAttempts: z.number().int().min(0).max(100).optional(),
+    lockoutDurationMinutes: z.number().int().min(0).max(1440).optional(),
+}).refine((data) => {
+    if (data.minLength !== undefined && data.maxLength !== undefined) {
+        return data.minLength <= data.maxLength;
+    }
+    return true;
+}, {
+    message: 'Minimal length harus kurang dari atau sama dengan maximal length',
+    path: ['minLength'],
+});
+
+export const changePasswordApiSchema = z.object({
+    currentPassword: z.string().min(1, 'Password saat ini wajib diisi'),
+    newPassword: z.string().min(8, 'Password baru minimal 8 karakter').max(128, 'Password maksimal 128 karakter'),
+}).refine((data) => data.currentPassword !== data.newPassword, {
+    message: 'Password baru harus berbeda dari password saat ini',
+    path: ['newPassword'],
 });

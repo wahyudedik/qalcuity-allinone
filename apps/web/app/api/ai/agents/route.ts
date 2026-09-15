@@ -3,9 +3,12 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { MSG } from '@/lib/api-messages';
-import { requireAuth } from '@/lib/session';
+import { requirePermissionForRoute } from '@/lib/session';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
+import { sanitizeInput } from '@/lib/sanitize';
 import { parseQuery } from '@/lib/ai/nlu-parser';
 import {
     determineAgent,
@@ -35,18 +38,32 @@ const agentQuerySchema = z.object({
  */
 export async function POST(req: Request) {
     try {
-        // 1. Auth check
-        const auth = await requireAuth();
-        const tenantId = auth.tenantId;
+        // 1. Auth + RBAC check (defense-in-depth: middleware + API route)
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId, userId } = auth;
 
-        // 2. Validate input
+        // 2. Rate limiting
+        const ip = getClientIp(req);
+        const rateLimitResult = checkRateLimit(`api:ai:agents:${tenantId}:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        // 3. Validate input
         const body = await req.json();
         const validated = agentQuerySchema.parse(body);
 
-        // 3. Parse query with NLU
-        const nluResult = parseQuery(validated.query);
+        // 4. Sanitize query
+        const sanitizedQuery = sanitizeInput(validated.query);
 
-        // 4. Determine agent (explicit override or auto-detect)
+        // 5. Parse query with NLU
+        const nluResult = parseQuery(sanitizedQuery);
+
+        // 6. Determine agent (explicit override or auto-detect)
         let agent: AgentName | null = validated.agent as AgentName || null;
         let action: AgentAction;
 
@@ -60,7 +77,7 @@ export async function POST(req: Request) {
                 return NextResponse.json(
                     {
                         success: false,
-                        error: 'Tidak dapat mengenali agent untuk query ini. Coba gunakan query yang lebih spesifik (misalnya: "prediksi cash flow", "skor lead", "prediksi stok").',
+                        error: 'Unable to recognize an agent for this query. Try a more specific query (e.g., "cash flow prediction", "lead score", "stock prediction").',
                     },
                     { status: 400 }
                 );
@@ -68,13 +85,23 @@ export async function POST(req: Request) {
             action = determineAction(agent, nluResult);
         }
 
-        // 5. Override action if explicitly provided
+        // 7. Override action if explicitly provided
         if (validated.action) {
             action = validated.action as AgentAction;
         }
 
-        // 6. Execute agent
+        // 8. Execute agent
         const response = await executeAgent(agent, tenantId, action, validated.params as Record<string, string | number | undefined>);
+
+        // 9. Audit logging
+        void logAudit({
+            userId: userId || '',
+            tenantId,
+            action: 'ai.agent.query',
+            entity: 'AiAgent',
+            entityId: '',
+            newValues: { agent, action: String(action), query: sanitizedQuery },
+        });
 
         return NextResponse.json({
             success: true,
@@ -93,11 +120,12 @@ export async function POST(req: Request) {
  *
  * Response: { success: true, agents: [...], suggestions: [...] }
  */
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        // 1. Auth check
-        const auth = await requireAuth();
-        const tenantId = auth.tenantId;
+        // 1. Auth + RBAC check (defense-in-depth: middleware + API route)
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
 
         // 2. Get suggestions from all agents
         const suggestions = await getAgentSuggestions(tenantId);

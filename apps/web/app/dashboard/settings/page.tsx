@@ -118,21 +118,21 @@ export default function ProfileSettingsPage() {
             if (data.success) {
                 const counts = data.data
                 const summary = [
-                    counts.categories > 0 ? `${counts.categories} kategori` : '',
-                    counts.suppliers > 0 ? `${counts.suppliers} supplier` : '',
-                    counts.contacts > 0 ? `${counts.contacts} kontak` : '',
-                    counts.products > 0 ? `${counts.products} produk` : '',
-                    counts.invoices > 0 ? `${counts.invoices} invoice` : '',
-                    counts.employees > 0 ? `${counts.employees} karyawan` : '',
+                    counts.categories > 0 ? `${counts.categories} ${t('inventory.categories.title') || 'kategori'}` : '',
+                    counts.suppliers > 0 ? `${counts.suppliers} ${t('inventory.suppliers.title') || 'supplier'}` : '',
+                    counts.contacts > 0 ? `${counts.contacts} ${t('crm.contacts.title') || 'kontak'}` : '',
+                    counts.products > 0 ? `${counts.products} ${t('inventory.products.title') || 'produk'}` : '',
+                    counts.invoices > 0 ? `${counts.invoices} ${t('finance.invoices.title') || 'invoice'}` : '',
+                    counts.employees > 0 ? `${counts.employees} ${t('hr.employees.title') || 'karyawan'}` : '',
                 ].filter(Boolean).join(', ')
-                setDemoStatus(`Berhasil! ${summary}`)
+                setDemoStatus(`${t('settings.demoStatusSuccess') || 'Berhasil!'} ${summary}`)
             } else if (data.skipped) {
-                setDemoStatus('Data sudah ada. Gunakan "force: true" untuk memuat ulang.')
+                setDemoStatus(t('settings.attentionWarning') || 'Data sudah ada.')
             } else {
-                setDemoStatus('Gagal: ' + (data.error || 'Unknown error'))
+                setDemoStatus(`${t('common.error') || 'Gagal'}: ${data.error || 'Unknown error'}`)
             }
         } catch {
-            setDemoStatus('Terjadi kesalahan. Silakan coba lagi.')
+            setDemoStatus(t('audit.networkError') || 'Terjadi kesalahan. Silakan coba lagi.')
         } finally {
             setDemoLoading(false)
             setTimeout(() => setDemoStatus(null), 8000)
@@ -146,13 +146,13 @@ export default function ProfileSettingsPage() {
         // Validate file type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
         if (!allowedTypes.includes(file.type)) {
-            setSaveMessage({ type: 'error', text: 'Format file tidak didukung. Gunakan JPG, PNG, atau GIF.' })
+            setSaveMessage({ type: 'error', text: t('settings.invalidFileFormat') || 'Format file tidak didukung. Gunakan JPG, PNG, atau GIF.' })
             return
         }
 
         // Validate file size (2MB max)
         if (file.size > 2 * 1024 * 1024) {
-            setSaveMessage({ type: 'error', text: 'Ukuran file terlalu besar. Maksimal 2MB.' })
+            setSaveMessage({ type: 'error', text: t('settings.fileTooLarge') || 'Ukuran file terlalu besar. Maksimal 2MB.' })
             return
         }
 
@@ -171,7 +171,7 @@ export default function ProfileSettingsPage() {
             const uploadData = await uploadRes.json()
 
             if (!uploadData.success || !uploadData.data?.url) {
-                setSaveMessage({ type: 'error', text: uploadData.error || 'Gagal mengunggah foto' })
+                setSaveMessage({ type: 'error', text: uploadData.error || (t('settings.photoUploadError') || 'Gagal mengunggah foto') })
                 return
             }
 
@@ -187,12 +187,12 @@ export default function ProfileSettingsPage() {
 
             if (profileData.success) {
                 setPhotoPreview(avatarUrl)
-                setSaveMessage({ type: 'success', text: 'Foto profil berhasil diubah!' })
+                setSaveMessage({ type: 'success', text: t('settings.photoUpdateSuccess') || 'Foto profil berhasil diubah!' })
             } else {
-                setSaveMessage({ type: 'error', text: profileData.error || 'Gagal menyimpan foto profil' })
+                setSaveMessage({ type: 'error', text: profileData.error || (t('settings.photoSaveError') || 'Gagal menyimpan foto profil') })
             }
         } catch {
-            setSaveMessage({ type: 'error', text: 'Gagal mengunggah foto' })
+            setSaveMessage({ type: 'error', text: t('settings.photoUploadError') || 'Gagal mengunggah foto' })
         } finally {
             setPhotoUploading(false)
         }
@@ -219,10 +219,10 @@ export default function ProfileSettingsPage() {
             a.click()
             document.body.removeChild(a)
             window.URL.revokeObjectURL(url)
-            setSaveMessage({ type: 'success', text: 'Data berhasil diunduh!' })
+            setSaveMessage({ type: 'success', text: t('settings.downloadDataSuccess') || 'Data berhasil diunduh!' })
             setTimeout(() => setSaveMessage(null), 3000)
         } catch {
-            setSaveMessage({ type: 'error', text: 'Gagal mengunduh data' })
+            setSaveMessage({ type: 'error', text: t('settings.downloadDataError') || 'Gagal mengunduh data' })
             setTimeout(() => setSaveMessage(null), 3000)
         } finally {
             setDownloadingData(false)
@@ -231,7 +231,7 @@ export default function ProfileSettingsPage() {
 
     const handleDeleteAccount = async () => {
         if (deleteConfirmText !== 'HAPUS') {
-            setSaveMessage({ type: 'error', text: 'Ketik "HAPUS" untuk mengkonfirmasi' })
+            setSaveMessage({ type: 'error', text: t('settings.deleteConfirmInstruction') || 'Ketik "HAPUS" untuk mengkonfirmasi' })
             return
         }
 
@@ -245,11 +245,11 @@ export default function ProfileSettingsPage() {
                 // Redirect to login page after account deletion
                 window.location.href = '/auth/login?deleted=true'
             } else {
-                setSaveMessage({ type: 'error', text: data.error || 'Gagal menghapus akun' })
+                setSaveMessage({ type: 'error', text: data.error || (t('settings.deleteAccountError') || 'Gagal menghapus akun') })
                 setDeletingAccount(false)
             }
         } catch {
-            setSaveMessage({ type: 'error', text: 'Gagal menghapus akun' })
+            setSaveMessage({ type: 'error', text: t('settings.deleteAccountErrorGeneric') || 'Gagal menghapus akun' })
             setDeletingAccount(false)
         }
     }
@@ -310,7 +310,7 @@ export default function ProfileSettingsPage() {
                             {photoUploading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    Mengunggah...
+                                    {t('settings.uploading') || 'Mengunggah...'}
                                 </>
                             ) : (
                                 <>
@@ -320,7 +320,7 @@ export default function ProfileSettingsPage() {
                             )}
                         </button>
                         <p className="text-xs text-gray-500 mt-2">
-                            JPG, PNG atau GIF. Maksimal 2MB.
+                            {t('settings.photoFormatHint') || 'JPG, PNG atau GIF. Maksimal 2MB.'}
                         </p>
                     </div>
                 </div>
@@ -371,7 +371,7 @@ export default function ProfileSettingsPage() {
                             readOnly
                             className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Telepon diatur di pengaturan perusahaan</p>
+                        <p className="text-xs text-gray-400 mt-1">{t('settings.phoneFromCompany') || 'Telepon diatur di pengaturan perusahaan'}</p>
                     </div>
 
                     <div>
@@ -426,9 +426,9 @@ export default function ProfileSettingsPage() {
 
             {/* Demo Data Section */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Data Demo</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.demoDataTitle') || 'Data Demo'}</h2>
                 <p className="text-sm text-gray-600 mb-4">
-                    Muat data demo untuk menjelajahi fitur Qalcuity. Data termasuk produk, kontak, invoice, karyawan, dan lainnya.
+                    {t('settings.demoDataDescription') || 'Muat data demo untuk menjelajahi fitur Qalcuity. Data termasuk produk, kontak, invoice, karyawan, dan lainnya.'}
                 </p>
 
                 {demoStatus && (
@@ -445,13 +445,12 @@ export default function ProfileSettingsPage() {
                         onClick={() => setShowDemoConfirm(true)}
                         className="px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
                     >
-                        Muat Data Demo
+                        {t('settings.loadDemoData') || 'Muat Data Demo'}
                     </button>
                 ) : (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <p className="text-sm text-blue-800 mb-3">
-                            <strong>Perhatian:</strong> Data demo hanya akan dimuat jika workspace Anda masih kosong.
-                            Jika sudah ada data, muatan demo akan dilewati.
+                            <strong>{t('settings.attention') || 'Perhatian:'}</strong> {t('settings.attentionWarning') || 'Data demo hanya akan dimuat jika workspace Anda masih kosong.'}
                         </p>
                         <div className="flex items-center gap-3">
                             <button
@@ -459,13 +458,13 @@ export default function ProfileSettingsPage() {
                                 disabled={demoLoading}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
-                                {demoLoading ? 'Memuat...' : 'Ya, Muat Data Demo'}
+                                {demoLoading ? (t('settings.loadingDemo') || 'Memuat...') : (t('settings.confirmLoadDemo') || 'Ya, Muat Data Demo')}
                             </button>
                             <button
                                 onClick={() => setShowDemoConfirm(false)}
                                 className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                             >
-                                Batal
+                                {t('common.cancel') || 'Batal'}
                             </button>
                         </div>
                     </div>
@@ -487,12 +486,12 @@ export default function ProfileSettingsPage() {
                         {downloadingData ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Mengunduh...
+                                {t('settings.downloading') || 'Mengunduh...'}
                             </>
                         ) : (
                             <>
                                 <Download className="w-4 h-4" />
-                                Unduh Data Saya
+                                {t('settings.downloadMyData') || 'Unduh Data Saya'}
                             </>
                         )}
                     </button>
@@ -509,12 +508,12 @@ export default function ProfileSettingsPage() {
                 {showDeleteConfirm && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}>
                         <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-lg font-semibold text-red-600 mb-2">Hapus Akun</h3>
+                            <h3 className="text-lg font-semibold text-red-600 mb-2">{t('settings.deleteAccountModalTitle') || 'Hapus Akun'}</h3>
                             <p className="text-sm text-gray-600 mb-4">
-                                Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus secara permanen.
+                                {t('settings.deleteAccountModalDesc') || 'Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus secara permanen.'}
                             </p>
                             <p className="text-sm text-gray-700 mb-2">
-                                Ketik <strong>HAPUS</strong> untuk mengkonfirmasi:
+                                {t('settings.typeDeleteToConfirm') || 'Ketik HAPUS untuk mengkonfirmasi:'}
                             </p>
                             <input
                                 type="text"
@@ -528,7 +527,7 @@ export default function ProfileSettingsPage() {
                                     onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
                                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
-                                    Batal
+                                    {t('common.cancel') || 'Batal'}
                                 </button>
                                 <button
                                     onClick={handleDeleteAccount}
@@ -538,12 +537,12 @@ export default function ProfileSettingsPage() {
                                     {deletingAccount ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            Menghapus...
+                                            {t('settings.saving') || 'Menghapus...'}
                                         </>
                                     ) : (
                                         <>
                                             <Trash2 className="w-4 h-4" />
-                                            Hapus Akun Secara Permanen
+                                            {t('settings.deleteAccountTitle') || 'Hapus Akun Secara Permanen'}
                                         </>
                                     )}
                                 </button>

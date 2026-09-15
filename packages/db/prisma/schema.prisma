@@ -161,6 +161,9 @@ model Tenant {
 
   // WhatsApp Message Logs
   whatsappMessageLogs WhatsAppMessageLog[]
+
+  // Password Policy
+  passwordPolicy PasswordPolicy?
 }
 
 model User {
@@ -196,6 +199,7 @@ model User {
   auditLogs      AuditLog[]
   savedReports   SavedReport[]
   userDashboards UserDashboard[]
+  passwordHistory PasswordHistory[]
 
   // Sessions & Login History
   sessions  UserSession[]
@@ -2031,6 +2035,9 @@ model PosTransaction {
   subtotal        Decimal    @default(0)
   discountAmount  Decimal    @default(0)
   discountPercent Decimal?
+  discountType    String?    // PERCENTAGE or FIXED (order-level discount type)
+  discountValue   Decimal?   @default(0) // order-level discount value (percentage 0-100 or nominal amount)
+  promoCode       String?    // promo code applied to this transaction
   taxAmount       Decimal    @default(0)
   totalAmount     Decimal    @default(0)
   paidAmount      Decimal    @default(0)
@@ -2104,6 +2111,8 @@ model PosRefund {
   refundNo      String // Auto-generated, unique per tenant
   amount        Decimal
   reason        String
+  restockItem   Boolean        @default(false) // If true, restore stock on approval
+  restockedAt   DateTime?      // Timestamp when stock was restored
   status        String         @default("PENDING") // PENDING, APPROVED, REJECTED
   approvedBy    String?
   approvedAt    DateTime?
@@ -2723,6 +2732,50 @@ model PlanTenantLimit {
   maxTenants Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ============================================
+// PASSWORD POLICY (per-tenant configurable)
+// ============================================
+
+model PasswordPolicy {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Complexity rules
+  minLength             Int      @default(8)
+  maxLength             Int      @default(128)
+  requireUppercase      Boolean  @default(false)
+  requireLowercase      Boolean  @default(false)
+  requireNumbers        Boolean  @default(false)
+  requireSpecialChars   Boolean  @default(false)
+  specialChars          String   @default("!@#$%^&*()_+-=[]{}|;:,.<>?")
+
+  // History & expiry
+  preventReuse           Int     @default(0)  // number of previous passwords to block
+  expiryDays             Int     @default(0)  // 0 = never expires
+  warnBeforeExpiryDays   Int     @default(7)
+
+  // Lockout
+  maxFailedAttempts      Int     @default(5)
+  lockoutDurationMinutes Int     @default(30)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([tenantId])
+  @@index([tenantId])
+}
+
+model PasswordHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // ============================================

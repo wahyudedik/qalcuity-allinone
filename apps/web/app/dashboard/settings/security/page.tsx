@@ -7,8 +7,10 @@ import { formatDateTime } from '@/lib/utils'
 import {
     Key, Shield, Monitor, AlertTriangle, Loader2, CheckCircle, X,
     LogOut, RefreshCw, Smartphone, Globe, Clock, Copy, Check,
+    Download, RefreshCw as RefreshCwIcon,
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { QRCode } from '@/components/ui/qr-code'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,6 +83,15 @@ export default function SecuritySettingsPage() {
     const [twoFaBackupCodes, setTwoFaBackupCodes] = useState<string[]>([])
     const [showBackupCodes, setShowBackupCodes] = useState(false)
     const [copiedKey, setCopiedKey] = useState(false)
+
+    // Regenerate backup codes state
+    const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false)
+    const [regeneratePassword, setRegeneratePassword] = useState('')
+    const [regenerateLoading, setRegenerateLoading] = useState(false)
+
+    // Disable 2FA with password state
+    const [showDisablePasswordModal, setShowDisablePasswordModal] = useState(false)
+    const [disablePassword, setDisablePassword] = useState('')
 
     // Sessions state
     const [sessions, setSessions] = useState<SessionEntry[]>([])
@@ -221,7 +232,7 @@ export default function SecuritySettingsPage() {
 
     const handleTwoFaToggle = () => {
         if (twoFaStatus.enabled) {
-            setShowTwoFaDisableConfirm(true)
+            setShowDisablePasswordModal(true)
         } else {
             startTwoFaSetup()
         }
@@ -282,19 +293,23 @@ export default function SecuritySettingsPage() {
     }
 
     const handleTwoFaDisable = async () => {
+        if (!disablePassword) {
+            setTwoFaError(t('settings.currentPassword'))
+            return
+        }
         setTwoFaLoading(true)
         setTwoFaError(null)
         try {
             const res = await fetch('/api/settings/security/2fa', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: twoFaDisablePassword }),
+                body: JSON.stringify({ password: disablePassword }),
             })
             const data = await res.json()
             if (data.success) {
                 setTwoFaStatus({ enabled: false, backupCodesRemaining: 0 })
-                setShowTwoFaDisableConfirm(false)
-                setTwoFaDisablePassword('')
+                setShowDisablePasswordModal(false)
+                setDisablePassword('')
                 setToast({ message: t('settings.twoFaDisabled'), type: 'success' })
             } else {
                 setTwoFaError(data.error)
@@ -305,6 +320,59 @@ export default function SecuritySettingsPage() {
         } finally {
             setTwoFaLoading(false)
         }
+    }
+
+    const handleRegenerateBackupCodes = async () => {
+        if (!regeneratePassword) {
+            setTwoFaError(t('settings.currentPassword'))
+            return
+        }
+        setRegenerateLoading(true)
+        setTwoFaError(null)
+        try {
+            const res = await fetch('/api/settings/security/2fa', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: regeneratePassword }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                setTwoFaBackupCodes(data.data.backupCodes)
+                setShowBackupCodes(true)
+                setShowRegenerateConfirm(false)
+                setRegeneratePassword('')
+                setTwoFaStatus(prev => ({ ...prev, backupCodesRemaining: data.data.backupCodesCount }))
+                setToast({ message: t('settings.securityRegenerateCodesSuccess'), type: 'success' })
+            } else {
+                setTwoFaError(data.error)
+                setToast({ message: data.error || t('settings.securityRegenerateCodesFailed'), type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('settings.errorConnectServer'), type: 'error' })
+        } finally {
+            setRegenerateLoading(false)
+        }
+    }
+
+    const handleDownloadBackupCodes = () => {
+        const codesText = [
+            '# Qalcuity - 2FA Backup Codes',
+            '# ' + t('settings.securityBackupCodesWarning'),
+            '# ' + t('settings.securityBackupCodesDesc'),
+            '',
+            ...twoFaBackupCodes,
+            '',
+        ].join('\n')
+        const blob = new Blob([codesText], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'qalcuity-backup-codes.txt'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        setToast({ message: t('settings.securityCodesDownloaded'), type: 'success' })
     }
 
     const handleCopyKey = () => {
@@ -552,19 +620,28 @@ export default function SecuritySettingsPage() {
                 </div>
                 {twoFaStatus.enabled ? (
                     <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                            <div>
-                                <p className="text-sm text-green-800 font-medium">{t('settings.twoFactorActive')}</p>
-                                <p className="text-sm text-green-700 mt-1">
-                                    {t('settings.twoFactorActiveDesc')}
-                                </p>
-                                {twoFaStatus.backupCodesRemaining > 0 && (
-                                    <p className="text-xs text-green-600 mt-2">
-                                        {t('settings.securityBackupCodesRemaining').replace('{count}', String(twoFaStatus.backupCodesRemaining))}
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm text-green-800 font-medium">{t('settings.twoFactorActive')}</p>
+                                    <p className="text-sm text-green-700 mt-1">
+                                        {t('settings.twoFactorActiveDesc')}
                                     </p>
-                                )}
+                                    {twoFaStatus.backupCodesRemaining > 0 && (
+                                        <p className="text-xs text-green-600 mt-2">
+                                            {t('settings.securityBackupCodesRemaining').replace('{count}', String(twoFaStatus.backupCodesRemaining))}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
+                            <button
+                                onClick={() => setShowRegenerateConfirm(true)}
+                                className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors flex items-center gap-1.5 flex-shrink-0"
+                            >
+                                <RefreshCwIcon className="w-3.5 h-3.5" />
+                                {t('settings.securityRegenerateCodes')}
+                            </button>
                         </div>
                     </div>
                 ) : (
@@ -769,18 +846,11 @@ export default function SecuritySettingsPage() {
                                     {t('settings.twoFaSetupDesc')}
                                 </p>
 
-                                {/* QR Code placeholder with otpauth URI */}
+                                {/* QR Code — actual rendering via qrcode library */}
                                 <div className="flex justify-center py-4">
-                                    <div className="w-48 h-48 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
-                                        <div className="text-center px-4">
-                                            <Shield className="w-10 h-10 text-blue-500 mx-auto mb-2" />
-                                            <p className="text-xs text-gray-500 mb-2">{t('settings.securityScanQr')}</p>
-                                            <p className="text-[10px] text-gray-400 break-all font-mono leading-tight">
-                                                {twoFaOtpAuthUri.substring(0, 60)}...
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <QRCode value={twoFaOtpAuthUri} size={200} />
                                 </div>
+                                <p className="text-xs text-gray-500 text-center">{t('settings.securityScanQr')}</p>
 
                                 {/* Manual entry key */}
                                 <div className="bg-gray-50 rounded-lg p-3">
@@ -878,36 +948,144 @@ export default function SecuritySettingsPage() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(twoFaBackupCodes.join('\n'))
                                     setToast({ message: t('settings.securityBackupCopied'), type: 'success' })
                                 }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
                             >
                                 <Copy className="w-4 h-4" />
                                 {t('settings.securityCopyAllCodes')}
+                            </button>
+                            <button
+                                onClick={handleDownloadBackupCodes}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                            >
+                                <Download className="w-4 h-4" />
+                                {t('settings.securityDownloadCodes')}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Disable 2FA Confirm Dialog */}
-            <ConfirmDialog
-                isOpen={showTwoFaDisableConfirm}
-                onClose={() => {
-                    setShowTwoFaDisableConfirm(false)
-                    setTwoFaDisablePassword('')
-                    setTwoFaError(null)
-                }}
-                onConfirm={handleTwoFaDisable}
-                title={t('settings.disable2faTitle')}
-                message={t('settings.confirmDisable2fa')}
-                confirmText={t('settings.disable2faConfirmText')}
-                variant="warning"
-            />
+            {/* Disable 2FA Password Modal */}
+            {showDisablePasswordModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">{t('settings.disable2faTitle')}</h3>
+                            <button onClick={() => { setShowDisablePasswordModal(false); setDisablePassword(''); setTwoFaError(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-yellow-800">{t('settings.confirmDisable2fa')}</p>
+                            </div>
+                        </div>
+
+                        {twoFaError && (
+                            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <p className="text-sm text-red-700">{twoFaError}</p>
+                            </div>
+                        )}
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                {t('settings.currentPassword')}
+                            </label>
+                            <input
+                                type="password"
+                                value={disablePassword}
+                                onChange={(e) => setDisablePassword(e.target.value)}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-gray-900"
+                                placeholder="••••••••"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => { setShowDisablePasswordModal(false); setDisablePassword(''); setTwoFaError(null); }}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                            <button
+                                onClick={handleTwoFaDisable}
+                                disabled={twoFaLoading || !disablePassword}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {twoFaLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {t('settings.disable2faConfirmText')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Regenerate Backup Codes Confirm Modal */}
+            {showRegenerateConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">{t('settings.securityRegenerateCodes')}</h3>
+                            <button onClick={() => { setShowRegenerateConfirm(false); setRegeneratePassword(''); setTwoFaError(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-yellow-800">{t('settings.securityRegenerateCodesWarning')}</p>
+                            </div>
+                        </div>
+
+                        {twoFaError && (
+                            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <p className="text-sm text-red-700">{twoFaError}</p>
+                            </div>
+                        )}
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                {t('settings.currentPassword')}
+                            </label>
+                            <input
+                                type="password"
+                                value={regeneratePassword}
+                                onChange={(e) => setRegeneratePassword(e.target.value)}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+                                placeholder="••••••••"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => { setShowRegenerateConfirm(false); setRegeneratePassword(''); setTwoFaError(null); }}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                            <button
+                                onClick={handleRegenerateBackupCodes}
+                                disabled={regenerateLoading || !regeneratePassword}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {regenerateLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {t('settings.securityRegenerateCodes')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Revoke All Sessions Confirm Dialog */}
             <ConfirmDialog

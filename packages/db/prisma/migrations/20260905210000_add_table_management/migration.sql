@@ -1,0 +1,2 @@
+-- Stub: This migration was applied directly to the database.
+-- Table management models were already created in a previous session.

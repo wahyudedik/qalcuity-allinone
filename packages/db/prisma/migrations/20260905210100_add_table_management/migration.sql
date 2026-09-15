@@ -1,5 +1,5 @@
--- CreateTable
-CREATE TABLE "PosTable" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "PosTable" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "number" INTEGER NOT NULL,
@@ -21,8 +21,8 @@ CREATE TABLE "PosTable" (
     CONSTRAINT "PosTable_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "PosTableReservation" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "PosTableReservation" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "tableId" TEXT,
@@ -39,26 +39,34 @@ CREATE TABLE "PosTableReservation" (
     CONSTRAINT "PosTableReservation_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "PosTable_tenantId_number_key" ON "PosTable"("tenantId", "number");
+-- CreateIndex (idempotent)
+DO $$ BEGIN
+    CREATE UNIQUE INDEX IF NOT EXISTS "PosTable_tenantId_number_key" ON "PosTable"("tenantId", "number");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
 
--- CreateIndex
-CREATE INDEX "PosTable_tenantId_status_idx" ON "PosTable"("tenantId", "status");
+DO $$ BEGIN
+    CREATE INDEX IF NOT EXISTS "PosTable_tenantId_status_idx" ON "PosTable"("tenantId", "status");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
 
--- CreateIndex
-CREATE INDEX "PosTable_tenantId_zone_idx" ON "PosTable"("tenantId", "zone");
+DO $$ BEGIN
+    CREATE INDEX IF NOT EXISTS "PosTable_tenantId_zone_idx" ON "PosTable"("tenantId", "zone");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
 
--- CreateIndex
-CREATE INDEX "PosTableReservation_tenantId_reservationTime_idx" ON "PosTableReservation"("tenantId", "reservationTime");
+-- AddForeignKey (idempotent)
+DO $$ BEGIN
+    ALTER TABLE "PosTable" ADD CONSTRAINT "PosTable_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- CreateIndex
-CREATE INDEX "PosTableReservation_tenantId_status_idx" ON "PosTableReservation"("tenantId", "status");
+DO $$ BEGIN
+    ALTER TABLE "PosTableReservation" ADD CONSTRAINT "PosTableReservation_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "PosTable" ADD CONSTRAINT "PosTable_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PosTableReservation" ADD CONSTRAINT "PosTableReservation_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PosTableReservation" ADD CONSTRAINT "PosTableReservation_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "PosTable"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PosTableReservation" ADD CONSTRAINT "PosTableReservation_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "PosTable"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

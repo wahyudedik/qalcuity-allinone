@@ -174,7 +174,76 @@ export async function POST(request: Request) {
             (sum, item) => sum + (item.discountAmount || 0),
             0
         );
-        const discountAmount = validatedData.discountAmount || 0;
+
+        // Calculate order-level discount on backend (don't trust frontend)
+        let orderDiscountAmount = 0;
+        let orderDiscountType: string | null = null;
+        let orderDiscountValue = 0;
+        let promoCodeUsed: string | null = null;
+
+        if (validatedData.discountType && validatedData.discountValue !== undefined && validatedData.discountValue > 0) {
+            orderDiscountType = validatedData.discountType;
+            orderDiscountValue = validatedData.discountValue;
+
+            if (validatedData.discountType === 'PERCENTAGE') {
+                // Percentage: calculate from (subtotal - itemDiscountTotal)
+                const baseForDiscount = subtotal - itemDiscountTotal;
+                orderDiscountAmount = Math.round(baseForDiscount * (validatedData.discountValue / 100));
+                // Clamp to not exceed base
+                if (orderDiscountAmount > baseForDiscount) {
+                    orderDiscountAmount = baseForDiscount;
+                }
+            } else {
+                // FIXED: nominal discount, clamp to subtotal - itemDiscount
+                const baseForDiscount = subtotal - itemDiscountTotal;
+                orderDiscountAmount = Math.min(validatedData.discountValue, baseForDiscount);
+            }
+        }
+
+        // Handle promo code (MVP: hardcoded promo validation)
+        if (validatedData.promoCode && !orderDiscountType) {
+            const code = validatedData.promoCode.toUpperCase().trim();
+            // MVP promo codes — simple hardcoded validation
+            const promoCodes: Record<string, { type: 'PERCENTAGE' | 'FIXED'; value: number; maxDiscount?: number; minOrder?: number }> = {
+                'DISKON10': { type: 'PERCENTAGE', value: 10, maxDiscount: 50000 },
+                'HEMAT20': { type: 'PERCENTAGE', value: 20, maxDiscount: 100000 },
+                'POTONGAN5K': { type: 'FIXED', value: 5000, minOrder: 25000 },
+                'POTONGAN10K': { type: 'FIXED', value: 10000, minOrder: 50000 },
+                'GRATIS5': { type: 'PERCENTAGE', value: 5 },
+            };
+
+            const promo = promoCodes[code];
+            if (promo) {
+                const baseForDiscount = subtotal - itemDiscountTotal;
+                // Check minimum order if specified
+                if (promo.minOrder && baseForDiscount < promo.minOrder) {
+                    return NextResponse.json(
+                        { success: false, error: `Minimum pembelian ${promo.minOrder.toLocaleString('id-ID')} untuk promo ${code}` },
+                        { status: 400 }
+                    );
+                }
+
+                promoCodeUsed = code;
+                orderDiscountType = promo.type;
+                orderDiscountValue = promo.value;
+
+                if (promo.type === 'PERCENTAGE') {
+                    orderDiscountAmount = Math.round(baseForDiscount * (promo.value / 100));
+                    if (promo.maxDiscount && orderDiscountAmount > promo.maxDiscount) {
+                        orderDiscountAmount = promo.maxDiscount;
+                    }
+                } else {
+                    orderDiscountAmount = Math.min(promo.value, baseForDiscount);
+                }
+            } else {
+                return NextResponse.json(
+                    { success: false, error: `Kode promo "${code}" tidak valid` },
+                    { status: 400 }
+                );
+            }
+        }
+
+        const discountAmount = (validatedData.discountAmount || 0) + orderDiscountAmount;
         const taxableAmount = subtotal - itemDiscountTotal - discountAmount;
 
         // Calculate tax from items
@@ -187,7 +256,17 @@ export async function POST(request: Request) {
         );
 
         const totalAmount = taxableAmount + taxAmount;
-        const paidAmount = validatedData.paidAmount;
+
+        // Determine payment method and paid amount
+        // Support both single payment and split payment (payments array)
+        const splitPayments = validatedData.payments;
+        const isSplitPayment = Array.isArray(splitPayments) && splitPayments.length >= 2;
+        const paymentMethod = isSplitPayment
+            ? splitPayments[0].method  // Primary method for the transaction record
+            : (validatedData.paymentMethod || 'CASH');
+        const paidAmount = isSplitPayment
+            ? splitPayments.reduce((sum: number, p: { method: string; amount: number }) => sum + p.amount, 0)
+            : validatedData.paidAmount;
         const changeAmount = paidAmount > totalAmount ? paidAmount - totalAmount : 0;
 
         // Generate transaction number
@@ -207,6 +286,9 @@ export async function POST(request: Request) {
                     subtotal,
                     discountAmount,
                     discountPercent: validatedData.discountPercent || null,
+                    discountType: orderDiscountType,
+                    discountValue: orderDiscountValue > 0 ? orderDiscountValue : null,
+                    promoCode: promoCodeUsed,
                     taxAmount,
                     totalAmount,
                     paidAmount,
@@ -236,17 +318,32 @@ export async function POST(request: Request) {
                 })),
             });
 
-            // Create payment record
-            await tx.posPayment.create({
-                data: {
-                    tenantId,
-                    transactionId: trx.id,
-                    method: validatedData.paymentMethod || 'CASH',
-                    amount: paidAmount,
-                    reference: null,
-                    status: 'COMPLETED',
-                },
-            });
+            // Create payment record(s)
+            if (isSplitPayment && splitPayments) {
+                // Split payment: create one record per method
+                await tx.posPayment.createMany({
+                    data: splitPayments.map((p: { method: string; amount: number }) => ({
+                        tenantId,
+                        transactionId: trx.id,
+                        method: p.method,
+                        amount: p.amount,
+                        reference: null,
+                        status: 'COMPLETED',
+                    })),
+                });
+            } else {
+                // Single payment
+                await tx.posPayment.create({
+                    data: {
+                        tenantId,
+                        transactionId: trx.id,
+                        method: validatedData.paymentMethod || 'CASH',
+                        amount: paidAmount,
+                        reference: null,
+                        status: 'COMPLETED',
+                    },
+                });
+            }
 
             return trx;
         });
@@ -260,7 +357,10 @@ export async function POST(request: Request) {
             newValues: {
                 transactionNo,
                 totalAmount,
-                paymentMethod: validatedData.paymentMethod || 'CASH',
+                paymentMethod,
+                discountAmount: orderDiscountAmount > 0 ? orderDiscountAmount : undefined,
+                promoCode: promoCodeUsed || undefined,
+                ...(isSplitPayment && { splitPayments: splitPayments?.map((p: { method: string; amount: number }) => `${p.method}: ${p.amount}`) }),
             },
             request,
         });
@@ -275,6 +375,10 @@ export async function POST(request: Request) {
                 id: transaction.id,
                 transactionNo: transaction.transactionNo,
                 totalAmount: Number(transaction.totalAmount),
+                discountAmount: Number(transaction.discountAmount),
+                discountType: transaction.discountType,
+                discountValue: transaction.discountValue ? Number(transaction.discountValue) : null,
+                promoCode: transaction.promoCode,
                 paidAmount: Number(transaction.paidAmount),
                 changeAmount: Number(transaction.changeAmount),
                 paymentMethod: transaction.paymentMethod,

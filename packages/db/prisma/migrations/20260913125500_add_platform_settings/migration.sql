@@ -1,5 +1,5 @@
--- CreateTable
-CREATE TABLE "PlatformSetting" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "PlatformSetting" (
     "id" TEXT NOT NULL,
     "platformName" TEXT NOT NULL DEFAULT 'Qalcuity',
     "supportEmail" TEXT NOT NULL DEFAULT 'support@qalcuity.com',
@@ -14,8 +14,8 @@ CREATE TABLE "PlatformSetting" (
     CONSTRAINT "PlatformSetting_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "PlanTenantLimit" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "PlanTenantLimit" (
     "id" TEXT NOT NULL,
     "planName" TEXT NOT NULL,
     "maxTenants" INTEGER NOT NULL DEFAULT 0,
@@ -25,5 +25,8 @@ CREATE TABLE "PlanTenantLimit" (
     CONSTRAINT "PlanTenantLimit_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "PlanTenantLimit_planName_key" ON "PlanTenantLimit"("planName");
+-- CreateIndex (idempotent)
+DO $$ BEGIN
+    CREATE UNIQUE INDEX IF NOT EXISTS "PlanTenantLimit_planName_key" ON "PlanTenantLimit"("planName");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;

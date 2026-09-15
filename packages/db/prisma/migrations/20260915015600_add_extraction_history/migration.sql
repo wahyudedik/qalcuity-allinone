@@ -1,5 +1,5 @@
--- CreateTable
-CREATE TABLE "ExtractionHistory" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "ExtractionHistory" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "documentType" TEXT NOT NULL,
@@ -17,14 +17,24 @@ CREATE TABLE "ExtractionHistory" (
     CONSTRAINT "ExtractionHistory_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "ExtractionHistory_tenantId_idx" ON "ExtractionHistory"("tenantId");
+-- CreateIndex (idempotent)
+DO $$ BEGIN
+    CREATE INDEX IF NOT EXISTS "ExtractionHistory_tenantId_idx" ON "ExtractionHistory"("tenantId");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
 
--- CreateIndex
-CREATE INDEX "ExtractionHistory_tenantId_documentType_idx" ON "ExtractionHistory"("tenantId", "documentType");
+DO $$ BEGIN
+    CREATE INDEX IF NOT EXISTS "ExtractionHistory_tenantId_documentType_idx" ON "ExtractionHistory"("tenantId", "documentType");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
 
--- CreateIndex
-CREATE INDEX "ExtractionHistory_extractedAt_idx" ON "ExtractionHistory"("extractedAt");
+DO $$ BEGIN
+    CREATE INDEX IF NOT EXISTS "ExtractionHistory_extractedAt_idx" ON "ExtractionHistory"("extractedAt");
+EXCEPTION WHEN duplicate_table THEN NULL;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "ExtractionHistory" ADD CONSTRAINT "ExtractionHistory_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (idempotent)
+DO $$ BEGIN
+    ALTER TABLE "ExtractionHistory" ADD CONSTRAINT "ExtractionHistory_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
