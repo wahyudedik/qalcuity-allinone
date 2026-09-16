@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
+import { materializedViewsExist } from '@/lib/analytics/read-model'
 
 // ============================================
 // TYPES
@@ -331,6 +332,11 @@ export async function GET(request: Request) {
         ])
 
         // ============================================
+        // CHECK MV AVAILABILITY
+        // ============================================
+        const mvAvailable = await materializedViewsExist()
+
+        // ============================================
         // PROCESS MV REVENUE DATA WITH FALLBACK
         // ============================================
         // If materialized view has no data for this tenant (first load),
@@ -340,6 +346,7 @@ export async function GET(request: Request) {
         let currentRevenueTotal: number
         let previousRevenueTotal: number
         let revenueMonthlyData: Array<{ month: string; value: number }>
+        let dataSource: string[] = []
 
         if (mvHasRevenueData) {
             // Fast path: use materialized view data
@@ -349,10 +356,12 @@ export async function GET(request: Request) {
                 month: row.month,
                 value: toNumber(row.total),
             }))
+            dataSource.push('mv_daily_revenue')
             logger.info(`[Analytics Dashboard] Using mv_daily_revenue for tenant ${tenantId}`)
         } else {
             // Fallback: direct queries to Invoice table
             logger.info(`[Analytics Dashboard] MV empty for tenant ${tenantId}, falling back to direct queries`)
+            dataSource.push('invoice_fallback')
             const [fallbackCurrent, fallbackPrevious, fallbackByMonth] = await Promise.all([
                 prisma.invoice.aggregate({
                     where: {
@@ -497,7 +506,7 @@ export async function GET(request: Request) {
         // RESPONSE
         // ============================================
 
-        const response: DashboardResponse = {
+        const response: DashboardResponse & { _meta?: { dataSource: string[]; mvAvailable: boolean } } = {
             summary,
             recentTrends: {
                 revenue: revenueTrend,
@@ -505,6 +514,12 @@ export async function GET(request: Request) {
             },
             alerts: alertItems,
             topKPIs: topKPIsData,
+        }
+
+        // Add metadata about data source for debugging/monitoring
+        response._meta = {
+            dataSource: [...new Set(dataSource)],
+            mvAvailable,
         }
 
         return NextResponse.json({ success: true, data: response })

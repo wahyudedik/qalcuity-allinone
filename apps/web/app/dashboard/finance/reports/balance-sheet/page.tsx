@@ -45,11 +45,83 @@ interface BalanceSheetData {
     generatedAt: string
 }
 
-function AccountTable({ accounts }: { accounts: BalanceSheetAccount[] }) {
+function exportToCsv(data: BalanceSheetData, t: (key: string) => string): void {
+    const headers = [
+        t('finance.reports.balanceSheet.code'),
+        t('finance.reports.balanceSheet.accountName'),
+        t('finance.reports.balanceSheet.balance'),
+        'Section',
+    ]
+
+    const rows: string[][] = []
+
+    // Current Assets
+    for (const acc of data.assets.current.accounts) {
+        rows.push([
+            acc.accountCode,
+            acc.accountName,
+            String(acc.balance),
+            t('finance.reports.balanceSheet.currentAssets'),
+        ])
+    }
+    // Non-Current Assets
+    for (const acc of data.assets.nonCurrent.accounts) {
+        rows.push([
+            acc.accountCode,
+            acc.accountName,
+            String(acc.balance),
+            t('finance.reports.balanceSheet.nonCurrentAssets'),
+        ])
+    }
+    // Current Liabilities
+    for (const acc of data.liabilities.current.accounts) {
+        rows.push([
+            acc.accountCode,
+            acc.accountName,
+            String(acc.balance),
+            t('finance.reports.balanceSheet.currentLiabilities'),
+        ])
+    }
+    // Long-Term Liabilities
+    for (const acc of data.liabilities.longTerm.accounts) {
+        rows.push([
+            acc.accountCode,
+            acc.accountName,
+            String(acc.balance),
+            t('finance.reports.balanceSheet.longTermLiabilities'),
+        ])
+    }
+    // Equity
+    for (const acc of data.equity.accounts) {
+        rows.push([
+            acc.accountCode,
+            acc.accountName,
+            String(acc.balance),
+            t('finance.reports.balanceSheet.equity'),
+        ])
+    }
+
+    const csvContent = [
+        headers.join(','),
+        ...rows.map((row) =>
+            row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')
+        ),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `balance-sheet-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+}
+
+function AccountTable({ accounts, t }: { accounts: BalanceSheetAccount[]; t: (key: string) => string }) {
     if (accounts.length === 0) {
         return (
             <p className="text-sm text-gray-500 dark:text-gray-400 italic py-2">
-                Tidak ada akun
+                {t('finance.reports.balanceSheet.noAccounts')}
             </p>
         )
     }
@@ -57,9 +129,9 @@ function AccountTable({ accounts }: { accounts: BalanceSheetAccount[] }) {
         <table className="w-full text-sm">
             <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="py-2 px-3 text-left font-medium text-gray-500 dark:text-gray-400">Kode</th>
-                    <th className="py-2 px-3 text-left font-medium text-gray-500 dark:text-gray-400">Nama Akun</th>
-                    <th className="py-2 px-3 text-right font-medium text-gray-500 dark:text-gray-400">Saldo</th>
+                    <th className="py-2 px-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('finance.reports.balanceSheet.code')}</th>
+                    <th className="py-2 px-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('finance.reports.balanceSheet.accountName')}</th>
+                    <th className="py-2 px-3 text-right font-medium text-gray-500 dark:text-gray-400">{t('finance.reports.balanceSheet.balance')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -75,14 +147,14 @@ function AccountTable({ accounts }: { accounts: BalanceSheetAccount[] }) {
     )
 }
 
-function SectionBlock({ title, section, bgColor = 'bg-white' }: { title: string; section: BalanceSheetSection; bgColor?: string }) {
+function SectionBlock({ title, section, bgColor = 'bg-white', t }: { title: string; section: BalanceSheetSection; bgColor?: string; t: (key: string) => string }) {
     return (
         <div className={`${bgColor} rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden`}>
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{section.label || title}</h3>
             </div>
             <div className="p-4">
-                <AccountTable accounts={section.accounts} />
+                <AccountTable accounts={section.accounts} t={t} />
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total {title}</span>
                     <span className="text-sm font-bold text-gray-900 dark:text-white font-mono">{formatCurrency(section.total)}</span>
@@ -102,21 +174,21 @@ export default function BalanceSheetPage() {
         async function fetchData() {
             try {
                 const res = await fetch('/api/finance/reports/balance-sheet')
-                if (!res.ok) throw new Error('Gagal memuat neraca')
+                if (!res.ok) throw new Error(t('finance.reports.balanceSheet.failedToLoad'))
                 const json = await res.json()
                 if (json.success && json.data) {
                     setData(json.data)
                 } else {
-                    throw new Error(json.error || 'Gagal memuat data')
+                    throw new Error(json.error || t('finance.reports.balanceSheet.errorOccurred'))
                 }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
+                setError(err instanceof Error ? err.message : t('finance.reports.balanceSheet.errorOccurred'))
             } finally {
                 setLoading(false)
             }
         }
         fetchData()
-    }, [])
+    }, [t])
 
     if (loading) {
         return (
@@ -144,7 +216,7 @@ export default function BalanceSheetPage() {
                     <Link href="/dashboard/finance/reports" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                         <ArrowLeft className="h-5 w-5" />
                     </Link>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Neraca</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('finance.reports.balanceSheet.title')}</h1>
                 </div>
                 <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
                     <div className="flex items-center gap-3">
@@ -152,7 +224,7 @@ export default function BalanceSheetPage() {
                         <div>
                             <p className="text-sm font-medium text-red-800 dark:text-red-300">{error}</p>
                             <button onClick={() => window.location.reload()} className="mt-2 text-sm text-red-600 hover:text-red-800 underline dark:text-red-400">
-                                Coba Lagi
+                                {t('finance.reports.balanceSheet.retry')}
                             </button>
                         </div>
                     </div>
@@ -174,7 +246,7 @@ export default function BalanceSheetPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                             <Scale className="h-6 w-6" />
-                            {t('finance.reports.balanceSheet.title') || 'Neraca'}
+                            {t('finance.reports.balanceSheet.title')}
                         </h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                             Per {new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -182,15 +254,22 @@ export default function BalanceSheetPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => exportToCsv(data, t)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        {t('finance.reports.trialBalance.exportCsv')}
+                    </button>
                     {data.isBalanced ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
                             <CheckCircle className="h-3 w-3" />
-                            Seimbang
+                            {t('finance.reports.balanceSheet.balanced')}
                         </span>
                     ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
                             <XCircle className="h-3 w-3" />
-                            Tidak Seimbang
+                            {t('finance.reports.balanceSheet.unbalanced')}
                         </span>
                     )}
                 </div>
@@ -198,13 +277,13 @@ export default function BalanceSheetPage() {
 
             {/* Assets */}
             <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Aset (Assets)</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">{t('finance.reports.balanceSheet.assets')}</h2>
                 <div className="space-y-4">
-                    <SectionBlock title="Aset Lancar" section={data.assets.current} bgColor="bg-blue-50/50 dark:bg-blue-900/10" />
-                    <SectionBlock title="Aset Tidak Lancar" section={data.assets.nonCurrent} bgColor="bg-blue-50/50 dark:bg-blue-900/10" />
+                    <SectionBlock title={t('finance.reports.balanceSheet.currentAssets')} section={data.assets.current} bgColor="bg-blue-50/50 dark:bg-blue-900/10" t={t} />
+                    <SectionBlock title={t('finance.reports.balanceSheet.nonCurrentAssets')} section={data.assets.nonCurrent} bgColor="bg-blue-50/50 dark:bg-blue-900/10" t={t} />
                     <div className="rounded-lg border-2 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4 py-3">
                         <div className="flex justify-between items-center">
-                            <span className="text-sm font-bold text-blue-800 dark:text-blue-300">Total Aset</span>
+                            <span className="text-sm font-bold text-blue-800 dark:text-blue-300">{t('finance.reports.balanceSheet.totalAssets')}</span>
                             <span className="text-lg font-bold text-blue-900 dark:text-blue-200 font-mono">{formatCurrency(data.assets.total)}</span>
                         </div>
                     </div>
@@ -213,13 +292,13 @@ export default function BalanceSheetPage() {
 
             {/* Liabilities */}
             <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Kewajiban (Liabilities)</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">{t('finance.reports.balanceSheet.liabilities')}</h2>
                 <div className="space-y-4">
-                    <SectionBlock title="Kewajiban Lancar" section={data.liabilities.current} bgColor="bg-orange-50/50 dark:bg-orange-900/10" />
-                    <SectionBlock title="Kewajiban Jangka Panjang" section={data.liabilities.longTerm} bgColor="bg-orange-50/50 dark:bg-orange-900/10" />
+                    <SectionBlock title={t('finance.reports.balanceSheet.currentLiabilities')} section={data.liabilities.current} bgColor="bg-orange-50/50 dark:bg-orange-900/10" t={t} />
+                    <SectionBlock title={t('finance.reports.balanceSheet.longTermLiabilities')} section={data.liabilities.longTerm} bgColor="bg-orange-50/50 dark:bg-orange-900/10" t={t} />
                     <div className="rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 px-4 py-3">
                         <div className="flex justify-between items-center">
-                            <span className="text-sm font-bold text-orange-800 dark:text-orange-300">Total Kewajiban</span>
+                            <span className="text-sm font-bold text-orange-800 dark:text-orange-300">{t('finance.reports.balanceSheet.totalLiabilities')}</span>
                             <span className="text-lg font-bold text-orange-900 dark:text-orange-200 font-mono">{formatCurrency(data.liabilities.total)}</span>
                         </div>
                     </div>
@@ -228,9 +307,9 @@ export default function BalanceSheetPage() {
 
             {/* Equity */}
             <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Ekuitas (Equity)</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">{t('finance.reports.balanceSheet.equity')}</h2>
                 <div className="space-y-4">
-                    <SectionBlock title="Ekuitas" section={data.equity} bgColor="bg-purple-50/50 dark:bg-purple-900/10" />
+                    <SectionBlock title={t('finance.reports.balanceSheet.equity')} section={data.equity} bgColor="bg-purple-50/50 dark:bg-purple-900/10" t={t} />
                 </div>
             </div>
 
@@ -238,15 +317,15 @@ export default function BalanceSheetPage() {
             <div className="rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 p-6">
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Kewajiban + Ekuitas</span>
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('finance.reports.balanceSheet.totalLiabilitiesAndEquity')}</span>
                         <span className="text-sm font-bold text-gray-900 dark:text-white font-mono">{formatCurrency(data.totalLiabilitiesAndEquity)}</span>
                     </div>
                     <div className="flex justify-between items-center pt-3 border-t border-gray-300 dark:border-gray-600">
-                        <span className="text-base font-bold text-gray-900 dark:text-white">Total Aset</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-white">{t('finance.reports.balanceSheet.totalAssets')}</span>
                         <span className="text-lg font-bold text-gray-900 dark:text-white font-mono">{formatCurrency(data.assets.total)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-base font-bold text-gray-900 dark:text-white">Total Kewajiban + Ekuitas</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-white">{t('finance.reports.balanceSheet.totalLiabilitiesAndEquity')}</span>
                         <span className="text-lg font-bold text-gray-900 dark:text-white font-mono">{formatCurrency(data.totalLiabilitiesAndEquity)}</span>
                     </div>
                 </div>
@@ -254,7 +333,7 @@ export default function BalanceSheetPage() {
 
             {/* Footer */}
             <p className="text-xs text-gray-400 dark:text-gray-500 text-right">
-                Dibuat: {new Date(data.generatedAt).toLocaleString('id-ID')}
+                {t('finance.reports.balanceSheet.generatedAt')} {new Date(data.generatedAt).toLocaleString('id-ID')}
             </p>
         </div>
     )

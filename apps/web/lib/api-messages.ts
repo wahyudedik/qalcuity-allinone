@@ -356,6 +356,15 @@ export const MSG = {
     PASSWORD_DOES_NOT_MEET_POLICY: 'Password does not meet the tenant password policy requirements',
     PASSWORD_REUSED: 'Password was recently used and cannot be reused',
     PASSWORD_POLICY_UPDATED: 'Password policy updated successfully',
+
+    // -----------------------------------------------------------------------
+    // Session Management
+    // -----------------------------------------------------------------------
+    SESSION_REVOKED: 'Session revoked successfully',
+    SESSION_CANNOT_REVOKE_CURRENT: 'Cannot revoke your current session',
+    SESSIONS_REVOKED_ALL: 'All other sessions revoked successfully',
+    SESSION_TRACK_FAILED: 'Failed to track session',
+    SESSION_CLEANUP_SUCCESS: 'Expired sessions cleaned up successfully',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

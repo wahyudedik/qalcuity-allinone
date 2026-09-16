@@ -26,6 +26,8 @@ function getTasks(): CronTask[] {
     const { runStockAlert } = require('@/lib/stock-alert-handler');
     const { runRecurringInvoice } = require('@/lib/recurring-invoice-handler');
     const { runAnomalyScanCron } = require('@/lib/ai/anomaly-scan-handler');
+    const { runRefreshAnalyticsViews } = require('@/lib/analytics-refresh-handler');
+    const { cleanupExpiredSessions } = require('@/lib/session-tracker');
 
     _tasks = [
         {
@@ -54,6 +56,20 @@ function getTasks(): CronTask[] {
             name: 'Anomaly Detection Scan',
             schedule: { type: 'daily', hour: 2, minute: 0 }, // 02:00 WIB (local timezone)
             handler: runAnomalyScanCron,
+            enabled: true,
+        },
+        {
+            id: 'refresh-analytics-views',
+            name: 'Refresh Analytics Materialized Views',
+            schedule: { type: 'interval', intervalHours: 6 }, // Every 6 hours
+            handler: runRefreshAnalyticsViews,
+            enabled: true,
+        },
+        {
+            id: 'cleanup-sessions',
+            name: 'Cleanup Expired Sessions',
+            schedule: { type: 'daily', hour: 3, minute: 0 }, // 03:00 WIB (local timezone)
+            handler: cleanupExpiredSessions,
             enabled: true,
         },
     ];

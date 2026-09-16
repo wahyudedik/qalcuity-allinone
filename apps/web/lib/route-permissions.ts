@@ -39,6 +39,8 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/reports/balance-sheet': { permission: 'reports:view', fallbackRole: 'ADMIN' },
     '/api/finance/reports/income-statement': { permission: 'reports:view', fallbackRole: 'ADMIN' },
     '/api/finance/reports/trial-balance': { permission: 'reports:view', fallbackRole: 'ADMIN' },
+    '/api/finance/reports/cash-flow': { permission: 'reports:view', fallbackRole: 'ADMIN' },
+    '/api/finance/reports/general-ledger': { permission: 'reports:view', fallbackRole: 'ADMIN' },
 
     // ─── CRM ──────────────────────────────────────────────────────────────────
     '/api/crm/contacts': { permission: 'crm:view', fallbackRole: 'ADMIN' },
@@ -142,6 +144,10 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/settings/profile': { permission: 'settings:view', fallbackRole: 'MEMBER' },
     '/api/settings/control-engine': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
     '/api/settings/password-policy': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
+    '/api/settings/sessions': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/sessions/[id]': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/sessions/revoke-all': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/auth/session-track': { permission: 'settings:view', fallbackRole: 'MEMBER' },
     // ─── Billing ──────────────────────────────────────────────────────────────
     '/api/billing/admin': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
     '/api/billing/entitlement': { permission: 'billing:view', fallbackRole: 'ADMIN' },
@@ -177,6 +183,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/analytics/reports/[id]/execute': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/scheduled': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/refresh': { permission: 'analytics:edit', fallbackRole: 'SUPERADMIN' },
+    '/api/analytics/refresh-views': { permission: 'analytics:edit', fallbackRole: 'ADMIN' },
 
     // ─── Reports ──────────────────────────────────────────────────────────────
     '/api/reports': { permission: 'reports:view', fallbackRole: 'ADMIN' },
@@ -246,12 +253,16 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/cron/payment-reminder': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/stock-alert': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    '/api/cron/refresh-analytics': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
 
     // ─── WhatsApp Business API ────────────────────────────────────────────────
     '/api/settings/integrations/whatsapp/test': { permission: 'system:admin', fallbackRole: 'ADMIN' },
 
     // ─── Auth (Change Password) ──────────────────────────────────────────────
     '/api/auth/change-password': { permission: 'settings:view', fallbackRole: 'MEMBER' },
+
+    // ─── API Documentation ────────────────────────────────────────────────────
+    '/api/docs': { permission: 'system:view', fallbackRole: 'MEMBER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────
