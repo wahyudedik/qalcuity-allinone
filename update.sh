@@ -8,6 +8,7 @@
 # App URL: https://qalcuity.com
 # ============================================================================
 # Jalankan manual: sudo ./update.sh
+#                  sudo ./update.sh --force  (rebuild tanpa update baru)
 # Atau otomatis via cron (sudah di-setup oleh deploy.sh)
 # ============================================================================
 
@@ -34,6 +35,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+
+# --- Parse Command Flags ---
+FORCE_UPDATE=false
+if [[ "$1" == "--force" ]]; then
+    FORCE_UPDATE=true
+fi
 
 # --- Re-exec Guard ---
 # Re-exec mechanism: jika update.sh berubah setelah git pull,
@@ -79,8 +86,12 @@ log "🚀 Memulai update Qalcuity..."
 log "📅 Waktu: $(date '+%Y-%m-%d %H:%M:%S WIB')"
 log "📂 Direktori: $APP_DIR"
 
+if [ "$FORCE_UPDATE" = true ]; then
+    log "⚠️  Force mode aktif"
+fi
+
 # --- Re-exec: Simpan hash script sebelum git pull ---
-# Digunakan di Step 4 untuk mendeteksi apakah update.sh berubah setelah pull.
+# Digunakan di Step 3 untuk mendeteksi apakah update.sh berubah setelah pull.
 # Jika berubah, script akan re-exec dirinya sendiri dengan versi baru.
 SCRIPT_HASH_BEFORE=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
 
@@ -98,31 +109,8 @@ if ! command -v node &> /dev/null; then
 fi
 print_success "Node.js $(node -v) | pnpm $(pnpm -v)"
 
-# --- 3. Backup database PostgreSQL ---
-print_step "3/8 - Backup database"
-BACKUP_DIR="$APP_DIR/backups"
-mkdir -p "$BACKUP_DIR"
-BACKUP_FILE="$BACKUP_DIR/pg_backup_$(date '+%Y%m%d_%H%M%S').sql"
-
-# Backup PostgreSQL via aaPanel path
-if [ -x "$PG_BIN/pg_dump" ]; then
-    $PG_BIN/pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null || true
-    if [ -s "$BACKUP_FILE" ]; then
-        print_success "PostgreSQL backup: $BACKUP_FILE"
-    else
-        print_warning "Backup kosong (database mungkin belum ada)"
-        rm -f "$BACKUP_FILE"
-    fi
-else
-    print_warning "pg_dump tidak ditemukan di $PG_BIN, skip backup"
-fi
-
-# Bersihkan backup lama (>30 hari)
-find "$BACKUP_DIR" -name "*.sql" -mtime +30 -delete 2>/dev/null || true
-find "$BACKUP_DIR" -name "*.db" -mtime +30 -delete 2>/dev/null || true
-
-# --- 4. Cek ada update baru ---
-print_step "4/8 - Cek update terbaru dari repository"
+# --- 3. Cek ada update baru ---
+print_step "3/8 - Cek update terbaru dari repository"
 
 # Simpan commit hash sebelum update
 COMMIT_BEFORE=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
@@ -135,10 +123,64 @@ HAS_UPDATE=false
 
 if [ "$COMMIT_BEFORE" != "$COMMIT_AFTER" ]; then
     HAS_UPDATE=true
-    echo -e "${YELLOW}📥 Update ditemukan!${NC}"
-    echo -e "   Sebelum: ${COMMIT_BEFORE:0:7}"
-    echo -e "   Sesudah: ${COMMIT_AFTER:0:7}"
+    echo -e "${GREEN}✅ Update ditemukan: ${COMMIT_BEFORE:0:7} → ${COMMIT_AFTER:0:7}${NC}"
+else
+    echo -e "${GREEN}ℹ️  Tidak ada update baru. Commit: ${COMMIT_BEFORE:0:7}${NC}"
+fi
 
+# Tampilkan info force mode jika aktif
+if [ "$FORCE_UPDATE" = true ]; then
+    echo -e "${YELLOW}⚠️  Force mode: rebuild meski tidak ada update${NC}"
+fi
+
+# Early exit jika tidak ada update dan tidak force
+if [ "$HAS_UPDATE" = "false" ] && [ "$FORCE_UPDATE" = false ]; then
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════${NC}"
+    echo -e "${GREEN}✅ Tidak ada update baru. Script selesai.${NC}"
+    echo -e "${GREEN}   Gunakan --force untuk rebuild manual.${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════${NC}"
+    log "Tidak ada update baru — early exit"
+    exit 0
+fi
+
+# --- 4. Backup database PostgreSQL ---
+# Backup hanya dilakukan jika ada update baru atau force mode
+# (lebih efisien — skip backup jika tidak ada perubahan code)
+if [ "$HAS_UPDATE" = "true" ]; then
+    print_step "4/8 - Backup database (sebelum apply update)"
+elif [ "$FORCE_UPDATE" = true ]; then
+    print_step "4/8 - Backup database (force mode)"
+fi
+
+BACKUP_DIR="$APP_DIR/backups"
+BACKUP_FILE=""
+mkdir -p "$BACKUP_DIR"
+
+if [ "$HAS_UPDATE" = "true" ] || [ "$FORCE_UPDATE" = true ]; then
+    BACKUP_FILE="$BACKUP_DIR/pg_backup_$(date '+%Y%m%d_%H%M%S').sql"
+
+    # Backup PostgreSQL via aaPanel path
+    if [ -x "$PG_BIN/pg_dump" ]; then
+        $PG_BIN/pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null || true
+        if [ -s "$BACKUP_FILE" ]; then
+            print_success "PostgreSQL backup: $BACKUP_FILE"
+        else
+            print_warning "Backup kosong (database mungkin belum ada)"
+            rm -f "$BACKUP_FILE"
+            BACKUP_FILE=""
+        fi
+    else
+        print_warning "pg_dump tidak ditemukan di $PG_BIN, skip backup"
+    fi
+
+    # Bersihkan backup lama (>30 hari)
+    find "$BACKUP_DIR" -name "*.sql" -mtime +30 -delete 2>/dev/null || true
+    find "$BACKUP_DIR" -name "*.db" -mtime +30 -delete 2>/dev/null || true
+fi
+
+# --- Apply update (git pull) ---
+if [ "$HAS_UPDATE" = "true" ]; then
     # Pull update — stash local changes dulu jika ada
     STASHED=false
     if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
@@ -170,10 +212,7 @@ if [ "$COMMIT_BEFORE" != "$COMMIT_AFTER" ]; then
         fi
     fi
 else
-    echo ""
-    echo -e "${GREEN}ℹ️  Tidak ada update baru. Aplikasi sudah versi terbaru.${NC}"
-    echo -e "${GREEN}   Commit: ${COMMIT_BEFORE:0:7}${NC}"
-    echo ""
+    echo -e "${GREEN}ℹ️  Force mode — skip git pull (sudah versi terbaru)${NC}"
 fi
 
 # --- 5. Install dependencies ---
@@ -223,12 +262,12 @@ if [ "$HAS_UPDATE" = "true" ]; then
         print_success "Tidak ada perubahan dependency, skip"
     fi
 else
-    # Tidak ada update baru — tetap pastikan dependencies ter-install dengan benar
+    # Force mode tanpa update — tetap pastikan dependencies ter-install dengan benar
     if ! pnpm install --frozen-lockfile 2>/dev/null; then
         print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa"
         pnpm install
     fi
-    print_success "Dependencies verified (no update — consistency check)"
+    print_success "Dependencies verified (force mode — consistency check)"
 fi
 
 # --- 5b. Fix node_modules binary permissions ---
@@ -572,8 +611,21 @@ echo -e "${BLUE}================================================${NC}"
 echo ""
 echo -e "📅 Waktu update   : $(date '+%Y-%m-%d %H:%M:%S WIB')"
 echo -e "🔀 Branch         : ${GREEN}$BRANCH${NC}"
-echo -e "📝 Commit         : ${GREEN}${COMMIT_AFTER:0:7}${NC}"
-echo -e "📦 Backup         : ${GREEN}$BACKUP_FILE${NC}"
+echo -e "📝 Commit         : ${GREEN}${COMMIT_BEFORE:0:7} → ${COMMIT_AFTER:0:7}${NC}"
+if [ "$HAS_UPDATE" = "true" ]; then
+    echo -e "📥 Update         : ${GREEN}Yes — code diperbarui${NC}"
+else
+    echo -e "📥 Update         : ${YELLOW}No — force rebuild${NC}"
+fi
+echo -e "🔨 Build          : ${GREEN}Yes${NC}"
+echo -e "🔄 Restart        : ${GREEN}Yes${NC}"
+if [ -n "$BACKUP_FILE" ] && [ -f "$BACKUP_FILE" ]; then
+    echo -e "📦 Backup         : ${GREEN}$BACKUP_FILE${NC}"
+elif [ "$FORCE_UPDATE" = true ] && [ "$HAS_UPDATE" = "false" ]; then
+    echo -e "📦 Backup         : ${YELLOW}Skipped (force mode, no code change)${NC}"
+else
+    echo -e "📦 Backup         : ${YELLOW}Skipped (pg_dump unavailable)${NC}"
+fi
 echo -e "🌐 URL            : ${GREEN}https://qalcuity.com${NC}"
 echo ""
 echo -e "${YELLOW}📋 Log file: $LOG_FILE${NC}"
