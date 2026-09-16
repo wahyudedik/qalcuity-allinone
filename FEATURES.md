@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 15, 2026 (Session 38-44: Full i18n Migration Complete — v11.30.0)
+**Last Updated:** September 16, 2026 (Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs — v11.38.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 29.0 — Session 44: Full i18n migration complete (Sessions 38-44: 350+ keys added, 300+ hardcoded strings replaced across all modules — Dashboard, Sidebar, Header, Shared Components, HR, POS, Finance, CRM, Inventory, Settings, Control Engine). Session 35: Sprint 34 POS Void UI fix, Bills & Expenses, WhatsApp foundation. Session 33: POS critical fixes. Session 32: Aging Report, Dashboard real DB queries. Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Unified Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time routes.
+**Document Version:** 30.0 — Session 52: Financial Statements Enhancement (Cash Flow Statement, General Ledger, i18n, CSV export for all 5 reports), Analytics Read Model (12 materialized views, read model service, refresh API, cron task), Multi-device Session Control (session tracking, management UI, revoke, cleanup cron), API Documentation (OpenAPI 3.0 spec, Swagger UI, 53 endpoints). Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -145,7 +145,9 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 | **General Ledger** | ✅ `implemented` | 2026-09-01 | Journal Entry CRUD with double-entry validation, Prisma models |
 | **Journal Entry** | ✅ `implemented` | 2026-09-01 | CRUD + UI page + Zod validation (debit = credit), Batch 7C |
 | **Trial Balance** | ✅ `implemented` | 2026-09-04 | API route + UI page, debet = kredit validation |
-| **Financial Statements** | ✅ `implemented` | 2026-09-04 | Balance Sheet, Income Statement report APIs + UI |
+| **Financial Statements** | 🚀 `production_ready` | 2026-09-16 | 5 reports: Balance Sheet, Income Statement, Cash Flow Statement, General Ledger, Trial Balance — full i18n + CSV export — [`apps/web/app/dashboard/finance/reports/`](apps/web/app/dashboard/finance/reports/) |
+| **Cash Flow Statement** | 🚀 `production_ready` | 2026-09-16 | Arus kas dari aktivitas operasi, investasi, dan pendanaan — API + UI + i18n + CSV export — [`apps/web/app/api/finance/reports/cash-flow/route.ts`](apps/web/app/api/finance/reports/cash-flow/route.ts) |
+| **General Ledger** | 🚀 `production_ready` | 2026-09-16 | Buku besar dengan detail jurnal entri per akun, saldo berjalan — API + UI + i18n + CSV export — [`apps/web/app/api/finance/reports/general-ledger/route.ts`](apps/web/app/api/finance/reports/general-ledger/route.ts) |
 
 ### 2.2 Accounts Receivable
 
@@ -539,7 +541,7 @@ Omnichannel support yang terintegrasi.
 | **Data Lineage** | 📋 `planned` | — | Track metric origins and transformations: Revenue → Invoice → InvoiceItem → Product → COGS. Interactive lineage graph |
 | **Anomaly Detection** | 🚀 `production_ready` | 2026-09-10 | Deteksi anomali statistik: 12 rule-based rules + AI enrichment, severity levels (Critical/High/Medium/Low), cron daily 02:00, API + UI — [`apps/web/lib/ai/anomaly-detection.ts`](apps/web/lib/ai/anomaly-detection.ts), [`/api/ai/anomalies`](apps/web/app/api/ai/anomalies/) |
 | **Forecasting** | 📋 `planned` | — | Prediksi time series: sales forecasting, cash flow prediction, inventory demand. Time series algorithms |
-| **Analytics Read Model** | 🔄 `partial` | 2026-09-10 | 3 materialized views (`mv_daily_revenue`, `mv_top_products`, `mv_pos_sales_summary`), refresh function, API route `/api/analytics/refresh`, dashboard uses MVs with fallback |
+| **Analytics Read Model** | ✅ `implemented` | 2026-09-16 | 12 materialized views (daily_revenue, top_products, pos_sales_summary, customer_lifetime_value, inventory_turnover, hr_headcount, sales_pipeline, expense_by_category, payment_methods, tax_summary, project_profitability, anomaly_trends), read model service ([`apps/web/lib/analytics/read-model.ts`](apps/web/lib/analytics/read-model.ts)), refresh API ([`/api/analytics/refresh-views`](apps/web/app/api/analytics/refresh-views/route.ts)), cron task every 6 hours, dashboard wired with MV fallback |
 | **Industry Analytics** | 📋 `planned` | — | Configurable analytics templates per industri: Retail, Manufacturing, Construction, Service |
 | **Advanced Segmentation** | 📋 `planned` | — | Customer/product segmentation: clustering algorithms, behavioral segmentation, RFM analysis |
 
@@ -685,10 +687,10 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **REST API** | 🔄 `partial` | — | 400+ handlers across 228 route files, belum public API documentation |
+| **REST API** | ✅ `implemented` | 2026-09-16 | 400+ handlers across 228 route files, documented via OpenAPI 3.0 spec — [`apps/web/lib/api-docs/openapi-spec.ts`](apps/web/lib/api-docs/openapi-spec.ts) |
 | **GraphQL** | 📋 `planned` | — | Belum ada kode |
 | **Webhook** | 📋 `planned` | — | Belum ada kode |
-| **API Documentation** | 📋 `planned` | — | Belum ada kode |
+| **API Documentation** | ✅ `implemented` | 2026-09-16 | OpenAPI 3.0 spec (53 endpoints, 9 tags) + Swagger UI via CDN — [`/api/docs`](apps/web/app/api/docs/route.ts), [`/dashboard/api-docs`](apps/web/app/dashboard/api-docs/page.tsx) |
 | **OAuth 2.0** | 📋 `planned` | — | Belum ada kode |
 
 ### 10.6 Automation Connectors
@@ -727,7 +729,7 @@ Enterprise-grade security untuk data protection.
 | **SSO** | 📋 `planned` | — | Belum ada kode |
 | **2FA (TOTP)** | ✅ `implemented` | 2026-09-03 | RFC 6238 compliant TOTP implementation — enable/disable/verify flow, backup codes ([`apps/web/lib/totp.ts`](apps/web/lib/totp.ts), [`apps/web/app/api/settings/security/2fa/route.ts`](apps/web/app/api/settings/security/2fa/route.ts)) |
 | **Password Policy** | ✅ `implemented` | 2026-08-31 | Min 8 chars enforced in register route, password change API ([`apps/web/app/api/settings/security/password/route.ts`](apps/web/app/api/settings/security/password/route.ts)) |
-| **Session Management** | ✅ `implemented` | 2026-09-03 | Multi-device session tracking — UserSession model, active sessions list, revoke session ([`apps/web/app/api/settings/security/sessions/route.ts`](apps/web/app/api/settings/security/sessions/route.ts)) |
+| **Session Management** | 🚀 `production_ready` | 2026-09-16 | Multi-device session control — max 5 sessions per user, session tracker service ([`apps/web/lib/session-tracker.ts`](apps/web/lib/session-tracker.ts)), session management UI ([`/dashboard/settings/sessions`](apps/web/app/dashboard/settings/sessions/page.tsx)), revoke individual/all sessions, daily cleanup cron 03:00 WIB |
 | **Login History** | ✅ `implemented` | 2026-09-03 | LoginLog model — IP address, user agent, success/failure tracking, pagination ([`apps/web/app/api/settings/security/login-history/route.ts`](apps/web/app/api/settings/security/login-history/route.ts)) |
 | **CSP Headers** | ✅ `implemented` | 2026-08-31 | Content-Security-Policy di middleware.ts + next.config.js — `unsafe-eval` removed |
 | **CORS Configuration** | ✅ `implemented` | 2026-08-31 | Explicit CORS config di next.config.js |

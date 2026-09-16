@@ -7,6 +7,8 @@ import {
     Scale,
     TrendingUp,
     ClipboardList,
+    Banknote,
+    BookOpen,
     Loader2,
     AlertCircle,
 } from 'lucide-react'
@@ -34,6 +36,20 @@ const reports = [
         color: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
         borderColor: 'border-purple-200 dark:border-purple-800',
     },
+    {
+        key: 'cashFlow',
+        icon: Banknote,
+        href: '/dashboard/finance/reports/cash-flow',
+        color: 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400',
+        borderColor: 'border-teal-200 dark:border-teal-800',
+    },
+    {
+        key: 'generalLedger',
+        icon: BookOpen,
+        href: '/dashboard/finance/reports/general-ledger',
+        color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+    },
 ]
 
 export default function FinanceReportsPage() {
@@ -52,7 +68,7 @@ export default function FinanceReportsPage() {
                     <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
                 </div>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length: 5 }).map((_, i) => (
                         <div key={i} className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                             <div className="h-12 w-12 bg-gray-200 rounded-lg animate-pulse" />
                             <div className="h-5 w-40 bg-gray-200 rounded animate-pulse mt-4" />

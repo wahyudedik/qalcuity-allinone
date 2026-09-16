@@ -94,6 +94,11 @@ export default function SettingsLayout({
             description: t('settings.notificationsDesc') || 'Pengaturan notifikasi',
         },
         {
+            name: t('settings.sessions.title') || 'Sesi Perangkat',
+            href: '/dashboard/settings/sessions',
+            description: t('settings.sessions.layoutDesc') || 'Kelola sesi login aktif',
+        },
+        {
             name: t('settings.security') || 'Keamanan',
             href: '/dashboard/settings/security',
             description: t('settings.securityDesc') || 'Password dan keamanan akun',
@@ -112,6 +117,11 @@ export default function SettingsLayout({
             name: t('settings.controlEngine.title') || 'Control Engine',
             href: '/dashboard/settings/control-engine',
             description: t('settings.controlEngine.description') || 'Kelola semua konfigurasi platform',
+        },
+        {
+            name: t('apiDocs.title') || 'API Documentation',
+            href: '/dashboard/api-docs',
+            description: t('apiDocs.shortDesc') || 'Dokumentasi API interaktif',
         },
     ]
 
