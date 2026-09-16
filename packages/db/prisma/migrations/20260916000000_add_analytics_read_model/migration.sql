@@ -136,7 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_mv_accounts_payable_aging_supplier
 -- Source: InvoiceItem + Product
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_top_products AS
 SELECT
-    ii."tenantId",
+    i."tenantId",
     ii."productId",
     p.name AS "productName",
     p.sku AS "productSku",
@@ -148,7 +148,7 @@ JOIN "Invoice" i ON i.id = ii."invoiceId"
 LEFT JOIN "Product" p ON p.id = ii."productId"
 WHERE i.status IN ('SENT', 'PAID', 'OVERDUE')
   AND ii."productId" IS NOT NULL
-GROUP BY ii."tenantId", ii."productId", p.name, p.sku;
+GROUP BY i."tenantId", ii."productId", p.name, p.sku;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_top_products_pk
     ON mv_top_products ("tenantId", "productId");
@@ -220,7 +220,7 @@ CREATE INDEX IF NOT EXISTS idx_mv_inventory_summary_status
 -- Source: InvoiceItem + Product + Category
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_sales_by_category AS
 SELECT
-    ii."tenantId",
+    i."tenantId",
     p."categoryId",
     c.name AS "categoryName",
     COALESCE(SUM(ii.total), 0)::double precision AS "totalRevenue",
@@ -232,7 +232,7 @@ LEFT JOIN "Product" p ON p.id = ii."productId"
 LEFT JOIN "Category" c ON c.id = p."categoryId"
 WHERE i.status IN ('SENT', 'PAID', 'OVERDUE')
   AND p."categoryId" IS NOT NULL
-GROUP BY ii."tenantId", p."categoryId", c.name;
+GROUP BY i."tenantId", p."categoryId", c.name;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_sales_by_category_pk
     ON mv_sales_by_category ("tenantId", "categoryId");
