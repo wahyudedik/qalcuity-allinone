@@ -149,8 +149,11 @@ export default function LoginPage() {
     useEffect(() => {
         const authError = searchParams?.get('error')
         if (authError) {
-            // All credential errors show the same message for security
-            // (don't reveal which field is wrong)
+            // Log the actual error for debugging (visible in browser console)
+            const errorDesc = searchParams?.get('error_description')
+            console.error('[Login] Auth error:', { error: authError, description: errorDesc })
+
+            // Show user-friendly message (don't reveal internal error details)
             setError(t('auth.errorInvalidCredentials'))
         }
     }, [searchParams, t])

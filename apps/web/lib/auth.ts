@@ -139,6 +139,12 @@ export const authOptions: NextAuthOptions = {
             }
 
             try {
+                logger.info("[Auth] Google OAuth signIn attempt", {
+                    email: user.email,
+                    name: user.name,
+                    provider: account.provider,
+                });
+
                 // Cari user berdasarkan email
                 const existingUser = await prisma.user.findUnique({
                     where: { email: user.email! },
@@ -146,6 +152,18 @@ export const authOptions: NextAuthOptions = {
 
                 if (existingUser) {
                     // User sudah ada — izinkan sign in
+                    logger.info("[Auth] Google OAuth: existing user found", {
+                        userId: existingUser.id,
+                        tenantId: existingUser.tenantId,
+                        role: existingUser.role,
+                    });
+
+                    // CRITICAL: Set tenantId & role on user object so JWT callback
+                    // can store them in the token. Without this, the JWT would have
+                    // undefined values for role/tenantId, breaking dashboard access.
+                    user.tenantId = existingUser.tenantId;
+                    user.role = existingUser.role;
+
                     // Update lastLoginAt (non-blocking)
                     prisma.user.update({
                         where: { id: existingUser.id },
