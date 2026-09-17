@@ -55,6 +55,11 @@ function isGoogleOAuthConfigured(): boolean {
 }
 
 export const authOptions: NextAuthOptions = {
+    // trustHost: REQUIRED — VPS runs behind Nginx reverse proxy (aaPanel).
+    // Without this, NextAuth v4.24+ host validation fails during OAuth redirect flow,
+    // causing OAuthSignin error. See: https://next-auth.js.org/configuration/options#trusthost
+    // @ts-expect-error — trustHost exists at runtime in next-auth v4.24+ but types lag behind
+    trustHost: true,
     providers: [
         // Google OAuth Provider — hanya aktif jika credentials valid
         // Graceful degradation: jika env vars tidak ada atau tidak valid,
@@ -74,6 +79,7 @@ export const authOptions: NextAuthOptions = {
                             prompt: "consent",
                             access_type: "offline",
                             response_type: "code",
+                            url: "https://accounts.google.com/o/oauth2/v2/auth",
                         },
                     },
                 }),
@@ -148,6 +154,13 @@ export const authOptions: NextAuthOptions = {
             if (account?.provider !== "google") {
                 return true;
             }
+
+            // Verbose console logging for OAuth diagnostics (temporary — remove after fix verified)
+            console.log('[Auth] Google sign-in attempt:', {
+                email: user?.email,
+                provider: account?.provider,
+                hasToken: !!account?.access_token,
+            });
 
             try {
                 logger.info("[Auth] Google OAuth signIn attempt", {
@@ -300,5 +313,7 @@ export const authOptions: NextAuthOptions = {
     secret,
     // Debug mode in development — logs OAuth flow details to console.
     // Remove or set to false in production once OAuth is working.
-    debug: process.env.NODE_ENV === "development",
+    // Debug mode — ENABLED temporarily for production OAuth diagnostics.
+    // Remove or revert to `process.env.NODE_ENV === "development"` after OAuth fix is verified.
+    debug: true,
 };
