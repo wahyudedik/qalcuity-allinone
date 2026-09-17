@@ -146,6 +146,8 @@ export default function LoginPage() {
 
     // Detect auth errors from NextAuth redirect (?error=... in URL).
     // When signIn() with redirect:true fails, NextAuth redirects to /login?error=...
+    // Error codes: OAuthSignin, OAuthCallback, OAuthCreateAccount, EmailCreateAccount,
+    //   Callback, OAuthAccountNotLinked, SessionRequired, Default
     useEffect(() => {
         const authError = searchParams?.get('error')
         if (authError) {
@@ -153,8 +155,18 @@ export default function LoginPage() {
             const errorDesc = searchParams?.get('error_description')
             console.error('[Login] Auth error:', { error: authError, description: errorDesc })
 
-            // Show user-friendly message (don't reveal internal error details)
-            setError(t('auth.errorInvalidCredentials'))
+            // Map NextAuth error codes to user-friendly messages
+            // Don't reveal internal error details to end users
+            const errorMessages: Record<string, string> = {
+                'OAuthSignin': 'Gagal memulai login Google. Pastikan login Google telah aktif di pengaturan.',
+                'OAuthCallback': 'Gagal memproses callback dari Google. Silakan coba lagi.',
+                'OAuthCreateAccount': 'Gagal membuat akun dari Google. Silakan coba lagi.',
+                'OAuthAccountNotLinked': 'Email ini sudah terdaftar dengan akun lain. Silakan gunakan login email/password.',
+                'Callback': 'Gagal memproses callback autentikasi. Silakan coba lagi.',
+                'SessionRequired': 'Anda perlu login terlebih dahulu.',
+                'Default': t('auth.errorInvalidCredentials'),
+            }
+            setError(errorMessages[authError] || errorMessages['Default'])
         }
     }, [searchParams, t])
 

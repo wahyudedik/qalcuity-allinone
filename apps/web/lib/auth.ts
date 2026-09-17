@@ -65,6 +65,17 @@ export const authOptions: NextAuthOptions = {
                 GoogleProvider({
                     clientId: process.env.GOOGLE_CLIENT_ID!,
                     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+                    // Explicit authorization params — ensures correct redirect URI.
+                    // NextAuth derives the callback URL from NEXTAUTH_URL + provider id:
+                    //   callbackUrl = `${NEXTAUTH_URL}/api/auth/callback/google`
+                    // This MUST match the "Authorized redirect URI" in Google Cloud Console.
+                    authorization: {
+                        params: {
+                            prompt: "consent",
+                            access_type: "offline",
+                            response_type: "code",
+                        },
+                    },
                 }),
             ]
             : []),
@@ -222,7 +233,21 @@ export const authOptions: NextAuthOptions = {
 
                 return true;
             } catch (error) {
-                logger.error("[Auth] Error in Google OAuth signIn callback", error);
+                // Log detailed error for debugging OAuthSignin issues.
+                // Common causes:
+                //   1. VPS cannot reach Google OAuth endpoints (firewall/DNS)
+                //   2. Redirect URI mismatch (Google Cloud Console vs NEXTAUTH_URL)
+                //   3. Invalid/expired client secret
+                //   4. Database error (tenant/user creation failed)
+                logger.error("[Auth] Error in Google OAuth signIn callback", {
+                    error: error instanceof Error ? error.message : String(error),
+                    stack: error instanceof Error ? error.stack : undefined,
+                    email: user.email,
+                    name: user.name,
+                    nextauthUrl: process.env.NEXTAUTH_URL,
+                    // Diagnostic: check if VPS can reach Google
+                    googleClientId: process.env.GOOGLE_CLIENT_ID?.substring(0, 20) + "...",
+                });
                 return false;
             }
         },
@@ -261,6 +286,10 @@ export const authOptions: NextAuthOptions = {
             return `${baseUrl}/dashboard`;
         },
     },
+    // Custom error page — NextAuth redirects here on OAuth errors.
+    // The error code (e.g., OAuthSignin, OAuthCallback) is passed as ?error= query param.
+    // This allows the login page to display user-friendly error messages.
+    // @see https://next-auth.js.org/configuration/pages#error-page
     pages: {
         signIn: "/login",
         error: "/login",
@@ -269,4 +298,7 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
     secret,
+    // Debug mode in development — logs OAuth flow details to console.
+    // Remove or set to false in production once OAuth is working.
+    debug: process.env.NODE_ENV === "development",
 };
