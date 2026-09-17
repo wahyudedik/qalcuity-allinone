@@ -155,13 +155,6 @@ export const authOptions: NextAuthOptions = {
                 return true;
             }
 
-            // Verbose console logging for OAuth diagnostics (temporary — remove after fix verified)
-            console.log('[Auth] Google sign-in attempt:', {
-                email: user?.email,
-                provider: account?.provider,
-                hasToken: !!account?.access_token,
-            });
-
             try {
                 logger.info("[Auth] Google OAuth signIn attempt", {
                     email: user.email,
@@ -311,9 +304,6 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
     secret,
-    // Debug mode in development — logs OAuth flow details to console.
-    // Remove or set to false in production once OAuth is working.
-    // Debug mode — ENABLED temporarily for production OAuth diagnostics.
-    // Remove or revert to `process.env.NODE_ENV === "development"` after OAuth fix is verified.
-    debug: true,
+    // Debug mode — only enabled in development for OAuth flow diagnostics.
+    debug: process.env.NODE_ENV === "development",
 };
