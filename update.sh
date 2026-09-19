@@ -114,15 +114,42 @@ preflight_checks() {
         exit 1
     fi
 
-    # Check PostgreSQL running
-    if ! systemctl is-active --quiet postgresql 2>/dev/null; then
-        print_warning "PostgreSQL tidak running. Mencoba start..."
-        systemctl start postgresql 2>/dev/null || true
-        sleep 2
-        if ! systemctl is-active --quiet postgresql 2>/dev/null; then
-            print_error "PostgreSQL gagal di-start! Jalankan: systemctl start postgresql"
-            exit 1
+    # Check PostgreSQL — multi-method detection (aaPanel compatible)
+    PG_RUNNING=false
+
+    # Method 1: systemctl (standard)
+    if command -v systemctl &>/dev/null && systemctl is-active --quiet postgresql 2>/dev/null; then
+        PG_RUNNING=true
+        print_success "PostgreSQL detected via systemctl"
+    fi
+
+    # Method 2: pg_isready (system path)
+    if [ "$PG_RUNNING" = false ] && command -v pg_isready &>/dev/null; then
+        if pg_isready -h localhost -p 5432 -q 2>/dev/null; then
+            PG_RUNNING=true
+            print_success "PostgreSQL detected via pg_isready (system)"
         fi
+    fi
+
+    # Method 3: pg_isready (aaPanel path)
+    if [ "$PG_RUNNING" = false ] && [ -x /www/server/pgsql/bin/pg_isready ]; then
+        if /www/server/pgsql/bin/pg_isready -h localhost -p 5432 -q 2>/dev/null; then
+            PG_RUNNING=true
+            print_success "PostgreSQL detected via pg_isready (aaPanel)"
+        fi
+    fi
+
+    # Method 4: TCP port check (last resort)
+    if [ "$PG_RUNNING" = false ]; then
+        if (echo > /dev/tcp/localhost/5432) 2>/dev/null; then
+            PG_RUNNING=true
+            print_success "PostgreSQL detected via port 5432"
+        fi
+    fi
+
+    # Non-fatal: warning only — let Prisma handle connection errors
+    if [ "$PG_RUNNING" = false ]; then
+        print_warning "PostgreSQL tidak terdeteksi. Lanjutkan... (Prisma akan handle connection check)"
     fi
 
     print_success "Pre-flight checks passed"
