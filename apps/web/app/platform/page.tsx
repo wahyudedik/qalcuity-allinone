@@ -252,7 +252,7 @@ export default function PlatformDashboardPage() {
                                 {stats.totalUsers}
                             </p>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {t('platform.dashboardPage.avgPerTenant')} {Math.round(stats.totalUsers / stats.totalTenants)}
+                                {t('platform.dashboardPage.avgPerTenant')} {stats.totalTenants > 0 ? Math.round(stats.totalUsers / stats.totalTenants) : 0}
                             </p>
                         </div>
                         <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/30">

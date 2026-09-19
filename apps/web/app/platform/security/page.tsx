@@ -109,6 +109,9 @@ export default function PlatformSecurityPage() {
                 if (searchQuery) params.set("search", searchQuery);
 
                 const res = await fetch(`/api/platform/security/events?${params.toString()}`);
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch security events: ${res.status}`);
+                }
                 const data = await res.json();
                 if (data.success) {
                     setEvents(data.data.events);

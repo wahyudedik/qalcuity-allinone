@@ -213,15 +213,21 @@ export default function PlatformBillingPage() {
             params.set("limit", "20");
 
             const res = await fetch(`/api/platform/billing?${params.toString()}`);
+            if (!res.ok) {
+                throw new Error(`Failed to fetch billing data: ${res.status}`);
+            }
             const data = await res.json();
             if (data.success && data.data) {
                 setBilling(data.data.overview);
                 setPayments(data.data.paymentHistory);
                 setPaymentsPagination(data.data.pagination);
                 setOverdueInvoices(data.data.overdueInvoices);
+            } else {
+                throw new Error(data.error || "Failed to fetch billing data");
             }
-        } catch {
-            logger.error("[PlatformBilling] Failed to fetch billing data");
+        } catch (error) {
+            logger.error("[PlatformBilling] Failed to fetch billing data:", error);
+            setMessage({ type: "error", text: "Failed to load billing data. Please try again." });
         } finally {
             setLoading(false);
         }
