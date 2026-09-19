@@ -1,633 +1,431 @@
 #!/bin/bash
-# ============================================================================
-# Qalcuity All-in-One — VPS Update Script
-# ============================================================================
-# Deployment: aaPanel Node.js Project Manager
-# Process Manager: aaPanel + PM2 (fallback)
-# App Port: 3000
-# App URL: https://qalcuity.com
-# ============================================================================
-# Jalankan manual: sudo ./update.sh
-#                  sudo ./update.sh --force  (rebuild tanpa update baru)
-# Atau otomatis via cron (sudah di-setup oleh deploy.sh)
-# ============================================================================
+# ============================================================
+# Qalcuity — Update Script (Production VPS)
+# ============================================================
+# Purpose: Pull latest code, run migrations, build, and restart
+# Usage:   sudo bash update.sh [--force]
+# VPS:     /www/wwwroot/qalcuity (aaPanel Node.js Project Manager)
+#
+# Flow:
+#   1. Pre-flight checks (directory, Node.js, PostgreSQL)
+#   2. Backup database
+#   3. Git pull latest code
+#   4. Install dependencies
+#   5. Prisma generate (always)
+#   6. Prisma migrate deploy (if schema or migration files changed)
+#   7. Build Next.js
+#   8. Restart app (aaPanel auto-restart)
+#   9. Health check
+# ============================================================
 
 set -e
 
 # --- Prisma Engine Configuration ---
+# VPS ini tidak bisa download Prisma engine binary dari binaries.prisma.sh
+# Gunakan library engine sebagai workaround
 export PRISMA_QUERY_ENGINE_TYPE=library
 
-# --- Konfigurasi ---
-APP_NAME="qalcuity"
+# --- Configuration ---
 APP_DIR="/www/wwwroot/qalcuity"
-APP_PORT=3000
-LOG_FILE="/var/log/qalcuity-update.log"
 BRANCH="main"
+FORCE_MODE=false
 
-# --- PostgreSQL (aaPanel) ---
-PG_BIN="/www/server/pgsql/bin"
-DB_NAME="qalcuity"
-DB_USER="qalcuity"
+# Parse arguments
+if [ "${1:-}" = "--force" ]; then
+    FORCE_MODE=true
+fi
 
-# --- Warna untuk output ---
+# --- Colors ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
-# --- Parse Command Flags ---
-FORCE_UPDATE=false
-if [[ "$1" == "--force" ]]; then
-    FORCE_UPDATE=true
-fi
-
-# --- Re-exec Guard ---
-# Re-exec mechanism: jika update.sh berubah setelah git pull,
-# script akan re-exec dirinya sendiri agar versi baru ter-load.
-# Gunakan UPDATE_REEXEC env var untuk mencegah infinite loop.
-if [ "$UPDATE_REEXEC" = "1" ]; then
-    echo -e "${GREEN}ℹ️  Re-exec successful — menjalankan versi baru update.sh${NC}"
-fi
-
-# --- Fungsi Logging ---
+# --- Helper Functions ---
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+print_header() {
+    echo ""
+    echo -e "${BLUE}═══════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}   Qalcuity — Update Script (Production)          ${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════${NC}"
+    echo ""
 }
 
 print_step() {
     echo ""
-    log "🔄 $1"
-    echo -e "${YELLOW}----------------------------------------${NC}"
+    log "${CYAN}[$1] $2${NC}"
+    echo -e "${YELLOW}────────────────────────────────────────${NC}"
 }
 
 print_success() {
-    log "✅ $1"
+    log "${GREEN}✅ $1${NC}"
 }
 
 print_warning() {
-    log "⚠️  $1"
+    log "${YELLOW}⚠️  $1${NC}"
 }
 
 print_error() {
-    log "❌ $1"
-    exit 1
+    log "${RED}❌ $1${NC}"
+}
+
+print_info() {
+    log "${CYAN}ℹ️  $1${NC}"
 }
 
 # ============================================================
-# MAIN UPDATE EXECUTION
+# Step 1: Pre-flight Checks
 # ============================================================
-echo ""
-echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}   Qalcuity - Update Script                      ${NC}"
-echo -e "${BLUE}================================================${NC}"
-echo ""
-log "🚀 Memulai update Qalcuity..."
-log "📅 Waktu: $(date '+%Y-%m-%d %H:%M:%S WIB')"
-log "📂 Direktori: $APP_DIR"
+preflight_checks() {
+    print_step "1/8" "Pre-flight checks"
 
-if [ "$FORCE_UPDATE" = true ]; then
-    log "⚠️  Force mode aktif"
-fi
+    # Check root
+    if [ "$EUID" -ne 0 ]; then
+        print_error "Script ini harus dijalankan sebagai root! Gunakan: sudo bash update.sh"
+        exit 1
+    fi
 
-# --- Re-exec: Simpan hash script sebelum git pull ---
-# Digunakan di Step 3 untuk mendeteksi apakah update.sh berubah setelah pull.
-# Jika berubah, script akan re-exec dirinya sendiri dengan versi baru.
-SCRIPT_HASH_BEFORE=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
+    # Check app directory
+    if [ ! -d "$APP_DIR" ]; then
+        print_error "Direktori $APP_DIR tidak ditemukan! Jalankan deploy.sh terlebih dahulu."
+        exit 1
+    fi
 
-# --- 1. Cek direktori ---
-print_step "1/8 - Cek direktori aplikasi"
-if [ ! -d "$APP_DIR" ]; then
-    print_error "Direktori $APP_DIR tidak ditemukan! Jalankan deploy.sh terlebih dahulu."
-fi
-cd "$APP_DIR"
+    # Check Node.js
+    if ! command -v node &> /dev/null; then
+        print_error "Node.js tidak ditemukan!"
+        exit 1
+    fi
 
-# --- 2. Cek Node.js ---
-print_step "2/8 - Cek Node.js environment"
-if ! command -v node &> /dev/null; then
-    print_error "Node.js tidak ditemukan!"
-fi
-print_success "Node.js $(node -v) | pnpm $(pnpm -v)"
+    # Check pnpm
+    if ! command -v pnpm &> /dev/null; then
+        print_error "pnpm tidak ditemukan! Install: npm install -g pnpm"
+        exit 1
+    fi
 
-# --- 3. Cek ada update baru ---
-print_step "3/8 - Cek update terbaru dari repository"
+    # Check git
+    if ! command -v git &> /dev/null; then
+        print_error "Git tidak ditemukan!"
+        exit 1
+    fi
 
-# Simpan commit hash sebelum update
-COMMIT_BEFORE=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
-
-# Fetch & cek
-git fetch origin "$BRANCH"
-COMMIT_AFTER=$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo "unknown")
-
-HAS_UPDATE=false
-
-if [ "$COMMIT_BEFORE" != "$COMMIT_AFTER" ]; then
-    HAS_UPDATE=true
-    echo -e "${GREEN}✅ Update ditemukan: ${COMMIT_BEFORE:0:7} → ${COMMIT_AFTER:0:7}${NC}"
-else
-    echo -e "${GREEN}ℹ️  Tidak ada update baru. Commit: ${COMMIT_BEFORE:0:7}${NC}"
-fi
-
-# Tampilkan info force mode jika aktif
-if [ "$FORCE_UPDATE" = true ]; then
-    echo -e "${YELLOW}⚠️  Force mode: rebuild meski tidak ada update${NC}"
-fi
-
-# Early exit jika tidak ada update dan tidak force
-if [ "$HAS_UPDATE" = "false" ] && [ "$FORCE_UPDATE" = false ]; then
-    echo ""
-    echo -e "${GREEN}═══════════════════════════════════════════${NC}"
-    echo -e "${GREEN}✅ Tidak ada update baru. Script selesai.${NC}"
-    echo -e "${GREEN}   Gunakan --force untuk rebuild manual.${NC}"
-    echo -e "${GREEN}═══════════════════════════════════════════${NC}"
-    log "Tidak ada update baru — early exit"
-    exit 0
-fi
-
-# --- 4. Backup database PostgreSQL ---
-# Backup hanya dilakukan jika ada update baru atau force mode
-# (lebih efisien — skip backup jika tidak ada perubahan code)
-if [ "$HAS_UPDATE" = "true" ]; then
-    print_step "4/8 - Backup database (sebelum apply update)"
-elif [ "$FORCE_UPDATE" = true ]; then
-    print_step "4/8 - Backup database (force mode)"
-fi
-
-BACKUP_DIR="$APP_DIR/backups"
-BACKUP_FILE=""
-mkdir -p "$BACKUP_DIR"
-
-if [ "$HAS_UPDATE" = "true" ] || [ "$FORCE_UPDATE" = true ]; then
-    BACKUP_FILE="$BACKUP_DIR/pg_backup_$(date '+%Y%m%d_%H%M%S').sql"
-
-    # Backup PostgreSQL via aaPanel path
-    if [ -x "$PG_BIN/pg_dump" ]; then
-        $PG_BIN/pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null || true
-        if [ -s "$BACKUP_FILE" ]; then
-            print_success "PostgreSQL backup: $BACKUP_FILE"
-        else
-            print_warning "Backup kosong (database mungkin belum ada)"
-            rm -f "$BACKUP_FILE"
-            BACKUP_FILE=""
+    # Check PostgreSQL running
+    if ! systemctl is-active --quiet postgresql 2>/dev/null; then
+        print_warning "PostgreSQL tidak running. Mencoba start..."
+        systemctl start postgresql 2>/dev/null || true
+        sleep 2
+        if ! systemctl is-active --quiet postgresql 2>/dev/null; then
+            print_error "PostgreSQL gagal di-start! Jalankan: systemctl start postgresql"
+            exit 1
         fi
+    fi
+
+    print_success "Pre-flight checks passed"
+    print_success "Node.js $(node -v) | pnpm $(pnpm -v) | Git $(git --version | cut -d' ' -f3)"
+}
+
+# ============================================================
+# Step 2: Backup Database
+# ============================================================
+backup_database() {
+    print_step "2/8" "Backup database"
+
+    local PG_BIN="/www/server/pgsql/bin"
+    local DB_NAME="qalcuity"
+    local BACKUP_DIR="$APP_DIR/backups"
+    local TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
+    local BACKUP_FILE="$BACKUP_DIR/db_backup_$TIMESTAMP.sql.gz"
+
+    mkdir -p "$BACKUP_DIR"
+
+    # Backup using pg_dump
+    if command -v pg_dump &> /dev/null; then
+        pg_dump -U postgres "$DB_NAME" 2>/dev/null | gzip > "$BACKUP_FILE" || true
+    elif [ -f "$PG_BIN/pg_dump" ]; then
+        $PG_BIN/pg_dump -U postgres "$DB_NAME" 2>/dev/null | gzip > "$BACKUP_FILE" || true
     else
-        print_warning "pg_dump tidak ditemukan di $PG_BIN, skip backup"
+        print_warning "pg_dump tidak ditemukan, skip backup database"
+        return 0
     fi
 
-    # Bersihkan backup lama (>30 hari)
-    find "$BACKUP_DIR" -name "*.sql" -mtime +30 -delete 2>/dev/null || true
-    find "$BACKUP_DIR" -name "*.db" -mtime +30 -delete 2>/dev/null || true
-fi
-
-# --- Apply update (git pull) ---
-if [ "$HAS_UPDATE" = "true" ]; then
-    # Pull update — stash local changes dulu jika ada
-    STASHED=false
-    if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
-        echo -e "${YELLOW}📋 Local changes terdeteksi, stashing sebelum pull...${NC}"
-        git stash push -m "auto-stash before update $(date +%Y%m%d_%H%M%S)" && STASHED=true
-    fi
-
-    git pull origin "$BRANCH"
-    print_success "Code berhasil di-pull"
-
-    # --- Re-exec: Cek apakah update.sh berubah setelah git pull ---
-    # Jika script berubah, re-exec dengan versi baru agar Step 5-8 menggunakan kode terbaru.
-    # Guard: UPDATE_REEXEC=1 mencegah infinite loop (hanya max 1 re-exec).
-    if [ "$UPDATE_REEXEC" != "1" ]; then
-        CURRENT_SCRIPT_HASH=$(md5sum "$0" 2>/dev/null | awk '{print $1}' || echo "unknown")
-        if [ "$SCRIPT_HASH_BEFORE" != "$CURRENT_SCRIPT_HASH" ]; then
-            echo -e "${YELLOW}⚠️  update.sh berubah setelah git pull. Re-exec dengan versi baru...${NC}"
-            export UPDATE_REEXEC=1
-            exec bash "$0" "$@"
-        fi
-    fi
-
-    # Restore stashed changes
-    if [ "$STASHED" = true ] && git stash list | grep -q "auto-stash"; then
-        echo -e "${YELLOW}📋 Restoring stashed changes...${NC}"
-        if ! git stash pop; then
-            print_warning "Stash conflict — dropping stash (remote version kept)"
-            git stash drop
-        fi
-    fi
-else
-    echo -e "${GREEN}ℹ️  Force mode — skip git pull (sudah versi terbaru)${NC}"
-fi
-
-# --- 5. Install dependencies ---
-print_step "5/8 - Install dependencies"
-
-# Kill any orphan process on port 3000 from previous failed updates
-# Pastikan port bersih sebelum proses build & restart
-# Menggunakan 3 fallback methods: fuser → lsof → ss
-ORPHAN_KILLED=false
-if command -v fuser &> /dev/null; then
-    ORPHAN_PID=$(fuser $APP_PORT/tcp 2>/dev/null | tr -d ' ')
-    if [ -n "$ORPHAN_PID" ]; then
-        fuser -k $APP_PORT/tcp 2>/dev/null || true
-        log "Killed orphan process on port $APP_PORT (PID: $ORPHAN_PID, pre-build cleanup)"
-        ORPHAN_KILLED=true
-    fi
-elif command -v lsof &> /dev/null; then
-    ORPHAN_PID=$(lsof -t -i:$APP_PORT 2>/dev/null | head -1)
-    if [ -n "$ORPHAN_PID" ]; then
-        kill $ORPHAN_PID 2>/dev/null || true
-        log "Killed orphan process on port $APP_PORT (PID: $ORPHAN_PID, pre-build cleanup via lsof)"
-        ORPHAN_KILLED=true
-    fi
-elif command -v ss &> /dev/null; then
-    ORPHAN_PID=$(ss -tlnp "sport = :$APP_PORT" 2>/dev/null | grep -oP 'pid=\K\d+' | head -1)
-    if [ -n "$ORPHAN_PID" ]; then
-        kill -9 $ORPHAN_PID 2>/dev/null || true
-        log "Killed orphan process on port $APP_PORT (PID: $ORPHAN_PID, pre-build cleanup via ss)"
-        ORPHAN_KILLED=true
-    fi
-fi
-if [ "$ORPHAN_KILLED" = true ]; then
-    sleep 2
-fi
-
-if [ "$HAS_UPDATE" = "true" ]; then
-    # Cek apakah ada perubahan dependency
-    CHANGED_FILES=$(git diff --name-only "$COMMIT_BEFORE" "$COMMIT_AFTER" 2>/dev/null || echo "")
-
-    if echo "$CHANGED_FILES" | grep -q "package.json\|pnpm-lock.yaml"; then
-        if ! pnpm install --frozen-lockfile; then
-            print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa untuk regenerate lockfile"
-            pnpm install
-        fi
-        print_success "Dependencies di-install ulang"
+    if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+        local SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+        print_success "Database backed up: $BACKUP_FILE ($SIZE)"
     else
-        print_success "Tidak ada perubahan dependency, skip"
+        print_warning "Backup file kosong atau gagal dibuat"
     fi
-else
-    # Force mode tanpa update — tetap pastikan dependencies ter-install dengan benar
-    if ! pnpm install --frozen-lockfile 2>/dev/null; then
-        print_warning "frozen-lockfile gagal — menjalankan pnpm install biasa"
-        pnpm install
-    fi
-    print_success "Dependencies verified (force mode — consistency check)"
-fi
 
-# --- 5b. Fix node_modules binary permissions ---
-# Root cause: pnpm install dijalankan sebagai root → binary files dimiliki root tanpa +x untuk others
-# App berjalan sebagai user www (aaPanel) → butuh execute permission pada semua binaries
-# Error yang di-fix: EACCES pada prisma schema-engine dan turbo binary
-print_step "5b/8 - Fix node_modules binary permissions"
+    # Cleanup old backups (keep 7 days)
+    find "$BACKUP_DIR" -name "db_backup_*.sql.gz" -mtime +7 -delete 2>/dev/null || true
+}
 
-# Fix semua native addon binaries (.node files) — termasuk prisma query-engine
-find node_modules/.pnpm -name "*.node" -type f -exec chmod +x {} \; 2>/dev/null || true
-
-# Fix semua files di direktori bin/ — termasuk prisma schema-engine, turbo, dll
-find node_modules/.pnpm -path "*/bin/*" -type f -exec chmod +x {} \; 2>/dev/null || true
-
-# Fix semua symlinks di node_modules/.bin/ — bin links dari pnpm
-find node_modules/.bin -type l -exec chmod +x {} \; 2>/dev/null || true
-
-# Specific fix: Prisma engines (schema-engine, query-engine)
-find node_modules/.pnpm -path "*@prisma/engines*" -type f -exec chmod +x {} \; 2>/dev/null || true
-
-# Specific fix: Turbo binary
-find node_modules/.pnpm -path "*@turbo/linux-64*" -type f -exec chmod +x {} \; 2>/dev/null || true
-
-# Fix directory permissions agar bisa di-traverse oleh user www
-find node_modules/.pnpm -type d -name "bin" -exec chmod 755 {} \; 2>/dev/null || true
-
-print_success "Binary permissions diperbaiki (prisma engines, turbo, .node addons, .bin symlinks)"
-
-# --- 6. Prisma generate + migrate (SELALU sebelum build) ---
-print_step "6/8 - Prisma generate & migrate"
-echo -e "${YELLOW}----------------------------------------${NC}"
-
-cd "$APP_DIR/packages/db"
-
-# Generate Prisma Client
-if npx prisma generate; then
-    echo -e "${GREEN}✅ Prisma Client di-generate${NC}"
-else
-    echo -e "${RED}❌ Prisma generate gagal${NC}"
+# ============================================================
+# Step 3: Pull Latest Code
+# ============================================================
+pull_code() {
+    print_step "3/8" "Pulling latest code from origin/$BRANCH"
     cd "$APP_DIR"
-    exit 1
-fi
 
-# Deploy migrations dengan retry untuk failed migrations (handle P3009)
-echo "  Running prisma migrate deploy..."
-MIGRATE_EXIT=0
-MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1) || MIGRATE_EXIT=$?
+    # Save current commit for comparison
+    local old_commit
+    old_commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-if [ $MIGRATE_EXIT -ne 0 ]; then
-    # Check if it's a P3009 error (failed migrations blocking new ones)
-    if echo "$MIGRATE_OUTPUT" | grep -q "P3009"; then
-        echo -e "${YELLOW}⚠️ Ditemukan migration yang gagal sebelumnya, mencoba resolve...${NC}"
-        echo "$MIGRATE_OUTPUT" | head -5
+    # Stash any local changes
+    if ! git diff --quiet 2>/dev/null; then
+        print_warning "Local changes detected, stashing..."
+        git stash push -m "update-stash-$(date '+%Y%m%d_%H%M%S')" 2>/dev/null || true
+    fi
 
-        # Extract failed migration names and resolve them
-        # P3009 message format: "The `migration_name` migration ..."
-        FAILED_MIGRATIONS=$(echo "$MIGRATE_OUTPUT" | grep -oP 'The `\K[^`]+(?=` migration)' || true)
+    # Fetch and pull
+    git fetch origin 2>&1
+    git checkout "$BRANCH" 2>&1
+    git pull origin "$BRANCH" 2>&1
 
-        for MIGRATION in $FAILED_MIGRATIONS; do
-            echo -e "${YELLOW}   Resolving: $MIGRATION${NC}"
-            npx prisma migrate resolve --rolled-back "$MIGRATION" 2>&1 || true
-        done
+    local new_commit
+    new_commit=$(git rev-parse --short HEAD)
 
-        # Retry migration
-        echo -e "${YELLOW}   Retrying migration deploy...${NC}"
-        RETRY_EXIT=0
-        RETRY_OUTPUT=$(npx prisma migrate deploy 2>&1) || RETRY_EXIT=$?
-        if [ $RETRY_EXIT -eq 0 ]; then
-            echo -e "${GREEN}✅ Migration berhasil setelah resolve${NC}"
-        else
-            echo -e "${RED}❌ Migration masih gagal setelah resolve:${NC}"
-            echo "$RETRY_OUTPUT" | head -10
-            echo -e "${RED}   Cek manual: cd packages/db && npx prisma migrate status${NC}"
-        fi
+    if [ "$old_commit" = "$new_commit" ]; then
+        print_warning "No new commits (HEAD is still $new_commit)"
     else
-        echo -e "${YELLOW}⚠️ Prisma migrate deploy error (bukan P3009):${NC}"
-        echo "$MIGRATE_OUTPUT" | head -10
-        echo -e "${YELLOW}ℹ️ Melanjutkan — mungkin migration sudah apply atau conflict${NC}"
+        print_success "Code updated: $old_commit → $new_commit"
     fi
-else
-    echo -e "${GREEN}✅ Migrations berhasil di-deploy ke database${NC}"
-fi
-
-cd "$APP_DIR"
-
-# --- 7. Build aplikasi ---
-print_step "7/8 - Build aplikasi"
-
-# Bersihkan turbo cache + .next cache untuk memaksa fresh build
-# Turbo cache bisa menyimpan old Prisma types saat schema berubah
-rm -rf node_modules/.cache/turbo
-rm -rf .turbo
-rm -rf apps/web/.next
-print_success "Cache dibersihkan (turbo + .next)"
-
-pnpm build --force
-print_success "Build berhasil"
-
-# --- 8. Restart Application ---
-print_step "8/8 - Restarting application..."
-
-# --- 8a. Kill proses lama dengan robust method ---
-# Menggunakan 3 fallback methods: fuser → lsof → ss
-echo -e "${YELLOW}Killing existing process on port $APP_PORT...${NC}"
-KILLED_OK=false
-
-# Method 1: fuser
-if command -v fuser &> /dev/null; then
-    RESTART_PID=$(fuser $APP_PORT/tcp 2>/dev/null | tr -d ' ')
-    if [ -n "$RESTART_PID" ]; then
-        log "Found process on port $APP_PORT (PID: $RESTART_PID). Sending SIGTERM..."
-        fuser -k $APP_PORT/tcp 2>/dev/null || true
-        sleep 3
-
-        # Force kill jika masih hidup
-        if fuser $APP_PORT/tcp &>/dev/null; then
-            echo -e "${RED}⚠️  Port $APP_PORT masih terpakai. Force kill (SIGKILL)...${NC}"
-            log "Port $APP_PORT still in use. Force killing with SIGKILL..."
-            fuser -k -9 $APP_PORT/tcp 2>/dev/null || true
-            sleep 3
-        fi
-        KILLED_OK=true
-    fi
-
-# Method 2: lsof (fallback)
-elif command -v lsof &> /dev/null; then
-    RESTART_PID=$(lsof -t -i:$APP_PORT 2>/dev/null | head -1)
-    if [ -n "$RESTART_PID" ]; then
-        log "Found process on port $APP_PORT (PID: $RESTART_PID). Killing via lsof..."
-        kill $RESTART_PID 2>/dev/null || true
-        sleep 3
-
-        if kill -0 $RESTART_PID 2>/dev/null; then
-            echo -e "${RED}⚠️  Process still alive. Force killing (SIGKILL)...${NC}"
-            kill -9 $RESTART_PID 2>/dev/null || true
-            sleep 3
-        fi
-        KILLED_OK=true
-    fi
-
-# Method 3: ss + kill (fallback terakhir)
-elif command -v ss &> /dev/null; then
-    RESTART_PID=$(ss -tlnp "sport = :$APP_PORT" 2>/dev/null | grep -oP 'pid=\K\d+' | head -1)
-    if [ -n "$RESTART_PID" ]; then
-        log "Found process on port $APP_PORT (PID: $RESTART_PID). Killing via ss..."
-        kill -9 $RESTART_PID 2>/dev/null || true
-        sleep 3
-        KILLED_OK=true
-    fi
-else
-    echo -e "${YELLOW}⚠️  Neither fuser, lsof, nor ss available. Skipping port cleanup.${NC}"
-fi
-
-if [ "$KILLED_OK" = true ]; then
-    log "Process on port $APP_PORT cleaned up"
-fi
-
-# --- 8b. Verifikasi port benar-benar bebas ---
-PORT_FREE=false
-for i in {1..3}; do
-    if command -v fuser &> /dev/null; then
-        if ! fuser $APP_PORT/tcp &>/dev/null; then
-            PORT_FREE=true
-            break
-        fi
-    elif command -v lsof &> /dev/null; then
-        if ! lsof -i:$APP_PORT &>/dev/null; then
-            PORT_FREE=true
-            break
-        fi
-    else
-        # Tidak bisa verifikasi, asumsikan bebas
-        PORT_FREE=true
-        break
-    fi
-    echo -e "${YELLOW}  Port $APP_PORT still in use, waiting... ($i/3)${NC}"
-    sleep 2
-done
-
-if [ "$PORT_FREE" = true ]; then
-    echo -e "${GREEN}✅ Port $APP_PORT freed.${NC}"
-else
-    echo -e "${RED}⚠️  Port $APP_PORT might still be in use. Attempting to start anyway...${NC}"
-    log "WARNING: Port $APP_PORT verification failed, starting anyway"
-fi
-
-# --- 8c. Restart via aaPanel (race-condition-free) ---
-# STRATEGI: JANGAN start app dari update.sh!
-# aaPanel Node.js Project Manager akan auto-detect perubahan file dan restart sendiri.
-# Menjalankan app dari update.sh menyebabkan RACE CONDITION:
-#   1. update.sh start app → PID X di port 3000
-#   2. aaPanel detect file changes → restart via start.sh
-#   3. start.sh kill PID X → start baru → EADDRINUSE (sementara kill proses)
-#   4. aaPanel status = "Stopped", app down
-#
-# Solusi: Biarkan aaPanel yang manage app lifecycle:
-#   1. update.sh SELESAI (build + migrate done)
-#   2. aaPanel detect changes → jalankan start.sh
-#   3. start.sh kill process lama → start baru → no conflict
-#   4. aaPanel status = "Running"
-#
-# Fallback: Jika aaPanel tidak restart dalam 30 detik, start manual via start.sh
-echo -e "${YELLOW}Waiting for aaPanel to restart application...${NC}"
-log "Build complete. Waiting for aaPanel auto-restart..."
-
-# Pastikan port bersih (final cleanup)
-if command -v fuser &> /dev/null; then
-    fuser -k $APP_PORT/tcp 2>/dev/null || true
-    sleep 2
-fi
-
-# Tunggu aaPanel restart (timeout 30 detik)
-AAPANEL_RESTARTED=false
-AAPANEL_WAIT=30
-for i in $(seq 1 $AAPANEL_WAIT); do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 --max-time 5 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
-    if [ "$HTTP_CODE" = "200" ]; then
-        AAPANEL_RESTARTED=true
-        echo -e "  [$i/${AAPANEL_WAIT}s] aaPanel restart detected (HTTP 200) ✓"
-        log "aaPanel auto-restart detected after ${i}s"
-        break
-    fi
-    # Check TCP port as intermediate indicator
-    if command -v fuser &> /dev/null; then
-        if fuser $APP_PORT/tcp &>/dev/null && [ "$i" -gt 5 ]; then
-            echo -e "  [$i/${AAPANEL_WAIT}s] Port $APP_PORT is binding (app starting)..."
-        fi
-    fi
-    sleep 1
-done
-
-if [ "$AAPANEL_RESTARTED" = true ]; then
-    echo -e "${GREEN}✅ aaPanel restarted application successfully${NC}"
-    log "aaPanel auto-restart confirmed — app running on port $APP_PORT"
-else
-    # aaPanel belum restart dalam 30 detik
-    # Kemungkinan: aaPanel tidak auto-detect, atau lebih lambat dari expected
-    echo -e "${YELLOW}⚠️  aaPanel auto-restart not detected within ${AAPANEL_WAIT}s${NC}"
-    log "aaPanel auto-restart not detected within ${AAPANEL_WAIT}s — checking port status"
-
-    # Cek apakah ada process di port 3000 (mungkin aaPanel sudah mulai restart)
-    PORT_IN_USE=false
-    if command -v fuser &> /dev/null; then
-        if fuser $APP_PORT/tcp &>/dev/null; then
-            PORT_IN_USE=true
-        fi
-    elif command -v lsof &> /dev/null; then
-        if lsof -i:$APP_PORT &>/dev/null; then
-            PORT_IN_USE=true
-        fi
-    fi
-
-    if [ "$PORT_IN_USE" = true ]; then
-        echo -e "${YELLOW}  Port $APP_PORT is in use — aaPanel may be restarting now${NC}"
-        echo -e "${YELLOW}  Waiting additional 20s for aaPanel to complete...${NC}"
-        sleep 20
-
-        # Final check
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
-        if [ "$HTTP_CODE" = "200" ]; then
-            echo -e "${GREEN}✅ Application is running on port $APP_PORT${NC}"
-            log "Application confirmed running after extended wait"
-        else
-            echo -e "${YELLOW}⚠️  Port $APP_PORT in use but health check inconclusive${NC}"
-            echo -e "${YELLOW}ℹ️  Application may still be starting up — check aaPanel dashboard${NC}"
-            log "Port $APP_PORT in use but health check inconclusive"
-        fi
-    else
-        # Port kosong — aaPanel belum start sama sekali
-        # Fallback: start manual via start.sh
-        echo -e "${YELLOW}Fallback: Starting application manually via start.sh...${NC}"
-        log "aaPanel did not restart. Starting manually via start.sh as fallback..."
-
-        # Ensure start.sh exists and is executable
-        START_SH="$APP_DIR/apps/web/start.sh"
-        if [ ! -f "$START_SH" ]; then
-            echo -e "${RED}⚠️  start.sh tidak ditemukan di $START_SH!${NC}"
-            log "ERROR: start.sh not found at $START_SH"
-        else
-            chmod +x "$START_SH" 2>/dev/null || true
-            export PRISMA_QUERY_ENGINE_TYPE=library
-            cd "$APP_DIR/apps/web"
-            nohup bash "$START_SH" > /tmp/qalcuity-app.log 2>&1 &
-            APP_PID=$!
-            disown $APP_PID 2>/dev/null || true
-            log "start.sh launched as fallback (PID: $APP_PID)"
-
-            # Wait for app to start
-            echo -e "${YELLOW}Waiting for application to start (10s initial delay)...${NC}"
-            sleep 10
-
-            # Health check
-            HEALTH_OK=false
-            for j in $(seq 1 10); do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "http://127.0.0.1:$APP_PORT/api/health" 2>/dev/null || echo "000")
-                if [ "$HTTP_CODE" = "200" ]; then
-                    HEALTH_OK=true
-                    echo -e "  Attempt $j/10: HTTP $HTTP_CODE ✓"
-                    break
-                fi
-                echo -e "  Attempt $j/10: HTTP $HTTP_CODE — waiting..."
-                sleep 3
-            done
-
-            if [ "$HEALTH_OK" = true ]; then
-                echo -e "${GREEN}✅ Health check PASSED (HTTP 200)${NC}"
-                log "Fallback start successful — health check PASSED"
-            else
-                # Check if process is alive
-                APP_ALIVE=false
-                if [ -n "$APP_PID" ] && kill -0 $APP_PID 2>/dev/null; then
-                    APP_ALIVE=true
-                elif command -v fuser &> /dev/null; then
-                    if fuser $APP_PORT/tcp &>/dev/null; then
-                        APP_ALIVE=true
-                    fi
-                fi
-
-                if [ "$APP_ALIVE" = true ]; then
-                    echo -e "${YELLOW}⚠️  Health check timeout, but app process is running on port $APP_PORT${NC}"
-                    echo -e "${GREEN}✅ Application is UP (health endpoint may need more time)${NC}"
-                    log "Fallback start: health timeout but app alive on port $APP_PORT"
-                else
-                    echo -e "${RED}❌ Application failed to start${NC}"
-                    echo -e "${YELLOW}ℹ️  Buka aaPanel → Node.js Project → klik 'Start'${NC}"
-                    echo -e "${YELLOW}ℹ️  Atau jalankan: bash $APP_DIR/apps/web/start.sh${NC}"
-                    log "Fallback start FAILED — app process not found on port $APP_PORT"
-                fi
-            fi
-        fi
-    fi
-fi
+}
 
 # ============================================================
-# RINGKASAN
+# Step 4: Install Dependencies
 # ============================================================
+install_deps() {
+    print_step "4/8" "Installing dependencies"
+    cd "$APP_DIR"
+
+    # Check if package.json or pnpm-lock.yaml changed
+    local changes
+    changes=$(git diff --name-only HEAD~1 2>/dev/null || echo "")
+
+    if echo "$changes" | grep -qE "(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)" || [ "$FORCE_MODE" = true ]; then
+        print_info "Package changes detected, installing..."
+        if pnpm install --frozen-lockfile 2>&1; then
+            print_success "Dependencies installed (frozen lockfile)"
+        else
+            print_warning "Frozen lockfile failed, trying regular install..."
+            pnpm install 2>&1
+            print_success "Dependencies installed (regular)"
+        fi
+    else
+        print_success "No package changes detected, skipping install"
+    fi
+}
+
+# ============================================================
+# Step 5: Prisma Generate
+# ============================================================
+prisma_generate() {
+    print_step "5/8" "Prisma generate"
+    cd "$APP_DIR/packages/db"
+
+    # Ensure DATABASE_URL from production env is available for Prisma CLI
+    # packages/db/.env may have local dev values — override with production
+    local WEB_ENV="$APP_DIR/apps/web/.env"
+    if [ -f "$WEB_ENV" ]; then
+        local PROD_DB_URL
+        PROD_DB_URL=$(grep -E "^DATABASE_URL=" "$WEB_ENV" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        if [ -n "$PROD_DB_URL" ]; then
+            export DATABASE_URL="$PROD_DB_URL"
+            print_info "Using production DATABASE_URL from apps/web/.env"
+        fi
+    fi
+
+    print_info "Generating Prisma client..."
+    npx prisma generate 2>&1
+
+    print_success "Prisma client generated"
+    cd "$APP_DIR"
+}
+
+# ============================================================
+# Step 6: Prisma Migrate Deploy
+# ============================================================
+prisma_migrate() {
+    print_step "6/8" "Prisma migrate deploy"
+    cd "$APP_DIR/packages/db"
+
+    # Ensure DATABASE_URL from production env is available for Prisma CLI
+    local WEB_ENV="$APP_DIR/apps/web/.env"
+    if [ -f "$WEB_ENV" ]; then
+        local PROD_DB_URL
+        PROD_DB_URL=$(grep -E "^DATABASE_URL=" "$WEB_ENV" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        if [ -n "$PROD_DB_URL" ]; then
+            export DATABASE_URL="$PROD_DB_URL"
+            print_info "Using production DATABASE_URL from apps/web/.env"
+        fi
+    fi
+
+    # Check if schema or migration files changed
+    local changes
+    changes=$(git diff --name-only HEAD~1 2>/dev/null || echo "")
+
+    local needs_migration=false
+
+    if [ "$FORCE_MODE" = true ]; then
+        needs_migration=true
+        print_info "Force mode: running migrations regardless of changes"
+    elif echo "$changes" | grep -qE "schema\.prisma"; then
+        needs_migration=true
+        print_info "Schema changes detected"
+    elif echo "$changes" | grep -qE "packages/db/prisma/migrations/"; then
+        needs_migration=true
+        print_info "Migration file changes detected"
+    else
+        # Always check for pending migrations (someone might have added migrations without schema diff)
+        print_info "Checking for pending migrations..."
+    fi
+
+    # Always run migrate deploy to catch any pending migrations
+    # This is safe — prisma migrate deploy only applies pending migrations
+    print_info "Running prisma migrate deploy..."
+    if npx prisma migrate deploy 2>&1; then
+        print_success "Migrations applied successfully"
+    else
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+        echo -e "${RED}   ❌ PRISMA MIGRATE DEPLOY GAGAL!                ${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}Migrations yang gagal harus diperbaiki SEBELUM lanjut.${NC}"
+        echo -e "${YELLOW}Jangan lanjut ke build — aplikasi akan error jika migrations belum applied.${NC}"
+        echo ""
+        echo -e "${YELLOW}Langkah selanjutnya:${NC}"
+        echo -e "  1. Cek error message di atas"
+        echo -e "  2. Perbaiki migration SQL jika diperlukan"
+        echo -e "  3. Jalankan ulang: ${GREEN}sudo bash update.sh${NC}"
+        echo ""
+        exit 1
+    fi
+
+    cd "$APP_DIR"
+}
+
+# ============================================================
+# Step 7: Build Application
+# ============================================================
+build_app() {
+    print_step "7/8" "Building Next.js application"
+    cd "$APP_DIR/apps/web"
+
+    # Clean previous build cache
+    if [ -d ".next" ]; then
+        print_warning "Menghapus folder .next cache..."
+        rm -rf .next
+        print_success "Folder .next cache berhasil dihapus"
+    fi
+
+    # Build
+    print_info "Running pnpm build..."
+    cd "$APP_DIR"
+    if pnpm build 2>&1; then
+        print_success "Build completed successfully"
+    else
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+        echo -e "${RED}   ❌ BUILD GAGAL!                                ${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}Build error harus diperbaiki sebelum restart.${NC}"
+        echo -e "${YELLOW}Migrations sudah applied — app bisa di-restart setelah fix build.${NC}"
+        echo ""
+        exit 1
+    fi
+}
+
+# ============================================================
+# Step 8: Restart Application
+# ============================================================
+restart_app() {
+    print_step "8/8" "Restarting application"
+
+    # aaPanel Node.js Project Manager handles process lifecycle
+    # Touch the start.sh to trigger aaPanel's file watcher restart
+    # OR send SIGHUP to the running Next.js process
+
+    local START_SCRIPT="$APP_DIR/apps/web/start.sh"
+
+    # Ensure start.sh is executable
+    chmod +x "$START_SCRIPT" 2>/dev/null || true
+
+    # Method 1: Send SIGHUP to Next.js process (graceful restart)
+    local next_pid
+    next_pid=$(pgrep -f "next start" 2>/dev/null | head -1 || echo "")
+
+    if [ -n "$next_pid" ]; then
+        print_info "Sending SIGHUP to Next.js process (PID: $next_pid)..."
+        kill -HUP "$next_pid" 2>/dev/null || true
+        sleep 3
+        print_success "Restart signal sent"
+    else
+        print_warning "Next.js process tidak ditemukan. aaPanel akan auto-restart."
+        print_info "Jika app tidak running, restart manual dari aaPanel: Website > Node.js Project > Restart"
+    fi
+
+    # Verify app is running
+    sleep 3
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health 2>/dev/null || echo "000")
+
+    if [ "$http_code" = "200" ] || [ "$http_code" = "302" ] || [ "$http_code" = "307" ]; then
+        print_success "Application is running (HTTP $http_code)"
+    else
+        print_warning "Application may still be starting (HTTP $http_code). Check aaPanel status."
+    fi
+}
+
+# ============================================================
+# Summary
+# ============================================================
+print_summary() {
+    local commit
+    commit=$(cd "$APP_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}   🎉 UPDATE BERHASIL!                            ${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "  📅 Time:      $(date '+%Y-%m-%d %H:%M:%S WIB')"
+    echo -e "  🌿 Branch:    $BRANCH"
+    echo -e "  📝 Commit:    $commit"
+    echo -e "  📂 Directory: $APP_DIR"
+    echo ""
+    echo -e "${YELLOW}📋 Useful Commands:${NC}"
+    echo -e "  pm2 status (or aaPanel)       — Check process status"
+    echo -e "  curl http://localhost:3000/api/health — Health check"
+    echo -e "  cd packages/db && npx prisma migrate status — Check migration status"
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
+}
+
+# ============================================================
+# MAIN EXECUTION
+# ============================================================
+print_header
+log "🚀 Starting update — $(date '+%Y-%m-%d %H:%M:%S WIB')"
+log "📂 Target: $APP_DIR"
+log "🌿 Branch: $BRANCH"
+[ "$FORCE_MODE" = true ] && log "⚡ Force mode: ON"
 echo ""
-echo -e "${BLUE}================================================${NC}"
-echo -e "${GREEN}   ✅ UPDATE SELESAI!                           ${NC}"
-echo -e "${BLUE}================================================${NC}"
-echo ""
-echo -e "📅 Waktu update   : $(date '+%Y-%m-%d %H:%M:%S WIB')"
-echo -e "🔀 Branch         : ${GREEN}$BRANCH${NC}"
-echo -e "📝 Commit         : ${GREEN}${COMMIT_BEFORE:0:7} → ${COMMIT_AFTER:0:7}${NC}"
-if [ "$HAS_UPDATE" = "true" ]; then
-    echo -e "📥 Update         : ${GREEN}Yes — code diperbarui${NC}"
-else
-    echo -e "📥 Update         : ${YELLOW}No — force rebuild${NC}"
-fi
-echo -e "🔨 Build          : ${GREEN}Yes${NC}"
-echo -e "🔄 Restart        : ${GREEN}Yes${NC}"
-if [ -n "$BACKUP_FILE" ] && [ -f "$BACKUP_FILE" ]; then
-    echo -e "📦 Backup         : ${GREEN}$BACKUP_FILE${NC}"
-elif [ "$FORCE_UPDATE" = true ] && [ "$HAS_UPDATE" = "false" ]; then
-    echo -e "📦 Backup         : ${YELLOW}Skipped (force mode, no code change)${NC}"
-else
-    echo -e "📦 Backup         : ${YELLOW}Skipped (pg_dump unavailable)${NC}"
-fi
-echo -e "🌐 URL            : ${GREEN}https://qalcuity.com${NC}"
-echo ""
-echo -e "${YELLOW}📋 Log file: $LOG_FILE${NC}"
-echo -e "${YELLOW}📋 Cek status: lsof -i:$APP_PORT${NC}"
-echo ""
+
+preflight_checks
+backup_database
+pull_code
+install_deps
+prisma_generate
+prisma_migrate
+build_app
+restart_app
+print_summary
+
+log "✅ Update finished successfully — $(date '+%Y-%m-%d %H:%M:%S WIB')"
