@@ -47,8 +47,8 @@ Error `OAuthSignin` terjadi **sebelum redirect ke Google** — artinya masalahny
 
 ```
 NEXTAUTH_URL="https://qalcuity.com"
-GOOGLE_CLIENT_ID="1095304311939-n3de5uh10pvt3sn1jpffs72ngdb0sd18.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="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"
+GOOGLE_CLIENT_ID="YOUR_GOOGLE_CLIENT_ID"
+GOOGLE_CLIENT_SECRET="YOUR_GOOGLE_CLIENT_SECRET"
 GOOGLE_OAUTH_SKIP_HEALTH_CHECK="true"  ← ⚠️ BUKTI connectivity issue sudah diketahui
 ```
 
@@ -100,7 +100,7 @@ signIn('google', { callbackUrl: safeCallbackUrl })
 
 **Yang perlu dicek di Google Cloud Console:**
 1. Buka https://console.cloud.google.com/apis/credentials
-2. Cari OAuth 2.0 Client ID dengan Client ID: `1095304311939-n3de5uh10pvt3sn1jpffs72ngdb0sd18`
+2. Cari OAuth 2.0 Client ID dengan Client ID: `YOUR_GOOGLE_CLIENT_ID`
 3. Cek bagian **"Authorized redirect URIs"**
 4. **HARUS** ada tepat: `https://qalcuity.com/api/auth/callback/google`
 5. **TIDAK BOLEH** ada trailing slash (`/` di akhir)
@@ -134,7 +134,7 @@ telnet accounts.google.com 443
 
 ### A. Google Cloud Console (https://console.cloud.google.com/apis/credentials)
 
-- [ ] **1.** Buka OAuth 2.0 Client ID: `1095304311939-n3de5uh10pvt3sn1jpffs72ngdb0sd18`
+- [ ] **1.** Buka OAuth 2.0 Client ID: `YOUR_GOOGLE_CLIENT_ID`
 - [ ] **2.** Cek **"Authorized redirect URIs"** harus ada: `https://qalcuity.com/api/auth/callback/google`
 - [ ] **3.** Tidak ada trailing slash di redirect URI
 - [ ] **4.** Menggunakan `https://` (bukan `http://`)
@@ -176,7 +176,7 @@ curl -sS -o /dev/null -w "%{http_code}" https://oauth2.googleapis.com/token
 
 # === Test 4: Full Authorization URL Test ===
 # Ganti CLIENT_ID dan REDIRECT_URI sesuai config
-CLIENT_ID="1095304311939-n3de5uh10pvt3sn1jpffs72ngdb0sd18.apps.googleusercontent.com"
+CLIENT_ID="YOUR_GOOGLE_CLIENT_ID"
 REDIRECT_URI="https://qalcuity.com/api/auth/callback/google"
 echo "Authorization URL test:"
 echo "https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=email+profile&prompt=consent"
