@@ -123,8 +123,8 @@ export default function PlatformDashboardPage() {
         try {
             const res = await fetch("/api/platform/monitoring");
             const data = await res.json();
-            if (data.success && data.data?.recentActivity) {
-                setActivities(data.data.recentActivity);
+            if (data.success && data.data?.recentAlerts) {
+                setActivities(data.data.recentAlerts);
                 setActivitiesError(false);
             } else {
                 setActivities([]);
