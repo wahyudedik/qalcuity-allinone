@@ -4,170 +4,180 @@ import { NextResponse } from "next/server";
 import { MSG } from '@/lib/api-messages';
 import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { createTenantSchema } from "@/lib/validation-schemas";
 import { handleApiError } from "@/lib/api-error";
 
-// â”€â”€â”€ GET /api/platform/tenants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Returns paginated list of all tenants with stats.
+// ─── GET /api/platform/tenants/[id] ──────────────────────────────────
+// Returns single tenant detail with stats, users, entitlement, and recent activity.
 // Only accessible by SUPERADMIN role.
-export async function GET(request: Request) {
-    // 1. Auth + RBAC check â€” SUPERADMIN only
+export async function GET(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    // 1. Auth + RBAC check — SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
-        const { searchParams } = new URL(request.url);
-        const search = searchParams.get("search") || "";
-        const status = searchParams.get("status") || "";
-        const plan = searchParams.get("plan") || "";
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "10");
-        const skip = (page - 1) * limit;
+        const { id } = params;
 
-        // 3. Build where clause
-        const where: Record<string, unknown> = {};
-
-        if (search) {
-            where.OR = [
-                { name: { contains: search, mode: "insensitive" } },
-                { email: { contains: search, mode: "insensitive" } },
-                { slug: { contains: search, mode: "insensitive" } },
-            ];
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: MSG.ID_REQUIRED },
+                { status: 400 }
+            );
         }
 
-        if (status) {
-            where.subscriptionStatus = status.toUpperCase();
-        }
-
-        if (plan) {
-            where.currentPlanSlug = plan.toLowerCase();
-        }
-
-        // 4. Query tenants with stats
-        const [tenants, total] = await Promise.all([
-            prisma.tenant.findMany({
-                where,
-                include: {
-                    users: { select: { id: true } },
-                    entitlement: {
-                        include: { plan: true },
-                    },
+        // 2. Fetch single tenant with related data
+        const tenant = await prisma.tenant.findUnique({
+            where: { id },
+            include: {
+                users: {
+                    select: { id: true, name: true, email: true, role: true },
                 },
-                orderBy: { createdAt: "desc" },
-                skip,
-                take: limit,
-            }),
-            prisma.tenant.count({ where }),
+                entitlement: {
+                    include: { plan: true },
+                },
+            },
+        });
+
+        if (!tenant) {
+            return NextResponse.json(
+                { success: false, error: MSG.DATA_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // 3. Fetch stats in parallel
+        const [totalInvoices, totalContacts, totalProducts] = await Promise.all([
+            prisma.invoice.count({ where: { tenantId: id } }),
+            prisma.contact.count({ where: { tenantId: id } }),
+            prisma.product.count({ where: { tenantId: id } }),
         ]);
 
-        // 5. Format response
-        const formattedTenants = tenants.map((tenant) => ({
+        // 4. Fetch recent activity (last 10 audit logs)
+        const recentActivity = await prisma.auditLog.findMany({
+            where: { tenantId: id },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+            select: {
+                id: true,
+                action: true,
+                entity: true,
+                entityId: true,
+                ipAddress: true,
+                createdAt: true,
+            },
+        });
+
+        // 5. Build response matching TenantDetail interface
+        const responseData = {
             id: tenant.id,
             name: tenant.name,
             email: tenant.email,
             slug: tenant.slug,
-            plan: tenant.currentPlanSlug || "starter",
+            phone: tenant.phone || null,
+            website: tenant.website || null,
+            address: tenant.address || null,
             status: tenant.subscriptionStatus?.toLowerCase() || "trial",
-            userCount: tenant.users.length,
-            mrr: tenant.entitlement?.plan?.priceMonthly || 0,
+            plan: tenant.currentPlanSlug || "starter",
+            planPrice: tenant.entitlement?.plan?.priceMonthly || 0,
             createdAt: tenant.createdAt.toISOString(),
             updatedAt: tenant.updatedAt.toISOString(),
-        }));
+            stats: {
+                totalUsers: tenant.users.length,
+                totalInvoices,
+                totalContacts,
+                totalProducts,
+            },
+            users: tenant.users,
+            entitlement: tenant.entitlement
+                ? {
+                    id: tenant.entitlement.id,
+                    plan: tenant.entitlement.plan?.name || tenant.entitlement.plan?.slug || "unknown",
+                    status: tenant.entitlement.status,
+                    startDate: tenant.entitlement.currentPeriodStart?.toISOString() || "",
+                    endDate: tenant.entitlement.currentPeriodEnd?.toISOString() || null,
+                    price: tenant.entitlement.plan?.priceMonthly || 0,
+                }
+                : null,
+            recentActivity: recentActivity.map((log) => ({
+                id: log.id,
+                action: log.action,
+                entity: log.entity,
+                entityId: log.entityId || "",
+                ipAddress: log.ipAddress || null,
+                createdAt: log.createdAt.toISOString(),
+            })),
+        };
 
         return NextResponse.json({
             success: true,
-            data: formattedTenants,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
+            data: responseData,
         });
     } catch (error) {
         return handleApiError(error);
     }
 }
 
-// â”€â”€â”€ POST /api/platform/tenants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Creates a new tenant (provisioning).
+// ─── PUT /api/platform/tenants/[id] ──────────────────────────────────
+// Updates a tenant (suspend, reactivate, change plan, etc.).
 // Only accessible by SUPERADMIN role.
-export async function POST(request: Request) {
-    // 1. Auth + RBAC check â€” SUPERADMIN only
+export async function PUT(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    // 1. Auth + RBAC check — SUPERADMIN only
     const auth = await requirePermissionForRoute(request);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     try {
+        const { id } = params;
         const body = await request.json();
 
-        // 2. Validate input dengan Zod schema
-        const validated = createTenantSchema.safeParse(body);
-        if (!validated.success) {
+        // 2. Check tenant exists
+        const existing = await prisma.tenant.findUnique({ where: { id } });
+        if (!existing) {
             return NextResponse.json(
-                { error: validated.error.issues[0]?.message || "Invalid input", code: 'VALIDATION_ERROR' },
-                { status: 400 }
+                { success: false, error: MSG.DATA_NOT_FOUND },
+                { status: 404 }
             );
         }
 
-        const { name, email, slug, plan } = validated.data;
+        // 3. Build update data
+        const updateData: Record<string, unknown> = {};
 
-        // 3. Check slug uniqueness
-        const existing = await prisma.tenant.findUnique({
-            where: { slug },
-        });
-        if (existing) {
-            return NextResponse.json(
-                { error: "Tenant with this slug already exists" },
-                { status: 409 }
-            );
+        if (body.status) {
+            updateData.subscriptionStatus = body.status;
         }
 
-        // 5. Create tenant
-        const tenant = await prisma.tenant.create({
-            data: {
-                name,
-                email,
-                slug,
-                subscriptionStatus: "TRIAL",
-                currentPlanSlug: plan || "starter",
-                settings: {},
-            },
-        });
-
-        // 6. Create trial entitlement if plan specified
-        if (plan) {
-            const planRecord = await prisma.plan.findUnique({
-                where: { slug: plan },
-            });
-            if (planRecord) {
-                const trialEnd = new Date();
-                trialEnd.setDate(trialEnd.getDate() + 14); // 14-day trial
-
-                const now = new Date();
-                await prisma.tenantEntitlement.create({
-                    data: {
-                        tenantId: tenant.id,
-                        planId: planRecord.id,
-                        status: "trial",
-                        billingCycle: "monthly",
-                        trialEndsAt: trialEnd,
-                        currentPeriodStart: now,
-                        currentPeriodEnd: trialEnd,
-                    },
-                });
-            }
+        if (body.currentPlanSlug) {
+            updateData.currentPlanSlug = body.currentPlanSlug;
         }
+
+        if (body.name) {
+            updateData.name = body.name;
+        }
+
+        if (body.email) {
+            updateData.email = body.email;
+        }
+
+        // 4. Update tenant
+        const updated = await prisma.tenant.update({
+            where: { id },
+            data: updateData,
+        });
 
         return NextResponse.json({
             success: true,
             data: {
-                id: tenant.id,
-                name: tenant.name,
-                email: tenant.email,
-                slug: tenant.slug,
-                status: tenant.subscriptionStatus,
+                id: updated.id,
+                name: updated.name,
+                email: updated.email,
+                slug: updated.slug,
+                status: updated.subscriptionStatus,
             },
-        }, { status: 201 });
+        });
     } catch (error) {
         return handleApiError(error);
     }

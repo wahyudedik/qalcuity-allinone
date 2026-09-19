@@ -418,7 +418,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.users')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.stats.totalUsers}
+                                {tenant.stats?.totalUsers ?? 0}
                             </p>
                         </div>
                     </div>
@@ -444,7 +444,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.invoices')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.stats.totalInvoices.toLocaleString()}
+                                {(tenant.stats?.totalInvoices ?? 0).toLocaleString()}
                             </p>
                         </div>
                     </div>
@@ -457,7 +457,7 @@ export default function PlatformTenantDetailPage() {
                         <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{t('platform.tenantDetailPage.products')}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                {tenant.stats.totalProducts}
+                                {tenant.stats?.totalProducts ?? 0}
                             </p>
                         </div>
                     </div>
