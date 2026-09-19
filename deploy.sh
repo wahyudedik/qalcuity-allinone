@@ -210,7 +210,7 @@ EOF
         print_success "File .env.production berhasil dibuat"
     else
         print_warning "File .env.production sudah ada, skip pembuatan"
-    }
+    fi
 
     # Buat .env untuk local dev reference (copy dari .env.production)
     if [ ! -f "$WEB_ENV_FILE" ]; then
@@ -250,8 +250,26 @@ setup_database() {
     print_success "Prisma Client berhasil di-generate"
 
     # Deploy migrations ke database
-    pnpm db:migrate
-    print_success "Migrations berhasil di-deploy ke database"
+    print_warning "Menjalankan prisma migrate deploy..."
+    if pnpm db:migrate; then
+        print_success "Migrations berhasil di-deploy ke database"
+    else
+        echo ""
+        echo -e "${RED}================================================${NC}"
+        echo -e "${RED}   ❌ PRISMA MIGRATE DEPLOY GAGAL!              ${NC}"
+        echo -e "${RED}================================================${NC}"
+        echo ""
+        echo -e "${YELLOW}Migrations yang gagal harus diperbaiki SEBELUM lanjut.${NC}"
+        echo -e "${YELLOW}Jangan lanjut ke build — aplikasi akan error jika migrations belum applied.${NC}"
+        echo ""
+        echo -e "${YELLOW}Langkah selanjutnya:${NC}"
+        echo -e "  1. Cek error message di atas"
+        echo -e "  2. Pastikan PostgreSQL running: systemctl status postgresql"
+        echo -e "  3. Pastikan DATABASE_URL di packages/db/.env benar"
+        echo -e "  4. Jalankan ulang: ${GREEN}sudo ./deploy.sh${NC}"
+        echo ""
+        exit 1
+    fi
 
     # Seed database (opsional)
     print_warning "Menjalankan seed database..."
