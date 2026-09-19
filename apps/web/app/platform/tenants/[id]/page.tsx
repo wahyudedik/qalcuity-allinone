@@ -363,7 +363,9 @@ export default function PlatformTenantDetailPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowNotificationModal(true)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        disabled
+                        title="Coming soon — notification API not yet implemented"
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500"
                     >
                         <Send className="h-4 w-4" />
                         {t('platform.tenantDetailPage.sendNotification')}
@@ -619,9 +621,11 @@ export default function PlatformTenantDetailPage() {
                 <div className="flex flex-wrap gap-3 p-4">
                     <button
                         onClick={() => setShowNotificationModal(true)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        disabled
+                        title="Coming soon — notification API not yet implemented"
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed transition dark:border-gray-700 dark:text-gray-500"
                     >
-                        <Send className="h-4 w-4 text-blue-500" />
+                        <Send className="h-4 w-4 text-gray-400" />
                         {t('platform.tenantDetailPage.sendNotification')}
                     </button>
                     <button

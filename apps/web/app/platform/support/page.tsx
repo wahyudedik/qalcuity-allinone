@@ -93,6 +93,9 @@ export default function PlatformSupportPage() {
             if (searchQuery) params.set("search", searchQuery);
 
             const res = await fetch(`/api/platform/support/tickets?${params.toString()}`);
+            if (!res.ok) {
+                throw new Error(`Failed to fetch support tickets: ${res.status}`);
+            }
             const data = await res.json();
             if (data.success) {
                 setTickets(data.data);
