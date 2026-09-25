@@ -12,6 +12,13 @@
 -- (which is the desired behavior -- catch data issues early).
 
 -- ============================================
+-- Pre-flight: Drop materialized views that depend on PosTransaction columns
+-- PostgreSQL cannot ALTER COLUMN TYPE when a view/rule depends on that column.
+-- These views will be recreated after all ALTER statements complete.
+-- ============================================
+DROP MATERIALIZED VIEW IF EXISTS "mv_pos_hourly_sales";
+
+-- ============================================
 -- PosSession: Cash management fields
 -- ============================================
 ALTER TABLE "PosSession" ALTER COLUMN "openingCash" TYPE NUMERIC(19,4);
@@ -67,3 +74,31 @@ ALTER TABLE "PosPayment" ALTER COLUMN "amount" TYPE NUMERIC(19,4);
 -- PosRefund: Refund amount
 -- ============================================
 ALTER TABLE "PosRefund" ALTER COLUMN "amount" TYPE NUMERIC(19,4);
+
+-- ============================================
+-- Post-flight: Recreate materialized views
+-- Recreated from: migration 20260916000000_add_analytics_read_model
+-- ============================================
+
+-- mv_pos_hourly_sales — POS hourly sales pattern
+-- Source: PosTransaction
+CREATE MATERIALIZED VIEW IF NOT EXISTS "mv_pos_hourly_sales" AS
+SELECT
+    pt."tenantId",
+    EXTRACT(HOUR FROM pt."createdAt")::int AS hour,
+    EXTRACT(DOW FROM pt."createdAt")::int AS "dayOfWeek",
+    COUNT(pt.id)::int AS "transactionCount",
+    COALESCE(SUM(pt."totalAmount"), 0)::double precision AS "totalRevenue",
+    CASE
+        WHEN COUNT(pt.id) > 0
+        THEN (COALESCE(SUM(pt."totalAmount"), 0) / COUNT(pt.id))::double precision
+        ELSE 0
+    END AS "avgTicketSize"
+FROM "PosTransaction" pt
+WHERE pt.status = 'COMPLETED'
+GROUP BY pt."tenantId", EXTRACT(HOUR FROM pt."createdAt"), EXTRACT(DOW FROM pt."createdAt");
+
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_mv_pos_hourly_sales_pk"
+    ON "mv_pos_hourly_sales" ("tenantId", hour, "dayOfWeek");
+CREATE INDEX IF NOT EXISTS "idx_mv_pos_hourly_sales_tenant"
+    ON "mv_pos_hourly_sales" ("tenantId");
