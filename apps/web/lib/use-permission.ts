@@ -1,9 +1,9 @@
 // ─── Client-side Permission Hook ──────────────────────────────────────────────
 // Hook untuk permission checking di client components.
-// Menggunakan PermissionEngine dari @qalcuity/permissions (pure function, no DB).
+// Menggunakan permissions array dari session (resolved saat login dari system role atau custom role).
 //
-// Untuk custom roles, gunakan server-side hasPermission() dari apps/web/lib/permissions.ts.
-// Hook ini menggunakan SYSTEM_ROLE_PERMISSIONS sebagai fallback.
+// Untuk custom roles, permissions di-resolve di server-side (auth.ts) dan disimpan di JWT.
+// Hook ini membaca permissions dari session dan menggunakan PermissionEngine.hasFlatPermission().
 
 'use client';
 
@@ -28,33 +28,34 @@ import { PermissionEngine } from '@qalcuity/permissions';
 export function usePermission() {
     const { data: session } = useSession();
     const role = session?.user?.role;
+    const permissions = session?.user?.permissions ?? [];
 
     /**
      * Check apakah user memiliki permission tertentu.
-     * Menggunakan system role defaults (bukan custom role dari DB).
+     * Menggunakan resolved permissions dari session (system role atau custom role).
      *
      * @param permission - Permission string (e.g., 'finance:view', 'finance:create')
      * @returns boolean
      */
     const hasPermission = (permission: string): boolean => {
-        if (!role) return false;
-        return PermissionEngine.hasRolePermission(role, permission);
+        if (permissions.length === 0) return false;
+        return PermissionEngine.hasFlatPermission(permissions, permission);
     };
 
     /**
      * Check apakah user bisa melakukan mutasi (create/edit/delete) di module tertentu.
-     * Memeriksa apakah role memiliki setidaknya permission create atau edit.
+     * Memeriksa apakah user memiliki setidaknya permission create, edit, atau delete.
+     * Works with both system roles and custom roles.
      *
      * @param module - Module name (e.g., 'finance', 'crm', 'hr', 'inventory')
      * @returns boolean
      */
     const canMutate = (module: string): boolean => {
-        if (!role) return false;
-        if (role === 'VIEWER') return false;
+        if (permissions.length === 0) return false;
         return (
-            PermissionEngine.hasRolePermission(role, `${module}:create`) ||
-            PermissionEngine.hasRolePermission(role, `${module}:edit`) ||
-            PermissionEngine.hasRolePermission(role, `${module}:delete`)
+            permissions.includes(`${module}:create`) ||
+            permissions.includes(`${module}:edit`) ||
+            permissions.includes(`${module}:delete`)
         );
     };
 
@@ -65,8 +66,8 @@ export function usePermission() {
      * @returns boolean
      */
     const canDelete = (module: string): boolean => {
-        if (!role) return false;
-        return PermissionEngine.hasRolePermission(role, `${module}:delete`);
+        if (permissions.length === 0) return false;
+        return permissions.includes(`${module}:delete`);
     };
 
     /**
@@ -76,12 +77,13 @@ export function usePermission() {
      * @returns boolean
      */
     const canApprove = (module: string): boolean => {
-        if (!role) return false;
-        return PermissionEngine.hasRolePermission(role, `${module}:approve`);
+        if (permissions.length === 0) return false;
+        return permissions.includes(`${module}:approve`);
     };
 
     /**
-     * Check apakah user adalah ADMIN atau SUPERADMIN.
+     * Check apakah user adalah ADMIN atau SUPERADMIN (system roles only).
+     * Untuk custom roles, use hasPermission() instead.
      *
      * @returns boolean
      */
@@ -90,7 +92,7 @@ export function usePermission() {
     };
 
     /**
-     * Check apakah user adalah SUPERADMIN.
+     * Check apakah user adalah SUPERADMIN (system role only).
      *
      * @returns boolean
      */
@@ -106,5 +108,6 @@ export function usePermission() {
         isAdmin,
         isSuperAdmin,
         role,
+        permissions,
     };
 }

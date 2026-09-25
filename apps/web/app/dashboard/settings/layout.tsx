@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
+import { usePermission } from '@/lib/use-permission'
 
 export default function SettingsLayout({
     children,
@@ -15,15 +16,15 @@ export default function SettingsLayout({
     const router = useRouter()
     const { data: session, status } = useSession()
     const { t } = useTranslation()
+    const { hasPermission } = usePermission()
 
-    // ─── Role Check: Hanya ADMIN+ yang bisa mengakses Settings ────────────────
+    // ─── Permission Check: user harus memiliki settings:view permission ───────
     useEffect(() => {
         if (status === 'loading') return
-        const role = session?.user?.role
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        if (!hasPermission('settings:view')) {
             router.push('/dashboard')
         }
-    }, [session, status, router])
+    }, [session, status, router, hasPermission])
 
     // Tampilkan loading sambil mengecek session
     if (status === 'loading') {
@@ -37,8 +38,7 @@ export default function SettingsLayout({
         )
     }
 
-    const role = session?.user?.role
-    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+    if (!hasPermission('settings:view')) {
         return null
     }
 

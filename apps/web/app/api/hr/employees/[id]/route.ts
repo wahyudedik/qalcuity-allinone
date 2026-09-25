@@ -9,6 +9,7 @@ import { createEmployeeSchema, updateEmployeeSchema, formatZodError } from '@/li
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
 
 export async function GET(request: Request) {
     try {
@@ -68,6 +69,7 @@ export async function GET(request: Request) {
             joinDate: emp.joinDate.toISOString(),
             salary: emp.salary,
             status: emp.status,
+            version: emp.version,
             createdAt: emp.createdAt.toISOString(),
         }));
 
@@ -161,11 +163,18 @@ export async function PUT(request: Request) {
         if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
-        const { id, ...updateData } = body;
+        const { id, version, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
                 { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
+                { status: 400 }
+            );
+        }
+
+        if (version === undefined || version === null) {
+            return NextResponse.json(
+                { success: false, error: 'Version is required for concurrent update safety', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -191,23 +200,32 @@ export async function PUT(request: Request) {
             );
         }
 
-        // Build safe update data with sanitization
-        const data: Record<string, unknown> = {};
-        if (validatedData.name !== undefined) data.name = sanitizeInput(validatedData.name);
-        if (validatedData.email !== undefined) data.email = sanitizeInput(validatedData.email);
-        if (validatedData.phone !== undefined) data.phone = validatedData.phone ? sanitizeInput(validatedData.phone) : null;
-        if (validatedData.position !== undefined) data.position = sanitizeInput(validatedData.position);
-        if (validatedData.department !== undefined) data.department = sanitizeInput(validatedData.department);
-        if (validatedData.salary !== undefined) data.salary = validatedData.salary;
-        if (validatedData.status !== undefined) data.status = validatedData.status;
-        if (validatedData.joinDate !== undefined) data.joinDate = new Date(validatedData.joinDate);
+        // Build SET clauses for optimistic update (with sanitization)
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 4; // $1=id, $2=tenantId, $3=version, $4+=values
 
-        const employee = await prisma.employee.update({
-            where: { id },
-            data,
-        });
+        if (validatedData.name !== undefined) { setClauses.push(`name = $${paramIndex}`); values.push(sanitizeInput(validatedData.name)); paramIndex++; }
+        if (validatedData.email !== undefined) { setClauses.push(`email = $${paramIndex}`); values.push(sanitizeInput(validatedData.email)); paramIndex++; }
+        if (validatedData.phone !== undefined) { setClauses.push(`phone = $${paramIndex}`); values.push(validatedData.phone ? sanitizeInput(validatedData.phone) : null); paramIndex++; }
+        if (validatedData.position !== undefined) { setClauses.push(`position = $${paramIndex}`); values.push(sanitizeInput(validatedData.position)); paramIndex++; }
+        if (validatedData.department !== undefined) { setClauses.push(`department = $${paramIndex}`); values.push(sanitizeInput(validatedData.department)); paramIndex++; }
+        if (validatedData.salary !== undefined) { setClauses.push(`salary = $${paramIndex}`); values.push(validatedData.salary); paramIndex++; }
+        if (validatedData.status !== undefined) { setClauses.push(`status = $${paramIndex}`); values.push(validatedData.status); paramIndex++; }
+        if (validatedData.joinDate !== undefined) { setClauses.push(`"joinDate" = $${paramIndex}`); values.push(new Date(validatedData.joinDate)); paramIndex++; }
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Employee', entityId: id, newValues: data as Record<string, unknown>, request });
+        if (setClauses.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'No fields to update', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        await optimisticUpdateRaw('Employee', id, tenantId, version as number, setClauses.join(', '), values);
+
+        const employee = await prisma.employee.findUnique({ where: { id } });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Employee', entityId: id, newValues: updateData as Record<string, unknown>, request });
 
         return NextResponse.json({ success: true, data: employee });
     } catch (error) {

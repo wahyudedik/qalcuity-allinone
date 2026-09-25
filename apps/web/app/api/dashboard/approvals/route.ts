@@ -7,6 +7,8 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { ROLE_HIERARCHY } from '@qalcuity/config';
+import { checkPermissionByRole } from '@/lib/permissions';
+import { PERMISSIONS } from '@qalcuity/permissions';
 
 export async function GET(request: Request) {
     try {
@@ -18,7 +20,7 @@ export async function GET(request: Request) {
             );
         }
 
-        const { tenantId, role } = auth;
+        const { tenantId, userId, role } = auth;
 
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(
@@ -47,13 +49,14 @@ export async function GET(request: Request) {
             )
             .map((l: { entityType: string }) => l.entityType);
 
-        // For ADMIN/SUPERADMIN, show all pending; for others, only eligible
+        // Users with approval:viewAll see all pending; others only eligible
+        const canViewAllApprovals = await checkPermissionByRole(userId, role, PERMISSIONS.APPROVAL_VIEW_ALL);
         const whereCondition: Record<string, unknown> = {
             tenantId,
             status: 'PENDING',
         };
 
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        if (!canViewAllApprovals) {
             if (eligibleEntityTypes.length === 0) {
                 // User cannot approve anything
                 return NextResponse.json({

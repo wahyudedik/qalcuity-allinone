@@ -1,7 +1,7 @@
 # 🎨 Qalcuity — UI/UX Architecture
 
-> **Last Updated:** 11 September 2026 (Documentation Sync)
-> **Current Version:** v1.0.0-beta.2
+> **Last Updated:** 24 September 2026 (Documentation Sync)
+> **Current Version:** v1.1.0
 
 ---
 
@@ -221,14 +221,14 @@
 
 | Language | Status | Keys |
 |----------|--------|------|
-| **Bahasa Indonesia** | ✅ Primary | 200+ |
-| **English** | ✅ Secondary | 200+ |
+| **Bahasa Indonesia** | ✅ Primary | 4,755 |
+| **English** | ✅ Secondary | 4,755 |
 
 ### Implementation
 
 - **Provider:** Custom i18n provider ([`apps/web/lib/i18n.tsx`](apps/web/lib/i18n.tsx))
 - **Translation files:** [`apps/web/messages/id.json`](apps/web/messages/id.json), [`apps/web/messages/en.json`](apps/web/messages/en.json)
-- **Coverage:** 20+ pages localized
+- **Coverage:** 127+ pages localized (Bahasa Indonesia + English)
 
 ### Usage Pattern
 
@@ -300,5 +300,5 @@ import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 
 ---
 
-**Last Updated:** August 30, 2026
+**Last Updated:** 24 September 2026
 **Maintainer:** Qalcuity Design Team

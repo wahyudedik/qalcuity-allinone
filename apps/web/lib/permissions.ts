@@ -5,7 +5,7 @@
 import { getServerSession, Session } from 'next-auth';
 import { authOptions } from './auth';
 import { prisma } from './db';
-import { PermissionEngine, SYSTEM_ROLE_PERMISSIONS } from '@qalcuity/permissions';
+import { PermissionEngine, SYSTEM_ROLE_PERMISSIONS, PERMISSIONS } from '@qalcuity/permissions';
 
 /**
  * Dapatkan permissions untuk user berdasarkan role-nya.
@@ -175,4 +175,44 @@ export async function getCurrentUserPermissions() {
         role: session.user.role,
         permissions,
     };
+}
+
+// ─── Role-based Permission Check for API Routes ───────────────────────────────
+// Helper untuk check permission tanpa Session object — menggunakan userId + role.
+// Berguna di API routes yang sudah punya auth result dari requirePermissionForRoute().
+
+/**
+ * Check apakah user memiliki permission tertentu berdasarkan role dan userId.
+ * Mendukung system roles dan custom roles.
+ *
+ * @param userId - User ID
+ * @param role - Role name (SUPERADMIN, ADMIN, MEMBER, VIEWER)
+ * @param permission - Permission string (e.g., 'approval:viewAll')
+ * @returns boolean
+ */
+export async function checkPermissionByRole(
+    userId: string,
+    role: string,
+    permission: string
+): Promise<boolean> {
+    // Check system role permissions first (fast path)
+    if (PermissionEngine.hasRolePermission(role, permission)) {
+        return true;
+    }
+
+    // Check custom role permissions (DB lookup)
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { customRole: true },
+    });
+
+    if (user?.customRole) {
+        const customPerms = (user.customRole as { permissions?: string[] }).permissions;
+        if (Array.isArray(customPerms) && customPerms.length > 0) {
+            const resolved = PermissionEngine.resolvePermissions(customPerms);
+            return resolved.includes(permission);
+        }
+    }
+
+    return false;
 }

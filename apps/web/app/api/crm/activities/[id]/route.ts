@@ -5,12 +5,15 @@ import { prisma } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
-import { createActivitySchema, updateActivitySchema, formatZodError } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
+import { updateActivitySchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 
-export async function GET(request: Request) {
+// ─── GET /api/crm/activities/[id] ─────────────────────────────────────────────
+// Ambil detail satu activity berdasarkan ID.
+
+export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:activities:${ip}`, 100, 60000);
@@ -24,117 +27,30 @@ export async function GET(request: Request) {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const entityType = searchParams.get('entityType');
-        const entityId = searchParams.get('entityId');
-        const type = searchParams.get('type');
-        const search = searchParams.get('search');
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '20');
-        const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
-
-        if (entityType) {
-            where.entityType = entityType.toUpperCase();
-        }
-
-        if (entityId) {
-            where.entityId = entityId;
-        }
-
-        if (type) {
-            where.type = type.toUpperCase();
-        }
-
-        if (search) {
-            where.OR = [
-                { subject: { contains: search } },
-                { description: { contains: search } },
-            ];
-        }
-
-        const [activities, total] = await Promise.all([
-            prisma.activity.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.activity.count({ where }),
-        ]);
-
-        const data = activities.map((a) => ({
-            id: a.id,
-            entityType: a.entityType,
-            entityId: a.entityId,
-            type: a.type,
-            subject: a.subject,
-            description: a.description,
-            dueDate: a.dueDate?.toISOString() || null,
-            completedAt: a.completedAt?.toISOString() || null,
-            createdBy: a.createdBy,
-            createdAt: a.createdAt.toISOString(),
-            updatedAt: a.updatedAt.toISOString(),
-        }));
-
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function POST(request: Request) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:activities:POST:${ip}`, 30, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId: authTenantId } = auth;
-        const body = await request.json();
-
-        // Validasi input dengan Zod
-        const validation = createActivitySchema.safeParse(body);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
-
-        // Sanitize all text inputs
-        const sanitized = sanitizeObject(validation.data);
-
-        const activity = await prisma.activity.create({
-            data: {
-                tenantId: authTenantId,
-                entityType: validation.data.entityType,
-                entityId: validation.data.entityId,
-                type: validation.data.type,
-                subject: sanitized.subject as string,
-                description: (sanitized.description as string) || null,
-                dueDate: validation.data.dueDate ? new Date(validation.data.dueDate) : null,
-                createdBy: userId,
-            },
+        const activity = await prisma.activity.findFirst({
+            where: { id: params.id, tenantId },
         });
 
-        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Activity', entityId: activity.id, newValues: toAuditPayload(activity), request });
+        if (!activity) {
+            return NextResponse.json({ success: false, error: MSG.ACTIVITY_NOT_FOUND }, { status: 404 });
+        }
 
-        return NextResponse.json({ success: true, data: activity }, { status: 201 });
+        const data = {
+            id: activity.id,
+            entityType: activity.entityType,
+            entityId: activity.entityId,
+            type: activity.type,
+            subject: activity.subject,
+            description: activity.description,
+            dueDate: activity.dueDate?.toISOString() || null,
+            completedAt: activity.completedAt?.toISOString() || null,
+            createdBy: activity.createdBy,
+            createdAt: activity.createdAt.toISOString(),
+            updatedAt: activity.updatedAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data });
     } catch (error) {
         return handleApiError(error);
     }

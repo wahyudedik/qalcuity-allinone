@@ -6,10 +6,11 @@ import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { InvoiceForm } from '@/components/finance/invoice-form'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, ChevronRight, FileText, Trash2, Check, X } from 'lucide-react'
+import { Search, Plus, ChevronRight, FileText, Trash2, Check, X, Download } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Invoice = {
     id: string
@@ -113,6 +114,37 @@ export default function InvoicesPage() {
         }
     }
 
+    const handleExport = () => {
+        if (filteredInvoices.length === 0) {
+            setToast({ message: t('finance.invoices.toast.noDataExport') || 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filteredInvoices.map(invoice => ({
+            invoiceNumber: invoice.invoiceNumber,
+            customerName: invoice.customerName,
+            subtotal: Number(invoice.subtotal) || 0,
+            tax: Number(invoice.tax) || 0,
+            total: Number(invoice.total) || 0,
+            currency: invoice.currency,
+            status: t(statusConfig[invoice.status]?.labelKey) || invoice.status,
+            dueDate: invoice.dueDate,
+            createdAt: invoice.createdAt,
+        }))
+        const headerMap = {
+            invoiceNumber: t('finance.invoices.csv.invoiceNumber') || 'No. Invoice',
+            customerName: t('finance.invoices.csv.customerName') || 'Nama Pelanggan',
+            subtotal: t('finance.invoices.csv.subtotal') || 'Subtotal',
+            tax: t('finance.invoices.csv.tax') || 'Pajak',
+            total: t('finance.invoices.csv.total') || 'Total',
+            currency: t('finance.invoices.csv.currency') || 'Mata Uang',
+            status: t('finance.invoices.csv.status') || 'Status',
+            dueDate: t('finance.invoices.csv.dueDate') || 'Jatuh Tempo',
+            createdAt: t('finance.invoices.csv.createdAt') || 'Tanggal Dibuat',
+        }
+        exportToCSV(csvData, 'invoices', headerMap)
+        setToast({ message: t('finance.invoices.toast.exportSuccess') || 'Berhasil mengekspor data', type: 'success' })
+    }
+
     const handleDelete = async (id: string) => {
         setConfirmTitle(t('finance.invoices.confirmDeleteTitle'))
         setConfirmMessage(t('finance.invoices.confirmDeleteMessage'))
@@ -173,15 +205,25 @@ export default function InvoicesPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.invoices.title')}</h1>
                     <p className="text-gray-500">{t('finance.invoices.subtitle')}</p>
                 </div>
-                {canMutate && (
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={handleExport}
+                        disabled={filteredInvoices.length === 0}
+                        className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Plus className="h-4 w-4" />
-                        {t('finance.invoices.createInvoice')}
+                        <Download className="h-4 w-4" />
+                        {t('common.export') || 'Export CSV'}
                     </button>
-                )}
+                    {canMutate && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {t('finance.invoices.createInvoice')}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Stats Cards */}

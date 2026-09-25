@@ -35,3 +35,35 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export default prisma;
+
+// ─── Tenant-Scoped Prisma Client ─────────────────────────────────────────────
+// `prismaTenant` extends the base `prisma` client with automatic tenant isolation.
+// When used inside a `tenantStorage.run()` context, ALL queries for tenant-scoped
+// models automatically inject `tenantId` — no manual filtering needed.
+//
+// USAGE:
+//   import { prismaTenant } from '@/lib/db';
+//   import { tenantStorage } from '@/lib/tenant-context';
+//
+//   return tenantStorage.run({ tenantId: auth.tenantId, userId: auth.userId }, async () => {
+//     // tenantId is auto-injected — no manual where: { tenantId } needed
+//     const contacts = await prismaTenant.contact.findMany({ where: { type: 'CUSTOMER' } });
+//   });
+//
+// IMPORTANT:
+//   - Always wrap business logic with `tenantStorage.run()` for auto-scoping
+//   - The extension only injects tenantId when NOT already present (backward-compatible)
+//   - `prisma` (unfiltered) should still be used for platform/superadmin routes
+//   - `findUnique` (by ID) is NOT intercepted — ID lookups are safe
+import { modelExtensions } from './prisma-tenant';
+
+export const prismaTenant = prisma.$extends(modelExtensions as any);
+
+// ─── Tenant Isolation Utilities ───────────────────────────────────────────────
+// Re-export tenant isolation utilities for convenient access.
+// See prisma-tenant.ts for the Prisma Client Extension that auto-injects tenantId.
+// See tenant-context.ts for the AsyncLocalStorage-based tenant context.
+
+export { getScopedPrisma, isTenantScopedModel, getTenantScopedModelCount, TENANT_SCOPED_MODELS, modelExtensions } from './prisma-tenant';
+export { getTenantId, getUserId, getTenantContext, hasTenantContext, tenantStorage } from './tenant-context';
+export type { TenantContext } from './tenant-context';

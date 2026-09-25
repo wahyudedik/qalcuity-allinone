@@ -3,12 +3,12 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { requirePermissionForRoute } from '@/lib/session';
+import { requirePermissionForRoute, requirePermission } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createJournalEntrySchema, updateJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
-import { handleApiError, apiForbidden } from '@/lib/api-error';
+import { handleApiError } from '@/lib/api-error';
 
 // Helper: generate sequential entry number JE-YYYYMMDD-XXXX
 async function generateEntryNumber(tenantId: string): Promise<string> {
@@ -258,10 +258,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
-        // Hanya ADMIN+ yang boleh update journal entry
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return apiForbidden();
-        }
+        // Permission check: finance:approve required (ADMIN+ via permission engine)
+        await requirePermission('finance:approve');
 
         const { id } = params;
 
@@ -406,10 +404,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
-        // Hanya ADMIN+ yang boleh delete journal entry
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return apiForbidden();
-        }
+        // Permission check: finance:approve required (ADMIN+ via permission engine)
+        await requirePermission('finance:approve');
 
         const { id } = params;
 

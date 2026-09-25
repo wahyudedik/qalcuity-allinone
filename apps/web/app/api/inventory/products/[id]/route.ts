@@ -9,6 +9,7 @@ import { createProductSchema, updateProductSchema, formatZodError } from '@/lib/
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
 
 export async function GET(request: Request) {
     try {
@@ -67,6 +68,7 @@ export async function GET(request: Request) {
             stock: p.stock,
             minStock: p.minStock,
             isActive: p.isActive,
+            version: p.version,
             categoryId: p.categoryId,
             categoryName: p.category?.name || null,
             isLowStock: p.stock <= p.minStock,
@@ -145,11 +147,18 @@ export async function PUT(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const { id, ...updateData } = sanitizedBody;
+        const { id, version, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(
                 { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
+                { status: 400 }
+            );
+        }
+
+        if (version === undefined || version === null) {
+            return NextResponse.json(
+                { success: false, error: 'Version is required for concurrent update safety', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -174,21 +183,32 @@ export async function PUT(request: Request) {
             );
         }
 
-        const product = await prisma.product.update({
-            where: { id },
-            data: {
-                ...(validatedData.sku !== undefined && { sku: validatedData.sku }),
-                ...(validatedData.name !== undefined && { name: validatedData.name }),
-                ...(validatedData.description !== undefined && { description: validatedData.description }),
-                ...(validatedData.unit !== undefined && { unit: validatedData.unit }),
-                ...(validatedData.price !== undefined && { price: validatedData.price }),
-                ...(validatedData.cost !== undefined && { cost: validatedData.cost }),
-                ...(validatedData.stock !== undefined && { stock: validatedData.stock }),
-                ...(validatedData.minStock !== undefined && { minStock: validatedData.minStock }),
-                ...(validatedData.categoryId !== undefined && { categoryId: validatedData.categoryId }),
-                ...(validatedData.isActive !== undefined && { isActive: validatedData.isActive }),
-            },
-        });
+        // Build SET clauses for optimistic update
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 4; // $1=id, $2=tenantId, $3=version, $4+=values
+
+        if (validatedData.sku !== undefined) { setClauses.push(`sku = $${paramIndex}`); values.push(validatedData.sku); paramIndex++; }
+        if (validatedData.name !== undefined) { setClauses.push(`name = $${paramIndex}`); values.push(validatedData.name); paramIndex++; }
+        if (validatedData.description !== undefined) { setClauses.push(`description = $${paramIndex}`); values.push(validatedData.description); paramIndex++; }
+        if (validatedData.unit !== undefined) { setClauses.push(`unit = $${paramIndex}`); values.push(validatedData.unit); paramIndex++; }
+        if (validatedData.price !== undefined) { setClauses.push(`price = $${paramIndex}`); values.push(validatedData.price); paramIndex++; }
+        if (validatedData.cost !== undefined) { setClauses.push(`cost = $${paramIndex}`); values.push(validatedData.cost); paramIndex++; }
+        if (validatedData.stock !== undefined) { setClauses.push(`stock = $${paramIndex}`); values.push(validatedData.stock); paramIndex++; }
+        if (validatedData.minStock !== undefined) { setClauses.push(`"minStock" = $${paramIndex}`); values.push(validatedData.minStock); paramIndex++; }
+        if (validatedData.categoryId !== undefined) { setClauses.push(`"categoryId" = $${paramIndex}`); values.push(validatedData.categoryId); paramIndex++; }
+        if (validatedData.isActive !== undefined) { setClauses.push(`"isActive" = $${paramIndex}`); values.push(validatedData.isActive); paramIndex++; }
+
+        if (setClauses.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'No fields to update', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        await optimisticUpdateRaw('Product', id, tenantId, version as number, setClauses.join(', '), values);
+
+        const product = await prisma.product.findUnique({ where: { id } });
 
         // Log audit update
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Product', entityId: id, newValues: updateData as Record<string, unknown>, request });

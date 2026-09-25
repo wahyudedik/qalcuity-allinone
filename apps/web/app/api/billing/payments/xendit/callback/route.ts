@@ -19,7 +19,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
-import { getPaymentProvider } from '@/lib/payment/provider';
 import { xenditWebhookSchema, formatZodError } from '@/lib/validation-schemas';
 import { logger } from '@/lib/logger';
 
@@ -31,10 +30,13 @@ import { logger } from '@/lib/logger';
  */
 export async function POST(request: Request) {
     try {
-        // Extract callback token from header (Xendit sends it as X-Callback-Token)
-        const callbackToken = request.headers.get('x-callback-token') || '';
+        // 1. Read X-Callback-Token and X-Callback-HMAC headers — Xendit sends these in headers
+        const callbackTokenHeader = request.headers.get('x-callback-token');
+        const hmacHeader = request.headers.get('x-callback-hmac');
 
-        const body = await request.json();
+        // Read raw body for HMAC verification (must be before JSON.parse)
+        const rawBody = await request.text();
+        const body = JSON.parse(rawBody);
 
         // Validasi input dengan Zod
         const validation = xenditWebhookSchema.safeParse(body);
@@ -50,17 +52,21 @@ export async function POST(request: Request) {
         const data = validation.data;
         logger.info(`[XenditCallback] Received notification for invoice: ${data.external_id}, status: ${data.status}`);
 
-        // Verifikasi callback token menggunakan Xendit provider
-        const provider = getPaymentProvider();
-        const webhookResult = await provider.handleWebhook(body, callbackToken);
+        // 2. VERIFY CALLBACK TOKEN/HMAC — use the shared verification utility with timing-safe comparison
+        // Supports both X-Callback-Token (simple token) and X-Callback-HMAC (HMAC-SHA256)
+        const { verifyXenditToken } = await import('@/lib/payment/webhook-verification');
+        const verification = verifyXenditToken(callbackTokenHeader, hmacHeader, rawBody);
 
-        if (!webhookResult.success) {
-            logger.error(`[XenditCallback] Webhook verification failed for invoice: ${data.external_id}, error: ${webhookResult.error}`);
+        if (!verification.valid) {
+            logger.error(`[XenditCallback] Webhook verification FAILED for invoice: ${data.external_id} — ${verification.error}`);
+            // Return 403 (Forbidden) to indicate authentication failure
             return NextResponse.json(
-                { success: false, error: webhookResult.error },
-                { status: 400 }
+                { success: false, error: verification.error },
+                { status: 403 }
             );
         }
+
+        logger.info(`[XenditCallback] Token verified for invoice: ${data.external_id}`);
 
         // NOTE: Tenant isolation sengaja tidak diterapkan di sini karena route ini adalah
         // webhook publik yang dipanggil langsung oleh Xendit server (tidak ada auth).

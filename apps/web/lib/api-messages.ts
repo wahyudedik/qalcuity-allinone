@@ -29,6 +29,7 @@ export const MSG = {
     // ---------------------------------------------------------------------------
     DUPLICATE_DATA: 'Data already exists (duplicate)',
     RELATED_DATA_NOT_FOUND: 'Related data not found. Ensure the reference is valid.',
+    CONCURRENT_MODIFICATION: 'Data has been modified by another user. Please refresh and try again.',
     SERVICE_UNAVAILABLE: 'Service temporarily unavailable. Please contact administrator.',
     DATABASE_ERROR: 'A database error occurred',
     INTERNAL_SERVER_ERROR: 'An internal server error occurred',
@@ -365,6 +366,18 @@ export const MSG = {
     SESSIONS_REVOKED_ALL: 'All other sessions revoked successfully',
     SESSION_TRACK_FAILED: 'Failed to track session',
     SESSION_CLEANUP_SUCCESS: 'Expired sessions cleaned up successfully',
+
+    // ---------------------------------------------------------------------------
+    // Approval Escalation
+    // ---------------------------------------------------------------------------
+    ESCALATION_SCAN_COMPLETED: 'Approval escalation scan completed',
+    ESCALATION_SCAN_FAILED: 'Approval escalation scan failed',
+    ESCALATION_REMINDER_SENT: 'Approval reminder sent to approver',
+    ESCALATION_SUPERIOR_NOTIFIED: 'Approval escalated to superior',
+    ESCALATION_ADMIN_NOTIFIED: 'Approval escalated to admin',
+    ESCALATION_NO_PENDING: 'No pending approval requests found',
+    ESCALATION_SLA_CONFIG_UPDATED: 'Escalation SLA configuration updated',
+    ESCALATION_SLA_CONFIG_FAILED: 'Failed to update escalation SLA configuration',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

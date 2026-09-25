@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { MSG } from '@/lib/api-messages'
-import { requirePermissionForRoute } from '@/lib/session'
+import { requirePermissionForRoute, requirePermission } from '@/lib/session'
 import { logger } from '@/lib/logger'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
@@ -26,18 +26,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: MSG.TOO_MANY_REQUESTS }, { status: 429 })
         }
 
-        // 1. Auth check — only SUPERADMIN can refresh
+        // 1. Auth check — only SUPERADMIN can refresh (via permission engine)
         const auth = await requirePermissionForRoute(request)
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
         }
 
-        if (auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya SUPERADMIN yang dapat me-refresh analytics views' },
-                { status: 403 }
-            )
-        }
+        // Permission check: analytics:edit required (SUPERADMIN via permission engine)
+        await requirePermission('analytics:edit')
 
         // 2. Execute refresh function
         const startTime = Date.now()

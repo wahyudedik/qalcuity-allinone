@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/modal'
 import { ImportModal } from '@/components/crm/import-modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Lead = {
     id: string
@@ -111,6 +112,36 @@ export default function LeadsPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleExportCSV = () => {
+        if (filtered.length === 0) {
+            setToast({ message: t('crm.leads.toast.noDataExport') || 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filtered.map(l => ({
+            name: l.name,
+            company: l.company,
+            email: l.email,
+            phone: l.phone,
+            source: l.source,
+            value: l.value,
+            status: l.status,
+            assignedTo: l.assignedTo,
+            createdAt: l.createdAt,
+        }))
+        exportToCSV(csvData, 'leads', {
+            name: 'Nama',
+            company: 'Perusahaan',
+            email: 'Email',
+            phone: 'Telepon',
+            source: 'Sumber',
+            value: 'Nilai',
+            status: 'Status',
+            assignedTo: 'Ditugaskan Ke',
+            createdAt: 'Dibuat',
+        })
+        setToast({ message: t('crm.leads.toast.exportSuccess') || 'Berhasil mengekspor data', type: 'success' })
     }
 
     const filtered = leads.filter((l) => {
@@ -253,6 +284,13 @@ export default function LeadsPage() {
                     <p className="text-gray-500">{t('crm.leads.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={handleExportCSV}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        <Download className="h-4 w-4" />
+                        {t('crm.leads.exportCsv') || 'Export CSV'}
+                    </button>
                     <button
                         onClick={handleImport}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"

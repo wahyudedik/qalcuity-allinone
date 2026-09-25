@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prismaTenant, prisma, tenantStorage } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
 import { logAudit, toAuditPayload } from '@/lib/audit';
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
+        const { tenantId, userId } = auth;
         const ip = getClientIp(request);
         const rateLimitResult = checkRateLimit(`api:employees:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
@@ -28,56 +28,59 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '50');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        return tenantStorage.run({ tenantId, userId }, async () => {
+            // tenantId is auto-injected by prismaTenant extension — no manual filtering needed
+            const where: Record<string, unknown> = {};
 
-        if (status) {
-            where.status = status.toUpperCase();
-        }
+            if (status) {
+                where.status = status.toUpperCase();
+            }
 
-        if (department) {
-            where.department = department;
-        }
+            if (department) {
+                where.department = department;
+            }
 
-        if (search) {
-            where.OR = [
-                { name: { contains: search } },
-                { email: { contains: search } },
-                { position: { contains: search } },
-                { phone: { contains: search } },
-            ];
-        }
+            if (search) {
+                where.OR = [
+                    { name: { contains: search } },
+                    { email: { contains: search } },
+                    { position: { contains: search } },
+                    { phone: { contains: search } },
+                ];
+            }
 
-        const [employees, total] = await Promise.all([
-            prisma.employee.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.employee.count({ where }),
-        ]);
+            const [employees, total] = await Promise.all([
+                prismaTenant.employee.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                }),
+                prismaTenant.employee.count({ where }),
+            ]);
 
-        const data = employees.map((emp) => ({
-            id: emp.id,
-            employeeId: emp.employeeId,
-            name: emp.name,
-            email: emp.email,
-            phone: emp.phone || '',
-            position: emp.position,
-            department: emp.department || '',
-            joinDate: emp.joinDate.toISOString(),
-            salary: emp.salary,
-            status: emp.status,
-            createdAt: emp.createdAt.toISOString(),
-        }));
+            const data = employees.map((emp) => ({
+                id: emp.id,
+                employeeId: emp.employeeId,
+                name: emp.name,
+                email: emp.email,
+                phone: emp.phone || '',
+                position: emp.position,
+                department: emp.department || '',
+                joinDate: emp.joinDate.toISOString(),
+                salary: emp.salary,
+                status: emp.status,
+                createdAt: emp.createdAt.toISOString(),
+            }));
 
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            return NextResponse.json({
+                success: true,
+                data,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            });
         });
     } catch (error) {
         return handleApiError(error);

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from '@/lib/i18n'
+import { usePermission } from '@/lib/use-permission'
 import { Search, ChevronDown, ChevronRight, Download, Calendar, X, Eye } from 'lucide-react'
 
 type AuditLog = {
@@ -108,14 +109,15 @@ export default function AuditPage() {
         setPage(1)
     }, [selectedModule, selectedAction, search, dateFrom, dateTo])
 
-    // ─── Role Check: Hanya ADMIN+ yang bisa mengakses Audit Trail ─────────────
+    // ─── Permission Check: user harus memiliki audit:view permission ──────────
+    const { hasPermission } = usePermission()
+
     useEffect(() => {
         if (status === 'loading') return
-        const role = session?.user?.role
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        if (!hasPermission('audit:view')) {
             router.push('/dashboard')
         }
-    }, [session, status, router])
+    }, [session, status, router, hasPermission])
 
     if (status === 'loading') {
         return (
@@ -128,8 +130,7 @@ export default function AuditPage() {
         )
     }
 
-    const role = session?.user?.role
-    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+    if (!hasPermission('audit:view')) {
         return null
     }
 

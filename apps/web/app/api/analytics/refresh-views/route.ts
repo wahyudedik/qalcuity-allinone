@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
-import { requireAdminAuth } from '@/lib/session';
+import { requirePermissionForRoute, requirePermission } from '@/lib/session';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
@@ -31,8 +31,16 @@ export async function POST(request: Request) {
             );
         }
 
-        // 1. Auth check — only ADMIN/SUPERADMIN can refresh
-        const auth = await requireAdminAuth();
+        // 1. Auth check — permission-based (analytics:edit)
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+
+        const permCheck = await requirePermission('analytics:edit');
+        if (permCheck) {
+            return NextResponse.json({ success: false, error: permCheck }, { status: 403 });
+        }
 
         // 2. Execute refresh
         const startTime = Date.now();

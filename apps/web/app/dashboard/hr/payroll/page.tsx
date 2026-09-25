@@ -336,15 +336,28 @@ export default function PayrollPage() {
             return
         }
         const csvData = filteredData.map(record => ({
-            [t('hr.payroll.csv.employee')]: record.employeeName,
-            [t('hr.payroll.csv.period')]: record.period,
-            [t('hr.payroll.csv.baseSalary')]: record.baseSalary,
-            [t('hr.payroll.csv.allowances')]: record.allowances,
-            [t('hr.payroll.csv.deductions')]: record.deductions,
-            [t('hr.payroll.csv.netSalary')]: record.netSalary,
-            [t('hr.payroll.csv.status')]: statusConfig[record.status]?.label || record.status,
+            employeeName: record.employeeName,
+            department: record.department || '-',
+            position: record.position || '-',
+            period: record.period,
+            baseSalary: Number(record.baseSalary) || 0,
+            allowances: Number(record.allowances) || 0,
+            deductions: Number(record.deductions) || 0,
+            netSalary: Number(record.netSalary) || 0,
+            status: statusConfig[record.status]?.label || record.status,
         }))
-        exportToCSV(csvData, `payroll-${new Date().toISOString().split('T')[0]}`)
+        const headerMap = {
+            employeeName: t('hr.payroll.csv.employee') || 'Nama Karyawan',
+            department: t('hr.employees.department') || 'Departemen',
+            position: t('hr.employees.position') || 'Posisi',
+            period: t('hr.payroll.csv.period') || 'Periode',
+            baseSalary: t('hr.payroll.csv.baseSalary') || 'Gaji Pokok',
+            allowances: t('hr.payroll.csv.allowances') || 'Tunjangan',
+            deductions: t('hr.payroll.csv.deductions') || 'Potongan',
+            netSalary: t('hr.payroll.csv.netSalary') || 'Gaji Bersih',
+            status: t('hr.payroll.csv.status') || 'Status',
+        }
+        exportToCSV(csvData, `payroll`, headerMap)
         setToast({ message: t('hr.payroll.toast.exportSuccess'), type: 'success' })
     }
 

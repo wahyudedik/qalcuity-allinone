@@ -14,24 +14,25 @@ import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
+import { usePermission } from '@/lib/use-permission';
 import { FileCode, ExternalLink, Loader2 } from 'lucide-react';
 
 export default function ApiDocsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const { t } = useTranslation();
+    const { hasPermission } = usePermission();
     const swaggerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Role check: only ADMIN+ can access
+    // Permission check: user harus memiliki system:view permission
     useEffect(() => {
         if (status === 'loading') return;
-        const role = session?.user?.role;
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        if (!hasPermission('system:view')) {
             router.push('/dashboard');
         }
-    }, [session, status, router]);
+    }, [session, status, router, hasPermission]);
 
     useEffect(() => {
         if (status === 'loading' || !swaggerRef.current) return;
@@ -105,8 +106,7 @@ export default function ApiDocsPage() {
         );
     }
 
-    const role = session?.user?.role;
-    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+    if (!hasPermission('system:view')) {
         return null;
     }
 

@@ -4,12 +4,13 @@ import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from '@/lib/i18n'
-import { Download, Plus, Search, LayoutGrid, List, Trash2, Check, X, Users } from 'lucide-react'
+import { Download, Upload, Plus, Search, LayoutGrid, List, Trash2, Check, X, Users } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ImportModal } from '@/components/crm/import-modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Contact = {
     id: string
@@ -85,6 +86,38 @@ export default function ContactsPage() {
     useEffect(() => {
         fetchContacts()
     }, [])
+
+    const handleExportCSV = () => {
+        if (filtered.length === 0) {
+            setToast({ message: t('crm.contacts.toast.noDataExport') || 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filtered.map(c => ({
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            company: c.company,
+            type: c.type,
+            position: c.position,
+            address: c.address,
+            totalDeals: c.totalDeals,
+            totalValue: c.totalValue,
+            lastContact: c.lastContact,
+        }))
+        exportToCSV(csvData, 'contacts', {
+            name: 'Nama',
+            email: 'Email',
+            phone: 'Telepon',
+            company: 'Perusahaan',
+            type: 'Tipe',
+            position: 'Posisi',
+            address: 'Alamat',
+            totalDeals: 'Total Deal',
+            totalValue: 'Total Nilai',
+            lastContact: 'Kontak Terakhir',
+        })
+        setToast({ message: t('crm.contacts.toast.exportSuccess') || 'Berhasil mengekspor data', type: 'success' })
+    }
 
     const fetchContacts = async () => {
         try {
@@ -251,10 +284,18 @@ export default function ContactsPage() {
                 </div>
                 <div className="flex gap-2">
                     <button
+                        onClick={handleExportCSV}
+                        disabled={filtered.length === 0}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Download className="h-4 w-4" />
+                        {t('common.export') || 'Export CSV'}
+                    </button>
+                    <button
                         onClick={handleImport}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                        <Download className="h-4 w-4" />
+                        <Upload className="h-4 w-4" />
                         {t('crm.contacts.import')}
                     </button>
                     {canMutate && (

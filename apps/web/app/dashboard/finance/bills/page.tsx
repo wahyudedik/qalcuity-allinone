@@ -4,10 +4,11 @@ import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect, useMemo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Receipt, Trash2, Check, X } from 'lucide-react'
+import { Search, Plus, Download, Receipt, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Bill = {
     id: string
@@ -94,6 +95,38 @@ export default function BillsPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleExportCSV = () => {
+        if (filteredBills.length === 0) {
+            setToast({ message: 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filteredBills.map(b => ({
+            billNumber: b.billNumber,
+            vendorName: b.vendorName,
+            invoiceNumber: b.invoiceNumber || '',
+            subtotal: b.subtotal,
+            taxAmount: b.taxAmount,
+            totalAmount: b.totalAmount,
+            paidAmount: b.paidAmount,
+            dueDate: b.dueDate || '',
+            status: b.status,
+            notes: b.notes || '',
+        }))
+        exportToCSV(csvData, 'bills', {
+            billNumber: 'No. Tagihan',
+            vendorName: 'Vendor',
+            invoiceNumber: 'No. Invoice',
+            subtotal: 'Subtotal',
+            taxAmount: 'Pajak',
+            totalAmount: 'Total',
+            paidAmount: 'Dibayar',
+            dueDate: 'Jatuh Tempo',
+            status: 'Status',
+            notes: 'Catatan',
+        })
+        setToast({ message: 'Berhasil mengekspor data tagihan', type: 'success' })
     }
 
     const filteredBills = bills.filter(bill => {
@@ -204,15 +237,24 @@ export default function BillsPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.bills.title')}</h1>
                     <p className="text-gray-500">{t('finance.bills.subtitle')}</p>
                 </div>
-                {canMutate && (
+                <div className="flex gap-2">
                     <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={handleExportCSV}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                        <Plus className="h-4 w-4" />
-                        {t('finance.bills.createButton')}
+                        <Download className="h-4 w-4" />
+                        Export CSV
                     </button>
-                )}
+                    {canMutate && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {t('finance.bills.createButton')}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Stats Cards */}

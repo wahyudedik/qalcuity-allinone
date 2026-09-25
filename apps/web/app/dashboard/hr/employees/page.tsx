@@ -24,9 +24,11 @@ import {
     Loader2,
     ArrowUp,
     ArrowDown,
+    Download,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { exportToCSV } from '@/lib/export'
 
 interface Employee {
     id: string
@@ -323,6 +325,37 @@ export default function EmployeesPage() {
         }
     }
 
+    const handleExport = () => {
+        if (filteredEmployees.length === 0) {
+            setToast({ message: t('hr.employees.toast.noDataExport') || 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = sortedEmployees.map(emp => ({
+            employeeId: emp.employeeId,
+            name: emp.name,
+            department: emp.department || '-',
+            position: emp.position || '-',
+            email: emp.email,
+            phone: emp.phone,
+            status: emp.status,
+            joinDate: emp.joinDate,
+            salary: emp.salary,
+        }))
+        const headerMap = {
+            employeeId: t('hr.employees.csv.employeeId') || 'ID Karyawan',
+            name: t('hr.employees.csv.name') || 'Nama',
+            department: t('hr.employees.csv.department') || 'Departemen',
+            position: t('hr.employees.csv.position') || 'Posisi',
+            email: t('hr.employees.csv.email') || 'Email',
+            phone: t('hr.employees.csv.phone') || 'Telepon',
+            status: t('hr.employees.csv.status') || 'Status',
+            joinDate: t('hr.employees.csv.joinDate') || 'Tanggal Bergabung',
+            salary: t('hr.employees.csv.salary') || 'Gaji',
+        }
+        exportToCSV(csvData, 'employees', headerMap)
+        setToast({ message: t('hr.employees.toast.exportSuccess') || 'Berhasil mengekspor data', type: 'success' })
+    }
+
     const handleFormChange = (field: keyof EmployeeFormData, value: string | number) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
         // Clear error for this field when user types
@@ -418,6 +451,18 @@ export default function EmployeesPage() {
                     </div>
                     <div className="text-sm text-gray-500">{t('hr.employees.terminated') || 'Dikeluarkan'}</div>
                 </div>
+            </div>
+
+            {/* Export Button */}
+            <div className="flex justify-end">
+                <button
+                    onClick={handleExport}
+                    disabled={filteredEmployees.length === 0}
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Download className="h-4 w-4" />
+                    {t('common.export') || 'Export CSV'}
+                </button>
             </div>
 
             {/* Filters */}

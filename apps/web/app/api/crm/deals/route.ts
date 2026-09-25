@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prismaTenant, prisma, tenantStorage } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
-import { createDealSchema, updateDealSchema, formatZodError } from '@/lib/validation-schemas';
+import { createDealSchema, formatZodError } from '@/lib/validation-schemas';
 import { WorkflowEngine } from '@qalcuity/workflow';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
+        const { tenantId, userId } = auth;
         const { searchParams } = new URL(request.url);
         const stage = searchParams.get('stage');
         const search = searchParams.get('search');
@@ -32,59 +32,62 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        return tenantStorage.run({ tenantId, userId }, async () => {
+            // tenantId is auto-injected by prismaTenant extension — no manual filtering needed
+            const where: Record<string, unknown> = {};
 
-        if (stage) {
-            where.stage = stage.toUpperCase().replace(' ', '_');
-        }
+            if (stage) {
+                where.stage = stage.toUpperCase().replace(' ', '_');
+            }
 
-        if (search) {
-            where.OR = [
-                { title: { contains: search } },
-                { contact: { name: { contains: search } } },
-            ];
-        }
+            if (search) {
+                where.OR = [
+                    { title: { contains: search } },
+                    { contact: { name: { contains: search } } },
+                ];
+            }
 
-        const [deals, total] = await Promise.all([
-            prisma.deal.findMany({
-                where,
-                include: {
-                    contact: { select: { id: true, name: true, email: true } },
-                    lead: { select: { id: true, name: true, company: true } },
-                },
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.deal.count({ where }),
-        ]);
+            const [deals, total] = await Promise.all([
+                prismaTenant.deal.findMany({
+                    where,
+                    include: {
+                        contact: { select: { id: true, name: true, email: true } },
+                        lead: { select: { id: true, name: true, company: true } },
+                    },
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                }),
+                prismaTenant.deal.count({ where }),
+            ]);
 
-        const data = deals.map((deal) => ({
-            id: deal.id,
-            title: deal.title,
-            name: deal.title,
-            value: deal.value,
-            stage: deal.stage,
-            probability: deal.probability,
-            closeDate: deal.closeDate?.toISOString() || null,
-            expectedCloseDate: deal.closeDate?.toISOString() || null,
-            notes: deal.notes,
-            contactId: deal.contactId,
-            contactName: deal.contact?.name || null,
-            company: deal.lead?.company || deal.contact?.name || null,
-            leadId: deal.leadId,
-            leadCompany: deal.lead?.company || null,
-            assignedTo: null,
-            createdAt: deal.createdAt.toISOString(),
-        }));
+            const data = deals.map((deal) => ({
+                id: deal.id,
+                title: deal.title,
+                name: deal.title,
+                value: deal.value,
+                stage: deal.stage,
+                probability: deal.probability,
+                closeDate: deal.closeDate?.toISOString() || null,
+                expectedCloseDate: deal.closeDate?.toISOString() || null,
+                notes: deal.notes,
+                contactId: deal.contactId,
+                contactName: deal.contact?.name || null,
+                company: deal.lead?.company || deal.contact?.name || null,
+                leadId: deal.leadId,
+                leadCompany: deal.lead?.company || null,
+                assignedTo: null,
+                createdAt: deal.createdAt.toISOString(),
+            }));
 
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            return NextResponse.json({
+                success: true,
+                data,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            });
         });
     } catch (error) {
         return handleApiError(error);
@@ -188,137 +191,6 @@ export async function POST(request: Request) {
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Deal', entityId: deal.id, newValues: { title: deal.title, value: deal.value, stage: deal.stage } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: mappedDeal }, { status: 201 });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function PUT(request: Request) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const body = await request.json();
-        const { id, ...updateData } = body;
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: MSG.ID_REQUIRED },
-                { status: 400 }
-            );
-        }
-
-        const validation = updateDealSchema.safeParse(updateData);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
-
-        const validatedData = validation.data;
-
-        const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.DEAL_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        // Validasi workflow transition jika stage berubah
-        const newStage = validatedData.stage
-            ? validatedData.stage.toUpperCase().replace(' ', '_')
-            : undefined;
-
-        if (newStage && newStage !== existing.stage) {
-            const { validateWorkflowTransition } = await import('@/lib/workflow');
-            const validation = await validateWorkflowTransition(
-                tenantId,
-                'DEAL',
-                existing.stage,
-                newStage,
-                'MEMBER'
-            );
-
-            if (!validation.valid) {
-                return NextResponse.json(
-                    { success: false, error: validation.error },
-                    { status: 400 }
-                );
-            }
-        }
-
-        const deal = await prisma.deal.update({
-            where: { id },
-            data: {
-                ...(validatedData.title !== undefined && { title: validatedData.title }),
-                ...(validatedData.value !== undefined && { value: validatedData.value }),
-                ...(newStage !== undefined && { stage: newStage }),
-                ...(validatedData.probability !== undefined && { probability: validatedData.probability }),
-                ...(validatedData.closeDate !== undefined && { closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null }),
-                ...(validatedData.notes !== undefined && { notes: validatedData.notes }),
-                ...(validatedData.contactId !== undefined && { contactId: validatedData.contactId }),
-                ...(validatedData.leadId !== undefined && { leadId: validatedData.leadId }),
-            },
-        });
-
-        // Catat workflow history jika stage berubah
-        if (newStage && newStage !== existing.stage) {
-            await prisma.workflowHistory.create({
-                data: {
-                    tenantId,
-                    entityType: 'DEAL',
-                    entityId: id,
-                    fromState: existing.stage,
-                    toState: newStage,
-                    action: 'stage_change',
-                    userId,
-                    notes: `Stage diubah dari "${existing.stage}" ke "${newStage}"`,
-                },
-            });
-        }
-
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Deal', entityId: id, newValues: validatedData as Record<string, unknown>, request });
-        return NextResponse.json({ success: true, data: deal });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(request: Request) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: 'ID is required' },
-                { status: 400 }
-            );
-        }
-
-        const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Deal not found' },
-                { status: 404 }
-            );
-        }
-
-        await prisma.deal.delete({ where: { id } });
-
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Deal', entityId: id, oldValues: { title: existing.title, value: existing.value, stage: existing.stage } as Record<string, unknown>, request });
-        return NextResponse.json({ success: true, data: null });
     } catch (error) {
         return handleApiError(error);
     }

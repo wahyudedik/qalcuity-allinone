@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
+import { fetchDashboardStats, formatCurrency, DashboardStats } from '../lib/api';
 
 type HomeScreenProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -61,6 +62,16 @@ const menuItems = [
 ];
 
 export default function HomeScreen({ navigation }: Props) {
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+
+    useEffect(() => {
+        fetchDashboardStats()
+            .then(setStats)
+            .catch(() => {
+                // Silently fail — stats are optional on home screen
+            });
+    }, []);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
@@ -98,24 +109,26 @@ export default function HomeScreen({ navigation }: Props) {
                     ))}
                 </View>
 
-                {/* Quick Stats */}
+                {/* Quick Stats — fetched from API */}
                 <View style={styles.statsContainer}>
                     <Text style={styles.statsTitle}>Quick Stats</Text>
                     <View style={styles.statsGrid}>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>Rp 45.7Jt</Text>
+                            <Text style={styles.statValue} numberOfLines={1}>
+                                {formatCurrency(stats?.revenue?.current || 0)}
+                            </Text>
                             <Text style={styles.statLabel}>Revenue Bulan Ini</Text>
                         </View>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>128</Text>
+                            <Text style={styles.statValue}>{stats?.products?.total ?? '-'}</Text>
                             <Text style={styles.statLabel}>Total Produk</Text>
                         </View>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>56</Text>
+                            <Text style={styles.statValue}>{stats?.employees?.active ?? '-'}</Text>
                             <Text style={styles.statLabel}>Karyawan Aktif</Text>
                         </View>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>23</Text>
+                            <Text style={styles.statValue}>{stats?.activeDeals ?? '-'}</Text>
                             <Text style={styles.statLabel}>Deals Aktif</Text>
                         </View>
                     </View>
@@ -255,6 +268,7 @@ const styles = StyleSheet.create({
     footer: {
         padding: 20,
         alignItems: 'center',
+        marginTop: 8,
     },
     footerText: {
         fontSize: 12,

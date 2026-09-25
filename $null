@@ -1,0 +1,560 @@
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 
+Get-Content : A parameter cannot be found that matches parameter name 'Raw'.
+At line:1 char:122
++ ... s' | ForEach-Object { $content = Get-Content $_.FullName -Raw; if ($c ...
++                                                              ~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Content], ParameterBindingException
+    + FullyQualifiedErrorId : NamedParameterNotFound,Microsoft.PowerShell.Commands.GetContentCommand
+ 

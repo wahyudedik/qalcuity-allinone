@@ -10,6 +10,7 @@ import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Product = {
     id: string
@@ -165,6 +166,34 @@ export default function ProductsPage() {
     }, [fetchProducts, fetchCategories])
 
     const categoryNames = ['all', ...Array.from(new Set(products.map((p) => p.categoryName || 'Uncategorized')))]
+
+    const handleExportCSV = () => {
+        if (filtered.length === 0) {
+            setToast({ message: t('inventory.products.toast.noDataExport') || 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filtered.map(p => ({
+            name: p.name,
+            sku: p.sku,
+            categoryName: p.categoryName || '',
+            price: p.price,
+            cost: p.cost,
+            stock: p.stock,
+            unit: p.unit,
+            isActive: p.isActive ? 'Aktif' : 'Nonaktif',
+        }))
+        exportToCSV(csvData, 'products', {
+            name: 'Nama Produk',
+            sku: 'SKU',
+            categoryName: 'Kategori',
+            price: 'Harga',
+            cost: 'Harga Pokok',
+            stock: 'Stok',
+            unit: 'Satuan',
+            isActive: 'Status',
+        })
+        setToast({ message: t('inventory.products.toast.exportSuccess') || 'Berhasil mengekspor data', type: 'success' })
+    }
 
     const filtered = products.filter((p) => {
         const matchCat = filterCategory === 'all' || (p.categoryName || 'Uncategorized') === filterCategory
@@ -356,6 +385,13 @@ export default function ProductsPage() {
                     <p className="text-gray-500">{stats.total} {t('inventory.products.subtitle') || 'produk terdaftar'}</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={handleExportCSV}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        <Download className="h-4 w-4" />
+                        {t('inventory.products.exportCsv') || 'Export CSV'}
+                    </button>
                     <button
                         onClick={() => importInputRef.current?.click()}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"

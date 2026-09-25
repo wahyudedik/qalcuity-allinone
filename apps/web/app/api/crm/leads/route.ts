@@ -6,7 +6,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
-import { createLeadSchema, updateLeadSchema, formatZodError } from '@/lib/validation-schemas';
+import { createLeadSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 
@@ -131,110 +131,6 @@ export async function POST(request: Request) {
 
         void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Lead', entityId: lead.id, newValues: { name: lead.name, company: lead.company, status: lead.status } as Record<string, unknown>, request });
         return NextResponse.json({ success: true, data: lead }, { status: 201 });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function PUT(request: Request) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:leads:PUT:${ip}`, 30, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const body = await request.json();
-        const { id, ...updateData } = body;
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: MSG.ID_REQUIRED },
-                { status: 400 }
-            );
-        }
-
-        // Validasi input dengan Zod
-        const validation = updateLeadSchema.safeParse(updateData);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
-
-        const existing = await prisma.lead.findFirst({
-            where: { id, tenantId: tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.LEAD_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        // Sanitize text fields
-        const sanitized = sanitizeObject(validation.data);
-
-        const lead = await prisma.lead.update({
-            where: { id },
-            data: {
-                ...(typeof sanitized.name === 'string' && { name: sanitized.name }),
-                ...(typeof sanitized.email === 'string' && { email: sanitized.email }),
-                ...(typeof sanitized.phone === 'string' && { phone: sanitized.phone }),
-                ...(typeof sanitized.company === 'string' && { company: sanitized.company }),
-                ...(typeof sanitized.source === 'string' && { source: sanitized.source }),
-                ...(typeof validation.data.status === 'string' && { status: validation.data.status.toUpperCase() }),
-                ...(typeof validation.data.value === 'number' && { value: validation.data.value }),
-                ...(typeof sanitized.notes === 'string' && { notes: sanitized.notes }),
-                ...(typeof validation.data.contactId === 'string' && { contactId: validation.data.contactId }),
-            },
-        });
-
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Lead', entityId: id, newValues: updateData as Record<string, unknown>, request });
-        return NextResponse.json({ success: true, data: lead });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(request: Request) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: 'ID is required' },
-                { status: 400 }
-            );
-        }
-
-        const existing = await prisma.lead.findFirst({
-            where: { id, tenantId: tenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.LEAD_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        await prisma.lead.delete({ where: { id } });
-
-        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Lead', entityId: id, oldValues: { name: existing.name, company: existing.company, status: existing.status } as Record<string, unknown>, request });
-        return NextResponse.json({ success: true, data: null });
     } catch (error) {
         return handleApiError(error);
     }

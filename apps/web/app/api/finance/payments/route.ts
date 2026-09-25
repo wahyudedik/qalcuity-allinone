@@ -11,6 +11,7 @@ import { createPaymentSchema, updatePaymentSchema, formatZodError } from '@/lib/
 import { sendPaymentReceivedEmail } from '@/lib/email';
 import { handleApiError } from '@/lib/api-error';
 import { generatePaymentJournalEntry } from '@/lib/auto-journal';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
 
 export async function GET(request: Request) {
     try {
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        const where: Record<string, unknown> = { tenantId, deletedAt: null };
 
         if (status) {
             where.status = status.toUpperCase();
@@ -92,6 +93,7 @@ export async function GET(request: Request) {
             date: p.paymentDate.toISOString().split('T')[0],
             reference: p.reference || '',
             notes: p.notes || '',
+            version: p.version,
             createdAt: p.createdAt.toISOString(),
         }));
 
@@ -246,11 +248,18 @@ export async function PUT(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
-        const { id, ...updateData } = body;
+        const { id, version, ...updateData } = body;
 
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        if (typeof version !== 'number') {
+            return NextResponse.json(
+                { success: false, error: 'version is required for updates', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -297,38 +306,73 @@ export async function PUT(request: Request) {
             data.paymentDate = validatedData.date ? new Date(validatedData.date) : null;
         }
 
-        const payment = await prisma.$transaction(async (tx) => {
-            const updated = await tx.payment.update({
-                where: { id },
-                data,
-                include: {
-                    invoice: {
-                        select: { id: true, invoiceNumber: true, total: true, contact: { select: { name: true } } },
-                    },
+        // Optimistic locking: atomic UPDATE with version check
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 5; // $1=id, $2=tenantId, $3=version already used
+
+        if (data.status !== undefined) {
+            setClauses.push(`status = $${paramIndex++}`);
+            values.push(data.status);
+        }
+        if (data.method !== undefined) {
+            setClauses.push(`method = $${paramIndex++}`);
+            values.push(data.method);
+        }
+        if (data.amount !== undefined) {
+            setClauses.push(`amount = $${paramIndex++}`);
+            values.push(data.amount);
+        }
+        if (data.type !== undefined) {
+            setClauses.push(`type = $${paramIndex++}`);
+            values.push(data.type);
+        }
+        if (data.reference !== undefined) {
+            setClauses.push(`reference = $${paramIndex++}`);
+            values.push(data.reference);
+        }
+        if (data.notes !== undefined) {
+            setClauses.push(`notes = $${paramIndex++}`);
+            values.push(data.notes);
+        }
+        if (data.paymentDate !== undefined) {
+            setClauses.push(`"paymentDate" = $${paramIndex++}`);
+            values.push(data.paymentDate);
+        }
+
+        if (setClauses.length > 0) {
+            await optimisticUpdateRaw('Payment', id, tenantId, version, setClauses.join(', '), values);
+        }
+
+        // Fetch updated payment
+        const payment = await prisma.payment.findUnique({
+            where: { id },
+            include: {
+                invoice: {
+                    select: { id: true, invoiceNumber: true, total: true, contact: { select: { name: true } } },
                 },
+            },
+        });
+
+        // Recalculate invoice status if status changed
+        const newStatus = data.status as string | undefined;
+        if (newStatus && payment?.invoiceId) {
+            const invoice = await prisma.invoice.findUnique({
+                where: { id: payment.invoiceId },
+                include: { payments: true },
             });
 
-            // Recalculate invoice status if status changed
-            if (data.status && updated.invoiceId) {
-                const invoice = await tx.invoice.findUnique({
-                    where: { id: updated.invoiceId },
-                    include: { payments: true },
+            if (invoice) {
+                const totalPaid = invoice.payments
+                    .filter((p: { id: string; status: string }) => p.id !== id && p.status === 'COMPLETED')
+                    .reduce((sum: number, p: { amount: unknown }) => sum + Number(p.amount), 0) + (newStatus === 'COMPLETED' ? Number(payment.amount) : 0);
+                const newInvoiceStatus = Number(totalPaid) >= Number(invoice.total) ? 'PAID' : 'SENT';
+                await prisma.invoice.update({
+                    where: { id: payment.invoiceId },
+                    data: { status: newInvoiceStatus },
                 });
-
-                if (invoice) {
-                    const totalPaid = invoice.payments
-                        .filter((p: { id: string; status: string }) => p.id !== id && p.status === 'COMPLETED')
-                        .reduce((sum: number, p: { amount: unknown }) => sum + Number(p.amount), 0) + (data.status === 'COMPLETED' ? Number(updated.amount) : 0);
-                    const newInvoiceStatus = Number(totalPaid) >= Number(invoice.total) ? 'PAID' : 'SENT';
-                    await tx.invoice.update({
-                        where: { id: updated.invoiceId },
-                        data: { status: newInvoiceStatus },
-                    });
-                }
             }
-
-            return updated;
-        });
+        }
 
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Payment', entityId: id, newValues: data as Record<string, unknown>, request });
 

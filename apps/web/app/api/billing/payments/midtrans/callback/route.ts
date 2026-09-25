@@ -20,9 +20,7 @@ import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { invalidateEntitlementCache } from '@/lib/entitlement';
-import { getPaymentProvider } from '@/lib/payment/provider';
 import { midtransWebhookSchema, formatZodError } from '@/lib/validation-schemas';
-import type { MidtransProvider } from '@/lib/payment/midtrans';
 import { logger } from '@/lib/logger';
 
 /**
@@ -33,6 +31,9 @@ import { logger } from '@/lib/logger';
  */
 export async function POST(request: Request) {
     try {
+        // 1. Read X-Signature header — Midtrans sends signature in the header, NOT in the body
+        const signatureHeader = request.headers.get('x-signature');
+
         const body = await request.json();
 
         // Validasi input dengan Zod
@@ -49,20 +50,21 @@ export async function POST(request: Request) {
         const data = validation.data;
         logger.info(`[MidtransCallback] Received notification for order: ${data.order_id}, status: ${data.transaction_status}`);
 
-        // Verifikasi signature menggunakan Midtrans provider
-        const provider = getPaymentProvider();
-        const midtransProvider = provider as MidtransProvider;
+        // 2. VERIFY SIGNATURE — use the shared verification utility with timing-safe comparison
+        // Reads MIDTRANS_SERVER_KEY from env and computes SHA512(order_id + status_code + gross_amount + server_key)
+        const { verifyMidtransSignature } = await import('@/lib/payment/webhook-verification');
+        const verification = verifyMidtransSignature(body as Record<string, unknown>, signatureHeader);
 
-        // Generate expected signature untuk verifikasi
-        const webhookResult = await provider.handleWebhook(body, data.signature_key || '');
-
-        if (!webhookResult.success) {
-            logger.error(`[MidtransCallback] Webhook verification failed for order: ${data.order_id}, error: ${webhookResult.error}`);
+        if (!verification.valid) {
+            logger.error(`[MidtransCallback] Webhook signature verification FAILED for order: ${data.order_id} — ${verification.error}`);
+            // Return 403 (Forbidden) to indicate authentication failure
             return NextResponse.json(
-                { success: false, error: webhookResult.error },
-                { status: 400 }
+                { success: false, error: verification.error },
+                { status: 403 }
             );
         }
+
+        logger.info(`[MidtransCallback] Signature verified for order: ${data.order_id}`);
 
         // NOTE: Tenant isolation sengaja tidak diterapkan di sini karena route ini adalah
         // webhook publik yang dipanggil langsung oleh Midtrans server (tidak ada auth).

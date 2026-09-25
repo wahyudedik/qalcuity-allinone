@@ -99,6 +99,14 @@ export function handleApiError(error: unknown): NextResponse {
             );
         }
 
+        // Optimistic lock conflict (from ConflictError)
+        if ('statusCode' in error && (error as Record<string, unknown>).statusCode === 409) {
+            return NextResponse.json(
+                { success: false, error: MSG.CONCURRENT_MODIFICATION, code: 'CONCURRENT_MODIFICATION' },
+                { status: 409 }
+            );
+        }
+
         // WorkflowEngine errors
         if (message.includes('Workflow') || message.includes('workflow') || message.includes('transition')) {
             return NextResponse.json(

@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import prisma from "./db";
 import { logger } from '@/lib/logger';
+import { PermissionEngine, SYSTEM_ROLE_PERMISSIONS } from '@qalcuity/permissions';
 
 // ─── Security: NEXTAUTH_SECRET is MANDATORY in ALL environments ────────────────
 // Previously, development mode used an insecure fallback. This is now removed
@@ -54,6 +55,35 @@ function isGoogleOAuthConfigured(): boolean {
     return true;
 }
 
+/**
+ * Resolve permissions for a user based on their role.
+ * Supports both system roles (from SYSTEM_ROLE_PERMISSIONS) and custom roles (from DB).
+ *
+ * @param customRole - Custom role object with permissions array (from DB), or null
+ * @param role - System role name (SUPERADMIN, ADMIN, MEMBER, VIEWER)
+ * @returns Resolved flat permissions array
+ */
+function resolveUserPermissions(
+    customRole: { permissions?: string[] } | null,
+    role: string
+): string[] {
+    // If user has a custom role, use its permissions
+    if (customRole) {
+        const customPerms = customRole.permissions;
+        if (Array.isArray(customPerms) && customPerms.length > 0) {
+            return PermissionEngine.resolvePermissions(customPerms);
+        }
+    }
+
+    // Fall back to system role permissions
+    const systemPerms = SYSTEM_ROLE_PERMISSIONS[role];
+    if (systemPerms) {
+        return PermissionEngine.resolvePermissions(systemPerms);
+    }
+
+    return [];
+}
+
 export const authOptions: NextAuthOptions = {
     // trustHost: REQUIRED — VPS runs behind Nginx reverse proxy (aaPanel).
     // Without this, NextAuth v4.24+ host validation fails during OAuth redirect flow,
@@ -100,7 +130,7 @@ export const authOptions: NextAuthOptions = {
                     // Cari user berdasarkan email dari database
                     const user = await prisma.user.findUnique({
                         where: { email: credentials.email },
-                        include: { tenant: true },
+                        include: { tenant: true, customRole: true },
                     });
 
                     if (!user) {
@@ -121,6 +151,12 @@ export const authOptions: NextAuthOptions = {
                         throw new Error("Password salah");
                     }
 
+                    // Resolve permissions — supports both system roles and custom roles
+                    const permissions = resolveUserPermissions(
+                        user.customRole as { permissions?: string[] } | null,
+                        user.role
+                    );
+
                     // Update last login timestamp (non-blocking)
                     prisma.user.update({
                         where: { id: user.id },
@@ -135,6 +171,7 @@ export const authOptions: NextAuthOptions = {
                         name: user.name,
                         role: user.role,
                         tenantId: user.tenantId,
+                        permissions,
                     };
                 } catch (error) {
                     // Re-throw known errors (validation messages)
@@ -162,9 +199,10 @@ export const authOptions: NextAuthOptions = {
                     provider: account.provider,
                 });
 
-                // Cari user berdasarkan email
+                // Cari user berdasarkan email (include customRole for permissions resolution)
                 const existingUser = await prisma.user.findUnique({
                     where: { email: user.email! },
+                    include: { customRole: true },
                 });
 
                 if (existingUser) {
@@ -175,11 +213,15 @@ export const authOptions: NextAuthOptions = {
                         role: existingUser.role,
                     });
 
-                    // CRITICAL: Set tenantId & role on user object so JWT callback
+                    // CRITICAL: Set tenantId, role & permissions on user object so JWT callback
                     // can store them in the token. Without this, the JWT would have
-                    // undefined values for role/tenantId, breaking dashboard access.
+                    // undefined values for role/tenantId/permissions, breaking dashboard access.
                     user.tenantId = existingUser.tenantId;
                     user.role = existingUser.role;
+                    user.permissions = resolveUserPermissions(
+                        existingUser.customRole as { permissions?: string[] } | null,
+                        existingUser.role
+                    );
 
                     // Update lastLoginAt (non-blocking)
                     prisma.user.update({
@@ -233,9 +275,11 @@ export const authOptions: NextAuthOptions = {
                     },
                 });
 
-                // Set tenantId pada user object agar tersimpan di JWT
+                // Set tenantId, role & permissions pada user object agar tersimpan di JWT
                 user.tenantId = tenant.id;
                 user.role = "MEMBER";
+                // New OAuth users get system MEMBER permissions
+                user.permissions = resolveUserPermissions(null, "MEMBER");
 
                 return true;
             } catch (error) {
@@ -261,6 +305,8 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = user.role;
                 token.tenantId = user.tenantId;
+                // permissions is set by our authorize/signIn callbacks
+                token.permissions = (user as unknown as { permissions?: string[] }).permissions ?? [];
             }
             return token;
         },
@@ -269,6 +315,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.id = token.sub!;
                 session.user.role = token.role;
                 session.user.tenantId = token.tenantId;
+                session.user.permissions = token.permissions ?? [];
             }
             return session;
         },
