@@ -25,6 +25,22 @@ ALTER TABLE "PosSession" ALTER COLUMN "variance" TYPE NUMERIC(19,4);
 ALTER TABLE "PosTransaction" ALTER COLUMN "subtotal" TYPE NUMERIC(19,4);
 ALTER TABLE "PosTransaction" ALTER COLUMN "discountAmount" TYPE NUMERIC(19,4);
 ALTER TABLE "PosTransaction" ALTER COLUMN "discountPercent" TYPE NUMERIC(5,2);
+
+-- Add missing discount/promo columns if they don't exist yet
+-- (schema.prisma expects these but no prior migration added them to production)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PosTransaction' AND column_name = 'discountType') THEN
+        ALTER TABLE "PosTransaction" ADD COLUMN "discountType" TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PosTransaction' AND column_name = 'discountValue') THEN
+        ALTER TABLE "PosTransaction" ADD COLUMN "discountValue" NUMERIC(65,30) DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PosTransaction' AND column_name = 'promoCode') THEN
+        ALTER TABLE "PosTransaction" ADD COLUMN "promoCode" TEXT;
+    END IF;
+END $$;
+
 ALTER TABLE "PosTransaction" ALTER COLUMN "discountValue" TYPE NUMERIC(19,4);
 ALTER TABLE "PosTransaction" ALTER COLUMN "taxAmount" TYPE NUMERIC(19,4);
 ALTER TABLE "PosTransaction" ALTER COLUMN "totalAmount" TYPE NUMERIC(19,4);
