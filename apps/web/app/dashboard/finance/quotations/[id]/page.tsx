@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { usePermission } from '@/lib/use-permission'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/utils'
-import { ArrowLeft, Printer, Send, FileText, Copy, ArrowRight, Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Printer, Send, FileText, Copy, ArrowRight, Loader2, Trash2, Download } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface QuotationDetail {
@@ -38,7 +39,8 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
     const { t } = useTranslation()
     const router = useRouter()
     const { data: session } = useSession()
-    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { canDelete: canDeleteModule } = usePermission()
+    const canDelete = canDeleteModule('finance')
     const [quotation, setQuotation] = useState<QuotationDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -47,6 +49,7 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [processing, setProcessing] = useState(false)
     const [deleting, setDeleting] = useState(false)
+    const [downloadingPDF, setDownloadingPDF] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     useEffect(() => {
@@ -78,6 +81,31 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
 
     const handlePrint = () => {
         window.print()
+    }
+
+    const handleDownloadPDF = async () => {
+        try {
+            setDownloadingPDF(true)
+            const res = await fetch(`/api/finance/quotations/${params.id}/pdf`)
+            if (res.ok) {
+                const blob = await res.blob()
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `quotation-${quotation?.quotationNumber || params.id}.pdf`
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                window.URL.revokeObjectURL(url)
+                setToast({ message: t('finance.quotationsDetail.toastDownloaded') || 'PDF berhasil diunduh', type: 'success' })
+            } else {
+                setToast({ message: t('finance.quotationsDetail.toastDownloadFailed') || 'Gagal mengunduh PDF', type: 'error' })
+            }
+        } catch {
+            setToast({ message: t('finance.quotationsDetail.toastDownloadFailed') || 'Gagal mengunduh PDF', type: 'error' })
+        } finally {
+            setDownloadingPDF(false)
+        }
     }
 
     const handleEdit = () => {
@@ -237,6 +265,14 @@ export default function QuotationDetailPage({ params }: { params: { id: string }
                     >
                         <Printer className="h-4 w-4" />
                         {t('finance.quotationsDetail.print')}
+                    </button>
+                    <button
+                        onClick={handleDownloadPDF}
+                        disabled={downloadingPDF}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        {downloadingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        {t('finance.quotationsDetail.downloadPDF') || 'Download PDF'}
                     </button>
                     {canSend && (
                         <button

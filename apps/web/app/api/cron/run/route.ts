@@ -28,6 +28,7 @@ function getTasks(): CronTask[] {
     const { runAnomalyScanCron } = require('@/lib/ai/anomaly-scan-handler');
     const { runRefreshAnalyticsViews } = require('@/lib/analytics-refresh-handler');
     const { cleanupExpiredSessions } = require('@/lib/session-tracker');
+    const { runApprovalEscalation } = require('@/lib/approval-escalation');
 
     _tasks = [
         {
@@ -70,6 +71,13 @@ function getTasks(): CronTask[] {
             name: 'Cleanup Expired Sessions',
             schedule: { type: 'daily', hour: 3, minute: 0 }, // 03:00 WIB (local timezone)
             handler: cleanupExpiredSessions,
+            enabled: true,
+        },
+        {
+            id: 'approval-escalation',
+            name: 'Approval Escalation',
+            schedule: { type: 'interval', intervalHours: 1 }, // Every 1 hour
+            handler: runApprovalEscalation,
             enabled: true,
         },
     ];

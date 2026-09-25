@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
-import { prisma } from '@/lib/db';
+import { prismaTenant, prisma, tenantStorage } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
+        const { tenantId, userId } = auth;
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const search = searchParams.get('search');
@@ -34,67 +34,70 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        return tenantStorage.run({ tenantId, userId }, async () => {
+            // tenantId is auto-injected by prismaTenant extension — no manual filtering needed
+            const where: Record<string, unknown> = { deletedAt: null };
 
-        if (status) {
-            where.status = status.toUpperCase();
-        }
+            if (status) {
+                where.status = status.toUpperCase();
+            }
 
-        if (search) {
-            where.OR = [
-                { invoiceNumber: { contains: search } },
-                { contact: { name: { contains: search } } },
-            ];
-        }
+            if (search) {
+                where.OR = [
+                    { invoiceNumber: { contains: search } },
+                    { contact: { name: { contains: search } } },
+                ];
+            }
 
-        const [invoices, total] = await Promise.all([
-            prisma.invoice.findMany({
-                where,
-                include: {
-                    contact: { select: { id: true, name: true, email: true, phone: true } },
-                    items: true,
-                    payments: { select: { id: true, amount: true, status: true } },
-                },
-                orderBy: { createdAt: 'desc' },
-                skip,
-                take: limit,
-            }),
-            prisma.invoice.count({ where }),
-        ]);
+            const [invoices, total] = await Promise.all([
+                prismaTenant.invoice.findMany({
+                    where,
+                    include: {
+                        contact: { select: { id: true, name: true, email: true, phone: true } },
+                        items: true,
+                        payments: { select: { id: true, amount: true, status: true } },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    skip,
+                    take: limit,
+                }),
+                prismaTenant.invoice.count({ where }),
+            ]);
 
-        // Map to frontend-compatible format
-        const data = invoices.map((inv) => ({
-            id: inv.id,
-            invoiceNumber: inv.invoiceNumber,
-            customerName: inv.contact?.name || '-',
-            contactId: inv.contactId,
-            subtotal: inv.subtotal,
-            tax: inv.taxAmount,
-            total: inv.total,
-            currency: 'IDR',
-            status: inv.status.toLowerCase(),
-            dueDate: inv.dueDate.toISOString().split('T')[0],
-            createdAt: inv.createdAt.toISOString(),
-            notes: inv.notes,
-            items: inv.items.map((item) => ({
-                id: item.id,
-                description: item.description,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.total,
-            })),
-            paidAmount: inv.payments
-                .filter((p) => p.status === 'COMPLETED')
-                .reduce((sum, p) => sum + Number(p.amount), 0),
-        }));
+            // Map to frontend-compatible format
+            const data = invoices.map((inv) => ({
+                id: inv.id,
+                invoiceNumber: inv.invoiceNumber,
+                customerName: inv.contact?.name || '-',
+                contactId: inv.contactId,
+                subtotal: inv.subtotal,
+                tax: inv.taxAmount,
+                total: inv.total,
+                currency: 'IDR',
+                status: inv.status.toLowerCase(),
+                dueDate: inv.dueDate.toISOString().split('T')[0],
+                createdAt: inv.createdAt.toISOString(),
+                notes: inv.notes,
+                items: inv.items.map((item) => ({
+                    id: item.id,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    total: item.total,
+                })),
+                paidAmount: inv.payments
+                    .filter((p) => p.status === 'COMPLETED')
+                    .reduce((sum, p) => sum + Number(p.amount), 0),
+            }));
 
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            return NextResponse.json({
+                success: true,
+                data,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            });
         });
     } catch (error) {
         return handleApiError(error);

@@ -1,20 +1,53 @@
 /**
  * API Client — Qalcuity Mobile
- * 
+ *
  * Handles all API communication with the server.
  * Includes JWT token storage, authorization headers, and automatic token refresh.
- * 
+ *
  * Token Strategy:
  * - Access token stored in AsyncStorage
  * - Refresh token stored in AsyncStorage
  * - Automatic refresh on 401 responses
  * - Logout on refresh failure
+ *
+ * Environment Configuration:
+ * - EXPO_PUBLIC_API_URL env var (set in .env or EAS build)
+ * - Fallback to app.json extra.apiUrl via expo-constants
+ * - Final fallback: http://localhost:3000/api (local dev)
+ *
+ * To configure API URL:
+ * 1. Copy .env.example to .env and set EXPO_PUBLIC_API_URL
+ * 2. Or set via EAS build environment variables
+ * 3. Or update app.json > expo > extra > apiUrl
  */
+
+/// <reference path="../types/env.d.ts" />
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// API Configuration
-const API_BASE_URL = 'http://localhost:3000/api';
+// API Configuration — configurable base URL (no more hardcoded)
+// Priority: EXPO_PUBLIC_API_URL env var > app.json extra.apiUrl > localhost fallback
+function getBaseUrl(): string {
+    // EXPO_PUBLIC_* env vars are injected by Metro bundler at build time (Expo 49+)
+    if (process.env.EXPO_PUBLIC_API_URL) {
+        return process.env.EXPO_PUBLIC_API_URL;
+    }
+
+    // Fallback: try expo-constants (available when package is installed)
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Constants = require('expo-constants');
+        const extraApiUrl = Constants?.expoConfig?.extra?.apiUrl;
+        if (extraApiUrl) return extraApiUrl;
+    } catch {
+        // expo-constants not available — continue to fallback
+    }
+
+    // Final fallback: local development
+    return 'http://localhost:3000/api';
+}
+
+const API_BASE_URL = getBaseUrl();
 
 // ─── Token Storage Keys ───────────────────────────────────────────────────────
 
@@ -530,17 +563,101 @@ export async function fetchPayroll(): Promise<PayrollData[]> {
 }
 
 // ===== Dashboard API =====
-export interface DashboardStats {
-    totalRevenue: number;
-    totalOrders: number;
-    totalCustomers: number;
-    totalProducts: number;
-    recentInvoices: InvoiceData[];
-    recentPayments: PaymentData[];
+
+/** Revenue stats from the dashboard API */
+export interface DashboardRevenue {
+    current: number;
+    previous: number;
+    change: number;
+    currency: string;
 }
 
+/** Outstanding invoices summary */
+export interface DashboardOutstandingInvoices {
+    count: number;
+    total: number;
+}
+
+/** Expenses summary */
+export interface DashboardExpenses {
+    current: number;
+    previous: number;
+    change: number;
+}
+
+/** Deals won summary */
+export interface DashboardDealsWon {
+    current: number;
+    previous: number;
+    change: number;
+}
+
+/** New leads summary */
+export interface DashboardNewLeads {
+    current: number;
+    previous: number;
+    change: number;
+}
+
+/** Employees summary */
+export interface DashboardEmployees {
+    total: number;
+    active: number;
+}
+
+/** Products summary */
+export interface DashboardProducts {
+    total: number;
+    lowStock: number;
+    lowStockItems: Array<{ id: string; name: string; stock: number; minStock: number }>;
+}
+
+/** Recent activity item */
+export interface DashboardActivity {
+    id: string;
+    icon: string;
+    title: string;
+    description: string;
+    amount: string;
+    timestamp: string;
+    moduleId: string;
+}
+
+/** Alert item */
+export interface DashboardAlert {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    moduleId: string;
+}
+
+/** Full dashboard stats — matches the /api/dashboard/stats response shape */
+export interface DashboardStats {
+    revenue: DashboardRevenue;
+    outstandingInvoices: DashboardOutstandingInvoices;
+    expenses: DashboardExpenses;
+    activeDeals: number;
+    dealsWon: DashboardDealsWon;
+    newLeads: DashboardNewLeads;
+    employees: DashboardEmployees;
+    products: DashboardProducts;
+    recentActivities: DashboardActivity[];
+    alerts: DashboardAlert[];
+}
+
+/** Raw API response wrapper */
+interface DashboardStatsResponse {
+    success: boolean;
+    data: DashboardStats;
+}
+
+/**
+ * Fetch dashboard statistics from the server.
+ * Returns the full stats object including revenue, CRM, HR, inventory, activities, and alerts.
+ */
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-    const res = await fetchAPI<{ success: boolean; data: DashboardStats }>('/dashboard/stats');
+    const res = await fetchAPI<DashboardStatsResponse>('/dashboard/stats');
     return res.data;
 }
 

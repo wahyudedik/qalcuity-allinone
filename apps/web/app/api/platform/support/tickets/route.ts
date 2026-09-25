@@ -6,16 +6,19 @@ import { requirePermissionForRoute } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-error";
 import { createSupportTicketSchema, formatZodError } from "@/lib/validation-schemas";
+import { checkPermissionByRole } from '@/lib/permissions';
+import { PERMISSIONS } from '@qalcuity/permissions';
 
-// â”€â”€â”€ GET /api/platform/support/tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- GET /api/platform/support/tickets ---
 // Returns support tickets derived from AuditLog entries (support-related actions).
-// SUPERADMIN sees all tickets; other roles see only their tenant's tickets.
+// Users with platform:view see all tickets; other roles see only their tenant's tickets.
 export async function GET(request: Request) {
     try {
-        // 1. Auth + RBAC check â€” SUPERADMIN only
+        // 1. Auth + RBAC check
         const auth = await requirePermissionForRoute(request);
         if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+        const userId = auth.userId;
         const role = auth.role;
         const tenantId = auth.tenantId;
 
@@ -23,11 +26,12 @@ export async function GET(request: Request) {
         const status = searchParams.get("status") || "";
         const search = searchParams.get("search") || "";
 
-        // Build where clause for AuditLog â€” map audit actions to support tickets
+        // Build where clause for AuditLog -- map audit actions to support tickets
         const where: Record<string, unknown> = {};
 
-        // For non-SUPERADMIN, filter by tenantId
-        if (role !== "SUPERADMIN" && tenantId) {
+        // Users with platform:view see all tenants; others filtered by tenantId
+        const canViewAllTenants = await checkPermissionByRole(userId, role, PERMISSIONS.PLATFORM_VIEW);
+        if (!canViewAllTenants && tenantId) {
             where.tenantId = tenantId;
         }
 
@@ -115,11 +119,11 @@ export async function GET(request: Request) {
     }
 }
 
-// â”€â”€â”€ POST /api/platform/support/tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- POST /api/platform/support/tickets ---
 // Create a new support ticket (stored as AuditLog entry).
 export async function POST(request: Request) {
     try {
-        // 1. Auth + RBAC check â€” SUPERADMIN only
+        // 1. Auth + RBAC check
         const auth = await requirePermissionForRoute(request);
         if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { usePermission } from '@/lib/use-permission'
 import { ArrowLeft, Loader2, Pause, Play, XCircle, FileText, Calendar, Clock, Hash, Eye, Trash2 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -49,7 +50,8 @@ export default function RecurringInvoiceDetailPage({ params }: { params: { id: s
     const { t } = useTranslation()
     const router = useRouter()
     const { data: session } = useSession()
-    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { canDelete: canDeleteModule } = usePermission()
+    const canDelete = canDeleteModule('finance')
     const [data, setData] = useState<RecurringInvoiceDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState(false)

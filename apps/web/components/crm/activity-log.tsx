@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Phone, Mail, Handshake, FileText, ClipboardList, Plus, Check, Filter, Clock, Trash2 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { useSession } from 'next-auth/react'
+import { usePermission } from '@/lib/use-permission'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface Activity {
@@ -35,7 +36,8 @@ const activityTypeConfig: Record<string, { icon: typeof Phone; color: string; la
 export function ActivityLog({ entityType, entityId }: ActivityLogProps) {
     const { t } = useTranslation()
     const { data: session } = useSession()
-    const canMutate = session?.user?.role !== 'VIEWER'
+    const { canMutate: canMutateModule } = usePermission()
+    const canMutate = canMutateModule('crm')
 
     const [activities, setActivities] = useState<Activity[]>([])
     const [loading, setLoading] = useState(true)
@@ -292,11 +294,10 @@ export function ActivityLog({ entityType, entityId }: ActivityLogProps) {
                         return (
                             <div
                                 key={activity.id}
-                                className={`relative flex gap-3 rounded-xl border p-4 transition-all ${
-                                    isCompleted
-                                        ? 'border-green-200 bg-green-50'
-                                        : 'border-gray-200 bg-white hover:border-gray-300'
-                                }`}
+                                className={`relative flex gap-3 rounded-xl border p-4 transition-all ${isCompleted
+                                    ? 'border-green-200 bg-green-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                    }`}
                             >
                                 {/* Icon */}
                                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.color}`}>

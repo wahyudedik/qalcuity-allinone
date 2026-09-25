@@ -93,18 +93,54 @@ export class MidtransProvider implements PaymentProvider {
             const transactionStatus = data.transaction_status || 'pending';
 
             // Verify HMAC SHA512 signature — recommended by Midtrans documentation
+            // Fail-closed: reject if server key is not configured
+            const serverKey = process.env.MIDTRANS_SERVER_KEY;
+            if (!serverKey) {
+                logger.error('[MidtransProvider] MIDTRANS_SERVER_KEY not configured — rejecting webhook');
+                return {
+                    success: false,
+                    orderId,
+                    status: 'FAILED',
+                    error: 'Payment provider not configured',
+                };
+            }
+
+            if (!signature) {
+                logger.warn('[MidtransProvider] Webhook missing signature');
+                return {
+                    success: false,
+                    orderId,
+                    status: 'FAILED',
+                    error: 'Missing signature',
+                };
+            }
+
             const expectedSignature = this.generateSignature({
                 order_id: orderId,
                 status_code: statusCode,
                 gross_amount: grossAmount,
             });
-            if (signature && expectedSignature !== signature) {
-                logger.warn('[MidtransProvider] Webhook signature mismatch');
+
+            // Timing-safe comparison to prevent timing attacks
+            try {
+                const expectedBuf = Buffer.from(expectedSignature, 'hex');
+                const actualBuf = Buffer.from(signature, 'hex');
+                if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+                    logger.error(`[MidtransProvider] Webhook signature mismatch for order: ${orderId}`);
+                    return {
+                        success: false,
+                        orderId,
+                        status: 'FAILED',
+                        error: 'Invalid signature',
+                    };
+                }
+            } catch {
+                logger.error(`[MidtransProvider] Webhook signature format invalid for order: ${orderId}`);
                 return {
                     success: false,
                     orderId,
                     status: 'FAILED',
-                    error: 'Invalid signature',
+                    error: 'Invalid signature format',
                 };
             }
 

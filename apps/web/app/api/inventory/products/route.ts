@@ -1,7 +1,7 @@
 ﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prismaTenant, prisma, tenantStorage } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { sanitizeObject } from '@/lib/sanitize';
@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId, userId } = auth;
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
         const category = searchParams.get('category');
@@ -22,102 +23,105 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId: auth.tenantId };
+        return tenantStorage.run({ tenantId, userId }, async () => {
+            // tenantId is auto-injected by prismaTenant extension — no manual filtering needed
+            const where: Record<string, unknown> = {};
 
-        if (search) {
-            where.OR = [
-                { name: { contains: search } },
-                { sku: { contains: search } },
-                { description: { contains: search } },
-            ];
-        }
+            if (search) {
+                where.OR = [
+                    { name: { contains: search } },
+                    { sku: { contains: search } },
+                    { description: { contains: search } },
+                ];
+            }
 
-        if (category) {
-            where.categoryId = category;
-        }
+            if (category) {
+                where.categoryId = category;
+            }
 
-        if (lowStock === 'true') {
-            // Prisma can't compare fields (stock <= minStock), so we fetch ALL
-            // matching products, filter in memory, then paginate the result.
-            const allProducts = await prisma.product.findMany({
-                where,
-                include: {
-                    category: { select: { id: true, name: true } },
-                    _count: { select: { stockMovements: true } },
-                },
-                orderBy: { createdAt: 'desc' },
-            });
+            if (lowStock === 'true') {
+                // Prisma can't compare fields (stock <= minStock), so we fetch ALL
+                // matching products, filter in memory, then paginate the result.
+                const allProducts = await prismaTenant.product.findMany({
+                    where,
+                    include: {
+                        category: { select: { id: true, name: true } },
+                        _count: { select: { stockMovements: true } },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                });
 
-            const mapped = allProducts
-                .map((p) => ({
-                    id: p.id,
-                    sku: p.sku,
-                    name: p.name,
-                    description: p.description,
-                    unit: p.unit,
-                    price: p.price,
-                    cost: p.cost,
-                    stock: p.stock,
-                    minStock: p.minStock,
-                    isActive: p.isActive,
-                    categoryId: p.categoryId,
-                    categoryName: p.category?.name || null,
-                    isLowStock: p.stock <= p.minStock,
-                    createdAt: p.createdAt.toISOString(),
-                }))
-                .filter((p) => p.isLowStock);
+                const mapped = allProducts
+                    .map((p) => ({
+                        id: p.id,
+                        sku: p.sku,
+                        name: p.name,
+                        description: p.description,
+                        unit: p.unit,
+                        price: p.price,
+                        cost: p.cost,
+                        stock: p.stock,
+                        minStock: p.minStock,
+                        isActive: p.isActive,
+                        categoryId: p.categoryId,
+                        categoryName: p.category?.name || null,
+                        isLowStock: p.stock <= p.minStock,
+                        createdAt: p.createdAt.toISOString(),
+                    }))
+                    .filter((p) => p.isLowStock);
 
-            const filteredTotal = mapped.length;
-            const data = mapped.slice(skip, skip + limit);
+                const filteredTotal = mapped.length;
+                const data = mapped.slice(skip, skip + limit);
+
+                return NextResponse.json({
+                    success: true,
+                    data,
+                    total: filteredTotal,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(filteredTotal / limit),
+                });
+            }
+
+            const [products, total] = await Promise.all([
+                prismaTenant.product.findMany({
+                    where,
+                    include: {
+                        category: { select: { id: true, name: true } },
+                        _count: { select: { stockMovements: true } },
+                    },
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                }),
+                prismaTenant.product.count({ where }),
+            ]);
+
+            const data = products.map((p) => ({
+                id: p.id,
+                sku: p.sku,
+                name: p.name,
+                description: p.description,
+                unit: p.unit,
+                price: p.price,
+                cost: p.cost,
+                stock: p.stock,
+                minStock: p.minStock,
+                isActive: p.isActive,
+                categoryId: p.categoryId,
+                categoryName: p.category?.name || null,
+                isLowStock: p.stock <= p.minStock,
+                createdAt: p.createdAt.toISOString(),
+            }));
 
             return NextResponse.json({
                 success: true,
                 data,
-                total: filteredTotal,
+                total,
                 page,
                 limit,
-                totalPages: Math.ceil(filteredTotal / limit),
+                totalPages: Math.ceil(total / limit),
             });
-        }
-
-        const [products, total] = await Promise.all([
-            prisma.product.findMany({
-                where,
-                include: {
-                    category: { select: { id: true, name: true } },
-                    _count: { select: { stockMovements: true } },
-                },
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.product.count({ where }),
-        ]);
-
-        const data = products.map((p) => ({
-            id: p.id,
-            sku: p.sku,
-            name: p.name,
-            description: p.description,
-            unit: p.unit,
-            price: p.price,
-            cost: p.cost,
-            stock: p.stock,
-            minStock: p.minStock,
-            isActive: p.isActive,
-            categoryId: p.categoryId,
-            categoryName: p.category?.name || null,
-            isLowStock: p.stock <= p.minStock,
-            createdAt: p.createdAt.toISOString(),
-        }));
-
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         if (error instanceof Error && error.message === 'Unauthorized') {

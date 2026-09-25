@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { requirePermissionForRoute } from '@/lib/session';
+import { requirePermissionForRoute, requirePermission } from '@/lib/session';
 import { DEFAULT_WORKFLOWS } from '@qalcuity/workflow';
 import { handleApiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -30,11 +30,12 @@ export async function POST(request: Request) {
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
-        const { userId, role } = auth;
+        const { userId } = auth;
 
-        if (role !== 'SUPERADMIN') {
+        const permCheck = await requirePermission('system:admin');
+        if (permCheck) {
             return NextResponse.json(
-                { success: false, error: 'Hanya SUPERADMIN yang bisa seed workflows' },
+                { success: false, error: permCheck },
                 { status: 403 }
             );
         }

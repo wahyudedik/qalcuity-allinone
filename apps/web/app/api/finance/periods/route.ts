@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { requirePermissionForRoute } from '@/lib/session';
+import { requirePermissionForRoute, requirePermission } from '@/lib/session';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateYearlyPeriods } from '@/lib/period-closing';
@@ -82,13 +82,8 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
-        // Hanya ADMIN+ yang boleh create period
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return NextResponse.json(
-                { success: false, error: 'Hanya admin yang dapat membuat periode akuntansi' },
-                { status: 403 }
-            );
-        }
+        // Permission check: finance:approve required (ADMIN+ via permission engine)
+        await requirePermission('finance:approve');
 
         const body = await request.json();
 

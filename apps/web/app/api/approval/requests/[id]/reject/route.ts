@@ -12,6 +12,8 @@ import { checkAutoApproval } from '@/lib/auto-approval';
 import { notifyApprover } from '@/lib/approval-notifications';
 import { handleApiError } from '@/lib/api-error';
 import { ROLE_HIERARCHY } from '@qalcuity/config';
+import { checkPermissionByRole } from '@/lib/permissions';
+import { PERMISSIONS } from '@qalcuity/permissions';
 
 export async function GET(request: Request) {
     try {
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId, role } = auth;
+        const { tenantId, userId, role } = auth;
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
@@ -45,9 +47,9 @@ export async function GET(request: Request) {
             where.entityType = entityType.toUpperCase();
         }
 
-        // For non-admin users, only show requests where user can approve
-        // (based on eligible approval levels)
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        // Users with approval:viewAll see all requests; others only eligible
+        const canViewAllApprovals = await checkPermissionByRole(userId, role, PERMISSIONS.APPROVAL_VIEW_ALL);
+        if (!canViewAllApprovals) {
             const eligibleLevels = await getApprovalLevels(tenantId, where.entityType as string || '');
             const userLevel = ROLE_HIERARCHY[role] ?? 0;
 

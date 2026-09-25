@@ -1,7 +1,7 @@
 # 🗄️ Qalcuity — Database Architecture
 
-> **Last Updated:** 11 September 2026 (Documentation Sync)
-> **Current Version:** v1.0.0-beta.2
+> **Last Updated:** 24 September 2026 (Documentation Sync)
+> **Current Version:** v1.1.0
 
 ---
 
@@ -25,9 +25,9 @@
 | **ORM** | Prisma 5.22 |
 | **Database** | PostgreSQL 18.4 (DBngin local) |
 | **Schema Location** | [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) |
-| **Total Models** | 100 |
-| **Total Indexes** | 242 (`@@index`) + 33 (`@@unique`) = 275 |
-| **Migrations** | 27 |
+| **Total Models** | 107 |
+| **Total Indexes** | 243 (`@@index`) + 41 (`@@unique`) + 9 (inline `@unique`) = 293 |
+| **Migrations** | 44 |
 | **Generator** | `prisma-client-js` |
 | **Auth** | Trust authentication (no password for local dev) |
 
@@ -191,7 +191,7 @@ postgresql://postgres@localhost:5432/qalcuity?schema=public
 │  │ tenantId(FK) │ │ tenantId(FK) │  └──────────────┘   │                   │
 │  └──────────────┘ └──────────────┘                      │                   │
 └─────────────────────────────────────────────────────────┼───────────────────┘
-                                                          │
+                                                           │
 ┌─────────────────────────────────────────────────────────┼───────────────────┐
 │                    BILLING & AUDIT                      │                   │
 │                                                         │                   │
@@ -232,57 +232,193 @@ postgresql://postgres@localhost:5432/qalcuity?schema=public
 | `Tenant` | Company/workspace | name, slug (UQ), logo, settings (JSON), subscription |
 | `User` | User account | email (UQ), passwordHash, role, isActive, tenantId (FK) |
 
-### Finance
+### Finance (16 models)
 
 | Model | Purpose | Key Fields |
 |-------|---------|------------|
 | `Invoice` | Customer invoice | invoiceNumber, status, dueDate, subtotal, taxAmount, total, contactId, tenantId |
 | `InvoiceItem` | Invoice line item | description, quantity, unitPrice, total, invoiceId (FK) |
+| `Bill` | Supplier bill | billNumber, status, dueDate, subtotal, taxAmount, total, supplierId, tenantId |
+| `BillItem` | Bill line item | description, quantity, unitPrice, total, billId (FK) |
 | `Payment` | Payment record | paymentNumber, amount, method, status, type, invoiceId, tenantId |
-| `PurchaseOrder` | Supplier PO | poNumber, status, supplierId, tenantId |
+| `PaymentAllocation` | Payment allocation | amount, paymentId (FK), invoiceId (FK), tenantId |
 | `Quotation` | Customer quote | quotNumber, status, validUntil, contactId, tenantId |
 | `QuotationItem` | Quotation line item | description, quantity, unitPrice, total, quotId (FK) |
-| `CoAAccount` | Chart of accounts | code (UQ/tenant), name, type, parentId, tenantId |
-| `BankTransaction` | Bank statement | date, description, amount, type, reconciled, tenantId |
+| `JournalEntry` | Journal entry | entryNumber, date, description, tenantId |
+| `JournalEntryLine` | Journal entry line | debit, credit, accountId (FK), journalEntryId (FK), tenantId |
+| `ChartOfAccount` | Chart of accounts | code (UQ/tenant), name, type, parentId, tenantId |
+| `BankAccount` | Bank account | name, bankName, accountNumber, balance, tenantId |
+| `BankReconciliation` | Bank reconciliation | statementDate, statementBalance, reconciledBalance, status, tenantId |
+| `PeriodClosing` | Period closing | period, status, closedBy, tenantId |
+| `TaxRate` | Tax configuration | name, rate, type, isActive, tenantId |
+| `WithholdingTax` | Withholding tax | name, rate, type, isActive, tenantId |
 
-### CRM
+### CRM (4 models)
 
 | Model | Purpose | Key Fields |
 |-------|---------|------------|
 | `Contact` | Business contact | name, type, company, email, phone, tenantId |
 | `Lead` | Sales lead | name, company, status, value, contactId, tenantId |
 | `Deal` | Sales opportunity | title, value, stage, probability, contactId, leadId, tenantId |
+| `CrmActivity` | CRM activity | type, subject, description, dueDate, contactId, dealId, tenantId |
 
-### Inventory
+### HR (5 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Employee` | Employee record | employeeId, name, position, departmentId, salary, status, tenantId |
+| `Department` | Department | name, description, managerId, tenantId |
+| `LeaveRequest` | Leave application | type, startDate, endDate, days, status, employeeId, tenantId |
+| `LeaveBalance` | Leave balance | employeeId, leaveType, balance, used, tenantId |
+| `PayrollRecord` | Payroll record | period (UQ/employee), baseSalary, netSalary, status, employeeId, tenantId |
+
+### Inventory (7 models)
 
 | Model | Purpose | Key Fields |
 |-------|---------|------------|
 | `Product` | Product catalog | sku (UQ/tenant), name, price, cost, stock, minStock, categoryId, tenantId |
-| `Category` | Product category | name (UQ/tenant), description, tenantId |
-| `Supplier` | Supplier info | name, contactPerson, email, phone, rating, tenantId |
+| `Stock` | Stock record | productId, warehouseId, quantity, tenantId |
 | `StockMovement` | Stock history | type, quantity, productId, tenantId |
+| `Warehouse` | Warehouse | name, address, capacity, tenantId |
+| `StockOpname` | Stock opname | opnameNumber, status, date, tenantId |
+| `StockOpnameItem` | Stock opname item | productId, systemQty, actualQty, difference, stockOpnameId (FK), tenantId |
+| `Supplier` | Supplier info | name, contactPerson, email, phone, rating, tenantId |
 
-### HR
-
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| `Employee` | Employee record | employeeId, name, position, department, salary, status, tenantId |
-| `AttendanceRecord` | Daily attendance | date (UQ/employee), clockIn, clockOut, status, workHours, employeeId, tenantId |
-| `LeaveRequest` | Leave application | type, startDate, endDate, days, status, employeeId, tenantId |
-| `PayrollRecord` | Payroll record | period (UQ/employee), baseSalary, netSalary, status, employeeId, tenantId |
-
-### System
+### POS (16 models)
 
 | Model | Purpose | Key Fields |
 |-------|---------|------------|
-| `AuditLog` | Audit trail | action, entity, entityId, oldValue, newValue, userId, tenantId |
-| `SubscriptionPlan` | Billing plans | name, slug (UQ), price, interval, features, tenantId |
-| `TenantSubscription` | Tenant subscription | tenantId, planId, status, startDate, endDate |
-| `BillingPayment` | Payment proof | amount, method, status, proofUrl, tenantId, subscriptionId |
+| `PosTransaction` | POS transaction | transactionNumber, status, total, tenantId |
+| `PosItem` | POS item | productId, quantity, unitPrice, total, transactionId (FK), tenantId |
+| `PosPayment` | POS payment | amount, method, status, transactionId (FK), tenantId |
+| `PosShift` | POS shift | cashierId, startTime, endTime, status, tenantId |
+| `PosTable` | POS table | number, capacity, status, tenantId |
+| `PosReservation` | POS reservation | customerName, date, time, partySize, tableId, tenantId |
+| `KitchenDisplay` | Kitchen display | name, station, tenantId |
+| `KitchenOrder` | Kitchen order | status, priority, transactionId (FK), tenantId |
+| `KitchenOrderItem` | Kitchen order item | menuItem, quantity, status, kitchenOrderId (FK), tenantId |
+| `LoyaltyProgram` | Loyalty program | name, pointsPerCurrency, redemptionRate, isActive, tenantId |
+| `LoyaltyTransaction` | Loyalty transaction | points, type, customerId, programId (FK), tenantId |
+| `PosAnalytics` | POS analytics | metric, value, date, tenantId |
+
+### Billing (8 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Subscription` | Tenant subscription | tenantId, planId, status, startDate, endDate |
+| `Plan` | Subscription plan | name, slug (UQ), price, interval, features |
+| `BillingPayment` | Payment proof | amount, method, status, proofUrl, subscriptionId, tenantId |
+| `Entitlement` | Feature entitlement | planId, featureKey, limit, tenantId |
+| `EntitlementUsage` | Entitlement usage | entitlementId, used, period, tenantId |
+| `FeatureFlag` | Feature flag | key, enabled, description, tenantId |
+| `PaymentGateway` | Payment gateway config | name, config (JSON), isActive, tenantId |
+| `InvoiceRecurring` | Recurring invoice | frequency, nextRunDate, templateId, tenantId |
+
+### Analytics (18 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `DashboardWidget` | Dashboard widget | type, config (JSON), position, dashboardId (FK), tenantId |
+| `DashboardConfig` | Dashboard configuration | name, isDefault, layout (JSON), tenantId |
+| `SavedReport` | Saved report | name, query (JSON), format, tenantId |
+| `ReportSchedule` | Report schedule | reportId, frequency, recipients, nextRun, tenantId |
+| `AnalyticsCache` | Analytics cache | key, data (JSON), expiresAt, tenantId |
+| `AnalyticsMaterializedView` | Materialized view | viewName, query, refreshInterval, tenantId |
+| `AnalyticsReadModel` | Read model | modelType, data (JSON), computedAt, tenantId |
+| _(additional analytics models)_ | Various analytics | Various fields |
+
+### Platform (5 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `PlatformSetting` | Platform settings | key, value (JSON), description |
+| `PlatformAuditLog` | Platform audit | action, entity, entityId, userId, timestamp |
+| `SupportTicket` | Support ticket | subject, status, priority, tenantId |
+| `SupportMessage` | Support message | content, ticketId (FK), senderId |
+| `TenantMetrics` | Tenant metrics | metricType, value, period, tenantId |
+
+### Settings (6 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `Setting` | App settings | key, value (JSON), tenantId |
+| `Session` | User session | sessionToken, userId, expires |
+| `LoginLog` | Login history | email, success, ip, userAgent, timestamp |
+| `TwoFactorBackupCode` | 2FA backup codes | code, used, userId |
+| `RateLimitLog` | Rate limit log | ip, path, timestamp |
+| `CronRunLog` | Cron execution log | taskName, status, duration, ranAt |
+
+### Security (4 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `PasswordHistory` | Password history | passwordHash, userId |
+| `ApiKey` | API key | name, key, isActive, expiresAt, tenantId |
+| `Webhook` | Webhook config | url, events (JSON), isActive, tenantId |
+| `Notification` | Notification | title, message, read, userId, tenantId |
+
+### Approval (3 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `ApprovalLevel` | Approval level | level, name, requiredRole, tenantId |
+| `ApprovalRequest` | Approval request | entityType, entityId, status, requesterId, tenantId |
+| `ApprovalHistory` | Approval history | action, comment, requestId (FK), approverId |
+
+### Workflow (2 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `WorkflowDefinition` | Workflow definition | name, entityType, steps (JSON), tenantId |
+| `WorkflowTransition` | Workflow transition | fromStatus, toStatus, definitionId (FK), tenantId |
+
+### Industry (2 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `IndustryConfig` | Industry configuration | industryType, config (JSON), tenantId |
+| `CustomField` | Custom field definition | entityType, fieldName, fieldType, config (JSON), tenantId |
+
+### Other (5 models)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `ExtractionHistory` | Document extraction | documentType, status, result (JSON), tenantId |
+| `DocumentTemplate` | Document template | name, type, content (JSON), tenantId |
+| `AnomalyDetection` | Anomaly detection | entityType, entityId, severity, details (JSON), tenantId |
+| `AnomalyAlert` | Anomaly alert | detectionId (FK), acknowledged, tenantId |
+| `Version` | Version tracking | version, releasedAt, notes |
 
 ---
 
 ## 4. Multi-tenant Pattern
+
+### Tenant Isolation Coverage
+
+> **Per 24 September 2026 — Master Audit.**
+
+| Metric | Value |
+|--------|-------|
+| **Models with `tenantId`** | 94 / 107 (87.9%) |
+| **Models without `tenantId`** | 13 |
+
+Models without `tenantId` are intentionally scoped to platform-wide or junction/log tables:
+
+| Model | Reason |
+|-------|--------|
+| `Tenant` | Top-level entity — IS the tenant |
+| `User` | Scoped via `tenantId` FK, but also used platform-wide |
+| `Plan` | Platform-wide subscription plans |
+| `Session` | Auth session — scoped via `userId` FK |
+| `LoginLog` | Platform-wide login audit |
+| `TwoFactorBackupCode` | Scoped via `userId` FK |
+| `PasswordHistory` | Scoped via `userId` FK |
+| `RateLimitLog` | Platform-wide rate limit tracking |
+| `PlatformSetting` | Platform-wide settings |
+| `PlatformAuditLog` | Platform-wide audit trail |
+| `Version` | Platform-wide version tracking |
+| `ApprovalHistory` | Junction/log — scoped via `requestId` FK |
+| `KitchenDisplay` | POS config — scoped via `tenantId` on related models |
 
 ### Tenant Isolation Rule
 
@@ -332,7 +468,7 @@ Some unique constraints are scoped per-tenant using composite unique:
 
 ## 5. Index Strategy
 
-### Total: 242 Indexes (`@@index`) + 33 Unique Constraints (`@@unique`) = 275 Database Indexes
+### Total: 243 Indexes (`@@index`) + 41 Unique Constraints (`@@unique`) + 9 Inline `@unique` = 293 Database Indexes
 
 #### Auth & Tenant (5 indexes)
 
@@ -500,5 +636,5 @@ cd packages/db && npx prisma generate
 
 ---
 
-**Last Updated:** August 30, 2026
+**Last Updated:** 24 September 2026
 **Maintainer:** Qalcuity Engineering Team

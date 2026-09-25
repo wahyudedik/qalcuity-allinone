@@ -9,7 +9,7 @@ import { PERMISSIONS } from './permissions';
 /**
  * Default permissions per system role.
  * - SUPERADMIN: '*' (all permissions)
- * - ADMIN: '*' per module (kecuali beberapa yang dibatasi)
+ * - ADMIN: full access ke semua module (kecuali system:admin dan platform:view)
  * - MEMBER: view + create + edit (limited)
  * - VIEWER: view only
  */
@@ -60,6 +60,58 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<string, string[]> = {
 
         // Audit — view only (even for ADMIN)
         PERMISSIONS.AUDIT_VIEW,
+
+        // Approval — full access
+        PERMISSIONS.APPROVAL_VIEW,
+        PERMISSIONS.APPROVAL_VIEW_ALL,
+        PERMISSIONS.APPROVAL_CREATE,
+        PERMISSIONS.APPROVAL_EDIT,
+        PERMISSIONS.APPROVAL_DELETE,
+        PERMISSIONS.APPROVAL_APPROVE,
+        PERMISSIONS.APPROVAL_REJECT,
+
+        // Workflow — full access
+        PERMISSIONS.WORKFLOW_VIEW,
+        PERMISSIONS.WORKFLOW_CREATE,
+        PERMISSIONS.WORKFLOW_EDIT,
+        PERMISSIONS.WORKFLOW_DELETE,
+        PERMISSIONS.WORKFLOW_TRANSITION,
+
+        // POS — full access
+        PERMISSIONS.POS_VIEW,
+        PERMISSIONS.POS_CREATE,
+        PERMISSIONS.POS_EDIT,
+        PERMISSIONS.POS_DELETE,
+
+        // Billing — full access
+        PERMISSIONS.BILLING_VIEW,
+        PERMISSIONS.BILLING_CREATE,
+        PERMISSIONS.BILLING_EDIT,
+        PERMISSIONS.BILLING_DELETE,
+
+        // Dashboard — view
+        PERMISSIONS.DASHBOARD_VIEW,
+
+        // Projects — full access
+        PERMISSIONS.PROJECT_VIEW,
+        PERMISSIONS.PROJECT_CREATE,
+        PERMISSIONS.PROJECT_EDIT,
+        PERMISSIONS.PROJECT_DELETE,
+
+        // Operations — full access
+        PERMISSIONS.OPERATIONS_VIEW,
+        PERMISSIONS.OPERATIONS_CREATE,
+        PERMISSIONS.OPERATIONS_EDIT,
+        PERMISSIONS.OPERATIONS_DELETE,
+
+        // Notifications — view
+        PERMISSIONS.NOTIFICATION_VIEW,
+
+        // System — view only (no admin)
+        PERMISSIONS.SYSTEM_VIEW,
+
+        // AI — view
+        PERMISSIONS.AI_VIEW,
     ],
 
     MEMBER: [
@@ -90,6 +142,39 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<string, string[]> = {
 
         // Analytics — view only
         PERMISSIONS.ANALYTICS_VIEW,
+
+        // Approval — view + create (request approval)
+        PERMISSIONS.APPROVAL_VIEW,
+        PERMISSIONS.APPROVAL_CREATE,
+
+        // Workflow — view only
+        PERMISSIONS.WORKFLOW_VIEW,
+
+        // POS — view, create (cashier operations)
+        PERMISSIONS.POS_VIEW,
+        PERMISSIONS.POS_CREATE,
+
+        // Billing — view only
+        PERMISSIONS.BILLING_VIEW,
+
+        // Dashboard — view
+        PERMISSIONS.DASHBOARD_VIEW,
+
+        // Projects — view, create, edit
+        PERMISSIONS.PROJECT_VIEW,
+        PERMISSIONS.PROJECT_CREATE,
+        PERMISSIONS.PROJECT_EDIT,
+
+        // Operations — view, create, edit
+        PERMISSIONS.OPERATIONS_VIEW,
+        PERMISSIONS.OPERATIONS_CREATE,
+        PERMISSIONS.OPERATIONS_EDIT,
+
+        // Notifications — view
+        PERMISSIONS.NOTIFICATION_VIEW,
+
+        // AI — view
+        PERMISSIONS.AI_VIEW,
     ],
 
     VIEWER: [
@@ -100,6 +185,14 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<string, string[]> = {
         PERMISSIONS.INVENTORY_VIEW,
         PERMISSIONS.REPORTS_VIEW,
         PERMISSIONS.ANALYTICS_VIEW,
+        PERMISSIONS.APPROVAL_VIEW,
+        PERMISSIONS.WORKFLOW_VIEW,
+        PERMISSIONS.POS_VIEW,
+        PERMISSIONS.BILLING_VIEW,
+        PERMISSIONS.DASHBOARD_VIEW,
+        PERMISSIONS.PROJECT_VIEW,
+        PERMISSIONS.OPERATIONS_VIEW,
+        PERMISSIONS.NOTIFICATION_VIEW,
     ],
 };
 

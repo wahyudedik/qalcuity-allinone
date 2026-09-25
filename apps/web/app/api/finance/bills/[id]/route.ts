@@ -8,6 +8,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { updateBillSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
+import { softDelete } from '@/lib/soft-delete';
 
 export async function GET(
     request: Request,
@@ -28,7 +29,7 @@ export async function GET(
         const { tenantId } = auth;
 
         const bill = await prisma.bill.findFirst({
-            where: { id: params.id, tenantId },
+            where: { id: params.id, tenantId, deletedAt: null },
         });
 
         if (!bill) {
@@ -172,10 +173,10 @@ export async function DELETE(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
+        const { userId, tenantId } = auth;
 
         const existingBill = await prisma.bill.findFirst({
-            where: { id: params.id, tenantId },
+            where: { id: params.id, tenantId, deletedAt: null },
         });
 
         if (!existingBill) {
@@ -192,9 +193,14 @@ export async function DELETE(
             );
         }
 
-        await prisma.bill.delete({
-            where: { id: params.id },
-        });
+        // Soft delete: mark record as deleted instead of removing it
+        const deleteResult = await softDelete(prisma, 'bill', params.id, tenantId, userId);
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Bill not found or already deleted' },
+                { status: 404 }
+            );
+        }
 
         return NextResponse.json({
             success: true,

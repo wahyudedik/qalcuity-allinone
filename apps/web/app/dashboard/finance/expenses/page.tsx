@@ -4,10 +4,11 @@ import { usePermission } from '@/lib/use-permission'
 import { useState, useEffect, useMemo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import { Search, Plus, Wallet, Trash2, Check, X } from 'lucide-react'
+import { Search, Plus, Download, Wallet, Trash2, Check, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Expense = {
     id: string
@@ -123,6 +124,36 @@ export default function ExpensesPage() {
         }
     }
 
+    const handleExportCSV = () => {
+        if (filteredExpenses.length === 0) {
+            setToast({ message: 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filteredExpenses.map(e => ({
+            expenseNumber: e.expenseNumber,
+            category: e.category,
+            description: e.description,
+            amount: e.amount,
+            taxAmount: e.taxAmount,
+            totalAmount: e.totalAmount,
+            expenseDate: e.expenseDate,
+            paymentMethod: e.paymentMethod,
+            status: e.status,
+        }))
+        exportToCSV(csvData, 'expenses', {
+            expenseNumber: 'No. Pengeluaran',
+            category: 'Kategori',
+            description: 'Deskripsi',
+            amount: 'Jumlah',
+            taxAmount: 'Pajak',
+            totalAmount: 'Total',
+            expenseDate: 'Tanggal',
+            paymentMethod: 'Metode Bayar',
+            status: 'Status',
+        })
+        setToast({ message: 'Berhasil mengekspor data pengeluaran', type: 'success' })
+    }
+
     const filteredExpenses = expenses.filter(expense => {
         const matchesStatus = statusFilter === 'all' || expense.status === statusFilter
         const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter
@@ -234,15 +265,24 @@ export default function ExpensesPage() {
                     <h1 className="text-2xl font-bold text-gray-900">{t('finance.expenses.title')}</h1>
                     <p className="text-gray-500">{t('finance.expenses.subtitle')}</p>
                 </div>
-                {canMutate && (
+                <div className="flex gap-2">
                     <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={handleExportCSV}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                        <Plus className="h-4 w-4" />
-                        {t('finance.expenses.createButton')}
+                        <Download className="h-4 w-4" />
+                        Export CSV
                     </button>
-                )}
+                    {canMutate && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {t('finance.expenses.createButton')}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Stats Cards */}

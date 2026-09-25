@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        const where: Record<string, unknown> = { tenantId, deletedAt: null };
 
         if (status && status !== 'all') {
             where.status = status.toUpperCase();

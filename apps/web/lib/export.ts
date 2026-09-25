@@ -1,7 +1,60 @@
 /**
  * Export utilities for Qalcuity Reports
- * Supports CSV export, Excel (HTML table), and Print functionality
+ * Supports CSV export (with UTF-8 BOM for Excel), Excel (HTML table), and Print functionality
  */
+
+// ============================================
+// Formatting Helpers
+// ============================================
+
+/**
+ * Format a number as Indonesian Rupiah currency (Rp X.XXX.XXX)
+ * @param value - Number to format
+ * @returns Formatted string like "Rp 1.500.000"
+ */
+export function formatCurrencyIDR(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Rp 0';
+  const num = typeof value === 'number' ? value : Number(String(value).replace(/[^0-9.-]/g, ''));
+  if (isNaN(num)) return 'Rp 0';
+  return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+}
+
+/**
+ * Format a date string/Date to DD/MM/YYYY
+ * @param value - Date string or Date object
+ * @returns Formatted string like "24/09/2026"
+ */
+export function formatDateID(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '';
+  try {
+    const date = typeof value === 'string' ? new Date(value) : value instanceof Date ? value : new Date(String(value));
+    if (isNaN(date.getTime())) return String(value);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Get current timestamp string for filenames (YYYY-MM-DD_HHmmss)
+ */
+export function getFileTimestamp(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}_${hours}${minutes}${seconds}`;
+}
+
+// ============================================
+// CSV Export
+// ============================================
 
 /**
  * Escape HTML special characters to prevent XSS in HTML context.
@@ -24,35 +77,70 @@ function escapeHtml(value: unknown): string {
 }
 
 /**
- * Escape CSV value — handle commas, quotes, and newlines
+ * Escape CSV value — handle commas, quotes, newlines, and carriage returns
  */
 function escapeCSVValue(value: unknown): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
 }
 
 /**
- * Export data array to CSV file and trigger download
+ * Generate CSV-compatible content string from data array
+ * Uses UTF-8 BOM for Microsoft Excel compatibility
  */
-export function exportToCSV(data: Record<string, unknown>[], filename: string) {
+function generateCSVContent(
+  data: Record<string, unknown>[],
+  headerMap?: Record<string, string>
+): string {
+  if (data.length === 0) return '';
+
+  const keys = Object.keys(data[0]);
+  const displayHeaders = headerMap
+    ? keys.map(k => headerMap[k] || k)
+    : keys;
+
+  return [
+    displayHeaders.map(escapeCSVValue).join(','),
+    ...data.map(row =>
+      keys.map(key => escapeCSVValue(row[key])).join(',')
+    )
+  ].join('\r\n');
+}
+
+/**
+ * Export data array to CSV file and trigger download
+ * Uses UTF-8 BOM for Microsoft Excel compatibility
+ *
+ * @param data - Array of objects to export
+ * @param filename - Filename without extension (e.g., "invoices")
+ * @param headerMap - Optional mapping of field names to display headers
+ *   e.g., { "invoiceNumber": "No. Invoice", "totalAmount": "Total (Rp)" }
+ *   If omitted, raw field keys are used as headers.
+ */
+export function exportToCSV(
+  data: Record<string, unknown>[],
+  filename: string,
+  headerMap?: Record<string, string>
+) {
   if (data.length === 0) return;
 
-  const headers = Object.keys(data[0]);
-  const csvContent = [
-    headers.map(escapeCSVValue).join(','),
-    ...data.map(row =>
-      headers.map(header => escapeCSVValue(row[header])).join(',')
-    )
-  ].join('\n');
+  const csvContent = generateCSVContent(data, headerMap);
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // UTF-8 BOM prefix for Excel compatibility with Indonesian characters
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.csv`;
+  // Add timestamp to filename if not already present
+  const timestamp = getFileTimestamp();
+  const finalFilename = filename.includes('_20') || filename.includes('-20')
+    ? filename
+    : `${filename}_${timestamp}`;
+  link.download = `${finalFilename}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

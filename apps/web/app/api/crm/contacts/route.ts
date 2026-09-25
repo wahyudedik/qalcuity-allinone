@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prismaTenant, tenantStorage } from '@/lib/db';
 import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeInput, sanitizeObject } from '@/lib/sanitize';
-import { createContactSchema, updateContactSchema, formatZodError } from '@/lib/validation-schemas';
+import { createContactSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
+        const { tenantId, userId } = auth;
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type');
         const search = searchParams.get('search');
@@ -31,67 +31,70 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '10');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        return tenantStorage.run({ tenantId, userId }, async () => {
+            // tenantId is auto-injected by prismaTenant extension — no manual filtering needed
+            const where: Record<string, unknown> = {};
 
-        if (type) {
-            where.type = type.toUpperCase();
-        }
+            if (type) {
+                where.type = type.toUpperCase();
+            }
 
-        if (search) {
-            where.OR = [
-                { name: { contains: search } },
-                { email: { contains: search } },
-                { phone: { contains: search } },
-                { address: { contains: search } },
-            ];
-        }
+            if (search) {
+                where.OR = [
+                    { name: { contains: search } },
+                    { email: { contains: search } },
+                    { phone: { contains: search } },
+                    { address: { contains: search } },
+                ];
+            }
 
-        const [contacts, total] = await Promise.all([
-            prisma.contact.findMany({
-                where,
-                include: {
-                    _count: {
-                        select: {
-                            invoices: true,
-                            deals: true,
+            const [contacts, total] = await Promise.all([
+                prismaTenant.contact.findMany({
+                    where,
+                    include: {
+                        _count: {
+                            select: {
+                                invoices: true,
+                                deals: true,
+                            },
                         },
                     },
-                },
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.contact.count({ where }),
-        ]);
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                }),
+                prismaTenant.contact.count({ where }),
+            ]);
 
-        const data = contacts.map((c) => ({
-            id: c.id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            type: c.type?.toLowerCase() || 'customer',
-            company: c.company,
-            position: null,
-            address: c.address,
-            city: c.city,
-            province: c.province,
-            postalCode: c.postalCode,
-            taxId: c.taxId,
-            notes: c.notes,
-            isActive: c.isActive,
-            totalDeals: c._count.deals,
-            totalInvoices: c._count.invoices,
-            createdAt: c.createdAt.toISOString(),
-            updatedAt: c.updatedAt.toISOString(),
-        }));
+            const data = contacts.map((c) => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                phone: c.phone,
+                type: c.type?.toLowerCase() || 'customer',
+                company: c.company,
+                position: null,
+                address: c.address,
+                city: c.city,
+                province: c.province,
+                postalCode: c.postalCode,
+                taxId: c.taxId,
+                notes: c.notes,
+                isActive: c.isActive,
+                totalDeals: c._count.deals,
+                totalInvoices: c._count.invoices,
+                createdAt: c.createdAt.toISOString(),
+                updatedAt: c.updatedAt.toISOString(),
+            }));
 
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            return NextResponse.json({
+                success: true,
+                data,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            });
         });
     } catch (error) {
         return handleApiError(error);
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId: authTenantId } = auth;
+        const { userId, tenantId } = auth;
         const body = await request.json();
 
         // Validasi input dengan Zod
@@ -126,143 +129,29 @@ export async function POST(request: Request) {
         // Sanitize all text inputs
         const sanitized = sanitizeObject(validation.data);
 
-        const contact = await prisma.contact.create({
-            data: {
-                tenantId: authTenantId,
-                name: sanitized.name as string,
-                email: (sanitized.email as string) || null,
-                phone: (sanitized.phone as string) || null,
-                type: (validation.data.type || 'CUSTOMER').toUpperCase(),
-                company: (sanitized.company as string) || null,
-                address: (sanitized.address as string) || null,
-                city: (sanitized.city as string) || null,
-                province: (sanitized.province as string) || null,
-                postalCode: (sanitized.postalCode as string) || null,
-                taxId: (sanitized.taxId as string) || null,
-                notes: (sanitized.notes as string) || null,
-            },
+        return tenantStorage.run({ tenantId, userId }, async () => {
+            // tenantId kept for TypeScript type safety — extension won't duplicate it
+            const contact = await prismaTenant.contact.create({
+                data: {
+                    tenantId,
+                    name: sanitized.name as string,
+                    email: (sanitized.email as string) || null,
+                    phone: (sanitized.phone as string) || null,
+                    type: (validation.data.type || 'CUSTOMER').toUpperCase(),
+                    company: (sanitized.company as string) || null,
+                    address: (sanitized.address as string) || null,
+                    city: (sanitized.city as string) || null,
+                    province: (sanitized.province as string) || null,
+                    postalCode: (sanitized.postalCode as string) || null,
+                    taxId: (sanitized.taxId as string) || null,
+                    notes: (sanitized.notes as string) || null,
+                },
+            });
+
+            void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Contact', entityId: contact.id, newValues: toAuditPayload(contact), request });
+
+            return NextResponse.json({ success: true, data: contact }, { status: 201 });
         });
-
-        void logAudit({ userId, tenantId: authTenantId, action: 'CREATE', entity: 'Contact', entityId: contact.id, newValues: toAuditPayload(contact), request });
-
-        return NextResponse.json({ success: true, data: contact }, { status: 201 });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function PUT(request: Request) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:contacts:PUT:${ip}`, 30, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId: authTenantId } = auth;
-        const body = await request.json();
-        const sanitizedBody = sanitizeObject(body);
-        const { id, ...updateData } = sanitizedBody;
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: MSG.ID_REQUIRED },
-                { status: 400 }
-            );
-        }
-
-        // Validasi input dengan Zod
-        const validation = updateContactSchema.safeParse(updateData);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
-
-        const existing = await prisma.contact.findFirst({
-            where: { id, tenantId: authTenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.CONTACT_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        // Sanitize text fields
-        const sanitized = sanitizeObject(validation.data);
-
-        const contact = await prisma.contact.update({
-            where: { id },
-            data: {
-                ...(typeof sanitized.name === 'string' && { name: sanitized.name }),
-                ...(typeof sanitized.email === 'string' && { email: sanitized.email }),
-                ...(typeof sanitized.phone === 'string' && { phone: sanitized.phone }),
-                ...(typeof validation.data.type === 'string' && { type: validation.data.type.toUpperCase() }),
-                ...(typeof sanitized.company === 'string' && { company: sanitized.company }),
-                ...(typeof sanitized.address === 'string' && { address: sanitized.address }),
-                ...(typeof sanitized.city === 'string' && { city: sanitized.city }),
-                ...(typeof sanitized.province === 'string' && { province: sanitized.province }),
-                ...(typeof sanitized.postalCode === 'string' && { postalCode: sanitized.postalCode }),
-                ...(typeof sanitized.taxId === 'string' && { taxId: sanitized.taxId }),
-                ...(typeof sanitized.notes === 'string' && { notes: sanitized.notes }),
-                ...(typeof validation.data.isActive === 'boolean' && { isActive: validation.data.isActive }),
-            },
-        });
-
-        void logAudit({ userId, tenantId: authTenantId, action: 'UPDATE', entity: 'Contact', entityId: id, newValues: updateData as Record<string, unknown>, request });
-
-        return NextResponse.json({ success: true, data: contact });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function DELETE(request: Request) {
-    try {
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId: authTenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: 'ID is required' },
-                { status: 400 }
-            );
-        }
-
-        const existing = await prisma.contact.findFirst({
-            where: { id, tenantId: authTenantId },
-        });
-
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: MSG.CONTACT_NOT_FOUND },
-                { status: 404 }
-            );
-        }
-
-        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
-        const deleteResult = await prisma.contact.deleteMany({ where: { id, tenantId: authTenantId } });
-        if (deleteResult.count === 0) {
-            return NextResponse.json(
-                { success: false, error: 'Contact not found or access denied' },
-                { status: 404 }
-            );
-        }
-
-        void logAudit({ userId, tenantId: authTenantId, action: 'DELETE', entity: 'Contact', entityId: id, oldValues: toAuditPayload(existing), request });
-
-        return NextResponse.json({ success: true, data: null });
     } catch (error) {
         return handleApiError(error);
     }

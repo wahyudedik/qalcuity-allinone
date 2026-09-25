@@ -338,8 +338,13 @@ model Invoice {
   taxCode        String? // "PPN", "PPH23" — snapshot code
   totalBeforeTax Decimal  @default(0) @db.Decimal(19, 4)
   total          Decimal  @default(0) @db.Decimal(19, 4)
+  version        Int      @default(0) // Optimistic concurrency control
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
 
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
@@ -356,10 +361,12 @@ model Invoice {
   // Phase 2: Payment Reminder Logs
   paymentReminderLogs PaymentReminderLog[]
 
+  @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
   @@index([status])
   @@index([contactId])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model InvoiceItem {
@@ -410,18 +417,25 @@ model Payment {
   notes         String?
   reference     String?
   type          String   @default("INCOME") // INCOME, EXPENSE
+  version       Int      @default(0) // Optimistic concurrency control
   createdAt     DateTime @default(now())
+
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
 
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id])
 
+  @@unique([tenantId, paymentNumber])
   @@index([tenantId])
   @@index([invoiceId])
   @@index([status])
   @@index([type])
   @@index([paymentDate])
+  @@index([deletedAt])
 }
 
 model PurchaseOrder {
@@ -435,8 +449,13 @@ model PurchaseOrder {
   taxRate      Decimal   @default(11) @db.Decimal(5, 2)
   taxAmount    Decimal   @default(0) @db.Decimal(19, 4)
   total        Decimal   @default(0) @db.Decimal(19, 4)
+  version      Int       @default(0) // Optimistic concurrency control
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
 
   tenantId   String
   tenant     Tenant    @relation(fields: [tenantId], references: [id])
@@ -445,9 +464,11 @@ model PurchaseOrder {
 
   items PurchaseOrderItem[]
 
+  @@unique([tenantId, poNumber])
   @@index([tenantId])
   @@index([status])
   @@index([supplierId])
+  @@index([deletedAt])
 }
 
 model PurchaseOrderItem {
@@ -479,8 +500,13 @@ model Quotation {
   taxAmount       Decimal  @default(0) @db.Decimal(19, 4)
   discount        Decimal  @default(0) @db.Decimal(19, 4)
   total           Decimal  @default(0) @db.Decimal(19, 4)
+  version         Int      @default(0) // Optimistic concurrency control
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
 
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
@@ -489,9 +515,11 @@ model Quotation {
 
   items QuotationItem[]
 
+  @@unique([tenantId, quotationNumber])
   @@index([tenantId])
   @@index([status])
   @@index([contactId])
+  @@index([deletedAt])
 }
 
 model QuotationItem {
@@ -528,9 +556,14 @@ model Bill {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
+
   @@unique([tenantId, billNumber])
   @@index([tenantId, status])
   @@index([tenantId, dueDate])
+  @@index([deletedAt])
 }
 
 model Expense {
@@ -553,10 +586,15 @@ model Expense {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
+
   @@unique([tenantId, expenseNumber])
   @@index([tenantId, status])
   @@index([tenantId, category])
   @@index([tenantId, expenseDate])
+  @@index([deletedAt])
 }
 
 // ============================================
@@ -596,6 +634,7 @@ model Deal {
   probability Int       @default(0)
   closeDate   DateTime?
   notes       String?
+  version     Int       @default(0) // Optimistic concurrency control
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -665,6 +704,7 @@ model Product {
   stock       Int       @default(0)
   minStock    Int       @default(0)
   isActive    Boolean   @default(true)
+  version     Int       @default(0) // Optimistic concurrency control
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -791,6 +831,7 @@ model Employee {
   joinDate   DateTime
   salary     Decimal   @default(0) @db.Decimal(19, 4)
   status     String    @default("ACTIVE") // ACTIVE, INACTIVE, TERMINATED
+  version    Int       @default(0) // Optimistic concurrency control
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
@@ -2006,10 +2047,10 @@ model PosSession {
   cashierId    String
   cashierName  String
   status       String      @default("OPEN") // OPEN, CLOSED
-  openingCash  Decimal     @default(0)
-  closingCash  Decimal?
-  expectedCash Decimal?
-  variance     Decimal?
+  openingCash  Decimal     @default(0) @db.Decimal(19, 4)
+  closingCash  Decimal?    @db.Decimal(19, 4)
+  expectedCash Decimal?    @db.Decimal(19, 4)
+  variance     Decimal?    @db.Decimal(19, 4)
   openedAt     DateTime    @default(now())
   closedAt     DateTime?
   createdAt    DateTime    @default(now())
@@ -2032,22 +2073,26 @@ model PosTransaction {
   transactionNo   String // Auto-generated, unique per tenant
   customerName    String?
   customerPhone   String?
-  subtotal        Decimal    @default(0)
-  discountAmount  Decimal    @default(0)
-  discountPercent Decimal?
+  subtotal        Decimal    @default(0) @db.Decimal(19, 4)
+  discountAmount  Decimal    @default(0) @db.Decimal(19, 4)
+  discountPercent Decimal?   @db.Decimal(5, 2)
   discountType    String?    // PERCENTAGE or FIXED (order-level discount type)
-  discountValue   Decimal?   @default(0) // order-level discount value (percentage 0-100 or nominal amount)
+  discountValue   Decimal?   @default(0) @db.Decimal(19, 4) // order-level discount value (percentage 0-100 or nominal amount)
   promoCode       String?    // promo code applied to this transaction
-  taxAmount       Decimal    @default(0)
-  totalAmount     Decimal    @default(0)
-  paidAmount      Decimal    @default(0)
-  changeAmount    Decimal    @default(0)
+  taxAmount       Decimal    @default(0) @db.Decimal(19, 4)
+  totalAmount     Decimal    @default(0) @db.Decimal(19, 4)
+  paidAmount      Decimal    @default(0) @db.Decimal(19, 4)
+  changeAmount    Decimal    @default(0) @db.Decimal(19, 4)
   paymentMethod   String     @default("CASH") // CASH, CARD, QRIS, E_WALLET, BANK_TRANSFER
   status          String     @default("COMPLETED") // COMPLETED, VOIDED, REFUNDED
   notes           String?
   createdBy       String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
 
   items    PosTransactionItem[]
   payments PosPayment[]
@@ -2058,6 +2103,7 @@ model PosTransaction {
   @@index([tenantId, sessionId])
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@index([deletedAt])
 }
 
 model PosTransactionItem {
@@ -2069,13 +2115,13 @@ model PosTransactionItem {
   productId       String
   productName     String
   productSku      String?
-  quantity        Decimal        @default(1)
-  unitPrice       Decimal
-  discountAmount  Decimal        @default(0)
-  discountPercent Decimal?
-  taxRate         Decimal        @default(0)
-  taxAmount       Decimal        @default(0)
-  subtotal        Decimal        @default(0)
+  quantity        Decimal        @default(1) @db.Decimal(10, 2)
+  unitPrice       Decimal        @db.Decimal(19, 4)
+  discountAmount  Decimal        @default(0) @db.Decimal(19, 4)
+  discountPercent Decimal?       @db.Decimal(5, 2)
+  taxRate         Decimal        @default(0) @db.Decimal(5, 2)
+  taxAmount       Decimal        @default(0) @db.Decimal(19, 4)
+  subtotal        Decimal        @default(0) @db.Decimal(19, 4)
   itemNotes       String? // Catatan khusus dari kasir ke dapur
   kitchenStatus   String? // Status kitchen: NONE, PENDING, PREPARING, READY, SERVED
   createdAt       DateTime       @default(now())
@@ -2092,7 +2138,7 @@ model PosPayment {
   transactionId String
   transaction   PosTransaction @relation(fields: [transactionId], references: [id])
   method        String // CASH, CARD, QRIS, E_WALLET, BANK_TRANSFER
-  amount        Decimal
+  amount        Decimal         @db.Decimal(19, 4)
   reference     String? // Card number last 4, QRIS ref, etc.
   status        String         @default("COMPLETED") // PENDING, COMPLETED, FAILED
   createdAt     DateTime       @default(now())
@@ -2109,7 +2155,7 @@ model PosRefund {
   transactionId String
   transaction   PosTransaction @relation(fields: [transactionId], references: [id])
   refundNo      String // Auto-generated, unique per tenant
-  amount        Decimal
+  amount        Decimal         @db.Decimal(19, 4)
   reason        String
   restockItem   Boolean        @default(false) // If true, restore stock on approval
   restockedAt   DateTime?      // Timestamp when stock was restored
@@ -2120,10 +2166,15 @@ model PosRefund {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
+  // Soft delete fields
+  deletedAt DateTime?
+  deletedBy String?
+
   @@unique([tenantId, refundNo])
   @@index([tenantId])
   @@index([tenantId, transactionId])
   @@index([tenantId, status])
+  @@index([deletedAt])
 }
 
 // ============================================

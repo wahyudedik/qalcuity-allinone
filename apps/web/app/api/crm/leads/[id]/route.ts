@@ -6,243 +6,149 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
-import { importLeadRowSchema, formatZodError } from '@/lib/validation-schemas';
-import { parseCsv } from '@/lib/csv-parser';
-import { parseExcel } from '@/lib/excel-parser';
+import { updateLeadSchema, formatZodError } from '@/lib/validation-schemas';
 import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const BATCH_SIZE = 50;
+// ─── GET /api/crm/leads/[id] ─────────────────────────────────────────────────
+// Ambil detail satu lead berdasarkan ID.
 
-interface ImportError {
-    row: number;
-    field?: string;
-    message: string;
-}
-
-interface ImportResult {
-    success: boolean;
-    data?: {
-        imported: number;
-        errors: number;
-        totalRows: number;
-        errorDetails: ImportError[];
-    };
-    error?: string;
-}
-
-/**
- * POST /api/crm/leads/import
- * Import leads dari file CSV atau Excel.
- * 
- * Menerima FormData dengan field 'file'.
- * Return detailed report: success count, error count, error details.
- */
-export async function POST(request: Request): Promise<NextResponse<ImportResult>> {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
-        // Rate limit
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:leads:import:${ip}`, 5, 60000);
+        const rateLimitResult = checkRateLimit(`api:leads:${ip}`, 100, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429 }
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
             );
         }
 
-        // Auth check â€” VIEWER tidak boleh import
         const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { tenantId } = auth;
 
-        // Parse FormData
-        const formData = await request.formData();
-        const file = formData.get('file') as File | null;
-
-        if (!file) {
-            return NextResponse.json(
-                { success: false, error: MSG.FILE_UPLOAD_REQUIRED },
-                { status: 400 }
-            );
-        }
-
-        // Validate file size
-        if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json(
-                { success: false, error: MSG.FILE_TOO_LARGE },
-                { status: 400 }
-            );
-        }
-
-        // Validate file type
-        const fileName = file.name.toLowerCase();
-        const isCsv = fileName.endsWith('.csv');
-        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-
-        if (!isCsv && !isExcel) {
-            return NextResponse.json(
-                { success: false, error: MSG.UNSUPPORTED_FILE_FORMAT },
-                { status: 400 }
-            );
-        }
-
-        // Convert file to buffer
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Parse file
-        let rows: Record<string, string>[];
-        let headers: string[];
-
-        if (isCsv) {
-            const text = buffer.toString('utf-8');
-            const result = parseCsv(text);
-            rows = result.rows;
-            headers = result.headers;
-        } else {
-            const result = parseExcel(buffer);
-            rows = result.rows;
-            headers = result.headers;
-        }
-
-        if (rows.length === 0) {
-            return NextResponse.json(
-                { success: false, error: MSG.LEAD_IMPORT_FILE_EMPTY },
-                { status: 400 }
-            );
-        }
-
-        // Validate required columns
-        const headerLower = headers.map((h) => h.toLowerCase().trim());
-        const hasNameColumn = headerLower.some(
-            (h) => h === 'name' || h === 'nama'
-        );
-
-        if (!hasNameColumn) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: MSG.LEAD_IMPORT_COLUMNS_REQUIRED,
-                },
-                { status: 400 }
-            );
-        }
-
-        // Column mapping â€” normalize header names
-        const columnMap: Record<string, string> = {};
-        for (const header of headers) {
-            const lower = header.toLowerCase().trim();
-            if (lower === 'name' || lower === 'nama') columnMap[header] = 'name';
-            else if (lower === 'email') columnMap[header] = 'email';
-            else if (lower === 'phone' || lower === 'telepon' || lower === 'telp') columnMap[header] = 'phone';
-            else if (lower === 'company' || lower === 'perusahaan') columnMap[header] = 'company';
-            else if (lower === 'source' || lower === 'sumber') columnMap[header] = 'source';
-            else if (lower === 'value' || lower === 'nilai') columnMap[header] = 'value';
-            else if (lower === 'notes' || lower === 'catatan') columnMap[header] = 'notes';
-            else if (lower === 'status') columnMap[header] = 'status';
-        }
-
-        // Map and validate rows
-        const validRows: Record<string, string>[] = [];
-        const errors: ImportError[] = [];
-
-        for (let i = 0; i < rows.length; i++) {
-            const rawRow = rows[i];
-            const mappedRow: Record<string, string> = {};
-
-            for (const [originalHeader, mappedField] of Object.entries(columnMap)) {
-                const value = rawRow[originalHeader];
-                if (value !== undefined && value !== '') {
-                    mappedRow[mappedField] = value;
-                }
-            }
-
-            // Validate with Zod
-            const validation = importLeadRowSchema.safeParse(mappedRow);
-            if (!validation.success) {
-                for (const issue of validation.error.issues) {
-                    errors.push({
-                        row: i + 2, // +2 because row 1 is header, and 0-indexed
-                        field: issue.path.join('.'),
-                        message: issue.message,
-                    });
-                }
-            } else {
-                validRows.push(validation.data as Record<string, string>);
-            }
-        }
-
-        // Batch insert ke database
-        let importedCount = 0;
-
-        if (validRows.length > 0) {
-            // Process in batches
-            for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
-                const batch = validRows.slice(i, i + BATCH_SIZE);
-
-                const createData = batch.map((row) => {
-                    const sanitized = sanitizeObject(row);
-
-                    // Parse value â€” bisa "1000000" atau "Rp 1.000.000" atau "1,000,000"
-                    let numericValue = 0;
-                    if (sanitized.value) {
-                        const raw = String(sanitized.value)
-                            .replace(/[Rp\s.]/g, '') // Remove "Rp", spaces, dots
-                            .replace(/,/g, '');      // Remove commas
-                        const parsed = parseFloat(raw);
-                        if (!isNaN(parsed) && parsed >= 0) {
-                            numericValue = parsed;
-                        }
-                    }
-
-                    return {
-                        tenantId,
-                        name: sanitized.name as string,
-                        email: (sanitized.email as string) || null,
-                        phone: (sanitized.phone as string) || null,
-                        company: (sanitized.company as string) || null,
-                        source: (sanitized.source as string) || null,
-                        status: (sanitized.status as string || 'NEW').toUpperCase(),
-                        value: numericValue,
-                        notes: (sanitized.notes as string) || null,
-                    };
-                });
-
-                const result = await prisma.lead.createMany({
-                    data: createData,
-                    skipDuplicates: false,
-                });
-
-                importedCount += result.count;
-            }
-
-            // Log audit trail
-            void logAudit({
-                userId,
-                tenantId,
-                action: 'CREATE',
-                entity: 'Lead',
-                newValues: {
-                    import: true,
-                    fileName: file.name,
-                    importedCount,
-                    errorCount: errors.length,
-                },
-                request,
-            });
-        }
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                imported: importedCount,
-                errors: errors.length,
-                totalRows: rows.length,
-                errorDetails: errors.slice(0, 50), // Limit error details to 50
+        const lead = await prisma.lead.findFirst({
+            where: { id: params.id, tenantId },
+            include: {
+                contact: { select: { id: true, name: true, email: true, phone: true, company: true } },
             },
         });
+
+        if (!lead) {
+            return NextResponse.json({ success: false, error: MSG.LEAD_NOT_FOUND }, { status: 404 });
+        }
+
+        const mappedLead = {
+            id: lead.id,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            company: lead.company,
+            source: lead.source,
+            status: lead.status.toLowerCase(),
+            value: lead.value,
+            notes: lead.notes,
+            contactId: lead.contactId,
+            contactName: lead.contact?.name || null,
+            createdAt: lead.createdAt.toISOString(),
+        };
+
+        return NextResponse.json({ success: true, data: mappedLead });
     } catch (error) {
-        return handleApiError(error) as NextResponse<ImportResult>;
+        return handleApiError(error);
+    }
+}
+
+// ─── PUT /api/crm/leads/[id] ─────────────────────────────────────────────────
+// Update lead berdasarkan ID.
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:leads:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+        const body = await request.json();
+
+        // Validasi input dengan Zod
+        const validation = updateLeadSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, ...formatZodError(validation.error) },
+                { status: 400 }
+            );
+        }
+
+        const existing = await prisma.lead.findFirst({
+            where: { id: params.id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: MSG.LEAD_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        // Sanitize text fields
+        const sanitized = sanitizeObject(validation.data);
+
+        const lead = await prisma.lead.update({
+            where: { id: params.id },
+            data: {
+                ...(typeof sanitized.name === 'string' && { name: sanitized.name }),
+                ...(typeof sanitized.email === 'string' && { email: sanitized.email }),
+                ...(typeof sanitized.phone === 'string' && { phone: sanitized.phone }),
+                ...(typeof sanitized.company === 'string' && { company: sanitized.company }),
+                ...(typeof sanitized.source === 'string' && { source: sanitized.source }),
+                ...(typeof validation.data.status === 'string' && { status: validation.data.status.toUpperCase() }),
+                ...(typeof validation.data.value === 'number' && { value: validation.data.value }),
+                ...(typeof sanitized.notes === 'string' && { notes: sanitized.notes }),
+                ...(typeof validation.data.contactId === 'string' && { contactId: validation.data.contactId }),
+            },
+        });
+
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Lead', entityId: params.id, newValues: validation.data as Record<string, unknown>, request });
+        return NextResponse.json({ success: true, data: lead });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+// ─── DELETE /api/crm/leads/[id] ──────────────────────────────────────────────
+// Hapus lead berdasarkan ID.
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+    try {
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId } = auth;
+
+        const existing = await prisma.lead.findFirst({
+            where: { id: params.id, tenantId },
+        });
+
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: MSG.LEAD_NOT_FOUND },
+                { status: 404 }
+            );
+        }
+
+        await prisma.lead.delete({ where: { id: params.id } });
+
+        void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Lead', entityId: params.id, oldValues: { name: existing.name, company: existing.company, status: existing.status } as Record<string, unknown>, request });
+        return NextResponse.json({ success: true, data: null });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

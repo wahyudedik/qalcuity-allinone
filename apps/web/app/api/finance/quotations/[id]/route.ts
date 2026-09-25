@@ -11,6 +11,8 @@ import { createApprovalRequest } from '@/lib/approval';
 import { sanitizeObject } from '@/lib/sanitize';
 import { handleApiError, apiNotFound } from '@/lib/api-error';
 import { calculateTax } from '@/lib/ppn';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
+import { softDelete } from '@/lib/soft-delete';
 
 export async function GET(request: Request) {
     try {
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        const where: Record<string, unknown> = { tenantId, deletedAt: null };
 
         if (status) {
             where.status = status.toUpperCase();
@@ -69,6 +71,7 @@ export async function GET(request: Request) {
             validUntil: q.validUntil.toISOString().split('T')[0],
             notes: q.notes || '',
             terms: q.terms || '',
+            version: q.version,
             items: q.items.map((item) => ({
                 id: item.id,
                 description: item.description,
@@ -193,11 +196,18 @@ export async function PUT(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const { id, items, ...updateData } = sanitizedBody;
+        const { id, items, version, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        if (typeof version !== 'number') {
+            return NextResponse.json(
+                { success: false, error: 'version is required for updates', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -217,24 +227,33 @@ export async function PUT(request: Request) {
             return apiNotFound('Quotation');
         }
 
-        const data: Record<string, unknown> = {};
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 5; // $1=id, $2=tenantId, $3=version already used
+
         if (validatedData.status) {
-            data.status = validatedData.status.toUpperCase();
+            setClauses.push(`status = $${paramIndex++}`);
+            values.push(validatedData.status.toUpperCase());
         }
         if (validatedData.validUntil !== undefined) {
-            data.validUntil = validatedData.validUntil ? new Date(validatedData.validUntil) : null;
+            setClauses.push(`"validUntil" = $${paramIndex++}`);
+            values.push(validatedData.validUntil ? new Date(validatedData.validUntil) : null);
         }
         if (validatedData.taxRate !== undefined) {
-            data.taxRate = validatedData.taxRate;
+            setClauses.push(`"taxRate" = $${paramIndex++}`);
+            values.push(validatedData.taxRate);
         }
         if (validatedData.discount !== undefined) {
-            data.discount = validatedData.discount;
+            setClauses.push(`discount = $${paramIndex++}`);
+            values.push(validatedData.discount);
         }
         if (validatedData.notes !== undefined) {
-            data.notes = validatedData.notes;
+            setClauses.push(`notes = $${paramIndex++}`);
+            values.push(validatedData.notes);
         }
         if (validatedData.terms !== undefined) {
-            data.terms = validatedData.terms;
+            setClauses.push(`terms = $${paramIndex++}`);
+            values.push(validatedData.terms);
         }
 
         if (validatedData.items && validatedData.items.length > 0) {
@@ -245,9 +264,13 @@ export async function PUT(request: Request) {
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
             const discount = Number(validatedData.discount || existing.discount);
             const taxCalc = calculateTax(subtotal, taxRate, discount);
-            data.subtotal = subtotal;
-            data.taxAmount = taxCalc.taxAmount;
-            data.total = taxCalc.total;
+
+            setClauses.push(`subtotal = $${paramIndex++}`);
+            values.push(subtotal);
+            setClauses.push(`"taxAmount" = $${paramIndex++}`);
+            values.push(taxCalc.taxAmount);
+            setClauses.push(`total = $${paramIndex++}`);
+            values.push(taxCalc.total);
 
             await prisma.quotationItem.deleteMany({ where: { quotationId: id } });
             await prisma.quotationItem.createMany({
@@ -261,11 +284,19 @@ export async function PUT(request: Request) {
             });
         }
 
-        const quotation = await prisma.quotation.update({
+        if (setClauses.length > 0) {
+            await optimisticUpdateRaw('Quotation', id, tenantId, version, setClauses.join(', '), values);
+        }
+
+        const quotation = await prisma.quotation.findUnique({
             where: { id },
-            data,
             include: { items: true, contact: true },
         });
+
+        const data: Record<string, unknown> = {};
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
+        }
 
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Quotation', entityId: id, newValues: data as Record<string, unknown>, request });
 
@@ -290,12 +321,19 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const existing = await prisma.quotation.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.quotation.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) {
             return apiNotFound('Quotation');
         }
 
-        await prisma.quotation.delete({ where: { id } });
+        // Soft delete: mark record as deleted instead of removing it
+        const deleteResult = await softDelete(prisma, 'quotation', id, tenantId, userId);
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Quotation not found or already deleted' },
+                { status: 404 }
+            );
+        }
 
         // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'Quotation', entityId: id, oldValues: toAuditPayload(existing), request });

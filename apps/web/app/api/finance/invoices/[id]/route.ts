@@ -13,6 +13,8 @@ import { createApprovalRequest } from '@/lib/approval';
 import { handleApiError } from '@/lib/api-error';
 import { generateInvoiceJournalEntry } from '@/lib/auto-journal';
 import { calculateTax } from '@/lib/ppn';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
+import { softDelete } from '@/lib/soft-delete';
 
 export async function GET(request: Request) {
     try {
@@ -35,7 +37,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        const where: Record<string, unknown> = { tenantId, deletedAt: null };
 
         if (status) {
             where.status = status.toUpperCase();
@@ -74,6 +76,7 @@ export async function GET(request: Request) {
             total: inv.total,
             currency: 'IDR',
             status: inv.status.toLowerCase(),
+            version: inv.version,
             dueDate: inv.dueDate.toISOString().split('T')[0],
             createdAt: inv.createdAt.toISOString(),
             notes: inv.notes,
@@ -236,11 +239,18 @@ export async function PUT(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const { id, items, ...updateData } = sanitizedBody;
+        const { id, items, version, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        if (version === undefined || version === null) {
+            return NextResponse.json(
+                { success: false, error: 'Version is required for concurrent update safety', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -264,22 +274,25 @@ export async function PUT(request: Request) {
             );
         }
 
-        // Build safe update data
-        const data: Record<string, unknown> = {};
+        // Build SET clauses for optimistic update
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 4; // $1=id, $2=tenantId, $3=version, $4+=values
+
         if (validatedData.status) {
-            data.status = validatedData.status.toUpperCase();
+            setClauses.push(`status = $${paramIndex}`); values.push(validatedData.status.toUpperCase()); paramIndex++;
         }
         if (validatedData.dueDate !== undefined) {
-            data.dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : null;
+            setClauses.push(`"dueDate" = $${paramIndex}`); values.push(validatedData.dueDate ? new Date(validatedData.dueDate) : null); paramIndex++;
         }
         if (validatedData.taxRate !== undefined) {
-            data.taxRate = validatedData.taxRate;
+            setClauses.push(`"taxRate" = $${paramIndex}`); values.push(validatedData.taxRate); paramIndex++;
         }
         if (validatedData.taxCode !== undefined) {
-            data.taxCode = validatedData.taxCode || null;
+            setClauses.push(`"taxCode" = $${paramIndex}`); values.push(validatedData.taxCode || null); paramIndex++;
         }
         if (validatedData.notes !== undefined) {
-            data.notes = validatedData.notes;
+            setClauses.push(`notes = $${paramIndex}`); values.push(validatedData.notes); paramIndex++;
         }
 
         // If items changed, recalculate and use transaction for atomicity
@@ -290,10 +303,10 @@ export async function PUT(request: Request) {
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
             const taxAmount = validatedData.taxAmount ?? calculateTax(subtotal, taxRate).taxAmount;
-            data.subtotal = subtotal;
-            data.totalBeforeTax = subtotal;
-            data.taxAmount = taxAmount;
-            data.total = subtotal + taxAmount;
+            setClauses.push(`subtotal = $${paramIndex}`); values.push(subtotal); paramIndex++;
+            setClauses.push(`"totalBeforeTax" = $${paramIndex}`); values.push(subtotal); paramIndex++;
+            setClauses.push(`"taxAmount" = $${paramIndex}`); values.push(taxAmount); paramIndex++;
+            setClauses.push(`total = $${paramIndex}`); values.push(subtotal + taxAmount); paramIndex++;
 
             // Delete old items and create new ones in transaction
             await prisma.$transaction(async (tx) => {
@@ -310,19 +323,19 @@ export async function PUT(request: Request) {
             });
         }
 
-        const invoice = await prisma.invoice.update({
+        if (setClauses.length > 0) {
+            await optimisticUpdateRaw('Invoice', id, tenantId, version as number, setClauses.join(', '), values);
+        }
+
+        const invoice = await prisma.invoice.findUnique({
             where: { id },
-            data,
-            include: {
-                items: true,
-                contact: true,
-            },
+            include: { items: true, contact: true },
         });
 
-        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: data as Record<string, unknown>, request });
+        void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'Invoice', entityId: id, newValues: updateData as Record<string, unknown>, request });
 
         // Auto Journal Entry + Stock Update: when invoice status changes to PAID
-        if (data.status === 'PAID') {
+        if (validatedData.status && validatedData.status.toUpperCase() === 'PAID') {
             const fullInvoice = await prisma.invoice.findUnique({
                 where: { id },
                 include: { items: true },
@@ -374,7 +387,7 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const existing = await prisma.invoice.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.invoice.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Invoice not found' },
@@ -382,11 +395,11 @@ export async function DELETE(request: Request) {
             );
         }
 
-        // Use deleteMany with tenantId filter for defense-in-depth (TOCTOU protection)
-        const deleteResult = await prisma.invoice.deleteMany({ where: { id, tenantId } });
+        // Soft delete: mark record as deleted instead of removing it
+        const deleteResult = await softDelete(prisma, 'invoice', id, tenantId, userId);
         if (deleteResult.count === 0) {
             return NextResponse.json(
-                { success: false, error: 'Invoice not found or access denied' },
+                { success: false, error: 'Invoice not found or already deleted' },
                 { status: 404 }
             );
         }

@@ -18,54 +18,85 @@
 
 export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: string; fallbackRole?: string }> = {
     // ─── Finance ──────────────────────────────────────────────────────────────
-    '/api/finance/invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/payments': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/quotations': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/purchase-orders': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/accounts': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/reconciliation': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/journal-entries': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/tax-rates': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/tax-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/aging-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/periods': { permission: 'finance:view', fallbackRole: 'ADMIN' },
-    '/api/finance/recurring-invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/bills': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/bills/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/expenses': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/expenses/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/invoices/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/invoices/[id]/pdf': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/invoices/[id]/remind': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/journal-entries': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/journal-entries/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/payments': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/payments/process': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/payments/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/periods': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/periods/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/periods/[id]/close': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/purchase-orders': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/purchase-orders/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/purchase-orders/[id]/pdf': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/quotations': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/quotations/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/quotations/[id]/convert': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/quotations/[id]/pdf': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/reconciliation': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/recurring-invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/recurring-invoices/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/tax-rates': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/tax-rates/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/tax-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
 
     // ─── Finance Reports ──────────────────────────────────────────────────────
     '/api/finance/reports/balance-sheet': { permission: 'reports:view', fallbackRole: 'ADMIN' },
-    '/api/finance/reports/income-statement': { permission: 'reports:view', fallbackRole: 'ADMIN' },
-    '/api/finance/reports/trial-balance': { permission: 'reports:view', fallbackRole: 'ADMIN' },
     '/api/finance/reports/cash-flow': { permission: 'reports:view', fallbackRole: 'ADMIN' },
     '/api/finance/reports/general-ledger': { permission: 'reports:view', fallbackRole: 'ADMIN' },
+    '/api/finance/reports/income-statement': { permission: 'reports:view', fallbackRole: 'ADMIN' },
+    '/api/finance/reports/trial-balance': { permission: 'reports:view', fallbackRole: 'ADMIN' },
 
     // ─── CRM ──────────────────────────────────────────────────────────────────
-    '/api/crm/contacts': { permission: 'crm:view', fallbackRole: 'ADMIN' },
-    '/api/crm/leads': { permission: 'crm:view', fallbackRole: 'ADMIN' },
-    '/api/crm/deals': { permission: 'crm:view', fallbackRole: 'ADMIN' },
     '/api/crm/activities': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/activities/[id]': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/contacts': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/contacts/import': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/contacts/[id]': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/deals': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/deals/[id]': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/emails': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/leads': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/leads/import': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/crm/leads/[id]': { permission: 'crm:view', fallbackRole: 'ADMIN' },
     '/api/crm/pipeline': { permission: 'crm:view', fallbackRole: 'ADMIN' },
 
     // ─── HR ───────────────────────────────────────────────────────────────────
-    '/api/hr/employees': { permission: 'hr:view', fallbackRole: 'ADMIN' },
     '/api/hr/attendance': { permission: 'hr:view', fallbackRole: 'ADMIN' },
-    '/api/hr/leaves': { permission: 'hr:view', fallbackRole: 'ADMIN' },
-    '/api/hr/payroll': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/attendance/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
     '/api/hr/departments': { permission: 'hr:view', fallbackRole: 'ADMIN' },
     '/api/hr/departments/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/employees': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/employees/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/leaves': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/leaves/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/payroll': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/payroll/calculate': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/hr/payroll/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
     '/api/timesheet': { permission: 'hr:view', fallbackRole: 'MEMBER' },
 
     // ─── Inventory ────────────────────────────────────────────────────────────
-    '/api/inventory/products': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
     '/api/inventory/categories': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
-    '/api/inventory/suppliers': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
-    '/api/inventory/warehouses': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
-    '/api/inventory/warehouses/[id]': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/products': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/products/search': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/products/[id]': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/products/[id]/restock': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
     '/api/inventory/stock-opname': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
     '/api/inventory/stock-opname/[id]': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/suppliers': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/suppliers/[id]': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/warehouses': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/inventory/warehouses/[id]': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
 
     // ─── Approval Engine (CRITICAL) ───────────────────────────────────────────
     '/api/approval/levels': { permission: 'approval:view', fallbackRole: 'ADMIN' },
@@ -78,8 +109,8 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     // ─── Workflow Engine (CRITICAL) ───────────────────────────────────────────
     '/api/workflow/definitions': { permission: 'workflow:view', fallbackRole: 'ADMIN' },
     '/api/workflow/definitions/[id]': { permission: 'workflow:view', fallbackRole: 'ADMIN' },
-    '/api/workflow/transition': { permission: 'workflow:transition', fallbackRole: 'ADMIN' },
     '/api/workflow/history': { permission: 'workflow:view', fallbackRole: 'MEMBER' },
+    '/api/workflow/transition': { permission: 'workflow:transition', fallbackRole: 'ADMIN' },
 
     // ─── POS Transactions (CRITICAL) ──────────────────────────────────────────
     '/api/pos/transactions': { permission: 'pos:view', fallbackRole: 'ADMIN' },
@@ -134,25 +165,46 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── Settings ─────────────────────────────────────────────────────────────
     '/api/settings/company': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/settings/team': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/settings/roles': { permission: 'settings:view', fallbackRole: 'SUPERADMIN' },
-    '/api/settings/security': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/settings/notifications': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/settings/integrations': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/settings/industry': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/control-engine': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
     '/api/settings/custom-fields': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/custom-fields/[id]': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/industry': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/industry/defaults': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/industry/fields': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/industry/packs': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/integrations': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/integrations/[id]/test': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    '/api/settings/integrations/whatsapp/test': { permission: 'system:admin', fallbackRole: 'ADMIN' },
+    '/api/settings/notifications': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/notifications/smtp': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/notifications/smtp/test': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    '/api/settings/password-policy': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
     '/api/settings/profile': { permission: 'settings:view', fallbackRole: 'MEMBER' },
-    '/api/settings/control-engine': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
-    '/api/settings/password-policy': { permission: 'settings:admin', fallbackRole: 'ADMIN' },
+    '/api/settings/profile/export': { permission: 'settings:view', fallbackRole: 'MEMBER' },
+    '/api/settings/roles': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/roles/[id]': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/security': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/security/2fa': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/security/login-history': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/security/password': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/settings/security/sessions': { permission: 'settings:view', fallbackRole: 'ADMIN' },
     '/api/settings/sessions': { permission: 'settings:view', fallbackRole: 'ADMIN' },
     '/api/settings/sessions/[id]': { permission: 'settings:view', fallbackRole: 'ADMIN' },
     '/api/settings/sessions/revoke-all': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/auth/session-track': { permission: 'settings:view', fallbackRole: 'MEMBER' },
+    '/api/settings/team': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+
     // ─── Billing ──────────────────────────────────────────────────────────────
     '/api/billing/admin': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
+    '/api/billing/admin/notifications': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
+    '/api/billing/admin/payments': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
+    '/api/billing/admin/payments/[id]/verify': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
+    '/api/billing/admin/stats': { permission: 'billing:view', fallbackRole: 'SUPERADMIN' },
     '/api/billing/entitlement': { permission: 'billing:view', fallbackRole: 'ADMIN' },
     '/api/billing/feature-check': { permission: 'billing:view', fallbackRole: 'MEMBER' },
     '/api/billing/payments': { permission: 'billing:view', fallbackRole: 'ADMIN' },
+    '/api/billing/payments/midtrans': { permission: 'billing:view', fallbackRole: 'ADMIN' },
+    '/api/billing/payments/upload': { permission: 'billing:view', fallbackRole: 'ADMIN' },
+    '/api/billing/payments/xendit': { permission: 'billing:view', fallbackRole: 'ADMIN' },
     '/api/billing/plan': { permission: 'billing:view', fallbackRole: 'ADMIN' },
     '/api/billing/plans': { permission: 'billing:view', fallbackRole: 'MEMBER' },
     '/api/billing/subscription': { permission: 'billing:view', fallbackRole: 'ADMIN' },
@@ -178,41 +230,51 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/analytics/kpi/[id]/evaluate': { permission: 'analytics:edit', fallbackRole: 'ADMIN' },
     '/api/analytics/metrics': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/query-history': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
+    '/api/analytics/refresh': { permission: 'analytics:edit', fallbackRole: 'SUPERADMIN' },
+    '/api/analytics/refresh-views': { permission: 'analytics:edit', fallbackRole: 'ADMIN' },
     '/api/analytics/reports': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/reports/[id]': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/reports/[id]/execute': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
     '/api/analytics/scheduled': { permission: 'analytics:view', fallbackRole: 'ADMIN' },
-    '/api/analytics/refresh': { permission: 'analytics:edit', fallbackRole: 'SUPERADMIN' },
-    '/api/analytics/refresh-views': { permission: 'analytics:edit', fallbackRole: 'ADMIN' },
 
     // ─── Reports ──────────────────────────────────────────────────────────────
     '/api/reports': { permission: 'reports:view', fallbackRole: 'ADMIN' },
 
     // ─── Audit ────────────────────────────────────────────────────────────────
     '/api/audit': { permission: 'audit:view', fallbackRole: 'ADMIN' },
+    '/api/audit/logs': { permission: 'audit:view', fallbackRole: 'ADMIN' },
 
     // ─── Dashboard ────────────────────────────────────────────────────────────
-    '/api/dashboard/stats': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/approvals': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/charts': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/kpi': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
     '/api/dashboard/recent-activity': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
+    '/api/dashboard/stats': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
 
     // ─── Inbox ──────────────────────────────────────────────────────────────
     '/api/inbox': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
 
-    // ─── Operations Module ────────────────────────────────────────────────────
+    // ─── Projects & Operations Module ────────────────────────────────────────
     '/api/projects': { permission: 'project:view', fallbackRole: 'MEMBER' },
     '/api/projects/[id]': { permission: 'project:view', fallbackRole: 'MEMBER' },
     '/api/projects/[id]/budget': { permission: 'project:view', fallbackRole: 'ADMIN' },
     '/api/projects/[id]/gantt': { permission: 'project:view', fallbackRole: 'MEMBER' },
     '/api/projects/[id]/members': { permission: 'project:view', fallbackRole: 'ADMIN' },
+    '/api/projects/[id]/members/[memberId]': { permission: 'project:view', fallbackRole: 'ADMIN' },
     '/api/projects/[id]/resources': { permission: 'project:view', fallbackRole: 'ADMIN' },
     '/api/tasks': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/tasks/bulk': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/tasks/[id]': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/tasks/[id]/comments': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/tasks/[id]/time': { permission: 'operations:view', fallbackRole: 'ADMIN' },
 
     // ─── Field Service ────────────────────────────────────────────────────────
-    '/api/field/jobs': { permission: 'operations:view', fallbackRole: 'ADMIN' },
     '/api/field/checklists': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/field/checklists/[id]': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/field/jobs': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/field/jobs/[id]': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/field/jobs/[id]/assignments': { permission: 'operations:view', fallbackRole: 'ADMIN' },
+    '/api/field/jobs/[id]/checklists': { permission: 'operations:view', fallbackRole: 'ADMIN' },
 
     // ─── Notifications & Upload ───────────────────────────────────────────────
     '/api/notifications': { permission: 'notification:view', fallbackRole: 'MEMBER' },
@@ -220,46 +282,47 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/upload': { permission: 'system:view', fallbackRole: 'MEMBER' },
 
     // ─── AI Features ──────────────────────────────────────────────────────────
-    '/api/ai/query': { permission: 'ai:view', fallbackRole: 'MEMBER' },
+    '/api/ai/agents': { permission: 'ai:view', fallbackRole: 'MEMBER' },
+    '/api/ai/anomalies': { permission: 'ai:view', fallbackRole: 'ADMIN' },
+    '/api/ai/anomalies/[id]': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    '/api/ai/anomalies/export': { permission: 'ai:view', fallbackRole: 'ADMIN' },
+    '/api/ai/anomalies/scan': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/ai/chat': { permission: 'ai:view', fallbackRole: 'MEMBER' },
     '/api/ai/extract': { permission: 'ai:view', fallbackRole: 'MEMBER' },
     '/api/ai/extraction-history': { permission: 'ai:view', fallbackRole: 'MEMBER' },
-    '/api/ai/anomalies': { permission: 'ai:view', fallbackRole: 'ADMIN' },
-    '/api/ai/anomalies/scan': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
-    '/api/ai/anomalies/[id]': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/ai/health': { permission: 'ai:view', fallbackRole: 'MEMBER' },
-    '/api/ai/agents': { permission: 'ai:view', fallbackRole: 'MEMBER' },
-
-    // ─── CRM Emails ──────────────────────────────────────────────────────────
-    '/api/crm/emails': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/ai/query': { permission: 'ai:view', fallbackRole: 'MEMBER' },
 
     // ─── Admin ────────────────────────────────────────────────────────────────
     '/api/admin/plans': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/admin/seed-workflows': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    '/api/admin/plans/[id]': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
     '/api/admin/rate-limits': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    '/api/admin/seed-workflows': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
 
     // ─── Platform Admin ───────────────────────────────────────────────────────
-    '/api/platform/tenants': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/platform/stats': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/platform/monitoring': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/platform/settings': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/platform/plans': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
     '/api/platform/billing': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/platform/support': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
-    '/api/platform/security': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/monitoring': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/plans': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/security/events': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/settings': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/stats': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/support/tickets': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/tenants': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/tenants/[id]': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
 
     // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ─────────
-    '/api/cron/run': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/payment-reminder': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
-    '/api/cron/stock-alert': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/refresh-analytics': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    '/api/cron/run': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    '/api/cron/stock-alert': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
 
-    // ─── WhatsApp Business API ────────────────────────────────────────────────
-    '/api/settings/integrations/whatsapp/test': { permission: 'system:admin', fallbackRole: 'ADMIN' },
+    // ─── Webhooks ─────────────────────────────────────────────────────────────
+    '/api/webhooks/whatsapp': { permission: 'system:admin', fallbackRole: 'ADMIN' },
 
     // ─── Auth (Change Password) ──────────────────────────────────────────────
     '/api/auth/change-password': { permission: 'settings:view', fallbackRole: 'MEMBER' },
+    '/api/auth/session-track': { permission: 'settings:view', fallbackRole: 'MEMBER' },
 
     // ─── API Documentation ────────────────────────────────────────────────────
     '/api/docs': { permission: 'system:view', fallbackRole: 'MEMBER' },
@@ -270,6 +333,8 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 //
 // SKIPPED in requirePermissionForRoute() (apps/web/lib/session.ts):
 //   - /api/auth/*          — NextAuth handler (login, register, forgot-password, etc.)
+//                            Exception: /api/auth/change-password and /api/auth/session-track
+//                            are included above because they need RBAC protection.
 //   - /api/mobile/*        — Mobile JWT auth (separate auth mechanism)
 //   - /api/health          — Public health check endpoint
 //   - /api/search          — Global search (explicitly skipped)
@@ -277,39 +342,10 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 //
 // PUBLIC routes (in PUBLIC_API_PATHS middleware bypass):
 //   - /api/billing/payments/midtrans/callback — Midtrans webhook (HMAC signature verification)
-//   - /api/billing/payments/xendit/callback — Xendit webhook (callback token verification)
-//
-// COVERED by prefix matching (getPermissionForRoute()):
-//   - All /api/crm/contacts/*     → covered by /api/crm/contacts
-//   - All /api/crm/leads/*        → covered by /api/crm/leads
-//   - All /api/crm/deals/*        → covered by /api/crm/deals
-//   - All /api/crm/activities/*   → covered by /api/crm/activities
-//   - All /api/ai/anomalies/*     → covered by /api/ai/anomalies (except /scan and /[id] which have explicit entries)
-//   - All /api/settings/* sub-routes → covered by parent prefixes
-//   - All /api/billing/* sub-routes → covered by parent prefixes
-//   - All /api/finance/* sub-routes → covered by parent prefixes
-//   - All /api/pos/* sub-routes → covered by parent prefixes
-//   - All /api/platform/* sub-routes → covered by parent prefixes
-//   - All /api/projects/* sub-routes → covered by /api/projects
-//   - All /api/tasks/* sub-routes → covered by /api/tasks
-//   - All /api/field/* sub-routes → covered by parent prefixes
-//   - /api/analytics/* sub-routes → now have EXPLICIT entries (permission guard fix)
-//   - All /api/audit/* sub-routes → covered by /api/audit
+//   - /api/billing/payments/xendit/callback  — Xendit webhook (callback token verification)
 
-// ─── Permissions that don't exist in the permission engine ────────────────────
-// Modules: billing, pos, approval, workflow, dashboard, project, operations,
-//          notification, system, ai, platform
-//
-// These modules are NOT defined in @qalcuity/permissions PERMISSIONS constant.
-// For these modules, the permission engine check will ALWAYS fail (returns false),
-// and the system falls back to role hierarchy check (fallbackRole).
-//
-// This is INTENTIONAL — these modules use role-based access control exclusively.
-// Only the following modules have granular permission support in the engine:
-//   finance, crm, hr, inventory, settings, reports, analytics, audit
-
-// ─── Permission Modules with Granular Access ──────────────────────────────────
-// These modules ARE defined in the permission engine with module:action format:
+// ─── All Permission Modules (registered in @qalcuity/permissions) ──────────────
+// ALL modules below are defined in the permission engine with module:action format:
 //
 //   finance:    view, create, edit, delete, approve
 //   crm:        view, create, edit, delete, import
@@ -319,6 +355,17 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 //   reports:    view, create
 //   analytics:  view, edit
 //   audit:      view
+//   approval:   view, create, edit, delete, approve, reject
+//   workflow:   view, create, edit, delete, transition
+//   pos:        view, create, edit, delete
+//   billing:    view, create, edit, delete
+//   dashboard:  view
+//   project:    view, create, edit, delete
+//   operations: view, create, edit, delete
+//   notification: view
+//   system:     view, admin
+//   ai:         view
+//   platform:   view
 //
 // For these modules, the permission engine provides granular access control.
 // Custom roles can be assigned specific permissions within these modules.

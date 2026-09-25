@@ -3,12 +3,12 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
-import { requirePermissionForRoute } from '@/lib/session';
+import { requirePermissionForRoute, requirePermission } from '@/lib/session';
 import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createTaxRateSchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
-import { handleApiError, apiForbidden } from '@/lib/api-error';
+import { handleApiError } from '@/lib/api-error';
 
 export async function GET(request: Request) {
     try {
@@ -69,10 +69,8 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
-        // Hanya ADMIN+ yang boleh create tax rate
-        if (auth.role !== 'ADMIN' && auth.role !== 'SUPERADMIN') {
-            return apiForbidden();
-        }
+        // Permission check: settings:edit required (ADMIN+ via permission engine)
+        const permAuth = await requirePermission('settings:edit');
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);

@@ -6,10 +6,14 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
-import { createDealSchema, updateDealSchema, formatZodError } from '@/lib/validation-schemas';
+import { updateDealSchema, formatZodError } from '@/lib/validation-schemas';
 import { WorkflowEngine } from '@qalcuity/workflow';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
+
+// ─── GET /api/crm/deals/[id] ────────────────────────────────────────────────
+// Ambil detail satu deal berdasarkan ID.
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
@@ -48,6 +52,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
             closeDate: deal.closeDate?.toISOString() || null,
             expectedCloseDate: deal.closeDate?.toISOString() || null,
             notes: deal.notes,
+            version: deal.version,
             contactId: deal.contactId,
             leadId: deal.leadId,
             contactName: deal.contact?.name || deal.lead?.name || null,
@@ -62,100 +67,21 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 }
 
-export async function POST(request: Request) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:deals:POST:${ip}`, 30, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
+// ─── PUT /api/crm/deals/[id] ────────────────────────────────────────────────
+// Update deal berdasarkan ID.
 
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
-        const body = await request.json();
-
-        // Sanitize text inputs before validation
-        const sanitizedBody = sanitizeObject(body);
-
-        const validation = createDealSchema.safeParse(sanitizedBody);
-        if (!validation.success) {
-            return NextResponse.json(
-                { success: false, ...formatZodError(validation.error) },
-                { status: 400 }
-            );
-        }
-
-        const validatedData = validation.data;
-
-        // Tentukan initial stage dari workflow definition
-        const initialStage = WorkflowEngine.getInitialState('DEAL', tenantId) || 'DISCOVERY';
-        const dealStage = (validatedData.stage || initialStage).toUpperCase().replace(' ', '_');
-
-        // Validasi bahwa stage yang diberikan adalah valid dalam workflow
-        const validStages = WorkflowEngine.getStates('DEAL', tenantId);
-        if (validStages.length > 0 && !validStages.includes(dealStage)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: MSG.DEAL_STAGE_INVALID,
-                },
-                { status: 400 }
-            );
-        }
-
-        const deal = await prisma.deal.create({
-            data: {
-                tenantId: tenantId,
-                title: validatedData.title,
-                value: validatedData.value || 0,
-                stage: dealStage,
-                probability: validatedData.probability || 0,
-                closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null,
-                notes: validatedData.notes || null,
-                contactId: validatedData.contactId || null,
-                leadId: validatedData.leadId || null,
-            },
-            include: {
-                contact: { select: { id: true, name: true } },
-            },
-        });
-
-        // Catat workflow history untuk deal baru
-        await prisma.workflowHistory.create({
-            data: {
-                tenantId,
-                entityType: 'DEAL',
-                entityId: deal.id,
-                fromState: '',
-                toState: dealStage,
-                action: 'create',
-                userId,
-                notes: `Deal "${deal.title}" dibuat dengan stage "${dealStage}"`,
-            },
-        });
-
-        void logAudit({ userId, tenantId, action: 'CREATE', entity: 'Deal', entityId: deal.id, newValues: { title: deal.title, value: deal.value, stage: deal.stage } as Record<string, unknown>, request });
-        return NextResponse.json({ success: true, data: deal }, { status: 201 });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-export async function PUT(request: Request) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
         const body = await request.json();
-        const { id, ...updateData } = body;
+        const id = params.id;
+        const { version, ...updateData } = body;
 
-        if (!id) {
+        if (version === undefined || version === null) {
             return NextResponse.json(
-                { success: false, error: MSG.ID_REQUIRED },
+                { success: false, error: 'Version is required for concurrent update safety', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -171,7 +97,7 @@ export async function PUT(request: Request) {
         const validatedData = validation.data;
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {
@@ -204,19 +130,25 @@ export async function PUT(request: Request) {
             }
         }
 
-        const deal = await prisma.deal.update({
-            where: { id },
-            data: {
-                ...(validatedData.title !== undefined && { title: validatedData.title }),
-                ...(validatedData.value !== undefined && { value: validatedData.value }),
-                ...(newStage !== undefined && { stage: newStage }),
-                ...(validatedData.probability !== undefined && { probability: validatedData.probability }),
-                ...(validatedData.closeDate !== undefined && { closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null }),
-                ...(validatedData.notes !== undefined && { notes: validatedData.notes }),
-                ...(validatedData.contactId !== undefined && { contactId: validatedData.contactId }),
-                ...(validatedData.leadId !== undefined && { leadId: validatedData.leadId }),
-            },
-        });
+        // Build SET clauses for optimistic update
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 4; // $1=id, $2=tenantId, $3=version, $4+=values
+
+        if (validatedData.title !== undefined) { setClauses.push(`title = $${paramIndex}`); values.push(validatedData.title); paramIndex++; }
+        if (validatedData.value !== undefined) { setClauses.push(`value = $${paramIndex}`); values.push(validatedData.value); paramIndex++; }
+        if (newStage !== undefined) { setClauses.push(`stage = $${paramIndex}`); values.push(newStage); paramIndex++; }
+        if (validatedData.probability !== undefined) { setClauses.push(`probability = $${paramIndex}`); values.push(validatedData.probability); paramIndex++; }
+        if (validatedData.closeDate !== undefined) { setClauses.push(`"closeDate" = $${paramIndex}`); values.push(validatedData.closeDate ? new Date(validatedData.closeDate) : null); paramIndex++; }
+        if (validatedData.notes !== undefined) { setClauses.push(`notes = $${paramIndex}`); values.push(validatedData.notes); paramIndex++; }
+        if (validatedData.contactId !== undefined) { setClauses.push(`"contactId" = $${paramIndex}`); values.push(validatedData.contactId); paramIndex++; }
+        if (validatedData.leadId !== undefined) { setClauses.push(`"leadId" = $${paramIndex}`); values.push(validatedData.leadId); paramIndex++; }
+
+        if (setClauses.length > 0) {
+            await optimisticUpdateRaw('Deal', id, tenantId, version as number, setClauses.join(', '), values);
+        }
+
+        const deal = await prisma.deal.findUnique({ where: { id } });
 
         // Catat workflow history jika stage berubah
         if (newStage && newStage !== existing.stage) {
@@ -241,23 +173,15 @@ export async function PUT(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: 'ID is required' },
-                { status: 400 }
-            );
-        }
+        const id = params.id;
 
         const existing = await prisma.deal.findFirst({
-            where: { id, tenantId: tenantId },
+            where: { id, tenantId },
         });
 
         if (!existing) {

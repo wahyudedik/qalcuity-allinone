@@ -7,6 +7,7 @@
  * @see https://developers.xendit.co/api-reference/
  */
 
+import crypto from 'crypto';
 import type {
     PaymentProvider,
     CreatePaymentParams,
@@ -159,15 +160,68 @@ export class XenditProvider implements PaymentProvider {
             const amount = (data.amount as number) || 0;
 
             // Verify callback token — Xendit sends X-Callback-Token header
-            // but we also accept it in the payload for flexibility
-            if (this.callbackToken && signature !== this.callbackToken) {
-                logger.warn('[XenditProvider] Webhook callback token mismatch');
+            // Fail-closed: reject if callback token is not configured
+            if (!this.callbackToken) {
+                logger.error('[XenditProvider] XENDIT_WEBHOOK_SECRET_KEY not configured — rejecting webhook');
                 return {
                     success: false,
                     orderId: externalId,
                     status: 'FAILED',
-                    error: 'Invalid callback token',
+                    error: 'Payment provider not configured',
                 };
+            }
+
+            if (!signature) {
+                logger.warn('[XenditProvider] Webhook missing callback token');
+                return {
+                    success: false,
+                    orderId: externalId,
+                    status: 'FAILED',
+                    error: 'Missing callback token',
+                };
+            }
+
+            // Timing-safe comparison to prevent timing attacks
+            try {
+                const expectedBuf = Buffer.from(this.callbackToken, 'hex');
+                const actualBuf = Buffer.from(signature, 'hex');
+
+                // If hex lengths differ, try UTF-8 comparison (Xendit tokens may be plain strings)
+                if (expectedBuf.length !== actualBuf.length) {
+                    // Fall back to string-level timing-safe comparison
+                    const expectedStr = Buffer.from(this.callbackToken, 'utf8');
+                    const actualStr = Buffer.from(signature, 'utf8');
+                    if (expectedStr.length !== actualStr.length || !crypto.timingSafeEqual(expectedStr, actualStr)) {
+                        logger.error(`[XenditProvider] Webhook callback token mismatch for invoice: ${externalId}`);
+                        return {
+                            success: false,
+                            orderId: externalId,
+                            status: 'FAILED',
+                            error: 'Invalid callback token',
+                        };
+                    }
+                } else if (!crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+                    logger.error(`[XenditProvider] Webhook callback token mismatch for invoice: ${externalId}`);
+                    return {
+                        success: false,
+                        orderId: externalId,
+                        status: 'FAILED',
+                        error: 'Invalid callback token',
+                    };
+                }
+            } catch {
+                // Buffer creation failed — do string-level timing-safe comparison as fallback
+                const expectedBuf = Buffer.from(this.callbackToken, 'utf8');
+                const actualBuf = Buffer.from(signature, 'utf8');
+                if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+                    logger.error(`[XenditProvider] Webhook callback token mismatch for invoice: ${externalId}`);
+                    return {
+                        success: false,
+                        orderId: externalId,
+                        status: 'FAILED',
+                        error: 'Invalid callback token',
+                    };
+                }
             }
 
             const mappedStatus = this.mapStatus(status);

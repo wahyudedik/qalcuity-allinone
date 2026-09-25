@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
-import { fetchDashboardStats, formatCurrency, formatDate, DashboardStats } from '../lib/api';
-import LoadingView from '../components/LoadingView';
+import { fetchDashboardStats, formatCurrency, DashboardStats } from '../lib/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
@@ -28,6 +27,13 @@ const quickActions = [
     { id: 'product', icon: '📦', title: 'Kelola Produk', screen: 'Inventory' as const },
     { id: 'employee', icon: '👤', title: 'Kelola Karyawan', screen: 'HR' as const },
 ];
+
+/** Format a percentage change with sign and color hint */
+function formatChange(value: number): { text: string; positive: boolean } {
+    if (value > 0) return { text: `+${value}%`, positive: true };
+    if (value < 0) return { text: `${value}%`, positive: false };
+    return { text: '0%', positive: true };
+}
 
 export default function DashboardScreen({ navigation }: Props) {
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -60,15 +66,45 @@ export default function DashboardScreen({ navigation }: Props) {
     if (loading) return <LoadingSkeleton variant="stats" />;
     if (error) return <ErrorView message={error} onRetry={loadData} />;
 
+    // Compute stat cards from actual API response
+    const revenueChange = formatChange(stats?.revenue?.change ?? 0);
+    const dealsChange = formatChange(stats?.dealsWon?.change ?? 0);
+    const leadsChange = formatChange(stats?.newLeads?.change ?? 0);
+    const expensesChange = formatChange(stats?.expenses?.change ?? 0);
+
     const statCards = [
-        { id: 'revenue', title: 'Revenue', value: formatCurrency(stats?.totalRevenue || 0), change: '+12.5%', positive: true },
-        { id: 'orders', title: 'Orders', value: `${stats?.totalOrders || 0}`, change: '+8.2%', positive: true },
-        { id: 'customers', title: 'Customers', value: `${stats?.totalCustomers || 0}`, change: '+5.1%', positive: true },
-        { id: 'products', title: 'Products', value: `${stats?.totalProducts || 0}`, change: '+3', positive: true },
+        {
+            id: 'revenue',
+            title: 'Revenue Bulan Ini',
+            value: formatCurrency(stats?.revenue?.current || 0),
+            change: revenueChange.text,
+            positive: revenueChange.positive,
+        },
+        {
+            id: 'deals',
+            title: 'Deals Aktif',
+            value: `${stats?.activeDeals || 0}`,
+            change: `${stats?.dealsWon?.current || 0} won`,
+            positive: true,
+        },
+        {
+            id: 'leads',
+            title: 'Lead Baru',
+            value: `${stats?.newLeads?.current || 0}`,
+            change: leadsChange.text,
+            positive: leadsChange.positive,
+        },
+        {
+            id: 'products',
+            title: 'Total Produk',
+            value: `${stats?.products?.total || 0}`,
+            change: `${stats?.products?.lowStock || 0} low stock`,
+            positive: (stats?.products?.lowStock || 0) === 0,
+        },
     ];
 
-    const recentInvoices = stats?.recentInvoices || [];
-    const recentPayments = stats?.recentPayments || [];
+    const recentActivities = stats?.recentActivities || [];
+    const alerts = stats?.alerts || [];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -108,51 +144,47 @@ export default function DashboardScreen({ navigation }: Props) {
                     </View>
                 </View>
 
-                {/* Recent Invoices */}
-                {recentInvoices.length > 0 && (
+                {/* Alerts */}
+                {alerts.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Invoice Terbaru</Text>
-                        {recentInvoices.slice(0, 3).map((invoice) => (
-                            <TouchableOpacity
-                                key={invoice.id}
-                                style={styles.activityItem}
-                                onPress={() => navigation.navigate('InvoiceDetail', { id: invoice.id })}
-                                activeOpacity={0.7}
+                        <Text style={styles.sectionTitle}>Peringatan</Text>
+                        {alerts.slice(0, 5).map((alert) => (
+                            <View
+                                key={alert.id}
+                                style={[styles.activityItem, alert.type === 'danger' ? styles.alertDanger : styles.alertWarning]}
                             >
-                                <View style={styles.activityIconBadge}>
-                                    <Text style={styles.activityIconText}>📄</Text>
+                                <View style={[styles.activityIconBadge, alert.type === 'danger' ? styles.alertDangerBadge : styles.alertWarningBadge]}>
+                                    <Text style={styles.activityIconText}>{alert.type === 'danger' ? '🔴' : '⚠️'}</Text>
                                 </View>
                                 <View style={styles.activityContent}>
-                                    <Text style={styles.activityTitle} numberOfLines={1}>{invoice.customerName}</Text>
-                                    <Text style={styles.activityTime} numberOfLines={1}>{invoice.invoiceNumber} · {formatDate(invoice.createdAt)}</Text>
+                                    <Text style={styles.activityTitle} numberOfLines={1}>{alert.title}</Text>
+                                    <Text style={styles.activityTime} numberOfLines={2}>{alert.message}</Text>
                                 </View>
-                                <Text style={styles.activityAmount} numberOfLines={1}>{formatCurrency(invoice.amount)}</Text>
-                            </TouchableOpacity>
+                            </View>
                         ))}
                     </View>
                 )}
 
-                {/* Recent Payments */}
-                {recentPayments.length > 0 && (
+                {/* Recent Activities */}
+                {recentActivities.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Pembayaran Terbaru</Text>
-                        {recentPayments.slice(0, 3).map((payment) => (
-                            <View key={payment.id} style={styles.activityItem}>
-                                <View style={[styles.activityIconBadge, styles.paymentBadge]}>
-                                    <Text style={styles.activityIconText}>💳</Text>
+                        <Text style={styles.sectionTitle}>Aktivitas Terbaru</Text>
+                        {recentActivities.slice(0, 5).map((activity) => (
+                            <View key={activity.id} style={styles.activityItem}>
+                                <View style={styles.activityIconBadge}>
+                                    <Text style={styles.activityIconText}>📋</Text>
                                 </View>
                                 <View style={styles.activityContent}>
-                                    <Text style={styles.activityTitle} numberOfLines={1}>{payment.customerName}</Text>
-                                    <Text style={styles.activityTime} numberOfLines={1}>{payment.invoiceNumber} · {formatDate(payment.paymentDate)}</Text>
+                                    <Text style={styles.activityTitle} numberOfLines={1}>{activity.title}</Text>
+                                    <Text style={styles.activityTime} numberOfLines={1}>{activity.description}</Text>
                                 </View>
-                                <Text style={[styles.activityAmount, { color: '#059669' }]} numberOfLines={1}>+{formatCurrency(payment.amount)}</Text>
                             </View>
                         ))}
                     </View>
                 )}
 
                 {/* Empty state if no data at all */}
-                {recentInvoices.length === 0 && recentPayments.length === 0 && (
+                {recentActivities.length === 0 && alerts.length === 0 && (
                     <View style={styles.section}>
                         <EmptyView title="Belum ada aktivitas" message="Aktivitas terbaru akan muncul di sini" />
                     </View>
@@ -192,6 +224,7 @@ const styles = StyleSheet.create({
     actionTitle: { fontSize: 13, fontWeight: '500', color: '#111827', textAlign: 'center' },
     activityItem: {
         backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center',
+        borderLeftWidth: 0, borderLeftColor: 'transparent',
         shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
     },
     activityIconBadge: {
@@ -204,6 +237,10 @@ const styles = StyleSheet.create({
     activityTitle: { fontSize: 13, fontWeight: '600', color: '#111827' },
     activityTime: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
     activityAmount: { fontSize: 13, fontWeight: '600', color: '#111827' },
+    alertDanger: { borderLeftColor: '#DC2626' },
+    alertWarning: { borderLeftColor: '#D97706' },
+    alertDangerBadge: { backgroundColor: '#FEF2F2' },
+    alertWarningBadge: { backgroundColor: '#FFFBEB' },
     footer: { padding: 20, alignItems: 'center' },
     footerText: { fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
 });

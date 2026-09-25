@@ -1,0 +1,31 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /www/wwwroot/qalcuity
+            git pull origin main
+            cd packages/db && npx prisma generate && cd ../..
+            pnpm install --frozen-lockfile
+            pnpm --filter @qalcuity/db run build 2>/dev/null || true
+            cd apps/web && pnpm run build
+            # aaPanel will auto-restart

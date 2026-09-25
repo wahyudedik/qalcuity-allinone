@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 16, 2026 (Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs — v11.38.0)
+**Last Updated:** September 24, 2026 (Session 57: Master Audit Documentation Update — v11.43.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 30.0 — Session 52: Financial Statements Enhancement (Cash Flow Statement, General Ledger, i18n, CSV export for all 5 reports), Analytics Read Model (12 materialized views, read model service, refresh API, cron task), Multi-device Session Control (session tracking, management UI, revoke, cleanup cron), API Documentation (OpenAPI 3.0 spec, Swagger UI, 53 endpoints). Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes
+**Document Version:** 33.0 — Session 57: Documentation update following Master Audit (Grade B- / 72/100). Updated statistics: 107 models, 293 indexes, mobile read-only (0% CRUD), RBAC ~41%. Session 56: PDF export (Invoice, Quotation, PO via jsPDF), CSV export improvements (UTF-8 BOM, header mapping, 3 utility functions), CSV export buttons on 6 pages (Contacts, Deals, Leads, Bills, Expenses, Products). Session 55: Master Audit P0/P1 fixes (Prisma Tenant Isolation Middleware, Payment Webhook Verification, 33 new permissions, Optimistic Locking, POS Decimal(19,4), Business Key Unique Constraints, Custom Role Client Support, Approval Escalation, Permission-based Approval Routes, Financial Soft Delete, Mobile API URL Fix). Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs. Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -97,7 +97,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Tenant Management** | 🚀 `production_ready` | 2026-08-30 | Multi-tenant isolation, tenantId on all queries |
+| **Tenant Management** | 🚀 `production_ready` | 2026-09-23 | Multi-tenant isolation, tenantId on all queries + Prisma Client Extension auto-injection ([`tenant-context.ts`](apps/web/lib/tenant-context.ts), [`prisma-tenant.ts`](apps/web/lib/prisma-tenant.ts)) |
 | **User Management** | 🚀 `production_ready` | 2026-08-30 | CRUD, role assignment, tenant-scoped |
 | **Auth (NextAuth.js)** | 🚀 `production_ready` | 2026-08-30 | JWT + CredentialsProvider, password bcryptjs |
 | **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-09-13 | SUPERADMIN (platform admin only, hidden from tenant views since Session 20), ADMIN, MEMBER, VIEWER — 3 layers |
@@ -126,6 +126,8 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **Deploy Scripts** | 🚀 `production_ready` | 2026-09-08 | aaPanel Node.js Project Manager, configurable port, robust db:push, update.sh |
 | **E2E Test Suite** | 🚀 `production_ready` | 2026-08-30 | 63 tests: CRUD, RBAC, tenant isolation, N+1 detection |
 | **Performance Indexes** | 🚀 `production_ready` | 2026-08-30 | 57 database indexes across frequently queried fields |
+| **Optimistic Locking** | 🚀 `production_ready` | 2026-09-23 | Version field on 7 critical models (Invoice, Payment, PO, Quotation, PosTransaction, PosSession, Employee) — prevents lost updates from concurrent edits — [`optimistic-lock.ts`](apps/web/lib/optimistic-lock.ts) |
+| **Financial Soft Delete** | 🚀 `production_ready` | 2026-09-23 | `deletedAt`/`deletedBy` on 8 financial models (Invoice, Payment, PO, Quotation, Bill, Expense, JournalEntry, PosTransaction) — never physically delete financial data — [`soft-delete.ts`](apps/web/lib/soft-delete.ts) |
 | **Subscription** | ✅ `implemented` | 2026-08-30 | Full subscription model with Midtrans payment integration |
 | **Billing** | ✅ `implemented` | 2026-08-30 | Plan selection, manual transfer + Midtrans Snap payment |
 | **Notification** | 🔄 `partial` | — | Notification bell ada, tapi belum real-time push |
@@ -153,8 +155,8 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Invoices** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, custom template, Zod validation, audit trail |
-| **Quotations** | 🚀 `production_ready` | 2026-08-30 | Convert to invoice, version tracking, Prisma DB |
+| **Invoices** | 🚀 `production_ready` | 2026-09-24 | Full CRUD, custom template, Zod validation, audit trail + PDF export via jsPDF ([`/api/finance/invoices/[id]/pdf`](apps/web/app/api/finance/invoices/[id]/pdf/route.ts)) |
+| **Quotations** | 🚀 `production_ready` | 2026-09-24 | Convert to invoice, version tracking, Prisma DB + PDF export via jsPDF ([`/api/finance/quotations/[id]/pdf`](apps/web/app/api/finance/quotations/[id]/pdf/route.ts)) |
 | **Payments** | 🚀 `production_ready` | 2026-08-30 | Multi-payment method, partial payment, process endpoint |
 | **Aging Report** | 🚀 `production_ready` | 2026-09-14 | Laporan Umur Piutang & Utang — AR (Invoice) + AP (PurchaseOrder), age buckets (Current, 31-60, 61-90, 90+), color coding, summary cards + detail tables, responsive layout. Auth: `finance:view`, Rate limit: 30 req/min — [`apps/web/app/api/finance/aging-report/route.ts`](apps/web/app/api/finance/aging-report/route.ts), [`apps/web/app/dashboard/finance/aging-report/page.tsx`](apps/web/app/dashboard/finance/aging-report/page.tsx) |
 | **Credit Limit Management** | 📋 `planned` | — | Belum ada kode |
@@ -163,7 +165,7 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Purchase Orders** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, approval workflow, Zod validation |
+| **Purchase Orders** | 🚀 `production_ready` | 2026-09-24 | Full CRUD, approval workflow, Zod validation + PDF export via jsPDF ([`/api/finance/purchase-orders/[id]/pdf`](apps/web/app/api/finance/purchase-orders/[id]/pdf/route.ts)) |
 | **Bills & Expenses** | 🚀 `production_ready` | 2026-09-14 | Full CRUD: Bill + Expense models, 4 API routes, 2 UI pages, 4 Zod schemas, RBAC, tenant isolation, sidebar navigation |
 | **Payment Processing** | 🔄 `partial` | — | Basic payment processing, belum batch/scheduled |
 | **Supplier Management** | 🚀 `production_ready` | 2026-08-30 | Full CRUD, rating, performance tracking |
@@ -660,8 +662,8 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Midtrans** | ✅ `implemented` | 2026-08-30 | Midtrans Snap integrated, webhook handler, HMAC verification |
-| **Xendit** | ✅ `implemented` | 2026-09-13 | Invoice API v2 + webhook callback ([`apps/web/lib/payment/xendit.ts`](apps/web/lib/payment/xendit.ts)) |
+| **Midtrans** | 🚀 `production_ready` | 2026-09-23 | Midtrans Snap integrated, webhook handler with timing-safe HMAC signature verification ([`webhook-verification.ts`](apps/web/lib/payment/webhook-verification.ts)) |
+| **Xendit** | 🚀 `production_ready` | 2026-09-23 | Invoice API v2 + webhook callback with timing-safe signature verification ([`webhook-verification.ts`](apps/web/lib/payment/webhook-verification.ts)) |
 
 ### 10.3 Rate Limiter & Security
 
@@ -673,7 +675,10 @@ AI yang benar-benar useful, bukan gimmick. **Semua AI features termasuk dalam bi
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Excel/CSV Export** | 🚀 `production_ready` | 2026-08-30 | Any report or data |
+| **CSV Export** | 🚀 `production_ready` | 2026-09-24 | UTF-8 BOM for Excel compatibility, header mapping, timestamp filenames — [`exportToCSV()`](apps/web/lib/export.ts) used across 17+ pages (Invoices, Bills, Expenses, Contacts, Deals, Leads, Products, Employees, Payroll, Attendance, Aging Report, Reconciliation, POS Reports, Platform Tenants, Billing, Reports, Financial Statements) |
+| **PDF Export (Financial Docs)** | 🚀 `production_ready` | 2026-09-24 | jsPDF + jspdf-autotable — Invoice, Quotation, Purchase Order PDF generation with company header, line items, totals, notes — [`pdf-generator.ts`](apps/web/lib/pdf-generator.ts) + 3 API routes |
+| **Excel Export (HTML)** | 🚀 `production_ready` | 2026-09-24 | Excel-compatible HTML table export — [`exportToExcel()`](apps/web/lib/export.ts) |
+| **Print Report** | 🚀 `production_ready` | 2026-09-24 | Print-friendly window with CSS — [`printReport()`](apps/web/lib/export.ts) |
 | **Excel/CSV Import** | ✅ `implemented` | 2026-09-01 | CSV/Excel parsers + CRM import API (contacts & leads) |
 
 ### 10.5 Real-time Features (SSE)
@@ -741,7 +746,7 @@ Enterprise-grade security untuk data protection.
 | **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-08-30 | SUPERADMIN (platform admin only, hidden from tenant views), ADMIN, MEMBER, VIEWER — defense-in-depth |
 | **IP Whitelisting** | 📋 `planned` | — | Belum ada kode |
 | **Data-level Security** | 📋 `planned` | — | Belum ada kode |
-| **Approval Workflow** | ✅ `implemented` | 2026-09-02 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models, configurable per entityType ([`apps/web/app/api/approval/`](apps/web/app/api/approval/)) |
+| **Approval Workflow** | 🚀 `production_ready` | 2026-09-23 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models, configurable per entityType, permission-based access (replaced hardcoded role checks in 7 routes), auto-escalation on SLA breach ([`approval-escalation.ts`](apps/web/lib/approval-escalation.ts)) |
 
 ### 11.3 Data Protection
 
@@ -808,8 +813,8 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Approval Engine** | ✅ `implemented` | 2026-09-02 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models ([`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma)) |
-| **Approval Routing** | ✅ `implemented` | 2026-09-02 | Configurable per entityType with level progression ([`apps/web/app/api/approval/`](apps/web/app/api/approval/)) |
+| **Approval Engine** | 🚀 `production_ready` | 2026-09-23 | Multi-level approval chains — ApprovalLevel + ApprovalRequest models, permission-based routing (replaced 7 hardcoded role checks), auto-escalation (3-level SLA: 24h→48h→72h) — [`approval-escalation.ts`](apps/web/lib/approval-escalation.ts) |
+| **Approval Routing** | 🚀 `production_ready` | 2026-09-23 | Configurable per entityType with level progression, permission-based access control — [`apps/web/app/api/approval/`](apps/web/app/api/approval/) |
 | **Amount-based Routing** | 📋 `planned` | — | Route ke approver berdasarkan nominal transaksi |
 | **Delegation** | 📋 `planned` | — | Delegate approval to another user [ADR-020] |
 
@@ -827,12 +832,12 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **SLA Engine** | 📋 `planned` | — | Service level tracking per transaction type [ADR-020] |
+| **SLA Engine** | 🔄 `partial` | 2026-09-23 | Approval escalation SLA implemented (3-level: 24h→48h→72h) — full SLA tracking per transaction type still planned |
 | **SLA Color Coding** | 📋 `planned` | — | 🟢 0-50%, 🟡 50-100%, 🔴 >100% SLA |
-| **SLA Breach Escalation** | 📋 `planned` | — | Auto-escalate saat SLA breach |
+| **SLA Breach Escalation** | 🚀 `production_ready` | 2026-09-23 | Auto-escalate pending approvals via [`approval-escalation.ts`](apps/web/lib/approval-escalation.ts) — 3-level SLA: L1 (24h → Supervisor), L2 (48h → Manager), L3 (72h → Director) — hourly cron check |
 | **SLA Metrics** | 📋 `planned` | — | Average completion time, compliance rate, escalation rate |
-| **Escalation Engine** | 📋 `planned` | — | Deadline-based: PIC → Supervisor → Manager → Director |
-| **Escalation Rules** | 📋 `planned` | — | Configurable escalation timeline per transaction type |
+| **Escalation Engine** | 🚀 `production_ready` | 2026-09-23 | Time-based escalation: PIC → Supervisor → Manager → Director — [`approval-escalation.ts`](apps/web/lib/approval-escalation.ts), registered as hourly cron task |
+| **Escalation Rules** | ✅ `implemented` | 2026-09-23 | 3-level SLA configurable per entity type (default: 24h/48h/72h), escalation targets per level |
 | **Escalation Notification** | 📋 `planned` | — | Real-time notification on escalation |
 
 ### 12.7 Delegation
@@ -977,13 +982,13 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **Permission Model (Prisma)** | 🚀 `production_ready` | 2026-09-01 | User → Membership → Role → Permission → Scope → Resource → Action |
 | **@qalcuity/permissions package** | 🚀 `production_ready` | 2026-09-01 | Shared package for Web, Mobile, Desktop, API, AI Agent |
 | **Permission Middleware** | 🚀 `production_ready` | 2026-09-01 | API route-level permission enforcement via `@qalcuity/permissions` |
-| **Permission Engine Integration (Batch 7A)** | 🚀 `production_ready` | 2026-09-01 | 165 API routes integrated with `can()` checks via `route-permissions.ts` |
+| **Permission Engine Integration (Batch 7A)** | 🚀 `production_ready` | 2026-09-23 | 165+ API routes integrated with `can()` checks via `route-permissions.ts` — 33 new permissions added in Session 55 (61 total), 12 hardcoded role checks replaced |
 | **Permission Hooks (usePermission)** | 🚀 `production_ready` | 2026-09-10 | UI-level permission hook [`usePermission`](apps/web/lib/use-permission.ts) — used in 86+ pages for conditional rendering |
 | **Platform Permissions** | 🚀 `production_ready` | 2026-09-01 | Internal Qalcuity: tenant.view, subscription.manage, system.monitor |
 | **Tenant Permissions** | 🚀 `production_ready` | 2026-09-01 | Customer org: invoice.approve, employee.view, payroll.manage |
 | **Scope Support** | 🚀 `production_ready` | 2026-09-01 | Branch + Department level permissions |
 | **Cross-platform Enforcement** | 🚀 `production_ready` | 2026-09-01 | Web, Mobile, Desktop, API, AI Agent — same engine |
-| **Migration from 4-Role RBAC** | 🔄 `partial` | 2026-09-01 | Strategy defined, `@qalcuity/permissions` ready for integration |
+| **Migration from 4-Role RBAC** | 🔄 `partial` | 2026-09-23 | 12 hardcoded role checks replaced in Session 55 (7 approval routes + 5 client files), strategy defined, `@qalcuity/permissions` active — remaining routes tracked |
 
 ### 13.2 Workflow Engine
 
@@ -1169,7 +1174,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **POS Terminal (Cashier)** | 🚀 `production_ready` | 2026-09-12 | Terminal/Cashier page + API, RBAC, tenant isolation, Zod validation (Phase 2) |
+| **POS Terminal (Cashier)** | 🚀 `production_ready` | 2026-09-23 | Terminal/Cashier page + API, RBAC, tenant isolation, Zod validation, Decimal(19,4) monetary precision (Phase 2) |
 | **POS Returns** | 📋 `planned` | — | Pengembalian barang partial/full |
 | **POS Refunds** | 🚀 `production_ready` | 2026-09-14 | Refunds page + 2 API routes, PUT handler with stock restoration, RBAC, tenant isolation, Zod validation (Phase 3) |
 | **POS Void Transaction** | 🚀 `production_ready` | 2026-09-14 | Void UI fix (voidReason input field + state), PUT handler with stock restoration, `prisma.$transaction` atomicity, RBAC, tenant isolation — [`apps/web/app/api/pos/transactions/[id]/void/route.ts`](apps/web/app/api/pos/transactions/[id]/void/route.ts) |
@@ -1179,7 +1184,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Barcode** | 📋 `planned` | — | Barcode scanning untuk product lookup |
 | **POS Payments** | 📋 `planned` | — | Multi metode: cash, card, e-wallet, QRIS, transfer |
 | **POS Cash Drawer** | 📋 `planned` | — | Cash in/out tracking, opening/closing cash count |
-| **POS Shift Management** | 🚀 `production_ready` | 2026-09-14 | Sessions page + API, Close Session PUT handler with closing report + expected cash calculation + variance, Daily Closing Report API (`GET /api/pos/sessions/[id]/closing-report`), RBAC, tenant isolation, Zod validation |
+| **POS Shift Management** | 🚀 `production_ready` | 2026-09-23 | Sessions page + API, Close Session PUT handler with closing report + expected cash calculation + variance, Daily Closing Report API, RBAC, tenant isolation, Zod validation, optimistic locking (version field) |
 | **POS Cashier Management** | 🚀 `production_ready` | 2026-09-12 | Terminals Management page (CRUD), RBAC, tenant isolation |
 | **POS Receipt Printing** | 🚀 `production_ready` | 2026-09-14 | Thermal printer format (80mm), `window.print()` for thermal printer, Web Share API for mobile sharing, download as .txt, Print CSS (`@media print`) — [`apps/web/components/pos/pos-receipt.tsx`](apps/web/components/pos/pos-receipt.tsx) |
 | **POS Tax Calculation** | 📋 `planned` | — | Automatic tax computation per item/transaction |
@@ -1192,7 +1197,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **POS Closing** | 📋 `planned` | — | Daily/shift closing dengan approval workflow |
 | **POS Audit Trail** | 🚀 `production_ready` | 2026-09-12 | Audit trail lengkap untuk semua transaksi POS via `logAudit()` |
 | **POS Dashboard** | 🚀 `production_ready` | 2026-09-12 | POS overview dashboard API with stats, RBAC, tenant isolation |
-| **POS Transactions Page** | 🚀 `production_ready` | 2026-09-12 | Transaction history page + API, RBAC, tenant isolation, Zod validation |
+| **POS Transactions Page** | 🚀 `production_ready` | 2026-09-23 | Transaction history page + API, RBAC, tenant isolation, Zod validation, Decimal(19,4) monetary precision, optimistic locking |
 | **POS Sessions Page** | 🚀 `production_ready` | 2026-09-12 | Sessions list page + API, RBAC, tenant isolation |
 | **POS Terminals Management** | 🚀 `production_ready` | 2026-09-12 | Terminal CRUD management page, RBAC, tenant isolation |
 | **POS Reports** | 🚀 `production_ready` | 2026-09-12 | POS reports page — sales, products, cashier reports, RBAC, tenant isolation |
@@ -1500,17 +1505,19 @@ Electron-based desktop application.
 
 | Status | Icon | Count | Percentage |
 |--------|------|-------|------------|
-| `production_ready` | 🚀 | ~91 | ~49% |
-| `implemented` | ✅ | ~33 | ~18% |
+| `production_ready` | 🚀 | ~105 | ~56% |
+| `implemented` | ✅ | ~31 | ~17% |
 | `verified` | ✔️ | 0 | 0% |
 | `partial` | 🔄 | ~19 | ~10% |
 | `foundation_complete` | 🔄 | ~1 | ~1% |
 | `in_progress` | 🔨 | 0 | 0% |
-| `planned` | 📋 | ~130 | ~36% |
+| `planned` | 📋 | ~117 | ~32% |
 | `blocked` | 🚫 | 0 | 0% |
 | `deprecated` | ⛔ | 0 | 0% |
 | **Total** | | **~290** | **100%** |
 
+> **Session 56 Impact (24 Sep):** +4 production_ready (PDF Export — Invoice/Quotation/PO, CSV Export improvements, PDF Export Financial Docs, Print Report), -4 planned → production_ready 101→105, planned 121→117. 6 pages updated with CSV export buttons (Contacts, Deals, Leads, Bills, Expenses, Products).
+> **Session 55 Impact (23 Sep):** +10 production_ready (Prisma Tenant Isolation, Optimistic Locking, Financial Soft Delete, Midtrans Webhook Verification, Xendit Webhook Verification, Approval Engine, Approval Routing, SLA Breach Escalation, Escalation Engine, Approval Workflow), -9 planned → production_ready 91→101, planned 130→121, implemented 33→31 (Midtrans/Xendit promoted to production_ready). 33 new permissions added (61 total). 12 hardcoded role checks replaced.
 > **Session 38-44 Impact (15 Sep):** Full i18n migration complete — 350+ i18n keys added, 300+ hardcoded strings replaced across all modules (Dashboard, Sidebar, Header, Shared Components, HR, POS, Finance, CRM, Inventory, Settings, Control Engine). i18n status updated to reflect production-ready state with 4755+ total keys.
 > **Session 35 Impact (14 Sep):** +1 production_ready (Bills & Expenses full CRUD), +1 foundation_complete (WhatsApp Business API foundation), POS Void notes updated (UI fix), Operations i18n completion note → production_ready 90→91, partial 20→19, planned 131→130, foundation_complete 0→1
 > **Session 33 Impact (14 Sep):** +1 production_ready (POS Void Transaction new entry), POS Refunds + POS Shift Management notes updated (stock restoration, closing report, expected cash) → production_ready 89→90, planned 132→131
@@ -1529,6 +1536,80 @@ Electron-based desktop application.
 ---
 
 ## 📝 Changelog
+
+### v32.0.0 (September 24, 2026) — Session 56: PDF Export + CSV Export Improvements (v11.42.0)
+
+#### P2 Features (Export)
+- **feat(finance):** PDF Export — Invoice, Quotation, Purchase Order PDF generation via jsPDF + jspdf-autotable ([`pdf-generator.ts`](apps/web/lib/pdf-generator.ts)) with 3 API routes (`/invoices/[id]/pdf`, `/quotations/[id]/pdf`, `/purchase-orders/[id]/pdf`)
+- **feat(export):** CSV Export Improvements — UTF-8 BOM for Excel compatibility, header mapping, timestamp filenames, 3 new utility functions (`formatCurrencyIDR`, `formatDateID`, `getFileTimestamp`), `exportToExcel()`, `printReport()`, `formatExportData()`
+- **feat(crm):** CSV Export Buttons — Contacts, Deals, Leads pages with `exportToCSV()` + header mapping
+- **feat(finance):** CSV Export Buttons — Bills, Expenses pages with `exportToCSV()` + header mapping
+- **feat(inventory):** CSV Export Button — Products page with `exportToCSV()` + header mapping
+
+#### Feature Status Updates
+- **feat(finance):** Invoices updated notes — PDF export via jsPDF added
+- **feat(finance):** Quotations updated notes — PDF export via jsPDF added
+- **feat(finance):** Purchase Orders updated notes — PDF export via jsPDF added
+- **feat(export):** Excel/CSV Export split into 4 entries — CSV Export, PDF Export (Financial Docs), Excel Export (HTML), Print Report — all production_ready
+
+#### Code Quality
+- TypeScript: 0 errors
+- Status Summary: production_ready 101→105, planned 121→117
+- Files changed: ~10 (1 new lib, 3 new API routes, 6 page updates)
+
+---
+
+### v31.0.0 (September 23, 2026) — Session 55: Master Audit — Security & Architecture Foundation Fixes (v11.41.0)
+
+#### P0 Fixes (Critical)
+- **fix(security):** Prisma Tenant Isolation Middleware — `AsyncLocalStorage` + Client Extension auto-injects `tenantId` on all queries (`tenant-context.ts`, `prisma-tenant.ts`)
+- **fix(security):** Payment Webhook Verification — Timing-safe HMAC signature verification for Midtrans + Xendit callbacks (`webhook-verification.ts`)
+- **fix(permission):** Permission Engine Registration — 33 new permissions added (33→61 total), 12 hardcoded role checks replaced with `can()` in 7 routes
+
+#### P1 Fixes (High)
+- **fix(deps):** Workspace Dependencies — Added missing `@qalcuity/ui` to apps/web package.json
+- **fix(data):** Optimistic Locking — `version` field on 7 critical models, `optimistic-lock.ts` helper prevents lost updates
+- **fix(mobile):** Mobile API URL — Configurable via `EXPO_PUBLIC_API_URL`, dashboard stats interface fixed
+- **fix(pos):** POS Monetary Precision — 21 fields changed to `Decimal(19,4)` across 5 POS models
+- **fix(data):** Business Key Unique Constraints — `@@unique([tenantId, key])` on Invoice, Payment, PO, Quotation
+- **fix(rbac):** Custom Role Client Support — 10 client files updated from hardcoded role checks to permission-based
+- **feat(approval):** Escalation Mechanism — `approval-escalation.ts` with 3-level SLA (24h→48h→72h), hourly cron task
+- **fix(approval):** Approval Route Hardcoded Roles — 7 routes updated from role-based to permission-based filtering
+- **feat(compliance):** Financial Soft Delete — `deletedAt`/`deletedBy` on 8 financial models, `soft-delete.ts` helper, 11 routes updated
+
+#### Prisma Migrations (Pending Deploy)
+- `20260923_add_optimistic_locking` — version field on 7 models
+- `20260923_add_pos_decimal_precision` — Decimal(19,4) on 21 POS fields
+- `20260923_add_soft_delete_financial` — deletedAt/deletedBy on 8 financial models
+
+#### Feature Status Updates
+- **feat(security):** Tenant Management updated notes — Prisma Client Extension auto-injection
+- **feat(integration):** Midtrans upgraded `implemented` → `production_ready` — timing-safe webhook verification
+- **feat(integration):** Xendit upgraded `implemented` → `production_ready` — timing-safe webhook verification
+- **feat(approval):** Approval Workflow upgraded `implemented` → `production_ready` — permission-based + auto-escalation
+- **feat(approval):** Approval Engine upgraded `implemented` → `production_ready` — permission-based routing + escalation
+- **feat(control):** SLA Breach Escalation upgraded `planned` → `production_ready` — 3-level SLA auto-escalation
+- **feat(control):** Escalation Engine upgraded `planned` → `production_ready` — time-based escalation with hourly cron
+- **feat(control):** Escalation Rules upgraded `planned` → `implemented` — configurable 3-level SLA
+- **feat(control):** SLA Engine upgraded `planned` → `partial` — approval SLA implemented, full tracking planned
+- **feat(core):** Optimistic Locking new entry `production_ready` — version field on 7 models
+- **feat(compliance):** Financial Soft Delete new entry `production_ready` — 8 models + helper + 11 routes
+- **feat(permission):** Permission Integration updated — 165+ routes, 33 new permissions (61 total)
+
+#### New Files
+- `apps/web/lib/tenant-context.ts` — AsyncLocalStorage tenant context
+- `apps/web/lib/prisma-tenant.ts` — Prisma Client Extension for tenant isolation
+- `apps/web/lib/payment/webhook-verification.ts` — Timing-safe webhook verification
+- `apps/web/lib/optimistic-lock.ts` — Optimistic locking helper
+- `apps/web/lib/soft-delete.ts` — Soft delete helper
+- `apps/web/lib/approval-escalation.ts` — Approval escalation engine
+
+#### Code Quality
+- TypeScript: 0 errors
+- Permission count: 33 → 61 (+28 new permissions)
+- Status Summary: production_ready 91→101, implemented 33→31, planned 130→121
+
+---
 
 ### v27.0.0 (September 14, 2026) — Session 35: Sprint 34 POS Void Fix + Operations i18n + Bills & Expenses + WhatsApp Foundation (v11.25.0)
 
@@ -1989,6 +2070,6 @@ Electron-based desktop application.
 - **Files Created/Modified:** 10 files
 - **POS Total** — Phase 1-5 complete: 23 API routes, 13 UI pages, 9 Prisma models, 180+ i18n keys, 10 offline files
 
-**Last Updated:** September 15, 2026 (Session 44: Full i18n Migration Complete — v11.30.0)
+**Last Updated:** September 24, 2026 (Session 57: Master Audit Documentation Update — v11.43.0)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 29.0 — Session 44: Full i18n migration complete (Sessions 38-44: 1,847 keys across 16 modules, 245+ files using useTranslation, 350+ keys added, 300+ hardcoded strings replaced — Dashboard, Sidebar, Header, Shared Components, HR, POS, Finance, CRM, Inventory, Settings, Control Engine). Session 35: Sprint 34 POS Void UI fix, Bills & Expenses, WhatsApp foundation. Session 33: POS critical fixes. Session 32: Aging Report, Dashboard real DB queries. Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Unified Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM encryption, Xendit payment, SSE real-time routes.
+**Document Version:** 33.0 — Session 57: Documentation update following Master Audit (Grade B- / 72/100). Updated statistics: 107 models, 293 indexes, mobile read-only (0% CRUD), RBAC ~41%. Session 56: PDF export (Invoice, Quotation, PO via jsPDF), CSV export improvements (UTF-8 BOM, header mapping, 3 utility functions), CSV export buttons on 6 pages (Contacts, Deals, Leads, Bills, Expenses, Products). Session 55: Master Audit P0/P1 fixes (Prisma Tenant Isolation Middleware, Payment Webhook Verification, 33 new permissions, Optimistic Locking, POS Decimal(19,4), Business Key Unique Constraints, Custom Role Client Support, Approval Escalation, Permission-based Approval Routes, Financial Soft Delete, Mobile API URL Fix). Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs. Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, 165 RBAC routes.

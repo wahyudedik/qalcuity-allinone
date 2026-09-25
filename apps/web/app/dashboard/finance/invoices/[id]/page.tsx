@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { usePermission } from '@/lib/use-permission'
 import { formatCurrency } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
 import { ArrowLeft, Printer, Send, CheckCircle, RotateCcw, FileText, XCircle, CreditCard, Smartphone, QrCode, Building2, Download, Loader2, Bell, Trash2 } from 'lucide-react'
@@ -38,7 +39,8 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
     const { t } = useTranslation()
     const router = useRouter()
     const { data: session } = useSession()
-    const canDelete = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN'
+    const { canDelete: canDeleteModule } = usePermission()
+    const canDelete = canDeleteModule('finance')
     const [showSendModal, setShowSendModal] = useState(false)
     const [showCancelConfirm, setShowCancelConfirm] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)

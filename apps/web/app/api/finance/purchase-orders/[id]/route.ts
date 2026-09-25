@@ -12,6 +12,8 @@ import { handleApiError } from '@/lib/api-error';
 import { sanitizeObject } from '@/lib/sanitize';
 import { generatePurchaseOrderJournalEntry } from '@/lib/auto-journal';
 import { calculateTax } from '@/lib/ppn';
+import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
+import { softDelete } from '@/lib/soft-delete';
 
 export async function GET(request: Request) {
     try {
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20');
         const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
+        const where: Record<string, unknown> = { tenantId, deletedAt: null };
 
         if (status) {
             where.status = status.toUpperCase();
@@ -70,6 +72,7 @@ export async function GET(request: Request) {
             expectedDelivery: po.deliveryDate?.toISOString().split('T')[0] || null,
             createdAt: po.createdAt.toISOString(),
             notes: po.notes || '',
+            version: po.version,
             items: po.items.map((item) => ({
                 id: item.id,
                 description: item.description,
@@ -190,11 +193,18 @@ export async function PUT(request: Request) {
         const { userId, tenantId } = auth;
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
-        const { id, items, ...updateData } = sanitizedBody;
+        const { id, items, version, ...updateData } = sanitizedBody;
 
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'ID is required', code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        if (typeof version !== 'number') {
+            return NextResponse.json(
+                { success: false, error: 'version is required for updates', code: 'VERSION_REQUIRED' },
                 { status: 400 }
             );
         }
@@ -217,19 +227,30 @@ export async function PUT(request: Request) {
             );
         }
 
-        const data: Record<string, unknown> = {};
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 5; // $1=id, $2=tenantId, $3=version already used
+
         if (validatedData.status) {
-            data.status = validatedData.status.toUpperCase();
+            setClauses.push(`status = $${paramIndex++}`);
+            values.push(validatedData.status.toUpperCase());
         }
         if (validatedData.expectedDelivery !== undefined) {
-            data.deliveryDate = validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : null;
+            setClauses.push(`"deliveryDate" = $${paramIndex++}`);
+            values.push(validatedData.expectedDelivery ? new Date(validatedData.expectedDelivery) : null);
         }
         if (validatedData.taxRate !== undefined) {
-            data.taxRate = validatedData.taxRate;
+            setClauses.push(`"taxRate" = $${paramIndex++}`);
+            values.push(validatedData.taxRate);
         }
         if (validatedData.notes !== undefined) {
-            data.notes = validatedData.notes;
+            setClauses.push(`notes = $${paramIndex++}`);
+            values.push(validatedData.notes);
         }
+
+        let newSubtotal: number | undefined;
+        let newTaxAmount: number | undefined;
+        let newTotal: number | undefined;
 
         if (validatedData.items && validatedData.items.length > 0) {
             const subtotal = validatedData.items.reduce(
@@ -238,9 +259,16 @@ export async function PUT(request: Request) {
             );
             const taxRate = Number(validatedData.taxRate || existing.taxRate);
             const taxCalc = calculateTax(subtotal, taxRate);
-            data.subtotal = subtotal;
-            data.taxAmount = taxCalc.taxAmount;
-            data.total = taxCalc.total;
+            newSubtotal = subtotal;
+            newTaxAmount = taxCalc.taxAmount;
+            newTotal = taxCalc.total;
+
+            setClauses.push(`subtotal = $${paramIndex++}`);
+            values.push(newSubtotal);
+            setClauses.push(`"taxAmount" = $${paramIndex++}`);
+            values.push(newTaxAmount);
+            setClauses.push(`total = $${paramIndex++}`);
+            values.push(newTotal);
 
             await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
             await prisma.purchaseOrderItem.createMany({
@@ -254,20 +282,32 @@ export async function PUT(request: Request) {
             });
         }
 
-        const purchaseOrder = await prisma.purchaseOrder.update({
+        if (setClauses.length > 0) {
+            await optimisticUpdateRaw('PurchaseOrder', id, tenantId, version, setClauses.join(', '), values);
+        }
+
+        const purchaseOrder = await prisma.purchaseOrder.findUnique({
             where: { id },
-            data,
             include: { items: true, supplier: true },
         });
 
+        const data: Record<string, unknown> = {};
+        if (validatedData.status) {
+            data.status = validatedData.status.toUpperCase();
+        }
+        if (newSubtotal !== undefined) {
+            data.subtotal = newSubtotal;
+            data.taxAmount = newTaxAmount;
+            data.total = newTotal;
+        }
+
         void logAudit({ userId, tenantId, action: 'UPDATE', entity: 'PurchaseOrder', entityId: id, newValues: data as Record<string, unknown>, request });
 
+        const newStatus = validatedData.status ? validatedData.status.toUpperCase() : undefined;
+
         // Auto Journal Entry + Stock Update: when PO status changes to PAID or RECEIVED
-        if (data.status === 'PAID' || data.status === 'RECEIVED') {
-            const fullPO = await prisma.purchaseOrder.findUnique({
-                where: { id },
-                include: { items: true },
-            });
+        if (newStatus === 'PAID' || newStatus === 'RECEIVED') {
+            const fullPO = purchaseOrder;
             if (fullPO) {
                 void generatePurchaseOrderJournalEntry(
                     {
@@ -289,7 +329,7 @@ export async function PUT(request: Request) {
                     },
                     tenantId,
                     userId,
-                    data.status as string,
+                    newStatus,
                     request
                 );
             }
@@ -316,7 +356,7 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
+        const existing = await prisma.purchaseOrder.findFirst({ where: { id, tenantId, deletedAt: null } });
         if (!existing) {
             return NextResponse.json(
                 { success: false, error: 'Purchase Order not found' },
@@ -324,7 +364,14 @@ export async function DELETE(request: Request) {
             );
         }
 
-        await prisma.purchaseOrder.delete({ where: { id } });
+        // Soft delete: mark record as deleted instead of removing it
+        const deleteResult = await softDelete(prisma, 'purchaseOrder', id, tenantId, userId);
+        if (deleteResult.count === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Purchase Order not found or already deleted' },
+                { status: 404 }
+            );
+        }
 
         // Audit logging non-blocking
         void logAudit({ userId, tenantId, action: 'DELETE', entity: 'PurchaseOrder', entityId: id, oldValues: toAuditPayload(existing), request });

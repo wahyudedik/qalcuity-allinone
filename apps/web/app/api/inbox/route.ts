@@ -7,6 +7,8 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
 import { ROLE_HIERARCHY } from '@qalcuity/config';
+import { checkPermissionByRole } from '@/lib/permissions';
+import { PERMISSIONS } from '@qalcuity/permissions';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -70,6 +72,7 @@ export async function GET(request: Request) {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const userLevel = ROLE_HIERARCHY[role] ?? 0;
+        const canViewAllApprovals = await checkPermissionByRole(userId, role, PERMISSIONS.APPROVAL_VIEW_ALL);
 
         // ── Parallel queries ────────────────────────────────────────────────
 
@@ -165,13 +168,13 @@ export async function GET(request: Request) {
         let pendingApprovals: InboxApproval[] = [];
         let pendingApprovalsCount = 0;
 
-        // ADMIN/SUPERADMIN see all pending; others only eligible types
+        // Users with approval:viewAll see all pending; others only eligible types
         const approvalWhere: Record<string, unknown> = {
             tenantId,
             status: 'PENDING',
         };
 
-        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+        if (!canViewAllApprovals) {
             if (eligibleEntityTypes.length === 0) {
                 // User cannot approve anything
                 pendingApprovalsCount = 0;

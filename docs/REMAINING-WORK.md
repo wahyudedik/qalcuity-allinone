@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity — Remaining Work Documentation
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
-> Diperbarui: 4 September 2026
-> Version: 1.4 — Post-POS Phase 4 Update (Loyalty + Analytics + Multi-terminal)
+> Diperbarui: 24 September 2026
+> Version: 1.6 — Session 57: Master Audit Findings Added
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -11,12 +11,13 @@
 ## 📋 Daftar Isi
 
 1. [Status Summary](#-status-summary)
-2. [🔴 CRITICAL — Harus Segera Dikerjakan](#-critical--harus-segera-dikerjakan)
-3. [🟠 HIGH PRIORITY — Core Business Logic](#-high-priority--core-business-logic)
-4. [🟡 MEDIUM PRIORITY — Feature Completeness](#-medium-priority--feature-completeness)
-5. [🔵 LOW PRIORITY — Advanced Features](#-low-priority--advanced-features)
-6. [📋 Appendix: File-by-File Reference](#-appendix-file-by-file-reference)
-7. [📐 Phase Roadmap](#-phase-roadmap)
+2. [🔴 P0 — Master Audit Findings (24 September 2026)](#-p0--master-audit-findings-24-september-2026)
+3. [🔴 CRITICAL — Harus Segera Dikerjakan](#-critical--harus-segera-dikerjakan)
+4. [🟠 HIGH PRIORITY — Core Business Logic](#-high-priority--core-business-logic)
+5. [🟡 MEDIUM PRIORITY — Feature Completeness](#-medium-priority--feature-completeness)
+6. [🔵 LOW PRIORITY — Advanced Features](#-low-priority--advanced-features)
+7. [📋 Appendix: File-by-File Reference](#-appendix-file-by-file-reference)
+8. [📐 Phase Roadmap](#-phase-roadmap)
 
 ---
 
@@ -43,6 +44,75 @@
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
 | **TOTAL** | **~91** | **~22** | **~135** | **~269** | **~34%** |
+
+---
+
+## 🔴 P0 — Master Audit Findings (24 September 2026)
+
+> **Master Audit completed on 24 September 2026 — Grade B- (72/100)**
+> Full report: [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md)
+
+### 🚨 Immediate Action Required
+
+- [ ] **[AUDIT-P0-1]** 🔴 **Rotate ALL production secrets** — `.env.production` was committed to git with production secrets (NEXTAUTH_SECRET, database URL, API keys)
+  - **File:** [`apps/web/.env.production`](apps/web/.env.production) (was in git history)
+  - **Impact:** 🔴 CRITICAL — All production secrets compromised
+  - **Action:** Rotate NEXTAUTH_SECRET, database password, API keys (Midtrans, Xendit, etc.) immediately
+  - **Complexity:** Low (manual rotation)
+
+- [ ] **[AUDIT-P0-2]** 🔴 **Remove `.env.production` from git history**
+  - **File:** Git history
+  - **Impact:** 🔴 CRITICAL — Secrets remain accessible via `git log` even after file deletion
+  - **Action:** Use `git filter-branch` or BFG Repo Cleaner to purge from history + force push
+  - **Complexity:** Medium (requires force push coordination)
+
+- [ ] **[AUDIT-P0-3]** 🔴 **Add RBAC entries for remaining routes (165 → 400+)**
+  - **File:** [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts)
+  - **Impact:** 🔴 CRITICAL — ~59% of routes lack RBAC permission entries, relying only on middleware path-based protection
+  - **Action:** Register remaining ~235 routes in `route-permissions.ts` with appropriate permission strings
+  - **Complexity:** High (systematic review of all routes)
+  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — RBAC coverage analysis
+
+- [ ] **[AUDIT-P0-4]** 🔴 **Integrate `prisma-tenant.ts` into route middleware**
+  - **File:** [`apps/web/lib/prisma-tenant.ts`](apps/web/lib/prisma-tenant.ts), [`apps/web/lib/tenant-context.ts`](apps/web/lib/tenant-context.ts)
+  - **Impact:** 🔴 CRITICAL — Tenant isolation middleware exists but is not wired into the request lifecycle, so auto-injection does not activate
+  - **Action:** Ensure `TenantContext` is set in middleware for every request, so Prisma extension can auto-filter by `tenantId`
+  - **Complexity:** Medium (middleware integration)
+  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — Architecture anti-patterns
+
+- [ ] **[AUDIT-P0-5]** 🟠 **Mobile CRUD operations (currently 0% — read-only)**
+  - **File:** [`apps/mobile/`](apps/mobile/)
+  - **Impact:** 🟠 HIGH — Mobile app has 12 screens but zero create/update/delete operations
+  - **Action:** Implement CRUD for at least core entities (contacts, products, invoices)
+  - **Complexity:** Very High (12 screens need write operations)
+  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — Mobile analysis
+
+- [ ] **[AUDIT-P0-6]** 🟠 **POS offline mode completion**
+  - **File:** [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline/)
+  - **Impact:** 🟠 HIGH — Architecture exists (IndexedDB, sync queue, service worker) but not fully functional
+  - **Action:** Complete offline sync, test conflict resolution, verify data integrity
+  - **Complexity:** High (requires thorough testing)
+  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — POS analysis
+
+- [ ] **[AUDIT-P0-7]** 🟠 **CI/CD pipeline setup**
+  - **File:** Project root (`.github/workflows/` or equivalent)
+  - **Impact:** 🟠 HIGH — No automated testing or deployment pipeline; manual deployment only
+  - **Action:** Set up GitHub Actions or similar CI/CD for automated type-check, test, and deployment
+  - **Complexity:** Medium
+  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — Infrastructure analysis
+
+### Audit Statistics (Corrected)
+
+| Metric | Previously Documented | Actual (Audit) |
+|--------|----------------------|-----------------|
+| Prisma Models | 100 | **107** |
+| Database Indexes | 277 | **293** |
+| RBAC Coverage | ~165 routes | **~165/400+ routes (~41%)** |
+| Mobile CRUD | Unknown | **0% (read-only)** |
+| E2E Tests | 78 | **78** |
+| Unit Tests | 189 | **189** |
+
+> ⚠️ **Note:** All statistics in this document and others should be updated to reflect actual numbers from the master audit.
 
 ---
 
@@ -691,11 +761,12 @@
   - **Dependency:** MetricDefinition model (exists)
   - **Complexity:** High
 
-- [ ] **[A-ADV-05]** Export Engine — CSV, Excel, PDF export dari query results
+- [x] **[A-ADV-05]** Export Engine — CSV, Excel, PDF export dari query results
   - **File:** `packages/analytics/src/export-engine.ts`
   - **Dependency:** Export libraries (xlsx, jspdf)
   - **Complexity:** Medium
   - **Ref:** [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) Section 18.12
+  - **Status:** **PARTIAL** — General CSV/PDF export for financial documents and CRUD pages is production-ready ([`apps/web/lib/export.ts`](apps/web/lib/export.ts), [`apps/web/lib/pdf-generator.ts`](apps/web/lib/pdf-generator.ts)). Analytics-specific query results export engine still planned.
 
 - [ ] **[A-ADV-06]** Query Performance Dashboard — Monitor query performance across users
   - **File:** Performance monitoring page
@@ -1998,8 +2069,8 @@ Parallel tracks (can run alongside):
 ---
 
 > **Document maintained by:** Qalcuity AI Team
-> **Version:** 1.3 — Remaining Work Documentation (Updated: 4 September 2026 — Batch N audit issues resolved)
-> **Next Review:** Setelah Phase 10 (Unified Control Engine) selesai
+> **Version:** 1.6 — Remaining Work Documentation (Updated: 24 September 2026 — Master Audit findings added)
+> **Next Review:** Setelah P0 remediation items selesai
 > **Related Documents:**
 > - [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) — Analytics architecture
 > - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Core architecture

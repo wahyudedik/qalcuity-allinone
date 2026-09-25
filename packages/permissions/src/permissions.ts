@@ -50,6 +50,61 @@ export const PERMISSIONS = {
 
     // ── Audit ────────────────────────────────────────────────────────────────
     AUDIT_VIEW: 'audit:view',
+
+    // ── Approval Engine ──────────────────────────────────────────────────────
+    APPROVAL_VIEW: 'approval:view',
+    APPROVAL_VIEW_ALL: 'approval:viewAll',
+    APPROVAL_CREATE: 'approval:create',
+    APPROVAL_EDIT: 'approval:edit',
+    APPROVAL_DELETE: 'approval:delete',
+    APPROVAL_APPROVE: 'approval:approve',
+    APPROVAL_REJECT: 'approval:reject',
+
+    // ── Workflow Engine ──────────────────────────────────────────────────────
+    WORKFLOW_VIEW: 'workflow:view',
+    WORKFLOW_CREATE: 'workflow:create',
+    WORKFLOW_EDIT: 'workflow:edit',
+    WORKFLOW_DELETE: 'workflow:delete',
+    WORKFLOW_TRANSITION: 'workflow:transition',
+
+    // ── POS (Point of Sale) ──────────────────────────────────────────────────
+    POS_VIEW: 'pos:view',
+    POS_CREATE: 'pos:create',
+    POS_EDIT: 'pos:edit',
+    POS_DELETE: 'pos:delete',
+
+    // ── Billing ──────────────────────────────────────────────────────────────
+    BILLING_VIEW: 'billing:view',
+    BILLING_CREATE: 'billing:create',
+    BILLING_EDIT: 'billing:edit',
+    BILLING_DELETE: 'billing:delete',
+
+    // ── Dashboard ────────────────────────────────────────────────────────────
+    DASHBOARD_VIEW: 'dashboard:view',
+
+    // ── Projects & Operations ────────────────────────────────────────────────
+    PROJECT_VIEW: 'project:view',
+    PROJECT_CREATE: 'project:create',
+    PROJECT_EDIT: 'project:edit',
+    PROJECT_DELETE: 'project:delete',
+
+    OPERATIONS_VIEW: 'operations:view',
+    OPERATIONS_CREATE: 'operations:create',
+    OPERATIONS_EDIT: 'operations:edit',
+    OPERATIONS_DELETE: 'operations:delete',
+
+    // ── Notifications ────────────────────────────────────────────────────────
+    NOTIFICATION_VIEW: 'notification:view',
+
+    // ── System ───────────────────────────────────────────────────────────────
+    SYSTEM_VIEW: 'system:view',
+    SYSTEM_ADMIN: 'system:admin',
+
+    // ── AI Features ──────────────────────────────────────────────────────────
+    AI_VIEW: 'ai:view',
+
+    // ── Platform Admin (SUPERADMIN only) ─────────────────────────────────────
+    PLATFORM_VIEW: 'platform:view',
 } as const;
 
 /**
@@ -69,6 +124,17 @@ export const MODULE_PERMISSIONS: Record<string, string[]> = {
     reports: ['view', 'create'],
     analytics: ['view', 'edit'],
     audit: ['view'],
+    approval: ['view', 'viewAll', 'create', 'edit', 'delete', 'approve', 'reject'],
+    workflow: ['view', 'create', 'edit', 'delete', 'transition'],
+    pos: ['view', 'create', 'edit', 'delete'],
+    billing: ['view', 'create', 'edit', 'delete'],
+    dashboard: ['view'],
+    project: ['view', 'create', 'edit', 'delete'],
+    operations: ['view', 'create', 'edit', 'delete'],
+    notification: ['view'],
+    system: ['view', 'admin'],
+    ai: ['view'],
+    platform: ['view'],
 };
 
 // ─── Permission Categories (for UI) ───────────────────────────────────────────
@@ -148,6 +214,106 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         label: 'Audit',
         permissions: [
             { key: PERMISSIONS.AUDIT_VIEW, label: 'View Audit Log', description: 'Melihat audit log' },
+        ],
+    },
+    {
+        key: 'approval',
+        label: 'Approval',
+        permissions: [
+            { key: PERMISSIONS.APPROVAL_VIEW, label: 'View Approval', description: 'Melihat data approval' },
+            { key: PERMISSIONS.APPROVAL_VIEW_ALL, label: 'View All Approvals', description: 'Melihat semua approval requests (bukan hanya yang eligible)' },
+            { key: PERMISSIONS.APPROVAL_CREATE, label: 'Create Approval', description: 'Membuat approval request' },
+            { key: PERMISSIONS.APPROVAL_EDIT, label: 'Edit Approval', description: 'Mengubah approval' },
+            { key: PERMISSIONS.APPROVAL_DELETE, label: 'Delete Approval', description: 'Menghapus approval' },
+            { key: PERMISSIONS.APPROVAL_APPROVE, label: 'Approve', description: 'Menyetujui approval request' },
+            { key: PERMISSIONS.APPROVAL_REJECT, label: 'Reject', description: 'Menolak approval request' },
+        ],
+    },
+    {
+        key: 'workflow',
+        label: 'Workflow',
+        permissions: [
+            { key: PERMISSIONS.WORKFLOW_VIEW, label: 'View Workflow', description: 'Melihat workflow' },
+            { key: PERMISSIONS.WORKFLOW_CREATE, label: 'Create Workflow', description: 'Membuat workflow' },
+            { key: PERMISSIONS.WORKFLOW_EDIT, label: 'Edit Workflow', description: 'Mengubah workflow' },
+            { key: PERMISSIONS.WORKFLOW_DELETE, label: 'Delete Workflow', description: 'Menghapus workflow' },
+            { key: PERMISSIONS.WORKFLOW_TRANSITION, label: 'Transition Workflow', description: 'Melakukan transisi workflow' },
+        ],
+    },
+    {
+        key: 'pos',
+        label: 'POS (Point of Sale)',
+        permissions: [
+            { key: PERMISSIONS.POS_VIEW, label: 'View POS', description: 'Melihat data POS' },
+            { key: PERMISSIONS.POS_CREATE, label: 'Create POS', description: 'Membuat transaksi POS' },
+            { key: PERMISSIONS.POS_EDIT, label: 'Edit POS', description: 'Mengubah data POS' },
+            { key: PERMISSIONS.POS_DELETE, label: 'Delete POS', description: 'Menghapus data POS' },
+        ],
+    },
+    {
+        key: 'billing',
+        label: 'Billing',
+        permissions: [
+            { key: PERMISSIONS.BILLING_VIEW, label: 'View Billing', description: 'Melihat data billing' },
+            { key: PERMISSIONS.BILLING_CREATE, label: 'Create Billing', description: 'Membuat data billing' },
+            { key: PERMISSIONS.BILLING_EDIT, label: 'Edit Billing', description: 'Mengubah data billing' },
+            { key: PERMISSIONS.BILLING_DELETE, label: 'Delete Billing', description: 'Menghapus data billing' },
+        ],
+    },
+    {
+        key: 'dashboard',
+        label: 'Dashboard',
+        permissions: [
+            { key: PERMISSIONS.DASHBOARD_VIEW, label: 'View Dashboard', description: 'Melihat dashboard' },
+        ],
+    },
+    {
+        key: 'project',
+        label: 'Projects',
+        permissions: [
+            { key: PERMISSIONS.PROJECT_VIEW, label: 'View Projects', description: 'Melihat proyek' },
+            { key: PERMISSIONS.PROJECT_CREATE, label: 'Create Projects', description: 'Membuat proyek' },
+            { key: PERMISSIONS.PROJECT_EDIT, label: 'Edit Projects', description: 'Mengubah proyek' },
+            { key: PERMISSIONS.PROJECT_DELETE, label: 'Delete Projects', description: 'Menghapus proyek' },
+        ],
+    },
+    {
+        key: 'operations',
+        label: 'Operations',
+        permissions: [
+            { key: PERMISSIONS.OPERATIONS_VIEW, label: 'View Operations', description: 'Melihat operasi' },
+            { key: PERMISSIONS.OPERATIONS_CREATE, label: 'Create Operations', description: 'Membuat operasi' },
+            { key: PERMISSIONS.OPERATIONS_EDIT, label: 'Edit Operations', description: 'Mengubah operasi' },
+            { key: PERMISSIONS.OPERATIONS_DELETE, label: 'Delete Operations', description: 'Menghapus operasi' },
+        ],
+    },
+    {
+        key: 'notification',
+        label: 'Notifications',
+        permissions: [
+            { key: PERMISSIONS.NOTIFICATION_VIEW, label: 'View Notifications', description: 'Melihat notifikasi' },
+        ],
+    },
+    {
+        key: 'system',
+        label: 'System',
+        permissions: [
+            { key: PERMISSIONS.SYSTEM_VIEW, label: 'View System', description: 'Melihat informasi sistem' },
+            { key: PERMISSIONS.SYSTEM_ADMIN, label: 'Admin System', description: 'Administrasi sistem' },
+        ],
+    },
+    {
+        key: 'ai',
+        label: 'AI Features',
+        permissions: [
+            { key: PERMISSIONS.AI_VIEW, label: 'View AI', description: 'Menggunakan fitur AI' },
+        ],
+    },
+    {
+        key: 'platform',
+        label: 'Platform Admin',
+        permissions: [
+            { key: PERMISSIONS.PLATFORM_VIEW, label: 'View Platform', description: 'Melihat data platform' },
         ],
     },
 ];

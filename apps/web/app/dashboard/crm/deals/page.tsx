@@ -3,13 +3,14 @@ import { usePermission } from '@/lib/use-permission'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Trash2, Check, X, TrendingUp } from 'lucide-react'
+import { Plus, Search, Trash2, Check, X, TrendingUp, Download } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
+import { exportToCSV } from '@/lib/export'
 
 type Deal = {
     id: string
@@ -101,6 +102,32 @@ export default function DealsPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleExportCSV = () => {
+        if (filtered.length === 0) {
+            setToast({ message: t('crm.deals.toast.noDataExport') || 'Tidak ada data untuk diekspor', type: 'error' })
+            return
+        }
+        const csvData = filtered.map(d => ({
+            title: d.title,
+            contactName: d.contactName || '',
+            value: d.value,
+            stage: d.stage,
+            probability: d.probability,
+            closeDate: d.closeDate || '',
+            notes: d.notes || '',
+        }))
+        exportToCSV(csvData, 'deals', {
+            title: 'Judul Deal',
+            contactName: 'Kontak',
+            value: 'Nilai',
+            stage: 'Stage',
+            probability: 'Probabilitas (%)',
+            closeDate: 'Tanggal Closing',
+            notes: 'Catatan',
+        })
+        setToast({ message: t('crm.deals.toast.exportSuccess') || 'Berhasil mengekspor data', type: 'success' })
     }
 
     const filtered = deals.filter((d) => {
@@ -239,15 +266,25 @@ export default function DealsPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('crm.deals.title')}</h1>
                     <p className="text-gray-500">{deals.length} {t('crm.deals.subtitle')} · {t('crm.deals.totalValue')}: {formatCurrency(totalValue)}</p>
                 </div>
-                {canMutate && (
+                <div className="flex gap-2">
                     <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                        onClick={handleExportCSV}
+                        disabled={filtered.length === 0}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                     >
-                        <Plus className="h-4 w-4" />
-                        {t('crm.deals.newDeal')}
+                        <Download className="h-4 w-4" />
+                        {t('common.export') || 'Export CSV'}
                     </button>
-                )}
+                    {canMutate && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {t('crm.deals.newDeal')}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Stats */}
