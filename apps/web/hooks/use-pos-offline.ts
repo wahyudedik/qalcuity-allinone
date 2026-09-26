@@ -20,6 +20,14 @@ import { logger } from '@/lib/logger';
 // Types
 // =============================================================================
 
+/** Callback options for sync events */
+export interface UsePosOfflineCallbacks {
+    /** Called when sync completes successfully (syncedCount > 0) */
+    onSyncComplete?: (syncedCount: number) => void;
+    /** Called when sync fails or has failures */
+    onSyncFailed?: (failedCount: number) => void;
+}
+
 /** Return type for the usePosOffline hook */
 export interface UsePosOfflineReturn {
     /** Whether the browser is currently online */
@@ -65,7 +73,7 @@ export interface UsePosOfflineReturn {
  * }
  * ```
  */
-export function usePosOffline(): UsePosOfflineReturn {
+export function usePosOffline(callbacks?: UsePosOfflineCallbacks): UsePosOfflineReturn {
     // ---------------------------------------------------------------------------
     // State
     // ---------------------------------------------------------------------------
@@ -92,6 +100,9 @@ export function usePosOffline(): UsePosOfflineReturn {
 
     // Track engine start state to avoid double-start in StrictMode
     const engineStartedRef = useRef<boolean>(false);
+
+    // Track previous syncing count for sync completion detection
+    const prevSyncingRef = useRef<number>(0);
 
     // ---------------------------------------------------------------------------
     // Online/Offline Detection
@@ -140,9 +151,25 @@ export function usePosOffline(): UsePosOfflineReturn {
 
         // Subscribe to status changes
         const unsubscribe = engine.onStatusChange((status: SyncStatus) => {
+            const prevSyncing = prevSyncingRef.current;
+            const wasSyncing = prevSyncing > 0;
+            const isNowIdle = status.syncingCount === 0;
+
             setSyncStatus(status);
             setIsOnline(status.isOnline);
             setPendingCount(status.pendingCount + status.syncingCount);
+
+            // Detect sync completion: was syncing, now idle
+            if (wasSyncing && isNowIdle) {
+                if (status.failedCount > 0 && callbacks?.onSyncFailed) {
+                    callbacks.onSyncFailed(status.failedCount);
+                } else if (callbacks?.onSyncComplete) {
+                    const syncedCount = prevSyncing - status.pendingCount;
+                    callbacks.onSyncComplete(Math.max(syncedCount, 0));
+                }
+            }
+
+            prevSyncingRef.current = status.syncingCount;
         });
 
         // Load initial status
@@ -187,6 +214,9 @@ export function usePosOffline(): UsePosOfflineReturn {
     const handleSyncNow = useCallback(async () => {
         try {
             const engine = SyncEngine.getInstance();
+            const statusBefore = await engine.getSyncStatus();
+            const prevPending = statusBefore.pendingCount + statusBefore.syncingCount;
+
             await engine.processQueue();
 
             // Refresh status after sync
@@ -194,10 +224,24 @@ export function usePosOffline(): UsePosOfflineReturn {
             setSyncStatus(status);
             setIsOnline(status.isOnline);
             setPendingCount(status.pendingCount + status.syncingCount);
+
+            // Notify callbacks after manual sync
+            const nowPending = status.pendingCount + status.syncingCount;
+            if (nowPending < prevPending) {
+                const syncedCount = prevPending - nowPending;
+                if (status.failedCount > 0 && callbacks?.onSyncFailed) {
+                    callbacks.onSyncFailed(status.failedCount);
+                } else if (callbacks?.onSyncComplete) {
+                    callbacks.onSyncComplete(syncedCount);
+                }
+            }
         } catch (error) {
             logger.error('[POS-Offline Hook] Sync failed:', error);
+            if (callbacks?.onSyncFailed) {
+                callbacks.onSyncFailed(0);
+            }
         }
-    }, []);
+    }, [callbacks]);
 
     /**
      * Get all cached products from IndexedDB.

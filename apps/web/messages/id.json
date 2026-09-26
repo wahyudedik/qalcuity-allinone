@@ -5720,6 +5720,15 @@
             "priorityHigh": "Tinggi",
             "priorityNormal": "Normal",
             "priorityLow": "Rendah"
+        },
+        "offline": {
+            "syncing": "Menyinkronkan transaksi offline...",
+            "syncComplete": "{count} transaksi berhasil disinkronkan",
+            "syncFailed": "Sinkronisasi gagal. {count} transaksi masih menunggu",
+            "offlineMode": "Mode Offline",
+            "onlineMode": "Online",
+            "pendingTransactions": "{count} transaksi menunggu",
+            "transactionLimit": "Batas transaksi offline tercapai"
         }
     },
     "operations": {

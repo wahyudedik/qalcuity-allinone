@@ -5720,6 +5720,15 @@
             "priorityHigh": "High",
             "priorityNormal": "Normal",
             "priorityLow": "Low"
+        },
+        "offline": {
+            "syncing": "Syncing offline transactions...",
+            "syncComplete": "{count} transactions synced successfully",
+            "syncFailed": "Sync failed. {count} transactions pending",
+            "offlineMode": "Offline Mode",
+            "onlineMode": "Online",
+            "pendingTransactions": "{count} pending transactions",
+            "transactionLimit": "Offline transaction limit reached"
         }
     },
     "operations": {

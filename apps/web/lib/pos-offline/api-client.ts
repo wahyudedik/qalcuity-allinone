@@ -18,6 +18,7 @@ import {
     getCachedSession,
     addToSyncQueue,
     savePendingTransaction,
+    getPendingTransactions,
 } from './db';
 import { SyncEngine } from './sync';
 import { logger } from '@/lib/logger';
@@ -33,6 +34,9 @@ export interface ApiResponse<T> {
     data: T;
     error?: string;
 }
+
+/** Maximum number of offline transactions before sync is required */
+export const OFFLINE_TRANSACTION_LIMIT = 50;
 
 /** Result of creating a transaction (online or queued for offline) */
 export interface TransactionResult {
@@ -229,6 +233,16 @@ export async function fetchActiveSession(terminalId?: string): Promise<Session |
 export async function createTransaction(
     tx: PendingTransaction
 ): Promise<TransactionResult> {
+    // Check offline transaction limit before saving
+    if (!isOnline()) {
+        const pending = await getPendingTransactions();
+        if (pending.length >= OFFLINE_TRANSACTION_LIMIT) {
+            const errorMsg = `Offline transaction limit reached (${OFFLINE_TRANSACTION_LIMIT}). Please sync first when online.`;
+            logger.warn('[POS-ApiClient] Offline transaction limit reached:', { detail: errorMsg });
+            throw new Error(errorMsg);
+        }
+    }
+
     // Always save to pending store first (for offline safety)
     await savePendingTransaction(tx);
 
