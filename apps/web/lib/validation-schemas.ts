@@ -2214,3 +2214,27 @@ export const updateSoDRuleSchema = z.object({
     action: z.string().max(100).optional().nullable(),
     enabled: z.boolean().optional(),
 });
+
+// SoD Exception Schemas
+
+export const requestSoDExceptionSchema = z.object({
+    ruleId: z.string().min(1, 'Rule ID wajib diisi'),
+    reason: z.string().min(10, 'Alasan minimal 10 karakter').max(1000, 'Alasan maksimal 1000 karakter'),
+    durationDays: z.number().int().min(1).max(90).optional(),
+});
+
+export const approveSoDExceptionSchema = z.object({
+    decision: z.enum(['APPROVED', 'REJECTED'], { message: 'Decision harus "APPROVED" atau "REJECTED"' }),
+    comments: z.string().max(1000).optional(),
+});
+
+export const checkSoDConflictSchema = z.object({
+    userId: z.string().min(1, 'User ID wajib diisi'),
+    userRole: z.string().min(1, 'User role wajib diisi'),
+    action: z.string().min(1, 'Action wajib diisi'),
+    module: z.string().min(1, 'Module wajib diisi'),
+});
+
+export const applyPolicyTemplateSchema = z.object({
+    templateId: z.string().min(1, 'Template ID wajib diisi'),
+});

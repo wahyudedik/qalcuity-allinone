@@ -6,11 +6,16 @@
  * creates SLA tracker jika perlu, dan returns decision.
  *
  * Flow: Transaction → Policy Evaluation → SoD Check → SLA → Decision
+ *
+ * Phase 2 Enhancements:
+ * - Amount-based policy routing (multi-level approval based on amount thresholds)
+ * - SoD exception awareness (check exceptions before blocking)
  */
 
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
+import { hasActiveSoDException } from '@/lib/sod-engine';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -62,7 +67,125 @@ interface PolicyConditions {
     roles?: string[];
     departments?: string[];
     entityTypes?: string[];
+    requireApproval?: boolean;
+    approvalLevels?: number;
+    requiredRole?: string;
     custom?: Record<string, unknown>;
+}
+
+// ─── Amount-Based Routing ──────────────────────────────────────────────────
+
+/**
+ * Determine the number of approval levels required based on amount thresholds.
+ * Uses the policy conditions to determine routing:
+ * - amount > 10jt → 2 levels
+ * - amount > 100jt → 3 levels + CFO/SUPERADMIN
+ *
+ * @param amount - Transaction amount
+ * @param entityType - Entity type (e.g., "INVOICE", "PURCHASE_ORDER")
+ * @param tenantId - Tenant ID
+ * @returns Required approval levels and roles
+ */
+export async function determineApprovalLevels(params: {
+    amount: number;
+    entityType: string;
+    tenantId: string;
+}): Promise<{ levels: number; requiredRole: string }> {
+    const { amount, entityType, tenantId } = params;
+
+    // Find matching policies for this entity type, sorted by priority DESC
+    const policies = await prisma.controlPolicy.findMany({
+        where: {
+            tenantId,
+            enabled: true,
+            module: entityType,
+        },
+        orderBy: { priority: 'desc' },
+    });
+
+    for (const policy of policies) {
+        const cond = policy.conditions as PolicyConditions;
+        if (!cond || typeof cond !== 'object') continue;
+
+        // Check amount range
+        if (cond.minAmount !== undefined && amount < cond.minAmount) continue;
+        if (cond.maxAmount !== undefined && amount > cond.maxAmount) continue;
+
+        // If this policy has approval level config, return it
+        if (cond.approvalLevels !== undefined) {
+            return {
+                levels: cond.approvalLevels,
+                requiredRole: cond.requiredRole ?? 'ADMIN',
+            };
+        }
+    }
+
+    // Default: 1 level approval, ADMIN role
+    return { levels: 1, requiredRole: 'ADMIN' };
+}
+
+/**
+ * Get amount-based routing summary for a given amount and entity type.
+ * Returns all matching policies to show the user what approval path will be taken.
+ *
+ * @param amount - Transaction amount
+ * @param entityType - Entity type
+ * @param tenantId - Tenant ID
+ * @returns Array of matching policies with their routing config
+ */
+export async function getAmountRoutingSummary(params: {
+    amount: number;
+    entityType: string;
+    tenantId: string;
+}): Promise<Array<{
+    policyId: string;
+    policyName: string;
+    effect: string;
+    approvalLevels: number;
+    requiredRole: string;
+    matched: boolean;
+}>> {
+    const { amount, entityType, tenantId } = params;
+
+    const policies = await prisma.controlPolicy.findMany({
+        where: {
+            tenantId,
+            enabled: true,
+            module: entityType,
+        },
+        orderBy: { priority: 'desc' },
+    });
+
+    const results: Array<{
+        policyId: string;
+        policyName: string;
+        effect: string;
+        approvalLevels: number;
+        requiredRole: string;
+        matched: boolean;
+    }> = [];
+
+    let foundMatch = false;
+
+    for (const policy of policies) {
+        const cond = policy.conditions as PolicyConditions;
+        const matches = evaluateConditions(policy.conditions, { amount, entityType } as PipelineContext);
+
+        results.push({
+            policyId: policy.id,
+            policyName: policy.name,
+            effect: policy.effect,
+            approvalLevels: cond?.approvalLevels ?? 1,
+            requiredRole: cond?.requiredRole ?? 'ADMIN',
+            matched: !foundMatch && matches,
+        });
+
+        if (!foundMatch && matches) {
+            foundMatch = true;
+        }
+    }
+
+    return results;
 }
 
 /**
@@ -169,7 +292,7 @@ export async function evaluateControlPipeline(
             }
         }
 
-        // Step 3: Check SoD rules
+        // Step 3: Check SoD rules (with exception awareness)
         const sodRules = await prisma.soDRule.findMany({
             where: {
                 tenantId,
@@ -185,14 +308,23 @@ export async function evaluateControlPipeline(
             const actionMatches = !rule.action || rule.action === action;
 
             if (rolesMatch && actionMatches) {
-                result.sodViolations.push({
+                // Check if user has an active SoD exception for this rule
+                const hasException = await hasActiveSoDException({
+                    tenantId,
+                    userId,
                     ruleId: rule.id,
-                    ruleName: rule.name,
-                    role1: rule.role1,
-                    role2: rule.role2,
-                    module: rule.module,
-                    message: `SoD violation: User role "${userRole}" conflicts with rule "${rule.name}" (roles: ${rule.role1} ↔ ${rule.role2})`,
                 });
+
+                if (!hasException) {
+                    result.sodViolations.push({
+                        ruleId: rule.id,
+                        ruleName: rule.name,
+                        role1: rule.role1,
+                        role2: rule.role2,
+                        module: rule.module,
+                        message: `SoD violation: User role "${userRole}" conflicts with rule "${rule.name}" (roles: ${rule.role1} ↔ ${rule.role2})`,
+                    });
+                }
             }
         }
 
