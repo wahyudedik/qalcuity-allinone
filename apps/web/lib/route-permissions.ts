@@ -19,6 +19,7 @@
 export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: string; fallbackRole?: string }> = {
     // ─── Finance ──────────────────────────────────────────────────────────────
     '/api/finance/accounts': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/finance/accounts/[id]/transactions': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/aging-report': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/bills': { permission: 'finance:view', fallbackRole: 'ADMIN' },
     '/api/finance/bills/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },

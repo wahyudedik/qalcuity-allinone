@@ -1,6 +1,43 @@
-> **Last Updated:** 26 September 2026 (Session 59: Mobile CRUD P0-5 — Full CRUD for Mobile App)
-> **Version:** v11.45.0
-> **Status:** ⚠️ NEEDS ATTENTION — Session 59: Mobile CRUD implementation complete. 9 mobile API routes, 20 CRUD functions, 8 form components, 4 detail screens updated. TypeScript: 0 errors.
+> **Last Updated:** 26 September 2026 (Session 60: Finance GL Enhancements — Phase 1-4 Complete)
+> **Version:** v11.46.0
+> **Status:** ⚠️ NEEDS ATTENTION — Session 60: Finance GL enhancements complete (closing entries, balance sync, period closing approval, period summary, JE edit, account drill-down). TypeScript: 0 errors.
+
+## 🏦 Session 60 — Finance GL Enhancements (Phase 1-4) — 26 Sep 2026
+
+> **Focus:** Complete GL gap filling — closing entries, balance auto-sync, period closing approval, period summary, JE edit, account drill-down
+> **TypeScript:** 0 errors
+> **Health Score:** ✅ COMPLETE (GL enhancements fully implemented)
+
+### Session 60 Summary
+
+#### What was done:
+- GL-GAP-01: Closing entry generator (Revenue/Expense → Retained Earnings) — [`apps/web/lib/closing-entry.ts`](apps/web/lib/closing-entry.ts)
+- GL-GAP-02: Account balance auto-sync on journal entry posting — [`apps/web/lib/balance-sync.ts`](apps/web/lib/balance-sync.ts)
+- GL-GAP-03: Period closing approval integration — [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts)
+- GL-GAP-04: Period summary report endpoint — [`apps/web/app/api/finance/periods/[id]/summary/route.ts`](apps/web/app/api/finance/periods/[id]/summary/route.ts)
+- GL-GAP-05: Journal entry edit for DRAFT entries — [`apps/web/app/api/finance/journal-entries/[id]/route.ts`](apps/web/app/api/finance/journal-entries/[id]/route.ts)
+- GL-GAP-06: Account drill-down (transactions per account) — [`apps/web/app/api/finance/accounts/[id]/transactions/route.ts`](apps/web/app/api/finance/accounts/[id]/transactions/route.ts)
+
+#### Files Created: 5 new files
+| File | Description |
+|------|-------------|
+| [`apps/web/lib/balance-sync.ts`](apps/web/lib/balance-sync.ts) | Account balance auto-sync engine |
+| [`apps/web/lib/closing-entry.ts`](apps/web/lib/closing-entry.ts) | Year-end closing entry generator |
+| [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts) | Period closing with approval + pre-close checks |
+| [`apps/web/app/api/finance/periods/[id]/summary/route.ts`](apps/web/app/api/finance/periods/[id]/summary/route.ts) | Period summary report endpoint |
+| [`apps/web/app/api/finance/accounts/[id]/transactions/route.ts`](apps/web/app/api/finance/accounts/[id]/transactions/route.ts) | Account drill-down transactions endpoint |
+
+#### Files Modified: 4 files
+| File | Description |
+|------|-------------|
+| [`apps/web/app/api/finance/journal-entries/[id]/route.ts`](apps/web/app/api/finance/journal-entries/[id]/route.ts) | Added PUT handler for DRAFT JE edit |
+| [`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts) | Added approval integration |
+| [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) | Added account transactions route permission |
+| [`apps/web/app/api/finance/journal-entries/route.ts`](apps/web/app/api/finance/journal-entries/route.ts) | Balance sync on posting |
+
+#### TypeScript: 0 errors
+
+---
 
 ## 📱 Session 59 — Mobile CRUD (P0-5) — Full CRUD for Mobile App (26 Sep 2026)
 

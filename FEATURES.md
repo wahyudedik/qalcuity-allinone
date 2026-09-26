@@ -144,12 +144,15 @@ Modul keuangan yang comprehensive dan comply dengan regulasi Indonesia.
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Chart of Account** | 🚀 `production_ready` | 2026-09-01 | Template CoA + custom, multi-level grouping, Prisma DB |
-| **General Ledger** | ✅ `implemented` | 2026-09-01 | Journal Entry CRUD with double-entry validation, Prisma models |
-| **Journal Entry** | ✅ `implemented` | 2026-09-01 | CRUD + UI page + Zod validation (debit = credit), Batch 7C |
-| **Trial Balance** | ✅ `implemented` | 2026-09-04 | API route + UI page, debet = kredit validation |
+| **General Ledger** | 🚀 `production_ready` | 2026-09-26 | Journal Entry CRUD + double-entry validation + DRAFT edit + closing entries + balance auto-sync — [`apps/web/app/api/finance/journal-entries/`](apps/web/app/api/finance/journal-entries/) |
+| **Journal Entry** | 🚀 `production_ready` | 2026-09-26 | Full CRUD + UI page + Zod validation (debit = credit) + DRAFT edit + balance sync — [`apps/web/app/api/finance/journal-entries/`](apps/web/app/api/finance/journal-entries/) |
+| **Trial Balance** | 🚀 `production_ready` | 2026-09-16 | API route + UI page + CSV export — [`apps/web/app/api/finance/reports/trial-balance/route.ts`](apps/web/app/api/finance/reports/trial-balance/route.ts) |
 | **Financial Statements** | 🚀 `production_ready` | 2026-09-16 | 5 reports: Balance Sheet, Income Statement, Cash Flow Statement, General Ledger, Trial Balance — full i18n + CSV export — [`apps/web/app/dashboard/finance/reports/`](apps/web/app/dashboard/finance/reports/) |
 | **Cash Flow Statement** | 🚀 `production_ready` | 2026-09-16 | Arus kas dari aktivitas operasi, investasi, dan pendanaan — API + UI + i18n + CSV export — [`apps/web/app/api/finance/reports/cash-flow/route.ts`](apps/web/app/api/finance/reports/cash-flow/route.ts) |
-| **General Ledger** | 🚀 `production_ready` | 2026-09-16 | Buku besar dengan detail jurnal entri per akun, saldo berjalan — API + UI + i18n + CSV export — [`apps/web/app/api/finance/reports/general-ledger/route.ts`](apps/web/app/api/finance/reports/general-ledger/route.ts) |
+| **Closing Entry Generator** | 🚀 `production_ready` | 2026-09-26 | Year-end closing: Revenue/Expense → Retained Earnings — [`apps/web/lib/closing-entry.ts`](apps/web/lib/closing-entry.ts) |
+| **Balance Auto-Sync** | 🚀 `production_ready` | 2026-09-26 | Account balance auto-sync on journal entry posting/void — [`apps/web/lib/balance-sync.ts`](apps/web/lib/balance-sync.ts) |
+| **Period Closing + Approval** | 🚀 `production_ready` | 2026-09-26 | Period closing with pre-close checks + approval integration — [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts) |
+| **Account Drill-Down** | 🚀 `production_ready` | 2026-09-26 | Transactions per account with pagination + summary — [`apps/web/app/api/finance/accounts/[id]/transactions/route.ts`](apps/web/app/api/finance/accounts/[id]/transactions/route.ts) |
 
 ### 2.2 Accounts Receivable
 

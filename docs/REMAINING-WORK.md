@@ -26,7 +26,7 @@
 | Category | Implemented | Partial | Planned | Total | Progress |
 |----------|------------|---------|---------|-------|----------|
 | **Core Platform & SaaS** | 20 | 1 | 2 | 23 | 87% |
-| **Finance & Accounting** | 5 | 3 | 16 | 24 | 21% |
+| **Finance & Accounting** | 9 | 3 | 12 | 24 | 38% |
 | **Sales & CRM** | 5 | 4 | 12 | 21 | 24% |
 | **Inventory & Supply Chain** | 4 | 0 | 14 | 18 | 22% |
 | **HR & People Ops** | 4 | 4 | 16 | 24 | 17% |
@@ -878,24 +878,24 @@
 
 #### Core Accounting
 
-- [ ] **[FIN-GL-01]** General Ledger — Full GL module
-  - **File:** New module: `apps/web/app/dashboard/finance/gl/`
+- [x] **[FIN-GL-01]** General Ledger — Full GL module ✅ DONE (Session 60)
+  - **File:** [`apps/web/app/dashboard/finance/reports/general-ledger/`](apps/web/app/dashboard/finance/reports/general-ledger/) + [`apps/web/app/api/finance/reports/general-ledger/route.ts`](apps/web/app/api/finance/reports/general-ledger/route.ts)
   - **Dependency:** Chart of Accounts (exists)
   - **Complexity:** High
   - **Ref:** [`FEATURES.md`](FEATURES.md) Section 2.1
 
-- [ ] **[FIN-GL-02]** Journal Entry — Manual journal entries
-  - **File:** `apps/web/app/dashboard/finance/journal/` + API routes
+- [x] **[FIN-GL-02]** Journal Entry — Manual journal entries ✅ DONE (Session 60)
+  - **File:** [`apps/web/app/dashboard/finance/journal-entries/`](apps/web/app/dashboard/finance/journal-entries/) + [`apps/web/app/api/finance/journal-entries/route.ts`](apps/web/app/api/finance/journal-entries/route.ts)
   - **Dependency:** FIN-GL-01
   - **Complexity:** High
 
-- [ ] **[FIN-GL-03]** Trial Balance — Trial balance report
-  - **File:** Report component + API
+- [x] **[FIN-GL-03]** Trial Balance — Trial balance report ✅ DONE (Session 60)
+  - **File:** [`apps/web/app/dashboard/finance/reports/trial-balance/`](apps/web/app/dashboard/finance/reports/trial-balance/) + [`apps/web/app/api/finance/reports/trial-balance/route.ts`](apps/web/app/api/finance/reports/trial-balance/route.ts)
   - **Dependency:** FIN-GL-01, FIN-GL-02
   - **Complexity:** Medium
 
-- [ ] **[FIN-GL-04]** Financial Statements — Balance Sheet, Income Statement, Cash Flow
-  - **File:** Report components
+- [x] **[FIN-GL-04]** Financial Statements — Balance Sheet, Income Statement, Cash Flow ✅ DONE (Session 60)
+  - **File:** [`apps/web/app/dashboard/finance/reports/`](apps/web/app/dashboard/finance/reports/) — 5 report pages + API routes
   - **Dependency:** FIN-GL-01
   - **Complexity:** Very High
 
