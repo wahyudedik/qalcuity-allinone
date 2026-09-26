@@ -330,6 +330,17 @@ export default function HRScreen({ navigation }: Props) {
                 {activeTab === 'leaves' && renderLeaves()}
                 {activeTab === 'payroll' && renderPayroll()}
             </ScrollView>
+
+            {/* FAB — Create Employee (only on employees tab) */}
+            {activeTab === 'employees' && (
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => navigation.navigate('EmployeeDetail', { mode: 'create' })}
+                    activeOpacity={0.8}
+                >
+                    <Text style={styles.fabText}>+</Text>
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }
@@ -361,4 +372,26 @@ const styles = StyleSheet.create({
     avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' },
     avatarText: { fontSize: 16, fontWeight: '600', color: '#DC2626' },
     leaveDays: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+    fab: {
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#DC2626',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    fabText: {
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontWeight: '300',
+        lineHeight: 30,
+    },
 });

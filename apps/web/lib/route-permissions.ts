@@ -310,6 +310,18 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/platform/tenants': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
     '/api/platform/tenants/[id]': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
 
+    // ─── Mobile API Routes (JWT Bearer auth via mobile-auth-guard) ───────────
+    // These routes use getMobileUserFromToken() instead of getServerSession().
+    // Registered here for documentation and future RBAC enforcement.
+    '/api/mobile/crm/contacts': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/crm/contacts/[id]': { permission: 'crm:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/inventory/products': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/inventory/products/[id]': { permission: 'inventory:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/finance/invoices': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/finance/invoices/[id]': { permission: 'finance:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/hr/employees': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+    '/api/mobile/hr/employees/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
+
     // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ─────────
     '/api/cron/payment-reminder': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },

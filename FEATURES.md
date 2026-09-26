@@ -43,7 +43,7 @@
 |----------|-------------|--------|---------------|-------|
 | **Web App** | Core utama, full feature, admin panel | 🚀 `production_ready` | 2026-08-31 | Next.js 14 App Router, 51+ API routes |
 | **Desktop App** | Electron-based, offline capable | 🔄 `partial` | — | Electron wrapper only, belum ada auth/offline |
-| **Mobile App** | iOS & Android, field-ready | ✅ `implemented` | 2026-09-01 | 12 screens, API client, JWT auth flow (login/register/refresh/me) |
+| **Mobile App** | iOS & Android, field-ready | 🚀 `production_ready` | 2026-09-26 | 12 screens, full CRUD (contacts, products, invoices, employees), 9 API routes, 8 form components, JWT auth |
 
 ### 💰 Yang Qalcuity Sediakan
 
@@ -1284,8 +1284,12 @@ React Native / Expo mobile app untuk field operations.
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **12 Screens** | ✅ `implemented` | 2026-09-01 | Dashboard, Home, Finance, CRM, HR, Inventory screens |
-| **API Client** | ✅ `implemented` | 2026-09-01 | API client dengan error handling, tenant-scoped |
+| **API Client** | 🚀 `production_ready` | 2026-09-26 | 20 CRUD functions + 17 TypeScript types, error handling, tenant-scoped |
 | **Auth Flow** | ✅ `implemented` | 2026-09-01 | JWT auth: login, register, refresh, me — via `/api/mobile/auth/*` |
+| **Mobile Auth Guard** | 🚀 `production_ready` | 2026-09-26 | JWT Bearer token auth helper (`mobile-auth-guard.ts`) |
+| **Mobile API Routes** | 🚀 `production_ready` | 2026-09-26 | 9 routes: contacts, products, invoices, employees CRUD — RBAC, tenant isolation |
+| **Form Components** | 🚀 `production_ready` | 2026-09-26 | 8 shared React Native form components (FormInput, FormSelect, FormActions, entity forms) |
+| **CRUD Screens** | 🚀 `production_ready` | 2026-09-26 | 4 detail screens with view/edit/create/delete + 4 list screens with FAB |
 | **Offline Support** | 📋 `planned` | — | Belum ada kode (Phase 12) |
 
 ---

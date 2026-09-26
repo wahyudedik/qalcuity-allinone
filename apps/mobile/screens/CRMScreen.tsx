@@ -248,6 +248,17 @@ export default function CRMScreen({ navigation }: Props) {
                 {activeTab === 'deals' && renderDeals()}
                 {activeTab === 'contacts' && renderContacts()}
             </ScrollView>
+
+            {/* FAB — Create Contact (only on contacts tab) */}
+            {activeTab === 'contacts' && (
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => navigation.navigate('ContactDetail', { mode: 'create' })}
+                    activeOpacity={0.8}
+                >
+                    <Text style={styles.fabText}>+</Text>
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }
@@ -344,5 +355,27 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#2563EB',
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#2563EB',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    fabText: {
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontWeight: '300',
+        lineHeight: 30,
     },
 });
