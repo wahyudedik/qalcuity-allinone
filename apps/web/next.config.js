@@ -37,6 +37,7 @@ const securityHeaders = [
             `connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com ${CLOUDFLARE_ORIGINS.join(' ')}`,
             "frame-src 'self' https://accounts.google.com",
             "object-src 'none'",
+            "worker-src 'self'",
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'none'",
