@@ -1923,9 +1923,10 @@ model AccountingPeriod {
   status     String    @default("OPEN") // OPEN, CLOSING, CLOSED
   closedBy   String? // userId yang menutup
   closedAt   DateTime?
-  closeNotes String? // Catatan saat closing
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  closeNotes   String? // Catatan saat closing
+  closeSummary Json?    // Ringkasan saat closing: { totalEntries, totalDebit, totalCredit, netIncome, breakdown }
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([tenantId, startDate])
   @@index([tenantId])

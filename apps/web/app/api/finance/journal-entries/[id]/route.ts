@@ -9,6 +9,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createJournalEntrySchema, updateJournalEntrySchema, formatZodError } from '@/lib/validation-schemas';
 import { sanitizeObject } from '@/lib/sanitize';
 import { handleApiError } from '@/lib/api-error';
+import { syncAccountsFromJournalEntry } from '@/lib/balance-sync';
 
 // Helper: generate sequential entry number JE-YYYYMMDD-XXXX
 async function generateEntryNumber(tenantId: string): Promise<string> {
@@ -272,6 +273,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             return NextResponse.json({ success: false, error: MSG.DATA_NOT_FOUND }, { status: 404 });
         }
 
+        // GL-GAP-05: Only DRAFT entries can be edited
+        if (existing.status !== 'DRAFT') {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: `Hanya jurnal dengan status DRAFT yang dapat diedit. Status saat ini: ${existing.status}`,
+                },
+                { status: 400 }
+            );
+        }
+
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
         const validation = updateJournalEntrySchema.safeParse(sanitizedBody);
@@ -382,6 +394,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             newValues: { description: updatedEntry.description, status: updatedEntry.status },
             request,
         });
+
+        // GL-GAP-02: Sync account balances after edit
+        try {
+            await syncAccountsFromJournalEntry(id, tenantId);
+        } catch (syncError) {
+            // Non-blocking — entry is updated, sync can be retried
+            console.error('[JournalEntry] Balance sync failed after edit:', syncError);
+        }
 
         return NextResponse.json({ success: true, data: completeEntry });
     } catch (error) {

@@ -1,4 +1,6 @@
 import { prisma } from './db';
+import { logger } from '@/lib/logger';
+import { Prisma } from '@prisma/client';
 
 // ============================================
 // Types
@@ -20,6 +22,14 @@ export interface CheckResult {
 export interface PreCloseResult {
     canClose: boolean;
     checks: CheckResult[];
+}
+
+export interface PeriodCloseResult {
+    success: boolean;
+    periodId: string;
+    closeSummary?: Record<string, unknown>;
+    message: string;
+    error?: string;
 }
 
 // ============================================
@@ -189,4 +199,198 @@ export async function generateYearlyPeriods(tenantId: string, year: number) {
         }
     }
     return created;
+}
+
+// ============================================
+// Approval Check for Period Closing (GL-GAP-03)
+// ============================================
+
+/**
+ * Check if user has permission to close an accounting period.
+ * Only users with `finance:approve` permission (ADMIN+) can close periods.
+ *
+ * This is a role-based check — the user must be ADMIN or higher role.
+ * The permission engine validates against the user's role assignment.
+ */
+export async function canUserClosePeriod(userId: string, tenantId: string): Promise<{ allowed: boolean; reason?: string }> {
+    try {
+        const user = await prisma.user.findFirst({
+            where: { id: userId, tenantId },
+            select: { role: true, isActive: true },
+        });
+
+        if (!user) {
+            return { allowed: false, reason: 'User tidak ditemukan.' };
+        }
+
+        if (!user.isActive) {
+            return { allowed: false, reason: 'User tidak aktif.' };
+        }
+
+        // Only ADMIN and SUPERADMIN can close periods
+        const allowedRoles = ['ADMIN', 'SUPERADMIN'];
+        if (!allowedRoles.includes(user.role)) {
+            return {
+                allowed: false,
+                reason: `Role "${user.role}" tidak memiliki akses untuk menutup period. Diperlukan role ADMIN atau SUPERADMIN.`,
+            };
+        }
+
+        return { allowed: true };
+    } catch (error) {
+        logger.error('[PeriodClosing] Error checking user permission:', error);
+        return { allowed: false, reason: 'Gagal memeriksa permission user.' };
+    }
+}
+
+// ============================================
+// Close Period with Summary (GL-GAP-03 + GL-GAP-04)
+// ============================================
+
+/**
+ * Close an accounting period with pre-close checks and summary generation.
+ *
+ * Steps:
+ * 1. Run pre-close checks
+ * 2. Verify user has permission (ADMIN+)
+ * 3. Generate period summary (total entries, debit/credit, net income)
+ * 4. Update period status to CLOSED
+ * 5. Save closeSummary as JSON on AccountingPeriod
+ */
+export async function closePeriod(
+    periodId: string,
+    tenantId: string,
+    userId: string,
+    closeNotes?: string
+): Promise<PeriodCloseResult> {
+    try {
+        // 1. Fetch the period
+        const period = await prisma.accountingPeriod.findFirst({
+            where: { id: periodId, tenantId },
+        });
+
+        if (!period) {
+            return { success: false, periodId, message: 'Period tidak ditemukan.', error: 'NOT_FOUND' };
+        }
+
+        if (period.status === 'CLOSED') {
+            return { success: false, periodId, message: 'Period sudah ditutup sebelumnya.', error: 'ALREADY_CLOSED' };
+        }
+
+        // 2. Run pre-close checks
+        const preCloseResult = await runPreCloseChecks({
+            tenantId,
+            startDate: period.startDate,
+            endDate: period.endDate,
+        });
+
+        if (!preCloseResult.canClose) {
+            const failedChecks = preCloseResult.checks.filter((c) => c.status === 'fail');
+            return {
+                success: false,
+                periodId,
+                message: `Pre-close checks gagal: ${failedChecks.map((c) => c.message).join('; ')}`,
+                error: 'PRE_CLOSE_FAILED',
+            };
+        }
+
+        // 3. Check user permission
+        const permission = await canUserClosePeriod(userId, tenantId);
+        if (!permission.allowed) {
+            return {
+                success: false,
+                periodId,
+                message: permission.reason || 'Tidak memiliki akses untuk menutup period.',
+                error: 'FORBIDDEN',
+            };
+        }
+
+        // 4. Generate period summary
+        const entries = await prisma.journalEntry.findMany({
+            where: {
+                tenantId,
+                date: { gte: period.startDate, lte: period.endDate },
+            },
+        });
+
+        const postedEntries = entries.filter((e) => e.status === 'POSTED');
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        for (const entry of postedEntries) {
+            totalDebit += Number(entry.totalDebit);
+            totalCredit += Number(entry.totalCredit);
+        }
+
+        // Get revenue and expense totals from posted entries
+        const postedItems = await prisma.journalEntryItem.findMany({
+            where: {
+                tenantId,
+                journalEntry: {
+                    status: 'POSTED',
+                    date: { gte: period.startDate, lte: period.endDate },
+                },
+            },
+            include: {
+                account: { select: { type: true } },
+            },
+        });
+
+        let totalRevenue = 0;
+        let totalExpenses = 0;
+
+        for (const item of postedItems) {
+            const debit = Number(item.debit);
+            const credit = Number(item.credit);
+            if (item.account.type === 'REVENUE') {
+                totalRevenue += credit - debit;
+            } else if (item.account.type === 'EXPENSE') {
+                totalExpenses += debit - credit;
+            }
+        }
+
+        const netIncome = totalRevenue - totalExpenses;
+
+        const closeSummary = {
+            totalEntries: entries.length,
+            postedEntries: postedEntries.length,
+            draftEntries: entries.filter((e) => e.status === 'DRAFT').length,
+            voidEntries: entries.filter((e) => e.status === 'VOID').length,
+            totalDebit: Math.round(totalDebit * 10000) / 10000,
+            totalCredit: Math.round(totalCredit * 10000) / 10000,
+            balanceDifference: Math.round((totalDebit - totalCredit) * 10000) / 10000,
+            totalRevenue: Math.round(totalRevenue * 10000) / 10000,
+            totalExpenses: Math.round(totalExpenses * 10000) / 10000,
+            netIncome: Math.round(netIncome * 10000) / 10000,
+            closedBy: userId,
+            closedAt: new Date().toISOString(),
+        };
+
+        // 5. Update period to CLOSED with summary
+        await prisma.accountingPeriod.update({
+            where: { id: periodId },
+            data: {
+                status: 'CLOSED',
+                closedBy: userId,
+                closedAt: new Date(),
+                closeNotes: closeNotes || null,
+                closeSummary: closeSummary as unknown as Prisma.InputJsonValue,
+            },
+        });
+
+        return {
+            success: true,
+            periodId,
+            closeSummary,
+            message: `Period "${period.name}" berhasil ditutup. Laba Bersih: Rp ${netIncome.toLocaleString('id-ID')}`,
+        };
+    } catch (error) {
+        logger.error('[PeriodClosing] Error closing period:', error);
+        return {
+            success: false,
+            periodId,
+            message: 'Gagal menutup period.',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
 }
