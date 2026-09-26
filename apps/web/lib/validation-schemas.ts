@@ -2165,3 +2165,52 @@ export const changePasswordApiSchema = z.object({
     message: 'Password baru harus berbeda dari password saat ini',
     path: ['newPassword'],
 });
+
+// ============================================
+// Control Engine Schemas
+// ============================================
+
+export const createControlPolicySchema = z.object({
+    name: z.string().min(1, 'Nama policy wajib diisi').max(255, 'Nama policy maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    module: z.string().min(1, 'Module wajib diisi').max(100, 'Module maksimal 100 karakter'),
+    action: z.string().min(1, 'Action wajib diisi').max(100, 'Action maksimal 100 karakter'),
+    conditions: z.record(z.string(), z.unknown()).default({}),
+    effect: z.enum(['allow', 'deny'], { message: 'Effect harus "allow" atau "deny"' }).default('allow'),
+    priority: z.number().int().min(0).max(1000).default(0),
+    enabled: z.boolean().default(true),
+});
+
+export const updateControlPolicySchema = z.object({
+    name: z.string().min(1, 'Nama policy wajib diisi').max(255).optional(),
+    description: z.string().max(1000).optional().nullable(),
+    module: z.string().min(1).max(100).optional(),
+    action: z.string().min(1).max(100).optional(),
+    conditions: z.record(z.string(), z.unknown()).optional(),
+    effect: z.enum(['allow', 'deny']).optional(),
+    priority: z.number().int().min(0).max(1000).optional(),
+    enabled: z.boolean().optional(),
+});
+
+export const createSoDRuleSchema = z.object({
+    name: z.string().min(1, 'Nama rule wajib diisi').max(255, 'Nama rule maksimal 255 karakter'),
+    description: z.string().max(1000, 'Deskripsi maksimal 1000 karakter').optional().nullable(),
+    role1: z.string().min(1, 'Role 1 wajib diisi').max(100, 'Role maksimal 100 karakter'),
+    role2: z.string().min(1, 'Role 2 wajib diisi').max(100, 'Role maksimal 100 karakter'),
+    module: z.string().min(1, 'Module wajib diisi').max(100, 'Module maksimal 100 karakter'),
+    action: z.string().max(100, 'Action maksimal 100 karakter').optional().nullable(),
+    enabled: z.boolean().default(true),
+}).refine((data) => data.role1 !== data.role2, {
+    message: 'Role 1 dan Role 2 harus berbeda',
+    path: ['role2'],
+});
+
+export const updateSoDRuleSchema = z.object({
+    name: z.string().min(1).max(255).optional(),
+    description: z.string().max(1000).optional().nullable(),
+    role1: z.string().min(1).max(100).optional(),
+    role2: z.string().min(1).max(100).optional(),
+    module: z.string().min(1).max(100).optional(),
+    action: z.string().max(100).optional().nullable(),
+    enabled: z.boolean().optional(),
+});
