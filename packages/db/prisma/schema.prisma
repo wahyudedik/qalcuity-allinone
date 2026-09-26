@@ -2071,6 +2071,7 @@ model PosTransaction {
   session         PosSession @relation(fields: [sessionId], references: [id])
   terminalId      String
   transactionNo   String // Auto-generated, unique per tenant
+  idempotencyKey  String?    // Idempotency key for offline sync dedup (nullable for backward compat)
   customerName    String?
   customerPhone   String?
   subtotal        Decimal    @default(0) @db.Decimal(19, 4)
@@ -2099,6 +2100,7 @@ model PosTransaction {
   refunds  PosRefund[]
 
   @@unique([tenantId, transactionNo])
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
   @@index([tenantId, sessionId])
   @@index([tenantId, createdAt])
