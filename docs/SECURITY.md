@@ -1,7 +1,7 @@
 # 🔒 Qalcuity — Security Architecture
 
-> **Last Updated:** 12 September 2026 (Session 6: Zod Validation & Rate Limiting Complete)
-> **Current Version:** v5.2.0
+> **Last Updated:** 26 September 2026 (Session 58: CSP Hardening + ChunkLoadError Documentation)
+> **Current Version:** v5.3.0
 
 ---
 
@@ -67,9 +67,10 @@
 | **HTTPS** | Infrastructure-level (not in app) | 🔲 DevOps |
 | **Redis Rate Limiting** | Redis-backed with in-memory fallback | ✅ Implemented |
 | **CORS** | Explicit config di middleware.ts + next.config.js | ✅ Implemented |
-| **CSP Headers** | Content-Security-Policy di middleware.ts + next.config.js (`unsafe-eval` removed) | ✅ Implemented |
+| **CSP Headers** | Content-Security-Policy di [`apps/web/next.config.js`](apps/web/next.config.js) — hardened with Cloudflare origins, `upgrade-insecure-requests` | ✅ Implemented (Hardened) |
 | **Export XSS Protection** | `escapeHtml()` + `escapeCSVValue()` di [`apps/web/lib/export.ts`](apps/web/lib/export.ts) | ✅ Implemented |
 | **Prisma Logging Control** | Toggle via `ENABLE_PRISMA_LOGGING` env var | ✅ Implemented |
+| **CI/CD Pipeline** | GitHub Actions — ci.yml (typecheck + test + lint) + deploy.yml (SSH deploy to VPS) | ✅ Implemented |
 
 ---
 
@@ -492,7 +493,7 @@ Every API route must follow this checklist:
 | # | Gap | Severity | Status | Fix Plan |
 |---|-----|----------|--------|----------|
 | 1 | Hardcoded NEXTAUTH_SECRET fallback | 🔴 High | ✅ Fixed | Env validation mandatory — throw error di production |
-| 2 | No CSP (Content-Security-Policy) headers | 🟠 Medium | ✅ Fixed | CSP di middleware.ts + next.config.js — `unsafe-eval` removed |
+| 2 | No CSP (Content-Security-Policy) headers | 🟠 Medium | ✅ Fixed (Hardened) | CSP di [`apps/web/next.config.js`](apps/web/next.config.js) — Cloudflare origins, `upgrade-insecure-requests`, ChunkLoadError docs |
 | 3 | No explicit CORS configuration | 🟠 Medium | ✅ Fixed | Explicit CORS di middleware.ts + next.config.js |
 | 4 | Prisma logging uncontrolled | 🟡 Low | ✅ Fixed | Toggle via `ENABLE_PRISMA_LOGGING` env var |
 | 5 | ~~Rate limiter in-memory only~~ | 🟡 Low | ✅ Fixed — Redis-backed with in-memory fallback (Batch 7D) | Session 3-6 |
@@ -501,7 +502,7 @@ Every API route must follow this checklist:
 ### Fix Priority
 
 1. ~~**NEXTAUTH_SECRET** — Remove hardcoded fallback, make env var mandatory~~ ✅ Done
-2. ~~**CSP Headers** — Add Content-Security-Policy to next.config.js~~ ✅ Done
+2. ~~**CSP Headers** — Add Content-Security-Policy to next.config.js~~ ✅ Done (Hardened Session 58)
 3. ~~**CORS** — Configure explicit allowed origins~~ ✅ Done
 4. ~~**Prisma Logging** — Toggle logging via env var~~ ✅ Done
 5. ~~**Rate Limiter** — Migrate to Redis for multi-instance support~~ ✅ Done
@@ -541,6 +542,99 @@ Every API route must follow this checklist:
 
 ---
 
+## Appendix A: CSP Policy Details (Session 58)
+
+### Content-Security-Policy Configuration
+
+> CSP headers dikonfigurasi di [`apps/web/next.config.js`](apps/web/next.config.js) sebagai security headers.
+
+| Directive | Value | Purpose |
+|-----------|-------|---------|
+| `default-src` | `'self' https://qalcuity.com` | Default policy — same-origin + production domain |
+| `script-src` | `'self' 'unsafe-inline' [dev: 'unsafe-eval'] https://accounts.google.com https://apis.google.com https://static.cloudflareinsights.com https://qalcuity.com https://cdn.jsdelivr.net` | Scripts — Next.js hydration + Google OAuth + Cloudflare + Swagger UI |
+| `style-src` | `'self' 'unsafe-inline' https://cdn.jsdelivr.net` | Styles — Tailwind CSS inline + Swagger UI |
+| `img-src` | `'self' data: https: blob:` | Images — flexible for user content |
+| `font-src` | `'self' https://cdn.jsdelivr.net` | Fonts — Swagger UI |
+| `connect-src` | `'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://static.cloudflareinsights.com https://qalcuity.com` | XHR/Fetch — Google OAuth + Cloudflare Analytics |
+| `frame-src` | `'self' https://accounts.google.com` | iframes — Google OAuth popup |
+| `object-src` | `'none'` | Blocks plugins (Flash, Java) |
+| `base-uri` | `'self'` | Restricts `<base>` tag |
+| `form-action` | `'self'` | Restricts form submissions |
+| `frame-ancestors` | `'none'` | Blocks embedding (clickjacking prevention) |
+| `upgrade-insecure-requests` | — | Forces HTTP→HTTPS for all sub-resources |
+
+### Cloudflare Origins
+
+```javascript
+const CLOUDFLARE_ORIGINS = [
+    'https://static.cloudflareinsights.com',  // Web Analytics beacon
+    'https://qalcuity.com',                   // Cloudflare email-decode (cdn-cgi/scripts/*)
+];
+```
+
+> Centralized di [`apps/web/next.config.js`](apps/web/next.config.js) — digunakan di `script-src` dan `connect-src`.
+
+### ChunkLoadError Prevention
+
+> **Root Cause:** ChunkLoadError terjadi karena stale cache — browser dan Cloudflare CDN mereferensikan chunk filename lama (`/_next/static/chunks/*`) yang sudah tidak ada di build baru.
+
+**Prevention Checklist:**
+1. `script-src 'self'` memastikan Next.js chunks diizinkan oleh CSP
+2. Setelah deployment, **purge Cloudflare cache** (Dashboard → Caching → Purge Everything)
+3. User melakukan **hard refresh** (`Ctrl+Shift+R` atau `Cmd+Shift+R`)
+4. Jika persist, clear browser cache secara manual
+
+**NOT a code issue** — ini murni masalah cache invalidation.
+
+### Security Headers Summary
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| `Content-Security-Policy` | (see above) | XSS prevention, resource control |
+| `X-Frame-Options` | `DENY` | Clickjacking prevention |
+| `X-Content-Type-Options` | `nosniff` | MIME sniffing prevention |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer control |
+| `X-DNS-Prefetch-Control` | `on` | DNS prefetch for performance |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | HSTS (2 years) |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Feature restrictions |
+
+---
+
+## Appendix B: CI/CD Pipeline (Session 58)
+
+### GitHub Actions Workflows
+
+| Workflow | File | Trigger | Jobs |
+|----------|------|---------|------|
+| **CI** | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Push to main/develop, PRs to main | typecheck, test, lint |
+| **Deploy** | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Push to main, manual dispatch | SSH deploy to VPS |
+
+### CI Pipeline Steps
+
+1. **TypeScript Check:** `npx tsc --noEmit` — ensures no type errors
+2. **Unit Tests:** `pnpm -r run test --if-present` — runs all package tests
+3. **Lint:** ESLint checks across codebase
+
+### Deploy Pipeline Steps
+
+1. Checkout code
+2. SSH to VPS (`/www/wwwroot/qalcuity`)
+3. `git pull origin main`
+4. `npx prisma generate` (packages/db)
+5. `pnpm install --frozen-lockfile`
+6. `pnpm run build` (apps/web)
+7. aaPanel auto-restarts
+
+### Required GitHub Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `VPS_HOST` | VPS IP address or hostname |
+| `VPS_USERNAME` | SSH username |
+| `VPS_SSH_KEY` | SSH private key for authentication |
+
+---
+
 ## 10. Security Checklist
 
 ### Development
@@ -573,6 +667,6 @@ Every API route must follow this checklist:
 
 ---
 
-**Last Updated:** September 12, 2026 (Session 6: Zod Validation & Rate Limiting Complete)
+**Last Updated:** September 26, 2026 (Session 58: CSP Hardening + ChunkLoadError Documentation)
 **Maintainer:** Qalcuity Security Team
-**Document Version:** 5.2.0
+**Document Version:** 5.3.0
