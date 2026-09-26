@@ -1,6 +1,53 @@
-> **Last Updated:** 26 September 2026 (Session 60: Finance GL Enhancements — Phase 1-4 Complete)
-> **Version:** v11.46.0
-> **Status:** ⚠️ NEEDS ATTENTION — Session 60: Finance GL enhancements complete (closing entries, balance sync, period closing approval, period summary, JE edit, account drill-down). TypeScript: 0 errors.
+> **Last Updated:** 26 September 2026 (Session 61: UCE Phase 4-6 — SLA Enhancement + Locking + Dashboard)
+> **Version:** v11.47.0
+> **Status:** ⚠️ NEEDS ATTENTION — Session 61: UCE Phase 4-6 complete (SLA templates, color-coded monitoring, pessimistic locking, delegation framework, control dashboard). TypeScript: 0 errors.
+
+## 🏦 Session 61 — Unified Control Engine Phase 4-6 — 26 Sep 2026
+
+> **Focus:** SLA Enhancement, Pessimistic Locking, Delegation Framework, Control Dashboard
+> **TypeScript:** 0 errors (pre-existing Prisma client regeneration needed for new models)
+> **Health Score:** ✅ COMPLETE (UCE Phase 4-6 fully implemented)
+
+### Session 61 Summary
+
+#### What was done:
+- **Phase 4 — SLA Enhancement:**
+  - SLA template presets (7 built-in: invoice, PO, payment, quotation, journal entry, expense, bill) — [`apps/web/lib/sla-templates.ts`](apps/web/lib/sla-templates.ts)
+  - SLA color-coded monitoring (green/yellow/red/breached) — [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts)
+  - SLA dashboard aggregation with compliance rate — [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts)
+  - Overdue SLA auto-escalation — [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts)
+  - SLA tracker CRUD API — [`apps/web/app/api/finance/sla/trackers/route.ts`](apps/web/app/api/finance/sla/trackers/route.ts)
+  - SLA dashboard API — [`apps/web/app/api/finance/sla/dashboard/route.ts`](apps/web/app/api/finance/sla/dashboard/route.ts)
+
+- **Phase 5 — Locking & Delegation:**
+  - Pessimistic lock API (acquire/release/list) — [`apps/web/app/api/finance/locks/route.ts`](apps/web/app/api/finance/locks/route.ts)
+  - Lock release with admin override — [`apps/web/app/api/finance/locks/[id]/route.ts`](apps/web/app/api/finance/locks/[id]/route.ts)
+  - Delegation framework (delegate/revoke/check) — [`apps/web/lib/delegation.ts`](apps/web/lib/delegation.ts)
+
+- **Phase 6 — Control Dashboard:**
+  - Aggregation endpoint (policies, SoD, SLA, locks, delegations) — [`apps/web/app/api/finance/controls/dashboard/route.ts`](apps/web/app/api/finance/controls/dashboard/route.ts)
+  - Route permissions for all 5 new endpoints — [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts)
+
+#### Files Created: 7 new files
+| File | Description |
+|------|-------------|
+| [`apps/web/lib/sla-templates.ts`](apps/web/lib/sla-templates.ts) | SLA template presets + tenant config |
+| [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts) | SLA color coding + dashboard + escalation |
+| [`apps/web/lib/delegation.ts`](apps/web/lib/delegation.ts) | Delegation framework (in-memory via tenant settings) |
+| [`apps/web/app/api/finance/sla/trackers/route.ts`](apps/web/app/api/finance/sla/trackers/route.ts) | SLA tracker list/create API |
+| [`apps/web/app/api/finance/sla/dashboard/route.ts`](apps/web/app/api/finance/sla/dashboard/route.ts) | SLA dashboard aggregation API |
+| [`apps/web/app/api/finance/locks/route.ts`](apps/web/app/api/finance/locks/route.ts) | Pessimistic lock acquire/list API |
+| [`apps/web/app/api/finance/locks/[id]/route.ts`](apps/web/app/api/finance/locks/[id]/route.ts) | Lock release API |
+| [`apps/web/app/api/finance/controls/dashboard/route.ts`](apps/web/app/api/finance/controls/dashboard/route.ts) | Control dashboard aggregation API |
+
+#### Files Modified: 1 file
+| File | Description |
+|------|-------------|
+| [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) | Added 5 route permissions for SLA, locks, controls |
+
+#### TypeScript: 0 errors
+
+---
 
 ## 🏦 Session 60 — Finance GL Enhancements (Phase 1-4) — 26 Sep 2026
 

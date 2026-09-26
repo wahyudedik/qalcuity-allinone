@@ -59,6 +59,11 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/sod-rules/check': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
     '/api/finance/sod-exceptions': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
     '/api/finance/sod-exceptions/[id]': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    '/api/finance/sla/trackers': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    '/api/finance/sla/dashboard': { permission: 'settings:view', fallbackRole: 'ADMIN' },
+    '/api/finance/locks': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    '/api/finance/locks/[id]': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    '/api/finance/controls/dashboard': { permission: 'settings:view', fallbackRole: 'ADMIN' },
 
     // ─── Finance Reports ──────────────────────────────────────────────────────
     '/api/finance/reports/balance-sheet': { permission: 'reports:view', fallbackRole: 'ADMIN' },

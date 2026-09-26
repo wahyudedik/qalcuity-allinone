@@ -796,20 +796,20 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Policy Engine** | 📋 `planned` | — | Rules bisnis konfigurabel: WHEN condition THEN action [ADR-018] |
-| **WHEN-THEN Rules** | 📋 `planned` | — | Conditions: amount, department, branch, type, vendor/category |
-| **Action Types** | 📋 `planned` | — | require_approval, auto_approve, block, flag_for_review, notify |
+| **Policy Engine** | ✅ `implemented` | 2026-09-26 | Rules bisnis konfigurabel: WHEN condition THEN action — [`control-engine.ts`](apps/web/lib/control-engine.ts) |
+| **WHEN-THEN Rules** | ✅ `implemented` | 2026-09-26 | Conditions: amount, department, branch, type, vendor/category |
+| **Action Types** | ✅ `implemented` | 2026-09-26 | require_approval, auto_approve, block, flag_for_review, notify |
 | **Policy Versioning** | 📋 `planned` | — | Rules berlaku sejak tanggal tertentu, histori tetap ada |
-| **Policy Configuration UI** | 📋 `planned` | — | Per-company rule management interface |
-| **Amount Threshold Approvals** | 📋 `planned` | — | Tiered approval: <10jt auto, 10-50jt Manager, 50-200jt Director, >200jt Board |
-| **Threshold per Department** | 📋 `planned` | — | Threshold bisa dikonfigurasi per departemen/jenis transaksi |
+| **Policy Configuration UI** | ✅ `implemented` | 2026-09-26 | 7-tab UCE control panel — [`control-engine.ts`](apps/web/lib/control-engine.ts) |
+| **Amount Threshold Approvals** | ✅ `implemented` | 2026-09-26 | Tiered approval configurable via control policies — [`control-pipeline.ts`](apps/web/lib/control-pipeline.ts) |
+| **Threshold per Department** | ✅ `implemented` | 2026-09-26 | Threshold per departemen/jenis transaksi via control policies |
 
 ### 12.3 Transaction Lifecycle
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Transaction Lifecycle** | 📋 `planned` | — | DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED → POSTED → COMPLETED → LOCKED |
-| **Status Transitions** | 📋 `planned` | — | Configurable workflow per transaction type |
+| **Transaction Lifecycle** | ✅ `implemented` | 2026-09-26 | DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED → POSTED → COMPLETED → LOCKED — [`control-pipeline.ts`](apps/web/lib/control-pipeline.ts) |
+| **Status Transitions** | ✅ `implemented` | 2026-09-26 | Configurable workflow via Workflow Engine (`@qalcuity/workflow`) |
 | **Immutable Transactions** | 📋 `planned` | — | No physical delete, corrections via Adjustment entries |
 
 ### 12.4 Approval Engine
@@ -825,20 +825,20 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **SoD Engine** | 📋 `planned` | — | Mencegah konflik kepentingan dalam proses bisnis [ADR-019] |
-| **SoD Matrix** | 📋 `planned` | — | Conflict pairs: Create ≠ Receive ≠ Approve ≠ Pay |
-| **Conflict Detection** | 📋 `planned` | — | Real-time check saat role/assignment |
-| **SoD Exception Workflow** | 📋 `planned` | — | Override dengan Director approval + audit trail |
-| **SoD Configuration** | 📋 `planned` | — | Per-company configurable SoD rules |
+| **SoD Engine** | ✅ `implemented` | 2026-09-26 | Mencegah konflik kepentingan — [`sod-engine.ts`](apps/web/lib/sod-engine.ts) |
+| **SoD Matrix** | ✅ `implemented` | 2026-09-26 | Conflict pairs: Create ≠ Receive ≠ Approve ≠ Pay — configurable per tenant |
+| **Conflict Detection** | ✅ `implemented` | 2026-09-26 | Real-time check via [`control-pipeline.ts`](apps/web/lib/control-pipeline.ts) |
+| **SoD Exception Workflow** | ✅ `implemented` | 2026-09-26 | Override dengan Director approval + audit trail — [`sod-engine.ts`](apps/web/lib/sod-engine.ts) |
+| **SoD Configuration** | ✅ `implemented` | 2026-09-26 | Per-company configurable SoD rules — API: `/api/finance/sod-rules` |
 
 ### 12.6 SLA & Escalation
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **SLA Engine** | 🔄 `partial` | 2026-09-23 | Approval escalation SLA implemented (3-level: 24h→48h→72h) — full SLA tracking per transaction type still planned |
-| **SLA Color Coding** | 📋 `planned` | — | 🟢 0-50%, 🟡 50-100%, 🔴 >100% SLA |
+| **SLA Engine** | ✅ `implemented` | 2026-09-26 | Full SLA tracking per transaction type — 7 template presets (invoice, PO, payment, quotation, journal, expense, bill) — [`sla-templates.ts`](apps/web/lib/sla-templates.ts) |
+| **SLA Color Coding** | ✅ `implemented` | 2026-09-26 | 🟢 >25% remaining, 🟡 10-25%, 🔴 <10%, ⏰ breached — [`sla-monitor.ts`](apps/web/lib/sla-monitor.ts) |
 | **SLA Breach Escalation** | 🚀 `production_ready` | 2026-09-23 | Auto-escalate pending approvals via [`approval-escalation.ts`](apps/web/lib/approval-escalation.ts) — 3-level SLA: L1 (24h → Supervisor), L2 (48h → Manager), L3 (72h → Director) — hourly cron check |
-| **SLA Metrics** | 📋 `planned` | — | Average completion time, compliance rate, escalation rate |
+| **SLA Metrics** | ✅ `implemented` | 2026-09-26 | Compliance rate, by-color breakdown, by-entity breakdown — [`sla-monitor.ts`](apps/web/lib/sla-monitor.ts) + API: `/api/finance/sla/dashboard` |
 | **Escalation Engine** | 🚀 `production_ready` | 2026-09-23 | Time-based escalation: PIC → Supervisor → Manager → Director — [`approval-escalation.ts`](apps/web/lib/approval-escalation.ts), registered as hourly cron task |
 | **Escalation Rules** | ✅ `implemented` | 2026-09-23 | 3-level SLA configurable per entity type (default: 24h/48h/72h), escalation targets per level |
 | **Escalation Notification** | 📋 `planned` | — | Real-time notification on escalation |
@@ -847,10 +847,10 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Delegation Framework** | 📋 `planned` | — | Manager delegate approval authority saat absent [ADR-020] |
-| **Delegation Scope** | 📋 `planned` | — | Siapa → ke siapa, periode, scope |
-| **Delegation Auto-expire** | 📋 `planned` | — | Otomatis berakhir setelah periode selesai |
-| **Delegation Audit Trail** | 📋 `planned` | — | Delegator, delegatee, period, reason |
+| **Delegation Framework** | ✅ `implemented` | 2026-09-26 | Manager delegate approval authority saat absent — [`delegation.ts`](apps/web/lib/delegation.ts) |
+| **Delegation Scope** | ✅ `implemented` | 2026-09-26 | Siapa → ke siapa, periode, scope, entity types |
+| **Delegation Auto-expire** | ✅ `implemented` | 2026-09-26 | Otomatis berakhir setelah periode selesai — `checkDelegation()` checks endDate |
+| **Delegation Audit Trail** | ✅ `implemented` | 2026-09-26 | Delegator, delegatee, period, reason — logged via `logAudit()` |
 | **Delegated Work Inbox** | 📋 `planned` | — | Delegatee melihat delegated items di Work Inbox |
 
 ### 12.8 Work Inbox
@@ -870,8 +870,8 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Locking Engine** | 📋 `planned` | — | Hierarchical: Transaction → Day → Month → Quarter → Year [ADR-016] |
-| **Lock Policy** | 📋 `planned` | — | Per-company configurable lock policy |
+| **Locking Engine** | ✅ `implemented` | 2026-09-26 | Pessimistic locking with timeout + admin override — API: `/api/finance/locks` |
+| **Lock Policy** | ✅ `implemented` | 2026-09-26 | Configurable lock type (exclusive/shared), duration, reason |
 | **Locked Edit** | 📋 `planned` | — | Edit locked transaction requires approval |
 | **Backdated Transaction** | 📋 `planned` | — | Backdated transaction requires approval |
 
@@ -890,13 +890,13 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Exception Center** | 📋 `planned` | — | Dashboard terpusat untuk semua anomali [ADR-021] |
-| **Overdue Transactions** | 📋 `planned` | — | Transaksi yang sudah melewati deadline |
-| **SLA Breach View** | 📋 `planned` | — | Transaksi yang sudah breach SLA |
-| **SoD Conflict View** | 📋 `planned` | — | Konflik Segregation of Duties |
+| **Exception Center** | 🔄 `partial` | 2026-09-26 | Control dashboard aggregation — [`/api/finance/controls/dashboard`](apps/web/app/api/finance/controls/dashboard/route.ts) |
+| **Overdue Transactions** | ✅ `implemented` | 2026-09-26 | SLA breach detection via [`sla-monitor.ts`](apps/web/lib/sla-monitor.ts) |
+| **SLA Breach View** | ✅ `implemented` | 2026-09-26 | Color-coded SLA dashboard — API: `/api/finance/sla/dashboard` |
+| **SoD Conflict View** | ✅ `implemented` | 2026-09-26 | SoD conflict detection — [`sod-engine.ts`](apps/web/lib/sod-engine.ts) |
 | **Negative Stock Alerts** | 📋 `planned` | — | Stok negatif detection |
 | **Unreconciled Payments** | 📋 `planned` | — | Pembayaran belum reconcile |
-| **Policy Violations** | 📋 `planned` | — | Pelanggaran kebijakan |
+| **Policy Violations** | ✅ `implemented` | 2026-09-26 | Policy engine evaluation — [`control-pipeline.ts`](apps/web/lib/control-pipeline.ts) |
 | **Exception Severity** | 📋 `planned` | — | Critical, High, Medium, Low |
 | **Exception Assignment** | 📋 `planned` | — | Assigned person + suggested action |
 
