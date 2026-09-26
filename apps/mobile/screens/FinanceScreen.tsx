@@ -258,6 +258,17 @@ export default function FinanceScreen({ navigation }: Props) {
                 {activeTab === 'invoices' && renderInvoices()}
                 {activeTab === 'payments' && renderPayments()}
             </ScrollView>
+
+            {/* FAB — Create Invoice (only on invoices tab) */}
+            {activeTab === 'invoices' && (
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => navigation.navigate('InvoiceDetail', { mode: 'create' })}
+                    activeOpacity={0.8}
+                >
+                    <Text style={styles.fabText}>+</Text>
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }
@@ -386,5 +397,27 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#9CA3AF',
         marginTop: 2,
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#2563EB',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    fabText: {
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontWeight: '300',
+        lineHeight: 30,
     },
 });

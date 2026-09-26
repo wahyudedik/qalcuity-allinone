@@ -331,7 +331,575 @@ export async function logoutAPI(): Promise<void> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BUSINESS DATA APIs
+// SHARED TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Generic paginated API response */
+export interface PaginatedResponse<T> {
+    success: boolean;
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+/** Generic single-item API response */
+export interface SingleResponse<T> {
+    success: boolean;
+    data: T;
+}
+
+/** Generic mutation API response (no data returned) */
+export interface MutationResponse {
+    success: boolean;
+    data?: unknown;
+    error?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD TYPES — Contacts
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Contact response from mobile API (list + detail) */
+export interface MobileContact {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    type: string;
+    company: string | null;
+    address: string | null;
+    city: string | null;
+    province: string | null;
+    postalCode: string | null;
+    taxId: string | null;
+    notes: string | null;
+    isActive: boolean;
+    totalDeals: number;
+    totalInvoices: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+/** Payload for creating a contact (POST /api/mobile/crm/contacts) */
+export interface CreateContactPayload {
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    type?: string;
+    company?: string | null;
+    position?: string | null;
+    address?: string | null;
+    city?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+    taxId?: string | null;
+    notes?: string | null;
+}
+
+/** Payload for updating a contact (PUT /api/mobile/crm/contacts/:id) */
+export interface UpdateContactPayload {
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+    type?: string;
+    company?: string | null;
+    position?: string | null;
+    address?: string | null;
+    city?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+    taxId?: string | null;
+    notes?: string | null;
+    isActive?: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD TYPES — Products
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Product response from mobile API (list + detail) */
+export interface MobileProduct {
+    id: string;
+    sku: string;
+    name: string;
+    description: string | null;
+    unit: string;
+    price: number;
+    cost: number;
+    stock: number;
+    minStock: number;
+    isActive: boolean;
+    categoryId: string | null;
+    categoryName: string | null;
+    isLowStock: boolean;
+    createdAt: string;
+}
+
+/** Payload for creating a product (POST /api/mobile/inventory/products) */
+export interface CreateProductPayload {
+    sku: string;
+    name: string;
+    description?: string | null;
+    unit?: string;
+    price?: number;
+    cost?: number;
+    stock?: number;
+    minStock?: number;
+    categoryId?: string | null;
+}
+
+/** Payload for updating a product (PUT /api/mobile/inventory/products/:id) */
+export interface UpdateProductPayload {
+    sku?: string;
+    name?: string;
+    description?: string | null;
+    unit?: string;
+    price?: number;
+    cost?: number;
+    stock?: number;
+    minStock?: number;
+    categoryId?: string | null;
+    isActive?: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD TYPES — Invoices
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Invoice item for create/update payloads */
+export interface InvoiceItemPayload {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total?: number;
+}
+
+/** Invoice item in response */
+export interface InvoiceItemResponse {
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+}
+
+/** Invoice list response from mobile API */
+export interface MobileInvoice {
+    id: string;
+    invoiceNumber: string;
+    customerName: string;
+    contactId: string | null;
+    subtotal: number;
+    tax: number;
+    total: number;
+    currency: string;
+    status: string;
+    dueDate: string;
+    createdAt: string;
+    notes: string;
+    items: InvoiceItemResponse[];
+    paidAmount: number;
+}
+
+/** Invoice detail response from mobile API (same as list but includes more detail) */
+export interface MobileInvoiceDetail extends MobileInvoice { }
+
+/** Payload for creating an invoice (POST /api/mobile/finance/invoices) */
+export interface CreateInvoicePayload {
+    contactId?: string | null;
+    customerName?: string;
+    customerEmail?: string | null;
+    customerPhone?: string | null;
+    customerAddress?: string | null;
+    items: InvoiceItemPayload[];
+    dueDate?: string | null;
+    taxRate?: number;
+    taxCode?: string | null;
+    taxAmount?: number;
+    notes?: string | null;
+}
+
+/** Payload for updating an invoice (PUT /api/mobile/finance/invoices/:id) */
+export interface UpdateInvoicePayload {
+    status?: string;
+    dueDate?: string | null;
+    taxRate?: number;
+    taxCode?: string | null;
+    taxAmount?: number;
+    notes?: string | null;
+    items?: InvoiceItemPayload[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD TYPES — Employees
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Employee response from mobile API (list + detail) */
+export interface MobileEmployee {
+    id: string;
+    employeeId: string;
+    name: string;
+    email: string;
+    phone: string;
+    position: string;
+    department: string;
+    joinDate: string;
+    salary: number;
+    status: string;
+    createdAt: string;
+    updatedAt?: string;
+}
+
+/** Payload for creating an employee (POST /api/mobile/hr/employees) */
+export interface CreateEmployeePayload {
+    name: string;
+    email: string;
+    phone?: string | null;
+    position: string;
+    department: string;
+    joinDate: string;
+    salary?: number;
+    status?: string;
+}
+
+/** Payload for updating an employee (PUT /api/mobile/hr/employees/:id) */
+export interface UpdateEmployeePayload {
+    name?: string;
+    email?: string;
+    phone?: string | null;
+    position?: string;
+    department?: string;
+    joinDate?: string;
+    salary?: number;
+    status?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD — Query Parameters
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Common pagination params for list endpoints */
+export interface PaginationParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+}
+
+/** Contact-specific list params */
+export interface ContactListParams extends PaginationParams {
+    type?: string;
+}
+
+/** Product-specific list params */
+export interface ProductListParams extends PaginationParams {
+    category?: string;
+}
+
+/** Invoice-specific list params */
+export interface InvoiceListParams extends PaginationParams {
+    status?: string;
+}
+
+/** Employee-specific list params */
+export interface EmployeeListParams extends PaginationParams {
+    status?: string;
+    department?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD — Helper to build query string
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildQueryString(params?: Record<string, string | number | undefined>): string {
+    if (!params) return '';
+    const entries = Object.entries(params).filter(
+        ([, value]) => value !== undefined && value !== '' && value !== null
+    );
+    if (entries.length === 0) return '';
+    const searchParams = new URLSearchParams();
+    entries.forEach(([key, value]) => {
+        searchParams.set(key, String(value));
+    });
+    return `?${searchParams.toString()}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD — Contacts API
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/mobile/crm/contacts — List contacts (paginated, searchable).
+ */
+export async function getContacts(
+    params?: ContactListParams
+): Promise<PaginatedResponse<MobileContact>> {
+    const query = buildQueryString({
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search,
+        type: params?.type,
+    });
+    return fetchAPI<PaginatedResponse<MobileContact>>(
+        `/crm/contacts${query}`
+    );
+}
+
+/**
+ * GET /api/mobile/crm/contacts/:id — Get contact detail.
+ */
+export async function getContact(id: string): Promise<MobileContact> {
+    const res = await fetchAPI<SingleResponse<MobileContact>>(
+        `/crm/contacts/${id}`
+    );
+    return res.data;
+}
+
+/**
+ * POST /api/mobile/crm/contacts — Create new contact.
+ */
+export async function createContact(data: CreateContactPayload): Promise<MobileContact> {
+    const res = await fetchAPI<SingleResponse<MobileContact>>('/crm/contacts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.data;
+}
+
+/**
+ * PUT /api/mobile/crm/contacts/:id — Update contact.
+ */
+export async function updateContact(
+    id: string,
+    data: UpdateContactPayload
+): Promise<MobileContact> {
+    const res = await fetchAPI<SingleResponse<MobileContact>>(
+        `/crm/contacts/${id}`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }
+    );
+    return res.data;
+}
+
+/**
+ * DELETE /api/mobile/crm/contacts/:id — Delete contact.
+ */
+export async function deleteContact(id: string): Promise<void> {
+    await fetchAPI<MutationResponse>(`/crm/contacts/${id}`, {
+        method: 'DELETE',
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD — Products API
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/mobile/inventory/products — List products (paginated, searchable).
+ */
+export async function getProducts(
+    params?: ProductListParams
+): Promise<PaginatedResponse<MobileProduct>> {
+    const query = buildQueryString({
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search,
+        category: params?.category,
+    });
+    return fetchAPI<PaginatedResponse<MobileProduct>>(
+        `/inventory/products${query}`
+    );
+}
+
+/**
+ * GET /api/mobile/inventory/products/:id — Get product detail.
+ */
+export async function getProduct(id: string): Promise<MobileProduct> {
+    const res = await fetchAPI<SingleResponse<MobileProduct>>(
+        `/inventory/products/${id}`
+    );
+    return res.data;
+}
+
+/**
+ * POST /api/mobile/inventory/products — Create new product.
+ */
+export async function createProduct(data: CreateProductPayload): Promise<MobileProduct> {
+    const res = await fetchAPI<SingleResponse<MobileProduct>>('/inventory/products', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.data;
+}
+
+/**
+ * PUT /api/mobile/inventory/products/:id — Update product.
+ */
+export async function updateProduct(
+    id: string,
+    data: UpdateProductPayload
+): Promise<MobileProduct> {
+    const res = await fetchAPI<SingleResponse<MobileProduct>>(
+        `/inventory/products/${id}`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }
+    );
+    return res.data;
+}
+
+/**
+ * DELETE /api/mobile/inventory/products/:id — Delete product.
+ */
+export async function deleteProduct(id: string): Promise<void> {
+    await fetchAPI<MutationResponse>(`/inventory/products/${id}`, {
+        method: 'DELETE',
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD — Invoices API
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/mobile/finance/invoices — List invoices (paginated, searchable).
+ */
+export async function getInvoices(
+    params?: InvoiceListParams
+): Promise<PaginatedResponse<MobileInvoice>> {
+    const query = buildQueryString({
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search,
+        status: params?.status,
+    });
+    return fetchAPI<PaginatedResponse<MobileInvoice>>(
+        `/finance/invoices${query}`
+    );
+}
+
+/**
+ * GET /api/mobile/finance/invoices/:id — Get invoice detail.
+ */
+export async function getInvoice(id: string): Promise<MobileInvoiceDetail> {
+    const res = await fetchAPI<SingleResponse<MobileInvoiceDetail>>(
+        `/finance/invoices/${id}`
+    );
+    return res.data;
+}
+
+/**
+ * POST /api/mobile/finance/invoices — Create new invoice with items.
+ */
+export async function createInvoice(data: CreateInvoicePayload): Promise<MobileInvoice> {
+    const res = await fetchAPI<SingleResponse<MobileInvoice>>('/finance/invoices', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.data;
+}
+
+/**
+ * PUT /api/mobile/finance/invoices/:id — Update invoice.
+ */
+export async function updateInvoice(
+    id: string,
+    data: UpdateInvoicePayload
+): Promise<MobileInvoice> {
+    const res = await fetchAPI<SingleResponse<MobileInvoice>>(
+        `/finance/invoices/${id}`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }
+    );
+    return res.data;
+}
+
+/**
+ * DELETE /api/mobile/finance/invoices/:id — Soft delete invoice.
+ */
+export async function deleteInvoice(id: string): Promise<void> {
+    await fetchAPI<MutationResponse>(`/finance/invoices/${id}`, {
+        method: 'DELETE',
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE CRUD — Employees API
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/mobile/hr/employees — List employees (paginated, searchable).
+ */
+export async function getEmployees(
+    params?: EmployeeListParams
+): Promise<PaginatedResponse<MobileEmployee>> {
+    const query = buildQueryString({
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search,
+        status: params?.status,
+        department: params?.department,
+    });
+    return fetchAPI<PaginatedResponse<MobileEmployee>>(
+        `/hr/employees${query}`
+    );
+}
+
+/**
+ * GET /api/mobile/hr/employees/:id — Get employee detail.
+ */
+export async function getEmployee(id: string): Promise<MobileEmployee> {
+    const res = await fetchAPI<SingleResponse<MobileEmployee>>(
+        `/hr/employees/${id}`
+    );
+    return res.data;
+}
+
+/**
+ * POST /api/mobile/hr/employees — Create new employee.
+ */
+export async function createEmployee(data: CreateEmployeePayload): Promise<MobileEmployee> {
+    const res = await fetchAPI<SingleResponse<MobileEmployee>>('/hr/employees', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.data;
+}
+
+/**
+ * PUT /api/mobile/hr/employees/:id — Update employee.
+ */
+export async function updateEmployee(
+    id: string,
+    data: UpdateEmployeePayload
+): Promise<MobileEmployee> {
+    const res = await fetchAPI<SingleResponse<MobileEmployee>>(
+        `/hr/employees/${id}`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }
+    );
+    return res.data;
+}
+
+/**
+ * DELETE /api/mobile/hr/employees/:id — Delete employee.
+ */
+export async function deleteEmployee(id: string): Promise<void> {
+    await fetchAPI<MutationResponse>(`/hr/employees/${id}`, {
+        method: 'DELETE',
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEGACY READ-ONLY APIs (kept for backward compatibility)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ===== Finance API =====

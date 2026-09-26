@@ -44,6 +44,8 @@ import EmployeeDetailScreen from './screens/EmployeeDetailScreen';
  * MainStackParamList — typed navigation for the main app screens.
  * Used internally by MainNavigator and referenced by all screen components.
  */
+export type ScreenMode = 'view' | 'edit' | 'create';
+
 export type MainStackParamList = {
     Home: undefined;
     Dashboard: undefined;
@@ -51,13 +53,13 @@ export type MainStackParamList = {
     CRM: undefined;
     Inventory: undefined;
     HR: undefined;
-    // Detail screens
-    InvoiceDetail: { id: string };
+    // Detail screens — id is optional for create mode
+    InvoiceDetail: { id?: string; mode?: ScreenMode };
     LeadDetail: { id: string };
     DealDetail: { id: string };
-    ContactDetail: { id: string };
-    ProductDetail: { id: string };
-    EmployeeDetail: { id: string };
+    ContactDetail: { id?: string; mode?: ScreenMode };
+    ProductDetail: { id?: string; mode?: ScreenMode };
+    EmployeeDetail: { id?: string; mode?: ScreenMode };
 };
 
 /**
@@ -155,7 +157,10 @@ function MainNavigator() {
             <MainStack.Screen
                 name="InvoiceDetail"
                 component={InvoiceDetailScreen}
-                options={{ title: 'Detail Invoice' }}
+                options={({ route }) => ({
+                    title: route.params?.mode === 'create' ? 'Buat Invoice' :
+                        route.params?.mode === 'edit' ? 'Edit Invoice' : 'Detail Invoice',
+                })}
             />
             <MainStack.Screen
                 name="LeadDetail"
@@ -170,17 +175,26 @@ function MainNavigator() {
             <MainStack.Screen
                 name="ContactDetail"
                 component={ContactDetailScreen}
-                options={{ title: 'Detail Kontak' }}
+                options={({ route }) => ({
+                    title: route.params?.mode === 'create' ? 'Buat Kontak' :
+                        route.params?.mode === 'edit' ? 'Edit Kontak' : 'Detail Kontak',
+                })}
             />
             <MainStack.Screen
                 name="ProductDetail"
                 component={ProductDetailScreen}
-                options={{ title: 'Detail Produk' }}
+                options={({ route }) => ({
+                    title: route.params?.mode === 'create' ? 'Buat Produk' :
+                        route.params?.mode === 'edit' ? 'Edit Produk' : 'Detail Produk',
+                })}
             />
             <MainStack.Screen
                 name="EmployeeDetail"
                 component={EmployeeDetailScreen}
-                options={{ title: 'Detail Karyawan' }}
+                options={({ route }) => ({
+                    title: route.params?.mode === 'create' ? 'Buat Karyawan' :
+                        route.params?.mode === 'edit' ? 'Edit Karyawan' : 'Detail Karyawan',
+                })}
             />
         </MainStack.Navigator>
     );

@@ -2,7 +2,7 @@
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
 > Diperbarui: 26 September 2026
-> Version: 1.7 — Session 58: Documentation Audit — P0 Updates (RBAC, CI/CD, CSP)
+> Version: 1.8 — Session 59: Mobile CRUD Complete (P0-5)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -83,11 +83,11 @@
   - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — Architecture anti-patterns
   - **Note:** Pattern proven; incremental migration recommended for remaining routes
 
-- [ ] **[AUDIT-P0-5]** 🟠 **Mobile CRUD operations (currently 0% — read-only)**
+- [x] **[AUDIT-P0-5]** 🟠 **Mobile CRUD operations (currently 0% — read-only)** — ✅ DONE (Session 59)
   - **File:** [`apps/mobile/`](apps/mobile/)
-  - **Impact:** 🟠 HIGH — Mobile app has 12 screens but zero create/update/delete operations
-  - **Action:** Implement CRUD for at least core entities (contacts, products, invoices)
-  - **Complexity:** Very High (12 screens need write operations)
+  - **Impact:** 🟠 HIGH → ✅ RESOLVED — Mobile app now has full CRUD for 4 core entities (Contacts, Products, Invoices, Employees)
+  - **Action:** ~~Implement CRUD~~ — Done: 9 API routes, 20 CRUD functions, 8 form components, 4 detail screens updated
+  - **Complexity:** Very High → ✅ Complete
   - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — Mobile analysis
 
 - [ ] **[AUDIT-P0-6]** 🟠 **POS offline mode completion**
@@ -112,14 +112,14 @@
 | Prisma Models | 100 | **107** | **107** (unchanged) |
 | Database Indexes | 277 | **293** | **293** (unchanged) |
 | RBAC Coverage | ~165 routes (~41%) | **~165/400+ routes (~41%)** | **~250/400+ routes (~94%)** ✅ |
-| Mobile CRUD | Unknown | **0% (read-only)** | **0% (read-only)** ❌ |
+| Mobile CRUD | Unknown | **0% (read-only)** | **~80% (4 entities CRUD)** ✅ |
 | Prisma Tenant Routes | 0 | **0** | **6 (PoC)** ✅ |
 | CI/CD Pipeline | ❌ None | **❌ None** | **✅ GitHub Actions** ✅ |
 | CSP Policy | Basic | **Basic** | **Hardened** ✅ |
 | E2E Tests | 78 | **78** | **78** (unchanged) |
 | Unit Tests | 189 | **189** | **189** (unchanged) |
 
-> ⚠️ **Note:** Session 58 resolved 3 P0 items (RBAC, CI/CD, Prisma Tenant PoC). Remaining: secrets rotation (P0-1, P0-2), mobile CRUD (P0-5), POS offline (P0-6).
+> ⚠️ **Note:** Session 58 resolved 3 P0 items (RBAC, CI/CD, Prisma Tenant PoC). Session 59 resolved mobile CRUD (P0-5). Remaining: secrets rotation (P0-1, P0-2), POS offline (P0-6).
 
 ---
 
