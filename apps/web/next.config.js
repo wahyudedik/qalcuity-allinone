@@ -3,26 +3,44 @@
 // ─── Security Headers ──────────────────────────────────────────────────────────
 const isDev = process.env.NODE_ENV !== 'production';
 
+// Cloudflare origins — whitelist for analytics, email obfuscation, and challenge pages.
+const CLOUDFLARE_ORIGINS = [
+    'https://static.cloudflareinsights.com',  // Web Analytics beacon
+    'https://qalcuity.com',                   // Cloudflare email-decode (cdn-cgi/scripts/*)
+];
+
 const securityHeaders = [
     {
         key: 'Content-Security-Policy',
-        // NOTE: 'unsafe-inline' for script-src is required by Next.js for inline hydration scripts.
-        // 'unsafe-eval' is ONLY allowed in development mode — required by React Fast Refresh
-        // (react-refresh-utils/dist/runtime.js uses eval). In production, 'unsafe-eval' is
-        // excluded to strengthen XSS protection.
-        // 'unsafe-inline' for style-src is required by Tailwind CSS.
+        // CSP Policy — Qalcuity Production
+        //
+        // DESIGN NOTES:
+        // - 'unsafe-inline' for script-src: REQUIRED by Next.js for inline hydration scripts.
+        // - 'unsafe-eval' for script-src: ONLY in development mode (React Fast Refresh).
+        // - 'unsafe-inline' for style-src: REQUIRED by Tailwind CSS (inline styles).
+        // - 'self' covers all same-origin scripts including Next.js chunks and Cloudflare cdn-cgi.
+        // - 'unsafe-dynamic' NOT used — all script URLs are static/known, 'unsafe-dynamic'
+        //   would weaken CSP by allowing dynamically constructed URLs.
+        // - upgrade-insecure-requests: forces HTTP→HTTPS for all sub-resources.
+        //
+        // CHUNK LOAD ERROR PREVENTION:
+        // - 'self' in script-src ensures Next.js chunks (/_next/static/chunks/*) are allowed.
+        // - If ChunkLoadError persists after deploy, it's a STALE CACHE issue (old HTML
+        //   references chunk filenames that no longer exist in the new build).
+        // - FIX: Purge Cloudflare cache + hard refresh after deployment.
         value: [
-            "default-src 'self'",
-            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://apis.google.com https://static.cloudflareinsights.com https://cdn.jsdelivr.net`,
+            "default-src 'self' https://qalcuity.com",
+            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com https://apis.google.com ${CLOUDFLARE_ORIGINS.join(' ')} https://cdn.jsdelivr.net`,
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
             "img-src 'self' data: https: blob:",
             "font-src 'self' https://cdn.jsdelivr.net",
-            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://static.cloudflareinsights.com",
+            `connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com ${CLOUDFLARE_ORIGINS.join(' ')}`,
             "frame-src 'self' https://accounts.google.com",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'none'",
+            "upgrade-insecure-requests",
         ].join('; '),
     },
     {
