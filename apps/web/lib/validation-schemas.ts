@@ -1020,6 +1020,7 @@ export const posApplyPromoSchema = z.object({
 
 export const createPosTransactionSchema = z.object({
     sessionId: z.string().min(1, 'ID sesi wajib diisi'),
+    idempotencyKey: z.string().max(255, 'Idempotency key maksimal 255 karakter').optional(),
     customerName: z.string().max(255, 'Nama pelanggan maksimal 255 karakter').optional().nullable(),
     customerPhone: z.string().max(50, 'Nomor telepon maksimal 50 karakter').optional().nullable(),
     items: z.array(posTransactionItemSchema).min(1, 'Minimal 1 item dalam transaksi'),

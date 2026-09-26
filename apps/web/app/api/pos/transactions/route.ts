@@ -142,6 +142,9 @@ export async function POST(request: Request) {
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
 
+        // Extract idempotency key from header or body (for offline sync)
+        const idempotencyKey = request.headers.get('X-Idempotency-Key') || undefined;
+
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
         const validation = createPosTransactionSchema.safeParse(sanitizedBody);
@@ -153,6 +156,47 @@ export async function POST(request: Request) {
         }
 
         const validatedData = validation.data;
+
+        // Resolve effective idempotency key (header takes precedence over body)
+        const effectiveIdempotencyKey = idempotencyKey || validatedData.idempotencyKey || undefined;
+
+        // Idempotency check: if key provided, return existing transaction if found
+        if (effectiveIdempotencyKey) {
+            const existingTransaction = await prisma.posTransaction.findUnique({
+                where: {
+                    tenantId_idempotencyKey: {
+                        tenantId,
+                        idempotencyKey: effectiveIdempotencyKey,
+                    },
+                },
+                include: {
+                    items: { select: { id: true, productName: true, quantity: true, unitPrice: true, subtotal: true } },
+                    payments: { select: { id: true, method: true, amount: true, reference: true, status: true } },
+                },
+            });
+
+            if (existingTransaction) {
+                // Return existing transaction (idempotent response — no duplicate created)
+                return NextResponse.json({
+                    success: true,
+                    data: {
+                        id: existingTransaction.id,
+                        transactionNo: existingTransaction.transactionNo,
+                        totalAmount: Number(existingTransaction.totalAmount),
+                        discountAmount: Number(existingTransaction.discountAmount),
+                        discountType: existingTransaction.discountType,
+                        discountValue: existingTransaction.discountValue ? Number(existingTransaction.discountValue) : null,
+                        promoCode: existingTransaction.promoCode,
+                        paidAmount: Number(existingTransaction.paidAmount),
+                        changeAmount: Number(existingTransaction.changeAmount),
+                        paymentMethod: existingTransaction.paymentMethod,
+                        status: existingTransaction.status,
+                        createdAt: existingTransaction.createdAt.toISOString(),
+                        idempotent: true,
+                    },
+                }, { status: 200 });
+            }
+        }
 
         // Verify session exists and is OPEN
         const session = await prisma.posSession.findFirst({
@@ -281,6 +325,7 @@ export async function POST(request: Request) {
                     sessionId: validatedData.sessionId,
                     terminalId: session.terminalId,
                     transactionNo,
+                    idempotencyKey: effectiveIdempotencyKey || null,
                     customerName: validatedData.customerName || null,
                     customerPhone: validatedData.customerPhone || null,
                     subtotal,
