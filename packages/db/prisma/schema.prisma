@@ -156,14 +156,21 @@ model Tenant {
   recurringInvoiceTemplates RecurringInvoice[]
 
   // Bills & Expenses
-  bills     Bill[]
-  expenses  Expense[]
+  bills    Bill[]
+  expenses Expense[]
 
   // WhatsApp Message Logs
   whatsappMessageLogs WhatsAppMessageLog[]
 
   // Password Policy
   passwordPolicy PasswordPolicy?
+
+  // Unified Control Engine
+  controlPolicies   ControlPolicy[]
+  sodRules          SoDRule[]
+  slaTrackers       SLATracker[]
+  lockRecords       LockRecord[]
+  transactionStates TransactionState[]
 }
 
 model User {
@@ -196,9 +203,9 @@ model User {
   resetToken       String?
   resetTokenExpiry DateTime?
 
-  auditLogs      AuditLog[]
-  savedReports   SavedReport[]
-  userDashboards UserDashboard[]
+  auditLogs       AuditLog[]
+  savedReports    SavedReport[]
+  userDashboards  UserDashboard[]
   passwordHistory PasswordHistory[]
 
   // Sessions & Login History
@@ -536,25 +543,25 @@ model QuotationItem {
 }
 
 model Bill {
-  id              String    @id @default(cuid())
-  tenantId        String
-  tenant          Tenant    @relation(fields: [tenantId], references: [id])
-  billNumber      String
-  vendorId        String?
-  vendorName      String
-  invoiceNumber   String?
-  status          String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, PAID, CANCELLED
-  subtotal        Decimal   @db.Decimal(19, 4)
-  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
-  totalAmount     Decimal   @db.Decimal(19, 4)
-  paidAmount      Decimal   @default(0) @db.Decimal(19, 4)
-  dueDate         DateTime?
-  notes           String?
-  createdBy       String?
-  approvedBy      String?
-  approvedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  billNumber    String
+  vendorId      String?
+  vendorName    String
+  invoiceNumber String?
+  status        String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, PAID, CANCELLED
+  subtotal      Decimal   @db.Decimal(19, 4)
+  taxAmount     Decimal   @default(0) @db.Decimal(19, 4)
+  totalAmount   Decimal   @db.Decimal(19, 4)
+  paidAmount    Decimal   @default(0) @db.Decimal(19, 4)
+  dueDate       DateTime?
+  notes         String?
+  createdBy     String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Soft delete fields
   deletedAt DateTime?
@@ -567,24 +574,24 @@ model Bill {
 }
 
 model Expense {
-  id              String    @id @default(cuid())
-  tenantId        String
-  tenant          Tenant    @relation(fields: [tenantId], references: [id])
-  expenseNumber   String
-  category        String    // OFFICE, TRAVEL, UTILITIES, MARKETING, SALARIES, MAINTENANCE, OTHER
-  description     String
-  amount          Decimal   @db.Decimal(19, 4)
-  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
-  totalAmount     Decimal   @db.Decimal(19, 4)
-  expenseDate     DateTime  @default(now())
-  paymentMethod   String    @default("CASH") // CASH, BANK_TRANSFER, QRIS, CREDIT_CARD
-  receiptUrl      String?
-  status          String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
-  approvedBy      String?
-  approvedAt      DateTime?
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  expenseNumber String
+  category      String // OFFICE, TRAVEL, UTILITIES, MARKETING, SALARIES, MAINTENANCE, OTHER
+  description   String
+  amount        Decimal   @db.Decimal(19, 4)
+  taxAmount     Decimal   @default(0) @db.Decimal(19, 4)
+  totalAmount   Decimal   @db.Decimal(19, 4)
+  expenseDate   DateTime  @default(now())
+  paymentMethod String    @default("CASH") // CASH, BANK_TRANSFER, QRIS, CREDIT_CARD
+  receiptUrl    String?
+  status        String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Soft delete fields
   deletedAt DateTime?
@@ -1014,14 +1021,14 @@ model TenantSubscription {
 }
 
 model BillingPayment {
-  id             String              @id @default(cuid())
+  id             String             @id @default(cuid())
   subscriptionId String
-  subscription   TenantSubscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  entitlementId  String?             // Phase 4: link to TenantEntitlement (nullable for backward compat)
-  entitlement    TenantEntitlement?  @relation(fields: [entitlementId], references: [id], onDelete: SetNull)
+  subscription   TenantSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  entitlementId  String? // Phase 4: link to TenantEntitlement (nullable for backward compat)
+  entitlement    TenantEntitlement? @relation(fields: [entitlementId], references: [id], onDelete: SetNull)
   tenantId       String
-  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  amount         Decimal             @default(0) @db.Decimal(19, 4) // Amount in Rupiah
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount         Decimal            @default(0) @db.Decimal(19, 4) // Amount in Rupiah
   paymentMethod  String // manual_transfer
   bankName       String? // BRI, JAGO, BTN, BSI
   accountNumber  String? // Rekening pengirim
@@ -1029,14 +1036,14 @@ model BillingPayment {
   proofFileUrl   String? // URL/path bukti transfer
   proofFileName  String? // Original filename
   reference      String? // Reference number from user
-  status         String              @default("PENDING") // PENDING, VERIFIED, REJECTED
+  status         String             @default("PENDING") // PENDING, VERIFIED, REJECTED
   verifiedById   String? // userId of admin who verified
   verifiedAt     DateTime?
   rejectReason   String?
   notes          String?
-  waConfirmed    Boolean             @default(false) // User sudah konfirmasi via WA
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  waConfirmed    Boolean            @default(false) // User sudah konfirmasi via WA
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([tenantId])
   @@index([status])
@@ -1860,8 +1867,8 @@ model TenantEntitlement {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan     Plan            @relation(fields: [planId], references: [id])
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     Plan             @relation(fields: [planId], references: [id])
   payments BillingPayment[]
 
   @@index([tenantId])
@@ -1914,17 +1921,17 @@ model RateLimitLog {
 // ============================================
 
 model AccountingPeriod {
-  id         String    @id @default(cuid())
-  tenantId   String
-  tenant     Tenant    @relation(fields: [tenantId], references: [id])
-  name       String // "Januari 2026", "Q1 2026"
-  startDate  DateTime
-  endDate    DateTime
-  status     String    @default("OPEN") // OPEN, CLOSING, CLOSED
-  closedBy   String? // userId yang menutup
-  closedAt   DateTime?
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  name         String // "Januari 2026", "Q1 2026"
+  startDate    DateTime
+  endDate      DateTime
+  status       String    @default("OPEN") // OPEN, CLOSING, CLOSED
+  closedBy     String? // userId yang menutup
+  closedAt     DateTime?
   closeNotes   String? // Catatan saat closing
-  closeSummary Json?    // Ringkasan saat closing: { totalEntries, totalDebit, totalCredit, netIncome, breakdown }
+  closeSummary Json? // Ringkasan saat closing: { totalEntries, totalDebit, totalCredit, netIncome, breakdown }
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -2072,15 +2079,15 @@ model PosTransaction {
   session         PosSession @relation(fields: [sessionId], references: [id])
   terminalId      String
   transactionNo   String // Auto-generated, unique per tenant
-  idempotencyKey  String?    // Idempotency key for offline sync dedup (nullable for backward compat)
+  idempotencyKey  String? // Idempotency key for offline sync dedup (nullable for backward compat)
   customerName    String?
   customerPhone   String?
   subtotal        Decimal    @default(0) @db.Decimal(19, 4)
   discountAmount  Decimal    @default(0) @db.Decimal(19, 4)
   discountPercent Decimal?   @db.Decimal(5, 2)
-  discountType    String?    // PERCENTAGE or FIXED (order-level discount type)
+  discountType    String? // PERCENTAGE or FIXED (order-level discount type)
   discountValue   Decimal?   @default(0) @db.Decimal(19, 4) // order-level discount value (percentage 0-100 or nominal amount)
-  promoCode       String?    // promo code applied to this transaction
+  promoCode       String? // promo code applied to this transaction
   taxAmount       Decimal    @default(0) @db.Decimal(19, 4)
   totalAmount     Decimal    @default(0) @db.Decimal(19, 4)
   paidAmount      Decimal    @default(0) @db.Decimal(19, 4)
@@ -2141,7 +2148,7 @@ model PosPayment {
   transactionId String
   transaction   PosTransaction @relation(fields: [transactionId], references: [id])
   method        String // CASH, CARD, QRIS, E_WALLET, BANK_TRANSFER
-  amount        Decimal         @db.Decimal(19, 4)
+  amount        Decimal        @db.Decimal(19, 4)
   reference     String? // Card number last 4, QRIS ref, etc.
   status        String         @default("COMPLETED") // PENDING, COMPLETED, FAILED
   createdAt     DateTime       @default(now())
@@ -2158,10 +2165,10 @@ model PosRefund {
   transactionId String
   transaction   PosTransaction @relation(fields: [transactionId], references: [id])
   refundNo      String // Auto-generated, unique per tenant
-  amount        Decimal         @db.Decimal(19, 4)
+  amount        Decimal        @db.Decimal(19, 4)
   reason        String
   restockItem   Boolean        @default(false) // If true, restore stock on approval
-  restockedAt   DateTime?      // Timestamp when stock was restored
+  restockedAt   DateTime? // Timestamp when stock was restored
   status        String         @default("PENDING") // PENDING, APPROVED, REJECTED
   approvedBy    String?
   approvedAt    DateTime?
@@ -2793,30 +2800,30 @@ model PlanTenantLimit {
 // ============================================
 
 model PasswordPolicy {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Complexity rules
-  minLength             Int      @default(8)
-  maxLength             Int      @default(128)
-  requireUppercase      Boolean  @default(false)
-  requireLowercase      Boolean  @default(false)
-  requireNumbers        Boolean  @default(false)
-  requireSpecialChars   Boolean  @default(false)
-  specialChars          String   @default("!@#$%^&*()_+-=[]{}|;:,.<>?")
+  minLength           Int     @default(8)
+  maxLength           Int     @default(128)
+  requireUppercase    Boolean @default(false)
+  requireLowercase    Boolean @default(false)
+  requireNumbers      Boolean @default(false)
+  requireSpecialChars Boolean @default(false)
+  specialChars        String  @default("!@#$%^&*()_+-=[]{}|;:,.<>?")
 
   // History & expiry
-  preventReuse           Int     @default(0)  // number of previous passwords to block
-  expiryDays             Int     @default(0)  // 0 = never expires
-  warnBeforeExpiryDays   Int     @default(7)
+  preventReuse         Int @default(0) // number of previous passwords to block
+  expiryDays           Int @default(0) // 0 = never expires
+  warnBeforeExpiryDays Int @default(7)
 
   // Lockout
-  maxFailedAttempts      Int     @default(5)
-  lockoutDurationMinutes Int     @default(30)
+  maxFailedAttempts      Int @default(5)
+  lockoutDurationMinutes Int @default(30)
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([tenantId])
   @@index([tenantId])
@@ -2833,6 +2840,102 @@ model PasswordHistory {
 }
 
 // ============================================
+// UNIFIED CONTROL ENGINE
+// ============================================
+
+model ControlPolicy {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  description String?
+  module      String // e.g., "finance", "crm", "hr"
+  action      String // e.g., "create", "update", "delete", "approve"
+  conditions  Json // Policy conditions (amount thresholds, role checks, etc.)
+  effect      String   @default("allow") // "allow" | "deny"
+  priority    Int      @default(0) // Higher = evaluated first
+  enabled     Boolean  @default(true)
+  version     Int      @default(1)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, module, action, name])
+  @@index([tenantId, module])
+}
+
+model SoDRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  description String?
+  role1       String // First role in conflict
+  role2       String // Second role in conflict
+  module      String // Module where rule applies
+  action      String? // Specific action (null = all actions)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId, module])
+}
+
+model SLATracker {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  entityType  String // e.g., "approval", "ticket", "invoice"
+  entityId    String
+  stage       String // e.g., "pending_approval", "in_review"
+  targetHours Int // SLA target in hours
+  startedAt   DateTime  @default(now())
+  deadline    DateTime
+  completedAt DateTime?
+  status      String    @default("active") // "active" | "met" | "breached" | "extended"
+  escalatedTo String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, status])
+}
+
+model LockRecord {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  entityType String // e.g., "invoice", "journal_entry", "employee"
+  entityId   String
+  lockedBy   String // userId who holds the lock
+  lockType   String   @default("edit") // "edit" | "delete" | "period_close"
+  expiresAt  DateTime // Auto-release after this time
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@unique([tenantId, entityType, entityId]) // One lock per entity
+  @@index([tenantId, lockedBy])
+}
+
+model TransactionState {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  entityType    String // e.g., "invoice", "purchase_order"
+  entityId      String
+  currentState  String // e.g., "DRAFT", "PENDING_APPROVAL", "APPROVED", "POSTED"
+  previousState String?
+  changedBy     String?
+  changedAt     DateTime @default(now())
+  metadata      Json? // Additional state change info
+
+  @@unique([tenantId, entityType, entityId])
+  @@index([tenantId, entityType])
+}
+
+// ============================================
 // WHATSAPP BUSINESS API
 // ============================================
 
@@ -2840,15 +2943,15 @@ model WhatsAppMessageLog {
   id           String    @id @default(cuid())
   tenantId     String
   tenant       Tenant    @relation(fields: [tenantId], references: [id])
-  messageId    String?   // Meta API message ID
-  to           String    // Recipient phone number
-  type         String    // 'text', 'template', 'image', 'document'
-  templateName String?   // Template name if using pre-approved templates
+  messageId    String? // Meta API message ID
+  to           String // Recipient phone number
+  type         String // 'text', 'template', 'image', 'document'
+  templateName String? // Template name if using pre-approved templates
   status       String    @default("sent") // 'sent', 'delivered', 'read', 'failed'
-  channel      String    // 'invoice', 'payment_reminder', 'overdue', 'order_confirmation'
-  entityType   String?   // 'Invoice', 'Payment', 'Order'
-  entityId     String?   // Related entity ID
-  error        String?   // Error message if failed
+  channel      String // 'invoice', 'payment_reminder', 'overdue', 'order_confirmation'
+  entityType   String? // 'Invoice', 'Payment', 'Order'
+  entityId     String? // Related entity ID
+  error        String? // Error message if failed
   sentAt       DateTime  @default(now())
   deliveredAt  DateTime?
   readAt       DateTime?
