@@ -168,6 +168,7 @@ model Tenant {
   // Unified Control Engine
   controlPolicies   ControlPolicy[]
   sodRules          SoDRule[]
+  sodExceptions     SoDException[]
   slaTrackers       SLATracker[]
   lockRecords       LockRecord[]
   transactionStates TransactionState[]
@@ -2933,6 +2934,26 @@ model TransactionState {
 
   @@unique([tenantId, entityType, entityId])
   @@index([tenantId, entityType])
+}
+
+model SoDException {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  ruleId      String // References SoDRule
+  userId      String // User who requested the exception
+  reason      String // Business justification
+  approverId  String? // Who approved/rejected
+  status      String   @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED"
+  decision    String? // Approver's decision comments
+  expiresAt   DateTime // Auto-expire after this date
+  decidedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, ruleId])
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
 }
 
 // ============================================

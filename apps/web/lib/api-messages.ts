@@ -378,6 +378,30 @@ export const MSG = {
     ESCALATION_NO_PENDING: 'No pending approval requests found',
     ESCALATION_SLA_CONFIG_UPDATED: 'Escalation SLA configuration updated',
     ESCALATION_SLA_CONFIG_FAILED: 'Failed to update escalation SLA configuration',
+
+    // ---------------------------------------------------------------------------
+    // Control Engine — Policy & SoD
+    // ---------------------------------------------------------------------------
+    POLICY_NOT_FOUND: 'Control policy not found',
+    POLICY_CREATED: 'Control policy created successfully',
+    POLICY_UPDATED: 'Control policy updated successfully',
+    POLICY_DELETED: 'Control policy deleted successfully',
+    POLICY_REVERTED: 'Control policy reverted to previous version',
+    POLICY_TEMPLATE_APPLIED: 'Policy template applied successfully',
+    POLICY_VERSION_NOT_FOUND: 'Policy version not found',
+    SOD_RULE_NOT_FOUND: 'SoD rule not found',
+    SOD_RULE_CREATED: 'SoD rule created successfully',
+    SOD_RULE_UPDATED: 'SoD rule updated successfully',
+    SOD_RULE_DELETED: 'SoD rule deleted successfully',
+    SOD_CONFLICT_DETECTED: 'Separation of duties conflict detected',
+    SOD_NO_CONFLICT: 'No SoD conflicts found',
+    SOD_EXCEPTION_REQUESTED: 'SoD exception requested successfully',
+    SOD_EXCEPTION_APPROVED: 'SoD exception approved',
+    SOD_EXCEPTION_REJECTED: 'SoD exception rejected',
+    SOD_EXCEPTION_NOT_FOUND: 'SoD exception not found',
+    SOD_EXCEPTION_ALREADY_EXISTS: 'An active exception already exists for this rule',
+    SOD_EXCEPTION_SELF_APPROVAL: 'Cannot approve your own exception request',
+    SOD_EXCEPTION_EXPIRED: 'SoD exception has expired',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;
