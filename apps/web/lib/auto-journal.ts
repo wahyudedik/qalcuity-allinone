@@ -12,6 +12,7 @@ import { prisma } from './db';
 import { logAudit } from './audit';
 import { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
+import { syncAccountsFromJournalEntry } from './balance-sync';
 
 // ============================================
 // Types
@@ -343,6 +344,13 @@ export async function generateInvoiceJournalEntry(
             request,
         });
 
+        // GL-GAP-02: Sync account balances after posting
+        try {
+            await syncAccountsFromJournalEntry(result, tenantId);
+        } catch (syncError) {
+            logger.error('[AutoJournal] Balance sync failed for invoice:', syncError);
+        }
+
         return { success: true, journalEntryId: result };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -491,6 +499,13 @@ export async function generatePurchaseOrderJournalEntry(
             request,
         });
 
+        // GL-GAP-02: Sync account balances after posting
+        try {
+            await syncAccountsFromJournalEntry(result, tenantId);
+        } catch (syncError) {
+            logger.error('[AutoJournal] Balance sync failed for PO:', syncError);
+        }
+
         return { success: true, journalEntryId: result };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -606,6 +621,13 @@ export async function generatePaymentJournalEntry(
             },
             request,
         });
+
+        // GL-GAP-02: Sync account balances after posting
+        try {
+            await syncAccountsFromJournalEntry(result, tenantId);
+        } catch (syncError) {
+            logger.error('[AutoJournal] Balance sync failed for payment:', syncError);
+        }
 
         return { success: true, journalEntryId: result };
     } catch (error) {
