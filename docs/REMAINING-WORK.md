@@ -434,33 +434,38 @@
 
 #### SLA & Escalation
 
-- [ ] **[UCE-16]** SLA Engine — Service level tracking per transaction type
-  - **File:** SLA tracking model
+- [x] **[UCE-16]** SLA Engine — Service level tracking per transaction type
+  - **File:** [`apps/web/lib/sla-templates.ts`](apps/web/lib/sla-templates.ts), [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts)
   - **Dependency:** UCE-01
   - **Complexity:** High
   - **Ref:** ADR-020
+  - **Status:** ✅ DONE (Session 61) — 7 SLA template presets + dashboard aggregation + auto-escalation
 
-- [ ] **[UCE-17]** SLA Color Coding — 🟢 0-50%, 🟡 50-100%, 🔴 >100% SLA
-  - **File:** UI component
+- [x] **[UCE-17]** SLA Color Coding — 🟢 0-50%, 🟡 50-100%, 🔴 >100% SLA
+  - **File:** [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts)
   - **Dependency:** UCE-16
   - **Complexity:** Low
+  - **Status:** ✅ DONE (Session 61) — green/yellow/red/breached with percent remaining
 
-- [ ] **[UCE-18]** Escalation Engine — Deadline-based: PIC → Supervisor → Manager → Director
+- [x] **[UCE-18]** Escalation Engine — Deadline-based: PIC → Supervisor → Manager → Director
   - **File:** Escalation rules engine
   - **Dependency:** UCE-16
   - **Complexity:** High
+  - **Status:** 🟡 Partial — existing [`approval-escalation.ts`](apps/web/lib/approval-escalation.ts) handles escalation; SLA breach auto-escalation added in Session 61
 
 #### Delegation
 
-- [ ] **[UCE-19]** Delegation Framework — Manager delegate approval authority saat absent
-  - **File:** Delegation model
+- [x] **[UCE-19]** Delegation Framework — Manager delegate approval authority saat absent
+  - **File:** [`apps/web/lib/delegation.ts`](apps/web/lib/delegation.ts)
   - **Dependency:** UCE-12
   - **Complexity:** Medium
+  - **Status:** ✅ DONE (Session 61) — delegate/revoke/check functions with audit trail
 
-- [ ] **[UCE-20]** Delegation Auto-expire — Otomatis berakhir setelah periode selesai
-  - **File:** Cron job for expiration
+- [x] **[UCE-20]** Delegation Auto-expire — Otomatis berakhir setelah periode selesai
+  - **File:** [`apps/web/lib/delegation.ts`](apps/web/lib/delegation.ts)
   - **Dependency:** UCE-19
   - **Complexity:** Low
+  - **Status:** ✅ DONE (Session 61) — time-limited with startDate/endDate, auto-check on query
 
 - [ ] **[UCE-21]** Delegated Work Inbox — Delegatee melihat delegated items
   - **File:** Work inbox extension
@@ -482,11 +487,12 @@
 
 #### Locking Engine
 
-- [ ] **[UCE-24]** Locking Engine — Hierarchical: Transaction → Day → Month → Quarter → Year
-  - **File:** Lock model + evaluation
+- [x] **[UCE-24]** Locking Engine — Hierarchical: Transaction → Day → Month → Quarter → Year
+  - **File:** [`apps/web/app/api/finance/locks/route.ts`](apps/web/app/api/finance/locks/route.ts), [`apps/web/app/api/finance/locks/[id]/route.ts`](apps/web/app/api/finance/locks/[id]/route.ts)
   - **Dependency:** UCE-01
   - **Complexity:** High
   - **Ref:** ADR-016
+  - **Status:** ✅ DONE (Session 61) — pessimistic lock acquire/release/list with timeout + admin override
 
 - [ ] **[UCE-25]** Lock Policy — Per-company configurable lock policy
   - **File:** Lock configuration
@@ -502,10 +508,11 @@
 #### Exception Center
 
 - [ ] **[UCE-27]** Exception Center — Dashboard terpusat untuk semua anomali
-  - **File:** `apps/web/app/dashboard/control/exceptions/page.tsx` (new)
+  - **File:** [`apps/web/app/api/finance/controls/dashboard/route.ts`](apps/web/app/api/finance/controls/dashboard/route.ts) (aggregation endpoint created)
   - **Dependency:** UCE-01
   - **Complexity:** High
   - **Ref:** ADR-021
+  - **Status:** 🟡 Partial — aggregation API created, full UI page still planned
 
 - [ ] **[UCE-28]** Exception Categories — Overdue, SLA Breach, SoD Conflict, Negative Stock, Unreconciled, Policy Violation
   - **File:** Exception detection engines
