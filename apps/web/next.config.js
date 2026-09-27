@@ -89,7 +89,7 @@ const nextConfig = {
         // into client chunks. See: apps/web/components/ai/anomaly-list.tsx fix.
         // ioredis v6 uses node:diagnostics_channel which webpack cannot bundle —
         // externalize it to prevent "UnhandledSchemeError" build failures.
-        serverComponentsExternalPackages: ["nodemailer", "ioredis"],
+        serverComponentsExternalPackages: ["nodemailer", "ioredis", "async_hooks"],
     },
     // Webpack config: externalize ioredis for ALL server-side builds
     // (server components, API routes, AND middleware Edge Runtime).
