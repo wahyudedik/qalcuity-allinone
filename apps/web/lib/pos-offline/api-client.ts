@@ -22,7 +22,17 @@ import {
 } from './db';
 import { SyncEngine } from './sync';
 import { logger } from '@/lib/logger';
-import { toAuditPayload } from '@/lib/audit';
+
+// Inline copy of toAuditPayload from @/lib/audit to BREAK the import chain:
+// api-client.ts → audit.ts → db.ts → tenant-context.ts → async_hooks (Node.js only!)
+// This module is used client-side (via use-pos-offline hook), so it must NOT
+// transitively depend on Node.js-only modules.
+function toAuditPayload(data: unknown): Record<string, unknown> {
+    if (data && typeof data === 'object') {
+        return data as Record<string, unknown>;
+    }
+    return {};
+}
 
 // =============================================================================
 // Types
