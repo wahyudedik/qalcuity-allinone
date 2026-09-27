@@ -13,6 +13,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { materializedViewsExist } from '@/lib/analytics/read-model'
+import { handleTableNotReady, handleViewNotReady } from '@/lib/analytics/table-error-handler'
 
 // ============================================
 // TYPES
@@ -199,10 +200,51 @@ export async function GET(request: Request) {
 
         // Materialized view queries for revenue data (fast path)
         // Plus non-revenue queries — all in parallel for maximum performance
+        // ============================================
+        // RAW SQL QUERIES (with graceful fallback)
+        // Materialized views may not exist if migration hasn't been run.
+        // Wrap in try/catch and fall back to empty arrays.
+        // ============================================
+        let mvCurrentRevenue: { total: number | null }[] = [{ total: 0 }]
+        let mvPreviousRevenue: { total: number | null }[] = [{ total: 0 }]
+        let mvRevenueByMonth: { month: string; total: number | null }[] = []
+
+        try {
+            ;[mvCurrentRevenue, mvPreviousRevenue, mvRevenueByMonth] = await Promise.all([
+                // MV: Current period revenue (fast — pre-aggregated)
+                prisma.$queryRaw<{ total: number | null }[]>`
+                    SELECT COALESCE(SUM(total_revenue), 0)::float AS total
+                    FROM mv_daily_revenue
+                    WHERE "tenantId" = ${tenantId}
+                    AND date >= ${currentFrom} AND date <= ${currentTo}
+                `,
+                // MV: Previous period revenue (fast — pre-aggregated)
+                prisma.$queryRaw<{ total: number | null }[]>`
+                    SELECT COALESCE(SUM(total_revenue), 0)::float AS total
+                    FROM mv_daily_revenue
+                    WHERE "tenantId" = ${tenantId}
+                    AND date >= ${previousFrom} AND date <= ${previousTo}
+                `,
+                // MV: Revenue by month for trend chart (fast — pre-aggregated)
+                prisma.$queryRaw<{ month: string; total: number | null }[]>`
+                    SELECT TO_CHAR(date, 'YYYY-MM') AS month,
+                           SUM(total_revenue)::float AS total
+                    FROM mv_daily_revenue
+                    WHERE "tenantId" = ${tenantId}
+                    GROUP BY TO_CHAR(date, 'YYYY-MM')
+                    ORDER BY TO_CHAR(date, 'YYYY-MM')
+                `,
+            ])
+            logger.info(`[Analytics Dashboard] MV queries succeeded for tenant ${tenantId}`)
+        } catch (mvError: unknown) {
+            // MV not available — will fallback to direct Invoice queries below
+            logger.warn(`[Analytics Dashboard] MV queries failed (migration pending?), falling back to direct queries: ${mvError instanceof Error ? mvError.message : String(mvError)}`)
+            mvCurrentRevenue = [{ total: 0 }]
+            mvPreviousRevenue = [{ total: 0 }]
+            mvRevenueByMonth = []
+        }
+
         const [
-            mvCurrentRevenue,
-            mvPreviousRevenue,
-            mvRevenueByMonth,
             currentExpenses,
             previousExpenses,
             expensesByMonth,
@@ -216,31 +258,6 @@ export async function GET(request: Request) {
             recentAlerts,
             topKPIs,
         ] = await Promise.all([
-            // MV: Current period revenue (fast — pre-aggregated)
-            prisma.$queryRaw<{ total: number | null }[]>`
-                SELECT COALESCE(SUM(total_revenue), 0)::float AS total
-                FROM mv_daily_revenue
-                WHERE "tenantId" = ${tenantId}
-                AND date >= ${currentFrom} AND date <= ${currentTo}
-            `,
-
-            // MV: Previous period revenue (fast — pre-aggregated)
-            prisma.$queryRaw<{ total: number | null }[]>`
-                SELECT COALESCE(SUM(total_revenue), 0)::float AS total
-                FROM mv_daily_revenue
-                WHERE "tenantId" = ${tenantId}
-                AND date >= ${previousFrom} AND date <= ${previousTo}
-            `,
-
-            // MV: Revenue by month for trend chart (fast — pre-aggregated)
-            prisma.$queryRaw<{ month: string; total: number | null }[]>`
-                SELECT TO_CHAR(date, 'YYYY-MM') AS month,
-                       SUM(total_revenue)::float AS total
-                FROM mv_daily_revenue
-                WHERE "tenantId" = ${tenantId}
-                GROUP BY TO_CHAR(date, 'YYYY-MM')
-                ORDER BY TO_CHAR(date, 'YYYY-MM')
-            `,
 
             // Current period expenses
             prisma.payment.aggregate({
@@ -524,6 +541,10 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: response })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'dashboard')
+        if (tableError) return tableError
+        const viewError = handleViewNotReady(error, 'dashboard')
+        if (viewError) return viewError
         logger.error('[Analytics Dashboard Error]', error)
         return handleApiError(error)
     }

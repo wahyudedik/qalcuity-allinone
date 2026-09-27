@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 // ============================================
 // Saved Reports API â€” GET (list), POST (create)
@@ -14,6 +14,7 @@ import { handleApiError } from '@/lib/api-error'
 import type { Prisma } from '@prisma/client'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createReportSchema } from '@/lib/validation-schemas'
+import { handleTableNotReady } from '@/lib/analytics/table-error-handler'
 
 // ============================================
 // GET â€” List saved reports for tenant
@@ -81,6 +82,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedReports })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'reports:GET')
+        if (tableError) return tableError
         logger.error('[ERROR]', error)
         return handleApiError(error)
     }
@@ -154,6 +157,8 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'reports:POST')
+        if (tableError) return tableError
         logger.error('[ERROR]', error)
         return handleApiError(error)
     }

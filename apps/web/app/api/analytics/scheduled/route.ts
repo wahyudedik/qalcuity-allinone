@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 // ============================================
 // Scheduled Queries API â€” GET (list), POST (create)
@@ -13,6 +13,7 @@ import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createScheduledQuerySchema, formatZodError } from '@/lib/validation-schemas'
+import { handleTableNotReady } from '@/lib/analytics/table-error-handler'
 
 // ============================================
 // GET â€” List scheduled queries for tenant
@@ -75,6 +76,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ success: true, data: enrichedScheduled })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'scheduled:GET')
+        if (tableError) return tableError
         logger.error('[ERROR]', error)
         return handleApiError(error)
     }
@@ -153,6 +156,8 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'scheduled:POST')
+        if (tableError) return tableError
         logger.error('[ERROR]', error)
         return handleApiError(error)
     }

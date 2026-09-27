@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 // ============================================
 // Query History API â€” GET (list), POST (create)
@@ -13,6 +13,7 @@ import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createQueryHistorySchema, formatZodError } from '@/lib/validation-schemas'
+import { handleTableNotReady } from '@/lib/analytics/table-error-handler'
 
 // ============================================
 // GET â€” List query history for tenant (with pagination)
@@ -93,6 +94,8 @@ export async function GET(request: Request) {
             },
         })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'query-history:GET')
+        if (tableError) return tableError
         logger.error('[ERROR]', error)
         return handleApiError(error)
     }
@@ -167,6 +170,8 @@ export async function POST(request: Request) {
             },
         }, { status: 201 })
     } catch (error) {
+        const tableError = handleTableNotReady(error, 'query-history:POST')
+        if (tableError) return tableError
         logger.error('[ERROR]', error)
         return handleApiError(error)
     }
