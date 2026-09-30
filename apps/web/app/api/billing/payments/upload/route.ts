@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requirePermissionForRoute } from '@/lib/session';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { getUploadSubDir } from '@/lib/upload-dir';
 import { logAudit } from '@/lib/audit';
 import { handleApiError } from '@/lib/api-error';
 import { MSG } from '@/lib/api-messages';
@@ -50,8 +51,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Buat direktori jika belum ada
-        const uploadDir = join(process.cwd(), 'public', 'uploads', 'billing');
+        // Buat direktori jika belum ada (persistent base dir via lib/upload-dir.ts)
+        const uploadDir = getUploadSubDir('billing');
         await mkdir(uploadDir, { recursive: true });
 
         // Generate filename unik

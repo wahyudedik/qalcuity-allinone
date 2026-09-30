@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { getUploadSubDir } from '@/lib/upload-dir';
 import { handleApiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -71,11 +72,10 @@ export async function POST(request: Request) {
             );
         }
 
-        // 4. Determine upload directory â€” tenant-isolated path
-        const baseUploadDir = process.env.UPLOAD_DIR
-            ? join(process.cwd(), process.env.UPLOAD_DIR)
-            : join(process.cwd(), 'public', 'uploads');
-        const uploadDir = join(baseUploadDir, tenantId);
+        // 4. Determine upload directory — tenant-isolated path
+        //    UPLOAD_DIR absolut (production) → dipakai langsung (persistent, di luar tree aplikasi);
+        //    relatif/tidak diset → backward compat (cwd / public/uploads). Lihat lib/upload-dir.ts.
+        const uploadDir = getUploadSubDir(tenantId);
         await mkdir(uploadDir, { recursive: true });
 
         // 5. Generate unique filename
