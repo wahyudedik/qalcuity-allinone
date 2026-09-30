@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -80,6 +80,13 @@ export function PlatformSidebar({ isOpen = false, onClose }: PlatformSidebarProp
     const pathname = usePathname();
     const { data: session } = useSession();
     const { t } = useTranslation();
+
+    // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const navRef = useRef<HTMLElement>(null);
     const activeItemRef = useRef<HTMLAnchorElement>(null);
@@ -183,8 +190,8 @@ export function PlatformSidebar({ isOpen = false, onClose }: PlatformSidebarProp
                                                 : undefined
                                         }
                                         className={`flex items-center gap-3 rounded-lg px-3 py-2 min-h-[44px] text-sm font-medium transition ${isActive
-                                                ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                                            ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
                                             }`}
                                     >
                                         <Icon className="h-5 w-5 shrink-0" />
@@ -217,8 +224,8 @@ export function PlatformSidebar({ isOpen = false, onClose }: PlatformSidebarProp
                                                                     : undefined
                                                             }
                                                             className={`flex min-h-[44px] items-center rounded-lg px-3 py-2 text-sm transition ${isChildActive
-                                                                    ? "bg-purple-50 text-purple-700 font-medium dark:bg-purple-900/30 dark:text-purple-400"
-                                                                    : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                                                                ? "bg-purple-50 text-purple-700 font-medium dark:bg-purple-900/30 dark:text-purple-400"
+                                                                : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                                                                 }`}
                                                         >
                                                             {child.label}
@@ -245,19 +252,24 @@ export function PlatformSidebar({ isOpen = false, onClose }: PlatformSidebarProp
                         <span>{t("platform.customerDashboard") || "Customer Dashboard"}</span>
                     </Link>
 
-                    {/* User Info */}
+                    {/* User Info — fallback server dipertahankan sampai isMounted
+                        agar text node identik dengan HTML server saat hydration */}
                     <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                            {session?.user?.name
+                            {isMounted && session?.user?.name
                                 ? getInitials(session.user.name)
                                 : "SA"}
                         </div>
                         <div className="flex-1 truncate">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {session?.user?.name || "Super Admin"}
+                                {isMounted && session?.user?.name
+                                    ? session.user.name
+                                    : "Super Admin"}
                             </p>
                             <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                                {session?.user?.email || "admin@qalcuity.com"}
+                                {isMounted && session?.user?.email
+                                    ? session.user.email
+                                    : "admin@qalcuity.com"}
                             </p>
                         </div>
                         <button
