@@ -1,6 +1,65 @@
-> **Last Updated:** 30 September 2026 (Session 64: Hydration Mismatch #418/#423 — Root Cause di Layout Chain)
-> **Version:** v11.50.0
-> **Status:** ✅ STABLE — Session 64: React Error #418/#423 root cause fix di layout chain (sidebar/header/notification-center + platform layout). TypeScript: 0 errors.
+> **Last Updated:** 30 September 2026 (Session 65: Upload Storage Persistent — Fix 404 `/uploads/` di Production)
+> **Version:** v11.51.0
+> **Status:** ✅ STABLE — Session 65: Jalur A — storage persistent `UPLOAD_DIR` (di luar tree aplikasi) + serving route `/uploads/[...path]` + onError avatar. TypeScript: 0 errors.
+
+## 🔧 Session 65 — Upload Storage Persistent (Jalur A) — Fix 404 `/uploads/` di Production — 30 Sep 2026
+
+> **Focus:** Fix 404 `GET /uploads/<tenantId>/<file>.jpg` di qalcuity.com — root cause file upload hilang saat deploy (gitignore + tanpa backup/sync)
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 65 Summary
+
+#### Root Cause (Terbukti — Investigasi Produksi)
+
+1. Upload menulis ke local filesystem: [`apps/web/app/api/upload/route.ts`](apps/web/app/api/upload/route.ts) memakai `process.env.UPLOAD_DIR ? join(process.cwd(), UPLOAD_DIR) : join(process.cwd(), 'public', 'uploads')` → **selalu relatif ke cwd** (path absolut di-env tidak pernah dipakai benar).
+2. `UPLOAD_DIR` tidak didefinisikan di env manapun → selalu default `public/uploads`.
+3. `apps/web/public/uploads/` **di-gitignore** (`.gitignore`) → `git pull` di VPS tidak pernah membawa file upload.
+4. **Tidak ada** langkah backup/sync uploads di [`update.sh`](update.sh), [`deploy-vps.sh`](deploy-vps.sh), maupun GitHub Actions.
+5. Writer kedua: [`apps/web/app/api/billing/payments/upload/route.ts`](apps/web/app/api/billing/payments/upload/route.ts) **hardcode** `public/uploads/billing`.
+6. Serving mechanics sudah benar: middleware matcher hanya `/dashboard/:path*`, `/platform/:path*`, `/api/:path*` → `/uploads` tidak diblokir; nginx catch-all proxy ke Node; `next start` non-standalone serve `public/` dari cwd. CSP `img-src 'self'` mengizinkan same-origin. **404 = file fisik tidak ada di disk.**
+7. DB menyimpan relative URL (kolom `User.avatar`, `Tenant.logo`, `BillingPayment.proofFileUrl` dsb di [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma)) → orphan reference saat file hilang.
+8. `<img>` avatar di [`apps/web/app/dashboard/settings/page.tsx`](apps/web/app/dashboard/settings/page.tsx) tanpa `onError` → retry loop noise di console.
+
+#### Fix Jalur A — Persistent UPLOAD_DIR + Serving Route
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/lib/upload-dir.ts`](apps/web/lib/upload-dir.ts) **(NEW)** | Shared helper: `getUploadBaseDir()` (UPLOAD_DIR absolut → dipakai langsung; relatif → join cwd; tidak diset → `public/uploads`) + `getUploadSubDir(segment)` (tolak `..`, `/`, `\`, null byte) |
+| 2 | [`apps/web/app/api/upload/route.ts`](apps/web/app/api/upload/route.ts) | Refactor resolusi directory (~baris 74) memakai `getUploadSubDir(tenantId)`; `mkdir(..., { recursive: true })` tetap ada (base dir dibuat otomatis saat upload pertama); URL return tetap relative `/uploads/${tenantId}/${fileName}` (DB lama kompatibel) |
+| 3 | [`apps/web/app/api/billing/payments/upload/route.ts`](apps/web/app/api/billing/payments/upload/route.ts) | Ganti hardcoded `public/uploads/billing` (~baris 54) memakai `getUploadSubDir('billing')` |
+| 4 | [`apps/web/app/uploads/[...path]/route.ts`](apps/web/app/uploads/[...path]/route.ts) **(NEW)** | Route handler GET serving file dari `getUploadBaseDir()`: proteksi path traversal (resolve + cek `resolved === baseDir \|\| startsWith(baseDir + sep)` → 403), stat isFile → 404 jika tidak ada, Content-Type map ekstensi (.jpg/.jpeg/.png/.gif/.webp/.svg/.pdf + default octet-stream), `Cache-Control: public, max-age=31536000, immutable`, error format standar `{ success: false, error: { code, message } }` via [`apps/web/lib/api-messages.ts`](apps/web/lib/api-messages.ts) (`MSG.FILE_NOT_FOUND`) |
+| 5 | [`apps/web/app/dashboard/settings/page.tsx`](apps/web/app/dashboard/settings/page.tsx) | `<img>` avatar (~baris 290) + `onError={() => setPhotoPreview(null)}` → jatuh ke fallback initials yang sudah ada di page (reuse, bukan komponen baru; client event handler = tanpa hydration impact) |
+| 6 | [`apps/web/.env.example`](apps/web/.env.example) + [`apps/web/.env.production.example`](apps/web/.env.production.example) | Dokumentasi `UPLOAD_DIR` (contoh tercomment: `/www/data/qalcuity-uploads`) |
+
+#### Kompatibilitas Legacy
+
+- File LAMA yang masih ada di `apps/web/public/uploads/` (mis. 2 file legacy ter-track git) tetap ter-serve statis oleh Next.js **SEBELUM** route handler (direktori `public/` dicek lebih dulu) → tidak ada regresi.
+- Route handler `/uploads/[...path]` hanya menangani file di base dir persistent.
+- Format URL di DB TIDAK berubah (`/uploads/...` relative) → referensi DB lama tetap valid untuk file yang ada.
+- [`apps/web/app/dashboard/settings/company/page.tsx`](apps/web/app/dashboard/settings/company/page.tsx) dicek: hanya menampilkan placeholder div statis (tanpa `<img>` logo) → tidak perlu `onError`.
+
+#### Langkah Manual VPS (WAJIB dijalankan user sebelum/per saat deploy)
+
+1. `mkdir -p /www/data/qalcuity-uploads`
+2. `chown -R www:www /www/data/qalcuity-uploads` (atau user yang dipakai aaPanel Node.js Manager menjalankan app — sesuaikan)
+3. Tambah `UPLOAD_DIR=/www/data/qalcuity-uploads` di `.env` app di VPS (`/www/wwwroot/qalcuity/apps/web/.env`)
+4. Re-upload avatar tenant (file `1790767539617-Gemini_Generated_Image_*.jpg` tidak ditemukan di mesin manapun — file lama hilang permanen)
+5. Deploy normal via `bash update.sh`
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/middleware.ts`, `apps/web/lib/auth.ts`, `apps/web/lib/session.ts`, `packages/db/prisma/schema.prisma`, `apps/web/app/api/auth/` tidak disentuh. `.gitignore` tidak diubah (uploads tetap ignore — production tidak lagi bergantung padanya). `update.sh` tidak diubah (Jalur A tidak memerlukannya). Logic auth/permission/serving security posture tidak berubah — file upload tetap ter-serve tanpa auth, sama seperti perilaku `public/` statis sebelumnya.
+
+#### Tradeoff & Catatan
+
+- **File serving tanpa auth** — konsisten dengan perilaku `public/` statis sebelumnya (bukan regresi). Hardening auth untuk file serving = di luar scope Jalur A.
+- **`Cache-Control: immutable`** aman karena nama file mengandung timestamp = unik per upload.
+- **`mkdir(..., { recursive: true })`** di writer membuat base dir + sub-dir otomatis saat upload pertama, jadi `mkdir -p` manual di VPS bersifat preparatory (recommended agar ownership benar sebelum app user menulis).
+- **Backup uploads ke depan:** file persistent di `/www/data/qalcuity-uploads` tidak ter-backup otomatis oleh repo/deploy — pertimbangkan backup task terpisah (di luar scope sesi ini).
+- **Dev lokal** tidak berubah: `UPLOAD_DIR` tidak diset → tetap `public/uploads` via cwd.
+
+#### TypeScript: 0 errors
+
+---
 
 ## 🔧 Session 64 — Hydration Mismatch #418/#423 Root Cause Fix (Layout Chain) — 30 Sep 2026
 

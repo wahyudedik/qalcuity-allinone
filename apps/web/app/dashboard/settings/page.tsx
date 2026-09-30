@@ -287,7 +287,12 @@ export default function ProfileSettingsPage() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.profilePicture') || 'Foto Profil'}</h2>
                 <div className="flex items-center gap-6">
                     {photoPreview ? (
-                        <img src={photoPreview} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
+                        <img
+                            src={photoPreview}
+                            alt="Profile"
+                            className="w-20 h-20 rounded-full object-cover"
+                            onError={() => setPhotoPreview(null)}
+                        />
                     ) : (
                         <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                             {initials}
