@@ -10,7 +10,7 @@
 #   1. Pre-flight checks (directory, Node.js, PostgreSQL)
 #   2. Backup database
 #   3. Git pull latest code
-#   4. Install dependencies
+#   4. Install dependencies 
 #   5. Prisma generate (always)
 #   6. Prisma migrate deploy (if schema or migration files changed)
 #   7. Build Next.js

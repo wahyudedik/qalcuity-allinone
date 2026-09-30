@@ -82,6 +82,13 @@ export default function ApprovalsPage() {
     const canMutate = canMutateFn('hr')
     const isAdmin = isAdminFn()
 
+    // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
     const [activeTab, setActiveTab] = useState<'pending' | 'levels'>('pending')
     const [requests, setRequests] = useState<ApprovalRequest[]>([])
     const [levels, setLevels] = useState<ApprovalLevel[]>([])
@@ -289,19 +296,17 @@ export default function ApprovalsPage() {
                         {t('approval.subtitle') || 'Kelola persetujuan transaksi bisnis'}
                     </p>
                 </div>
-                {isAdmin && activeTab === 'levels' && (
-                    <button
-                        onClick={() => {
-                            setEditingLevel(null)
-                            setLevelForm({ entityType: 'INVOICE', level: 1, name: '', requiredRole: 'ADMIN' })
-                            setShowLevelForm(true)
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                    >
-                        <Plus className="h-4 w-4" />
-                        {t('approval.addLevel') || 'Tambah Level'}
-                    </button>
-                )}
+                <button
+                    onClick={() => {
+                        setEditingLevel(null)
+                        setLevelForm({ entityType: 'INVOICE', level: 1, name: '', requiredRole: 'ADMIN' })
+                        setShowLevelForm(true)
+                    }}
+                    className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium ${isMounted && isAdmin && activeTab === 'levels' ? '' : 'invisible'}`}
+                >
+                    <Plus className="h-4 w-4" />
+                    {t('approval.addLevel') || 'Tambah Level'}
+                </button>
             </div>
 
             {/* Tabs */}
@@ -324,20 +329,18 @@ export default function ApprovalsPage() {
                             )}
                         </div>
                     </button>
-                    {isAdmin && (
-                        <button
-                            onClick={() => setActiveTab('levels')}
-                            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'levels'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
-                                }`}
-                        >
-                            <div className="flex items-center gap-2">
-                                <Settings className="h-4 w-4" />
-                                {t('approval.approvalLevels') || 'Level Persetujuan'}
-                            </div>
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setActiveTab('levels')}
+                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'levels'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                            } ${isMounted && isAdmin ? '' : 'invisible'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            {t('approval.approvalLevels') || 'Level Persetujuan'}
+                        </div>
+                    </button>
                 </nav>
             </div>
 
@@ -457,8 +460,8 @@ export default function ApprovalsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                                    {req.status === 'PENDING' && canMutate && (
-                                                        <div className="flex items-center justify-end gap-2">
+                                                    {req.status === 'PENDING' && (
+                                                        <div className={`flex items-center justify-end gap-2 ${isMounted && canMutate ? '' : 'invisible'}`}>
                                                             <button
                                                                 onClick={() => {
                                                                     setSelectedRequest(req)
@@ -524,8 +527,8 @@ export default function ApprovalsPage() {
                                                 {req.comments}
                                             </div>
                                         )}
-                                        {req.status === 'PENDING' && canMutate && (
-                                            <div className="flex gap-2">
+                                        {req.status === 'PENDING' && (
+                                            <div className={`flex gap-2 ${isMounted && canMutate ? '' : 'invisible'}`}>
                                                 <button
                                                     onClick={() => {
                                                         setSelectedRequest(req)

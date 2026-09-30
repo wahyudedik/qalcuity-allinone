@@ -6,6 +6,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { handleApiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { MSG } from '@/lib/api-messages';
+import { toNumber } from '@/lib/utils';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -47,16 +48,7 @@ interface AgingReportResponse {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function toNumber(val: unknown): number {
-    if (val === null || val === undefined) return 0;
-    if (typeof val === 'number') return val;
-    if (typeof val === 'string') return parseFloat(val) || 0;
-    if (typeof val === 'object' && 'toNumber' in (val as Record<string, unknown>)) {
-        return (val as { toNumber: () => number }).toNumber();
-    }
-    return 0;
-}
+// toNumber: shared Prisma Decimal → number converter from '@/lib/utils'
 
 function calculateAgeDays(referenceDate: Date, today: Date): number {
     const diffMs = today.getTime() - referenceDate.getTime();
