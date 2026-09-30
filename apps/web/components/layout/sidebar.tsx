@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -265,6 +265,15 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const isMember = userRole === "MEMBER";
     const isViewer = userRole === "VIEWER";
 
+    // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
+    // Server dan render pertama client selalu punya session = null → semua
+    // output berbasis session harus identik di keduanya, lalu update setelah mounted.
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // ─── Refs untuk auto-scroll ke menu aktif ─────────────────────────────────
     const navRef = useRef<HTMLElement>(null);
     const activeItemRef = useRef<HTMLAnchorElement>(null);
@@ -334,30 +343,34 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     </button>
                 </div>
 
-                {/* Badge Role */}
-                {userRole && (
-                    <div className="shrink-0 border-b border-gray-200 px-6 py-2 dark:border-gray-700">
-                        <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isSuperAdmin
-                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                : isAdmin
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : isMember
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                                }`}
-                        >
-                            <Shield className="h-3 w-3" />
-                            {isSuperAdmin
-                                ? "Super Admin"
-                                : isAdmin
-                                    ? "Admin"
-                                    : isMember
-                                        ? "Member"
-                                        : "Viewer"}
-                        </span>
-                    </div>
-                )}
+                {/* Badge Role — SELALU dirender agar DOM konsisten antara
+                    server & client; disembunyikan via CSS sampai mounted + ada role */}
+                <div
+                    className={`shrink-0 border-b border-gray-200 px-6 py-2 dark:border-gray-700 ${isMounted && userRole ? "" : "invisible"
+                        }`}
+                >
+                    <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isSuperAdmin
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                            : isAdmin
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                : isMember
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                            }`}
+                    >
+                        <Shield className="h-3 w-3" />
+                        {isSuperAdmin
+                            ? "Super Admin"
+                            : isAdmin
+                                ? "Admin"
+                                : isMember
+                                    ? "Member"
+                                    : isViewer
+                                        ? "Viewer"
+                                        : "—"}
+                    </span>
+                </div>
 
                 {/* Navigasi — scrollable area */}
                 <nav
@@ -366,8 +379,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e1 transparent" }}
                 >
                     <ul className="space-y-1">
+                        {/* Sebelum mounted: render SEMUA item (adminOnly disembunyikan
+                            via invisible) agar DOM server = client. Setelah mounted:
+                            filter by role seperti biasa — non-admin kehilangan item
+                            adminOnly dari DOM (post-hydration, aman untuk React). */}
                         {getMenuItems(t)
-                            .filter(isMenuVisible)
+                            .filter((item) => (isMounted ? isMenuVisible(item) : true))
                             .map((item) => {
                                 const isActive =
                                     pathname === item.href ||
@@ -385,7 +402,14 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                                 );
 
                                 return (
-                                    <li key={item.href}>
+                                    <li
+                                        key={item.href}
+                                        className={
+                                            item.adminOnly && !isMounted
+                                                ? "invisible"
+                                                : ""
+                                        }
+                                    >
                                         <Link
                                             href={item.href}
                                             onClick={onClose}
@@ -438,20 +462,26 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     </ul>
                 </nav>
 
-                {/* Footer — data dari session */}
+                {/* Footer — data dari session; fallback server ("U"/"User"/
+                    "user@qalcuity.com") dipertahankan sampai isMounted true agar
+                    text node identik dengan HTML server saat hydration */}
                 <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-700">
                     <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                            {session?.user?.name
+                            {isMounted && session?.user?.name
                                 ? getInitials(session.user.name)
                                 : "U"}
                         </div>
                         <div className="flex-1 truncate">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {session?.user?.name || "User"}
+                                {isMounted && session?.user?.name
+                                    ? session.user.name
+                                    : "User"}
                             </p>
                             <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                                {session?.user?.email || "user@qalcuity.com"}
+                                {isMounted && session?.user?.email
+                                    ? session.user.email
+                                    : "user@qalcuity.com"}
                             </p>
                         </div>
                     </div>

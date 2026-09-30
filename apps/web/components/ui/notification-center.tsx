@@ -38,6 +38,15 @@ export function NotificationCenter() {
     const dropdownRef = useRef<HTMLDivElement>(null)
     const eventSourceRef = useRef<EventSource | null>(null)
 
+    // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
+    // Badge notifikasi tidak boleh muncul di DOM sebelum mounted agar HTML
+    // server (tanpa badge) identik dengan render pertama client.
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
     const fetchNotifications = useCallback(async () => {
         if (!session?.user) return
         try {
@@ -189,7 +198,7 @@ export function NotificationCenter() {
                 aria-label={t('notification.title')}
             >
                 <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
+                {isMounted && unreadCount > 0 && (
                     <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>

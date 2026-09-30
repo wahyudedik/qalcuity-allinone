@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 import {
     Menu,
@@ -18,7 +19,14 @@ interface PlatformHeaderProps {
 export function PlatformHeader({ onMenuClick }: PlatformHeaderProps) {
     const pathname = usePathname();
     const { data: session } = useSession();
-    const { isDark, toggleTheme, mounted } = useDarkMode();
+    const { isDark, toggleTheme } = useDarkMode();
+
+    // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Generate breadcrumbs from pathname
     const segments = (pathname || "").split("/").filter(Boolean);
@@ -76,7 +84,7 @@ export function PlatformHeader({ onMenuClick }: PlatformHeaderProps) {
                     className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                     aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
                 >
-                    {mounted && isDark ? (
+                    {isMounted && isDark ? (
                         <Sun className="h-5 w-5" />
                     ) : (
                         <Moon className="h-5 w-5" />
@@ -86,7 +94,9 @@ export function PlatformHeader({ onMenuClick }: PlatformHeaderProps) {
                 {/* User Name */}
                 <div className="hidden sm:block text-right">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {session?.user?.name || session?.user?.email || "Platform Owner"}
+                        {isMounted && session?.user
+                            ? session.user.name || session.user.email || "Platform Owner"
+                            : "Platform Owner"}
                     </p>
                     <p className="text-xs text-purple-600 dark:text-purple-400">
                         Platform Owner

@@ -1,6 +1,68 @@
-> **Last Updated:** 30 September 2026 (Session 63: SEC-02 Decimal Helpers + SEC-04 @qalcuity/api Completion)
-> **Version:** v11.49.0
-> **Status:** ✅ STABLE — Session 63: Decimal type helpers shared + @qalcuity/api package completed (retry + standardized errors). TypeScript: 0 errors.
+> **Last Updated:** 30 September 2026 (Session 64: Hydration Mismatch #418/#423 — Root Cause di Layout Chain)
+> **Version:** v11.50.0
+> **Status:** ✅ STABLE — Session 64: React Error #418/#423 root cause fix di layout chain (sidebar/header/notification-center + platform layout). TypeScript: 0 errors.
+
+## 🔧 Session 64 — Hydration Mismatch #418/#423 Root Cause Fix (Layout Chain) — 30 Sep 2026
+
+> **Focus:** Fix React Error #418 ×3 + Error #423 di production yang TETAP muncul setelah fix Session 62 — root cause sebenarnya di layout chain, bukan halaman approvals
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 64 Summary
+
+#### Root Cause (Investigasi Debug Mode)
+
+Error #418/#423 di `/dashboard/approvals` setelah deploy commit `204a157` **bukan** berasal dari halaman approvals (itu sudah benar diperbaiki via pola `isMounted` di Session 62). Root cause ada di **layout chain yang membungkus SEMUA halaman dashboard**:
+
+1. [`apps/web/app/layout.tsx`](apps/web/app/layout.tsx) memakai `export const dynamic = 'force-dynamic'` → SSR terjadi, tapi `SessionProvider` TIDAK menerima prop `session` → hydration client SELALU dimulai dengan `session = null`.
+2. Selama SSR + render pertama client, `useSession()` = `{ data: null, status: 'loading' }` → menu admin, role badge, nama user, badge notifikasi TIDAK ADA di HTML server.
+3. Di VPS cepat, `fetch /api/auth/session` resolve saat hydration masih berjalan → React mendeteksi DOM client sudah beda → **Error #418 ×3** (3 komponen layout mismatch).
+4. **Error #423 adalah CASCADE** dari kegagalan hydration di subtree layout — hilang sendiri begitu #418 diperbaiki.
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `apps/web/lib/session.ts`, `apps/web/middleware.ts`, `apps/web/app/api/auth/` TIDAK disentuh. Logic auth/session tidak berubah — hanya cara render diubah agar DOM konsisten antara server dan client.
+
+#### Fix: Pola `isMounted` + CSS Visibility (konsisten dengan approvals/page.tsx)
+
+Pola yang sama dengan yang sudah terbukti di [`apps/web/app/dashboard/approvals/page.tsx`](apps/web/app/dashboard/approvals/page.tsx): tambah flag `isMounted` (`useState(false)` + `useEffect(() => setIsMounted(true), [])`), elemen SELALU ada di DOM (dengan fallback default saat belum mounted), kendalikan via CSS class `invisible` / text fallback sampai `isMounted` true.
+
+| # | Komponen | Sumber Mismatch | Fix |
+|---|----------|-----------------|-----|
+| 1 | [`apps/web/components/layout/sidebar.tsx`](apps/web/components/layout/sidebar.tsx) | `.filter(isMenuVisible)` menghapus `<li>` admin menu dari HTML server; role badge `{userRole && <div>}` structural; footer text fallback | Menu: render semua item sebelum mounted (`invisible` untuk adminOnly), filter by role SETELAH mounted; badge: div SELALU dirender + `invisible`; footer: guard `isMounted &&` untuk initials/nama/email |
+| 2 | [`apps/web/components/layout/header.tsx`](apps/web/components/layout/header.tsx) | Inisial/nama/email user + dropdown name/email text mismatch | Guard `isMounted &&` di 4 lokasi (avatar initials, nama, dropdown name, dropdown email); penamaan variabel diseragamkan: `mounted` (useDarkMode) → `isMounted` |
+| 3 | [`apps/web/components/ui/notification-center.tsx`](apps/web/components/ui/notification-center.tsx) | Badge `{unreadCount > 0 && <span>}` menambah elemen ke DOM setelah fetch resolve | Guard `isMounted && unreadCount > 0` |
+| 4 | [`apps/web/components/layout/platform-sidebar.tsx`](apps/web/components/layout/platform-sidebar.tsx) *(ditemukan via A4)* | Footer text mismatch (pola sama, layout chain `/platform`) | Guard `isMounted &&` di initials/nama/email footer |
+| 5 | [`apps/web/components/layout/platform-header.tsx`](apps/web/components/layout/platform-header.tsx) *(ditemukan via A4)* | User name text mismatch + `mounted` naming | Guard `isMounted &&`; `mounted` → `isMounted` |
+
+#### Hasil Pencarian A4 (Komponen Tambahan)
+
+Regex search `useSession(`, `{session?.user`, `{session &&`, `{session ?` di `apps/web/components/layout/`, `apps/web/components/auth/`, dan komponen yang di-import `apps/web/app/dashboard/layout.tsx`:
+
+- **Ditemukan & DIFIX:** [`platform-sidebar.tsx`](apps/web/components/layout/platform-sidebar.tsx), [`platform-header.tsx`](apps/web/components/layout/platform-header.tsx) — layout chain `/platform`, pola serupa (text mismatch berbasis session)
+- **Bersih (tidak diubah):** [`dashboard-layout.tsx`](apps/web/components/layout/dashboard-layout.tsx), `ai-chat.tsx`, `onboarding-modal.tsx`, `search-modal.tsx`, semua file di `components/auth/` — tidak ada render DOM kondisional berbasis session
+- **Catatan:** badge notifikasi di dalam dropdown notification-center (`{isOpen && ...}`) TIDAK perlu fix — `isOpen` = false di server & render pertama client (hanya bisa berubah via event handler post-hydration)
+
+#### Files Modified: 5 files
+
+| File | Description |
+|------|-------------|
+| [`apps/web/components/layout/sidebar.tsx`](apps/web/components/layout/sidebar.tsx) | + `isMounted` state; menu items: render semua + `invisible` adminOnly sebelum mounted, filter `isMenuVisible` setelah mounted; role badge selalu dirender; footer guarded |
+| [`apps/web/components/layout/header.tsx`](apps/web/components/layout/header.tsx) | + `isMounted` state; `mounted` → `isMounted` (dark mode toggle konsisten); guard di inisial/nama/email user + dropdown |
+| [`apps/web/components/ui/notification-center.tsx`](apps/web/components/ui/notification-center.tsx) | + `isMounted` state; badge bell: `isMounted && unreadCount > 0` |
+| [`apps/web/components/layout/platform-sidebar.tsx`](apps/web/components/layout/platform-sidebar.tsx) | + `isMounted` state; footer user info guarded (temuan A4) |
+| [`apps/web/components/layout/platform-header.tsx`](apps/web/components/layout/platform-header.tsx) | + `isMounted` state + import React hooks; `mounted` → `isMounted`; user name guarded (temuan A4) |
+
+#### Tradeoff & Catatan Deploy
+
+- **Flash singkat:** item admin menu dirender `invisible` (occupying space via `visibility: hidden`) selama SSR + hydration, lalu dihilangkan dari DOM untuk non-admin setelah mounted. Untuk admin, berubah dari invisible → visible. Durasi < 100ms — tidak terlihat signifikan.
+- **`visibility: hidden` vs `display: none`:** `invisible` dipilih untuk konsistensi dengan pola approvals/page.tsx. Space masih direserve selama hydration window — acceptable karena hanya sesaat.
+- **Perilaku UI non-admin TIDAK berubah:** setelah mounted, item adminOnly (Settings/Billing/Audit) tetap dihapus dari DOM untuk non-admin (filter `isMenuVisible` tetap dipertahankan, hanya diterapkan setelah mounted).
+- **Tidak ada perubahan:** logic auth, session, permission, data fetching, atau business logic. Hanya cara render.
+- **Error #423:** diharapkan hilang otomatis sebagai cascade dari fix #418 ini.
+- **Verifikasi produksi setelah deploy:** cek console `/dashboard/approvals` dan halaman dashboard lain — harus 0 Error #418/#423. Cek juga `/platform/*` (layout chain platform).
+
+#### TypeScript: 0 errors
+
+---
 
 ## 🔧 Session 63 — Security Cleanup: Decimal Helpers + @qalcuity/api Completion — 30 Sep 2026
 
@@ -77,8 +139,8 @@
 
 | Bug | Severity | Status |
 |-----|----------|--------|
-| React Error #418 (Hydration failed) | 🔴 High | ✅ Fixed |
-| React Error #423 (Suspense boundary hydration) | 🔴 High | ✅ Fixed |
+| React Error #418 (Hydration failed) | 🔴 High | ⚠️ Partially fixed — root cause di layout chain, resolved di Session 64 |
+| React Error #423 (Suspense boundary hydration) | 🔴 High | ⚠️ Cascade dari layout chain — resolved di Session 64 |
 | PUT 405 Method Not Allowed to `/api/approval/levels/[id]` | 🟠 Medium | ✅ Fixed |
 
 #### What was done:
@@ -92,8 +154,8 @@
 2. **Hydration Mismatch Fix** — [`apps/web/app/dashboard/approvals/page.tsx`](apps/web/app/dashboard/approvals/page.tsx)
    - **Before:** Used `useSession()` to conditionally render elements → server/client DOM mismatch → React Error #418
    - **After:** `isMounted` + CSS visibility approach — DOM structure identical between server and client; visibility controlled via CSS class based on session status
-   - **Resolution:** React Error #418 (Hydration failed) — resolved
-   - **Resolution:** React Error #423 (Suspense boundary hydration) — resolved
+   - **Resolution:** React Error #418 di halaman approvals — resolved (namun error tetap muncul di production karena root cause sebenarnya di layout chain — lihat Session 64)
+   - **Resolution:** React Error #423 — cascade dari layout chain, resolved di Session 64
 
 #### Files Modified: 2 files
 | File | Description |

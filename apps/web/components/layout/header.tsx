@@ -27,8 +27,17 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     const pathname = usePathname();
     const { data: session } = useSession();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const { isDark, toggleTheme, mounted } = useDarkMode();
+    const { isDark, toggleTheme } = useDarkMode();
     const { t } = useTranslation();
+
+    // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
+    // Server dan render pertama client selalu punya session = null → semua
+    // output berbasis session harus identik di keduanya, lalu update setelah mounted.
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const userRole = session?.user?.role as string | undefined;
     const isAdmin = userRole === "SUPERADMIN" || userRole === "ADMIN";
@@ -164,7 +173,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                         className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                         aria-label={isDark ? t("common.switchToLight") : t("common.switchToDark")}
                     >
-                        {mounted && isDark ? (
+                        {isMounted && isDark ? (
                             <Sun className="h-5 w-5" />
                         ) : (
                             <Moon className="h-5 w-5" />
@@ -178,18 +187,22 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                     <div className="relative group">
                         <button className="flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-gray-100 dark:hover:bg-gray-800">
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                {session?.user?.name ? getInitials(session.user.name) : 'U'}
+                                {isMounted && session?.user?.name ? getInitials(session.user.name) : 'U'}
                             </div>
                             <span className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 sm:inline">
-                                {session?.user?.name || 'User'}
+                                {isMounted && session?.user?.name ? session.user.name : 'User'}
                             </span>
                         </button>
 
                         {/* Dropdown Menu */}
                         <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 dark:border-gray-700 dark:bg-gray-800">
                             <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{session?.user?.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{session?.user?.email}</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                    {isMounted && session?.user?.name ? session.user.name : 'User'}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {isMounted && session?.user?.email ? session.user.email : 'user@qalcuity.com'}
+                                </p>
                             </div>
                             <Link
                                 href="/dashboard/settings"
