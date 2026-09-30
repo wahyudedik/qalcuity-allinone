@@ -15,6 +15,7 @@ import type { DatasetDefinition, DimensionDefinition, MeasureDefinition } from '
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError } from '@/lib/api-error'
 import { analyticsExplorerRequestSchema, formatZodError } from '@/lib/validation-schemas'
+import { toNumber } from '@/lib/utils'
 
 interface ExplorerColumn {
     key: string
@@ -48,16 +49,7 @@ const ALLOWED_PRISMA_MODELS = [
 // ============================================
 // HELPERS
 // ============================================
-
-function toNumber(val: unknown): number {
-    if (val === null || val === undefined) return 0
-    if (typeof val === 'number') return val
-    if (typeof val === 'string') return parseFloat(val) || 0
-    if (typeof val === 'object' && val !== null && 'toNumber' in val) {
-        return (val as { toNumber: () => number }).toNumber()
-    }
-    return 0
-}
+// toNumber: shared Prisma Decimal → number converter from '@/lib/utils'
 
 function buildFilterCondition(operator: string, value: unknown): unknown {
     switch (operator) {

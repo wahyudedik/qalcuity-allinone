@@ -11,7 +11,7 @@ import {
     RequestOptions,
     PaginationParams,
 } from './types';
-import { parseApiError, NetworkError } from './errors';
+import { parseApiError, NetworkError, isRetryableError, getRetryDelayMs } from './errors';
 
 // --------------------------------------------
 // Default Configuration
@@ -24,6 +24,15 @@ const DEFAULT_CONFIG: ApiClientConfig = {
     credentials: 'same-origin',
     getToken: undefined,
 };
+
+// --------------------------------------------
+// Retry Helpers
+// --------------------------------------------
+
+/** Promise-based sleep used for retry backoff delays. */
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // --------------------------------------------
 // Create API Client
@@ -81,7 +90,8 @@ export function createApiClient(config: ApiClientConfig = {}): ApiClient {
     }
 
     /**
-     * Core fetch function with timeout, error handling
+     * Core fetch function with timeout, error handling, and retry
+     * for idempotent methods (GET/HEAD).
      */
     async function request<T>(
         endpoint: string,
@@ -95,6 +105,8 @@ export function createApiClient(config: ApiClientConfig = {}): ApiClient {
             signal,
             timeout = currentConfig.timeout,
             credentials = currentConfig.credentials,
+            retries: retriesOption,
+            retryDelayMs: retryDelayOption,
         } = options;
 
         const url = buildUrl(endpoint, params);
@@ -111,59 +123,90 @@ export function createApiClient(config: ApiClientConfig = {}): ApiClient {
             fetchOptions.body = JSON.stringify(body);
         }
 
-        // Timeout handling
-        const controller = new AbortController();
-        const timeoutId = timeout
-            ? setTimeout(() => controller.abort(), timeout)
-            : null;
+        // Retry policy: only idempotent methods (GET/HEAD) are retried,
+        // and only on transient errors (network, timeout, rate limit, gateway).
+        const isIdempotent = method === 'GET' || method === 'HEAD';
+        const maxRetries = isIdempotent
+            ? Math.max(retriesOption ?? currentConfig.retries ?? 0, 0)
+            : 0;
+        const baseDelayMs =
+            retryDelayOption ?? currentConfig.retryDelayMs ?? 1000;
 
-        // Combine external signal with timeout signal
-        let combinedSignal = controller.signal;
-        if (signal) {
-            const combined = new AbortController();
-            signal.addEventListener('abort', () => combined.abort());
-            controller.signal.addEventListener('abort', () => combined.abort());
-            combinedSignal = combined.signal;
-        }
-        fetchOptions.signal = combinedSignal;
+        let lastError: unknown;
 
-        try {
-            const response = await fetch(url, fetchOptions);
-            let responseData: unknown;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            // Timeout handling — fresh controller per attempt
+            const controller = new AbortController();
+            const timeoutId = timeout
+                ? setTimeout(() => controller.abort(), timeout)
+                : null;
 
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                responseData = await response.json();
-            } else {
-                responseData = await response.text();
+            // Combine external signal with timeout signal
+            let combinedSignal = controller.signal;
+            if (signal) {
+                const combined = new AbortController();
+                signal.addEventListener('abort', () => combined.abort());
+                controller.signal.addEventListener('abort', () => combined.abort());
+                combinedSignal = combined.signal;
             }
+            fetchOptions.signal = combinedSignal;
 
-            if (!response.ok) {
-                throw parseApiError(response.status, responseData);
-            }
+            try {
+                const response = await fetch(url, fetchOptions);
+                let responseData: unknown;
 
-            return responseData as ApiResponse<T>;
-        } catch (error) {
-            // Re-throw ApiError instances
-            if (error && typeof error === 'object' && 'statusCode' in error) {
-                throw error;
-            }
-
-            // Handle AbortError (timeout or user abort)
-            if (error instanceof DOMException && error.name === 'AbortError') {
-                if (signal?.aborted) {
-                    throw error; // User-initiated abort
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                } else {
+                    responseData = await response.text();
                 }
-                throw new NetworkError('Request timeout. Coba lagi nanti.');
-            }
 
-            // Network error
-            throw new NetworkError(
-                error instanceof Error ? error.message : 'Gagal terhubung ke server'
-            );
-        } finally {
-            if (timeoutId) clearTimeout(timeoutId);
+                if (!response.ok) {
+                    throw parseApiError(response.status, responseData);
+                }
+
+                return responseData as ApiResponse<T>;
+            } catch (error) {
+                // User-initiated abort — never retry
+                if (signal?.aborted) {
+                    throw error;
+                }
+
+                // Normalize to a typed error for retry classification
+                let finalError: unknown;
+                if (error instanceof DOMException && error.name === 'AbortError') {
+                    // Timeout (internal controller.abort) — retryable
+                    finalError = new NetworkError('Request timeout. Coba lagi nanti.');
+                } else if (
+                    error !== null &&
+                    typeof error === 'object' &&
+                    'statusCode' in error
+                ) {
+                    // ApiError (or subclass) from parseApiError — use as-is
+                    finalError = error;
+                } else {
+                    finalError = new NetworkError(
+                        error instanceof Error ? error.message : 'Gagal terhubung ke server'
+                    );
+                }
+                lastError = finalError;
+
+                // Retry only if attempts remain and the error is retryable
+                if (attempt < maxRetries && isRetryableError(finalError)) {
+                    await sleep(getRetryDelayMs(finalError, attempt, baseDelayMs));
+                    continue;
+                }
+
+                throw finalError;
+            } finally {
+                if (timeoutId) clearTimeout(timeoutId);
+            }
         }
+
+        // Exhausted all retry attempts
+        if (lastError) throw lastError;
+        throw new NetworkError('Request gagal setelah semua percobaan retry.');
     }
 
     // --------------------------------------------

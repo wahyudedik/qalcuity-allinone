@@ -1,6 +1,112 @@
-> **Last Updated:** 26 September 2026 (Session 61: UCE Phase 4-6 — SLA Enhancement + Locking + Dashboard)
-> **Version:** v11.47.0
-> **Status:** ⚠️ NEEDS ATTENTION — Session 61: UCE Phase 4-6 complete (SLA templates, color-coded monitoring, pessimistic locking, delegation framework, control dashboard). TypeScript: 0 errors.
+> **Last Updated:** 30 September 2026 (Session 63: SEC-02 Decimal Helpers + SEC-04 @qalcuity/api Completion)
+> **Version:** v11.49.0
+> **Status:** ✅ STABLE — Session 63: Decimal type helpers shared + @qalcuity/api package completed (retry + standardized errors). TypeScript: 0 errors.
+
+## 🔧 Session 63 — Security Cleanup: Decimal Helpers + @qalcuity/api Completion — 30 Sep 2026
+
+> **Focus:** Execute SEC-02 (Decimal type cleanup) + SEC-04 (@qalcuity/api package completion) dari [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md)
+> **TypeScript:** 0 errors (packages/api, packages/utils, apps/web — semua exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 63 Summary
+
+#### SEC-02 — Decimal Type Helpers + Deduplication
+
+- Audit `npx tsc --noEmit` — **0 error Decimal aktif** (error yang tercatat di audit doc sudah tidak ada di codebase saat ini)
+- Created shared helpers `decimalToNumber()` + `safeDecimal()` (duck-typed via `.toNumber()`, NO Prisma import — mobile compatible) di:
+  - [`packages/utils/src/index.ts`](packages/utils/src/index.ts) — implementasi shared untuk web/mobile/desktop
+  - [`apps/web/lib/utils.ts`](apps/web/lib/utils.ts) — aliases wrapping `toNumber()` yang sudah ada
+- Consolidated 4 duplikat lokal `toNumber()` → import dari `@/lib/utils`:
+  - [`apps/web/app/api/finance/tax-report/route.ts`](apps/web/app/api/finance/tax-report/route.ts)
+  - [`apps/web/app/api/finance/aging-report/route.ts`](apps/web/app/api/finance/aging-report/route.ts)
+  - [`apps/web/app/api/analytics/explorer/route.ts`](apps/web/app/api/analytics/explorer/route.ts)
+  - [`apps/web/app/api/analytics/dashboard/route.ts`](apps/web/app/api/analytics/dashboard/route.ts)
+- **Catatan arsitektur:** web files import dari `@/lib/utils` (bukan `@qalcuity/utils`) karena `@qalcuity/utils` tidak punya dependency entry / node_modules junction di `apps/web`; 93 files sudah established pattern import dari `@/lib/utils`. Implementasi shared tetap di `packages/utils` untuk reuse mobile/future.
+
+#### SEC-04 — @qalcuity/api Package Completion
+
+- Package EXISTS dan diverifikasi (package.json, tsconfig, types.ts, errors.ts, client.ts, index.ts)
+- **Types** ([`packages/api/src/types.ts`](packages/api/src/types.ts)):
+  - `ApiResponse<T>.error` → `error?: ApiErrorPayload` (`{ code, message, details? }`); `data` menjadi optional
+  - `ApiResponseErrorCode` type union: VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, RATE_LIMITED, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE, NETWORK_ERROR, string
+  - `HttpMethod` + `'HEAD'`; `retries`/`retryDelayMs` options di `ApiClientConfig` + `RequestOptions`
+- **Errors** ([`packages/api/src/errors.ts`](packages/api/src/errors.ts)):
+  - `ApiError.code` field (machine-readable) di base class + semua subclasses
+  - `parseApiError` handle standardized format `{ error: { message } }` + extract `retryAfter` untuk 429
+  - New exports: `isRetryableError()` (status 0/408/429/502/503/504) + `getRetryDelayMs()` (exponential backoff + jitter, hormati `Retry-After`)
+- **Client** ([`packages/api/src/client.ts`](packages/api/src/client.ts)):
+  - Retry loop di `request()` — hanya idempotent methods (GET/HEAD), hanya transient errors
+  - Fresh timeout controller per attempt; user-initiated abort tidak pernah di-retry
+- **Index** ([`packages/api/src/index.ts`](packages/api/src/index.ts)): export semua tipe + helper baru
+- **Backward compat:** satu-satunya consumer `apps/web/lib/api.ts` hanya re-export types (field consumers tidak ditemukan via search) — consumers TIDAK dimigrasi sesuai instruksi
+
+#### Files Modified: 10 files
+
+| File | Description |
+|------|-------------|
+| [`packages/utils/src/index.ts`](packages/utils/src/index.ts) | + `decimalToNumber()`, `safeDecimal()` (shared, mobile-compatible) |
+| [`apps/web/lib/utils.ts`](apps/web/lib/utils.ts) | + `decimalToNumber()`, `safeDecimal()` aliases wrapping `toNumber()` |
+| [`apps/web/app/api/finance/tax-report/route.ts`](apps/web/app/api/finance/tax-report/route.ts) | Import `toNumber` dari `@/lib/utils`, hapus duplikat lokal |
+| [`apps/web/app/api/finance/aging-report/route.ts`](apps/web/app/api/finance/aging-report/route.ts) | Import `toNumber` dari `@/lib/utils`, hapus duplikat lokal |
+| [`apps/web/app/api/analytics/explorer/route.ts`](apps/web/app/api/analytics/explorer/route.ts) | Import `toNumber` dari `@/lib/utils`, hapus duplikat lokal |
+| [`apps/web/app/api/analytics/dashboard/route.ts`](apps/web/app/api/analytics/dashboard/route.ts) | Import `toNumber` dari `@/lib/utils`, hapus duplikat lokal |
+| [`packages/api/src/types.ts`](packages/api/src/types.ts) | `ApiErrorPayload`, `ApiResponseErrorCode`, retry config options |
+| [`packages/api/src/errors.ts`](packages/api/src/errors.ts) | `ApiError.code`, `isRetryableError()`, `getRetryDelayMs()` |
+| [`packages/api/src/client.ts`](packages/api/src/client.ts) | Retry loop untuk GET/HEAD + backoff |
+| [`packages/api/src/index.ts`](packages/api/src/index.ts) | Export tipe + helper baru |
+
+#### Impact
+- `@qalcuity/api` kini fungsional penuh: typed fetch client + auth header injection + retry + standardized error format
+- Duplikasi `toNumber()` di 4 route files tereliminasi — single source of truth di `@/lib/utils`
+- `decimalToNumber()`/`safeDecimal()` tersedia di `packages/utils` untuk mobile (React Native) dan desktop (Electron)
+- `docs/REMAINING-WORK.md`: SEC-02 & SEC-04 ditandai ✅ DONE
+
+#### TypeScript: 0 errors
+
+---
+
+## 🔧 Session 62 — Approval Levels Bug Fix — 30 Sep 2026
+
+> **Focus:** Fix broken approval levels API route + React hydration mismatch on approvals page
+> **TypeScript:** 0 errors
+> **Health Score:** ✅ COMPLETE (approval levels CRUD fully functional)
+
+### Session 62 Summary
+
+#### Bugs Fixed:
+
+| Bug | Severity | Status |
+|-----|----------|--------|
+| React Error #418 (Hydration failed) | 🔴 High | ✅ Fixed |
+| React Error #423 (Suspense boundary hydration) | 🔴 High | ✅ Fixed |
+| PUT 405 Method Not Allowed to `/api/approval/levels/[id]` | 🟠 Medium | ✅ Fixed |
+
+#### What was done:
+
+1. **API Route Fix** — [`apps/web/app/api/approval/levels/[id]/route.ts`](apps/web/app/api/approval/levels/[id]/route.ts)
+   - **Before:** Duplicate of parent route (`GET`/`POST` from `/api/approval/levels/route.ts`) — did not use `params.id`, returned 405 for PUT/DELETE
+   - **After:** Full rewrite with proper handlers: `GET` by ID, `PUT` (update), `DELETE` (soft-delete/deactivate)
+   - All handlers include: auth check, tenant isolation, Zod validation, audit logging
+   - **Resolution:** PUT 405 Method Not Allowed — resolved
+
+2. **Hydration Mismatch Fix** — [`apps/web/app/dashboard/approvals/page.tsx`](apps/web/app/dashboard/approvals/page.tsx)
+   - **Before:** Used `useSession()` to conditionally render elements → server/client DOM mismatch → React Error #418
+   - **After:** `isMounted` + CSS visibility approach — DOM structure identical between server and client; visibility controlled via CSS class based on session status
+   - **Resolution:** React Error #418 (Hydration failed) — resolved
+   - **Resolution:** React Error #423 (Suspense boundary hydration) — resolved
+
+#### Files Modified: 2 files
+| File | Description |
+|------|-------------|
+| [`apps/web/app/api/approval/levels/[id]/route.ts`](apps/web/app/api/approval/levels/[id]/route.ts) | Rewrite: GET by ID, PUT, DELETE with auth + tenant isolation + Zod + audit |
+| [`apps/web/app/dashboard/approvals/page.tsx`](apps/web/app/dashboard/approvals/page.tsx) | Fix hydration: `isMounted` + CSS visibility pattern |
+
+#### Impact:
+- Approval levels CRUD now fully functional (GET, PUT, DELETE)
+- Approvals page renders without hydration errors
+- Users can view, edit, and deactivate approval levels
+
+---
 
 ## 🏦 Session 61 — Unified Control Engine Phase 4-6 — 26 Sep 2026
 

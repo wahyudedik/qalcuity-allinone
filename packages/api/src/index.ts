@@ -9,6 +9,8 @@ export type {
     FetchOptions,
     RequestOptions,
     ApiResponse,
+    ApiErrorPayload,
+    ApiResponseErrorCode,
     ApiResponseWithMeta,
     ApiErrorResponse,
     PaginationParams,
@@ -39,6 +41,8 @@ export {
     ServiceUnavailableError,
     NetworkError,
     parseApiError,
+    isRetryableError,
+    getRetryDelayMs,
 } from './errors';
 
 // Client

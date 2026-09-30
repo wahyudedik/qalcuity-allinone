@@ -20,6 +20,25 @@ export function toNumber(value: unknown): number {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * Convert Prisma Decimal / string / number to a safe JavaScript number.
+ * Alias of {@link toNumber} — kept for naming consistency with the shared
+ * package. The canonical shared implementation (usable by Web, Mobile, and
+ * Desktop) lives in `@qalcuity/utils` as `decimalToNumber`.
+ */
+export function decimalToNumber(value: unknown): number {
+    return toNumber(value);
+}
+
+/**
+ * Semantic alias of {@link toNumber} for monetary / aggregate Prisma Decimal
+ * values (invoice totals, payment amounts, `_sum` aggregates).
+ * Shared implementation: `@qalcuity/utils` → `safeDecimal`.
+ */
+export function safeDecimal(value: unknown): number {
+    return toNumber(value);
+}
+
 export function formatCurrency(amount: number | string | unknown, currency = "IDR"): string {
     const num = toNumber(amount);
     return new Intl.NumberFormat("id-ID", {

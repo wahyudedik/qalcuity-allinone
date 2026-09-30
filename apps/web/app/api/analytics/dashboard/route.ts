@@ -14,6 +14,7 @@ import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 import { materializedViewsExist } from '@/lib/analytics/read-model'
 import { handleTableNotReady, handleViewNotReady } from '@/lib/analytics/table-error-handler'
+import { toNumber } from '@/lib/utils'
 
 // ============================================
 // TYPES
@@ -79,17 +80,7 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Se
 function formatMonthLabel(date: Date): string {
     return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`
 }
-
-function toNumber(val: unknown): number {
-    if (val === null || val === undefined) return 0
-    if (typeof val === 'number') return val
-    if (typeof val === 'string') return parseFloat(val) || 0
-    // Handle Prisma Decimal objects
-    if (typeof val === 'object' && val !== null && 'toNumber' in val) {
-        return (val as { toNumber: () => number }).toNumber()
-    }
-    return 0
-}
+// toNumber: shared Prisma Decimal → number converter from '@/lib/utils'
 
 function getPeriodDates(period: string): { currentFrom: Date; previousFrom: Date; previousTo: Date; currentTo: Date } {
     const now = new Date()

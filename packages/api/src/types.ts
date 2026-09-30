@@ -8,7 +8,7 @@ import type { ID, Timestamp } from '@qalcuity/types';
 // HTTP Methods
 // --------------------------------------------
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 // --------------------------------------------
 // Request Types
@@ -29,17 +29,53 @@ export interface RequestOptions extends FetchOptions {
     timeout?: number;
     /** Whether to include credentials (cookies) */
     credentials?: RequestCredentials;
+    /** Maximum retry attempts for idempotent (GET/HEAD) requests (default: 0 / client config) */
+    retries?: number;
+    /** Base delay in milliseconds between retries (default: 1000 / client config) */
+    retryDelayMs?: number;
 }
 
 // --------------------------------------------
 // Response Types
 // --------------------------------------------
 
+/**
+ * Standardized API error codes used across Qalcuity platforms.
+ * Open union — any string is allowed, but these are the canonical values.
+ */
+export type ApiResponseErrorCode =
+    | 'VALIDATION_ERROR'
+    | 'UNAUTHORIZED'
+    | 'FORBIDDEN'
+    | 'NOT_FOUND'
+    | 'CONFLICT'
+    | 'UNPROCESSABLE_ENTITY'
+    | 'RATE_LIMITED'
+    | 'INTERNAL_SERVER_ERROR'
+    | 'SERVICE_UNAVAILABLE'
+    | 'NETWORK_ERROR'
+    | string;
+
+/**
+ * Standardized error payload: `{ code, message, details? }`.
+ * Every Qalcuity API error response uses this shape under the `error` key.
+ */
+export interface ApiErrorPayload {
+    code: ApiResponseErrorCode;
+    message: string;
+    details?: Record<string, string>;
+}
+
+/**
+ * Standardized API response envelope.
+ * Success: `{ success: true, data }`
+ * Failure: `{ success: false, error: { code, message } }`
+ */
 export interface ApiResponse<T> {
     success: boolean;
-    data: T;
+    data?: T;
     message?: string;
-    error?: string;
+    error?: ApiErrorPayload;
 }
 
 export interface ApiResponseWithMeta<T> {
@@ -51,9 +87,12 @@ export interface ApiResponseWithMeta<T> {
     totalPages: number;
 }
 
+/**
+ * Legacy error shape kept for `onError` callback compatibility.
+ */
 export interface ApiErrorResponse {
     success: false;
-    error: string;
+    error: ApiErrorPayload;
     message?: string;
     details?: Record<string, string>;
     statusCode: number;
@@ -105,6 +144,10 @@ export interface ApiClientConfig {
     onError?: (error: ApiErrorResponse) => void;
     /** Token provider function for auth */
     getToken?: () => string | Promise<string | null> | null;
+    /** Default maximum retry attempts for idempotent (GET/HEAD) requests (default: 0) */
+    retries?: number;
+    /** Default base retry delay in milliseconds (default: 1000) */
+    retryDelayMs?: number;
 }
 
 // --------------------------------------------

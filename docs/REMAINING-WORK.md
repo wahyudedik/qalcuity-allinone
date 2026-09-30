@@ -153,11 +153,11 @@
   - **Complexity:** Medium
   - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #1
 
-- [ ] **[SEC-02]** TypeScript Decimal type arithmetic errors — Pre-existing type mismatch di Finance/Reports
-  - **File:** [`apps/web/app/api/reports/route.ts`](apps/web/app/api/reports/route.ts), Finance models
+- [x] **[SEC-02]** TypeScript Decimal type arithmetic errors — ✅ DONE (Session 63: shared helpers `decimalToNumber()`/`safeDecimal()` + 4 duplikat `toNumber()` dikonsolidasi)
+  - **File:** [`packages/utils/src/index.ts`](packages/utils/src/index.ts), [`apps/web/lib/utils.ts`](apps/web/lib/utils.ts), Finance/analytics routes
   - **Dependency:** None
   - **Complexity:** Low
-  - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #2
+  - **Ref:** [`CURRENT.md`](CURRENT.md) Session 63
 
 - [x] **[SEC-03]** `@qalcuity/ui` package — ✅ DONE (11 React components: Button, Input, Select, Table, Modal, Card, Badge, Alert, Spinner, ConfirmDialog, ToastProvider)
   - **File:** [`packages/ui/`](packages/ui/)
@@ -165,11 +165,11 @@
   - **Complexity:** High
   - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #7
 
-- [ ] **[SEC-04]** `@qalcuity/api` package — Belum dibuat
+- [x] **[SEC-04]** `@qalcuity/api` package — ✅ DONE (Session 63: retry logic untuk GET/HEAD + standardized error format `{ code, message }` via `ApiErrorPayload`)
   - **File:** [`packages/api/`](packages/api/)
   - **Dependency:** API contract definitions
   - **Complexity:** Medium
-  - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #8
+  - **Ref:** [`CURRENT.md`](CURRENT.md) Session 63
 
 - [x] **[SEC-05]** Settings pages simulated backend — ✅ DONE (Notifications & integrations connected to Prisma DB)
   - **File:** [`apps/web/app/api/settings/notifications/route.ts`](apps/web/app/api/settings/notifications/route.ts), [`apps/web/app/api/settings/integrations/route.ts`](apps/web/app/api/settings/integrations/route.ts)
