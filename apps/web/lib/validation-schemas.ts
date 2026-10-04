@@ -591,9 +591,17 @@ export const updateProfileSchema = z.object({
     avatar: z.string().max(2048, 'URL avatar maksimal 2048 karakter').optional(),
 });
 
+// Self-service account deletion — user harus mengetik "HAPUS" di UI,
+// dan konfirmasi yang sama divalidasi server-side (defense-in-depth).
+export const deleteAccountSchema = z.object({
+    confirm: z.string().refine((val) => val === 'HAPUS', {
+        message: 'Confirmation text must be "HAPUS"',
+    }),
+});
+
 export const changePasswordSchema = z.object({
     currentPassword: z.string().min(1, 'Password saat ini wajib diisi'),
-    newPassword: z.string().min(8, 'Password baru minimal 8 karakter'),
+    newPassword: z.string().min(8, 'Password baru minimal 8 karakter').max(128, 'Password maksimal 128 karakter'),
 }).refine((data) => data.currentPassword !== data.newPassword, {
     message: 'Password baru harus berbeda dari password saat ini',
     path: ['newPassword'],
@@ -2164,6 +2172,14 @@ export const changePasswordApiSchema = z.object({
 }).refine((data) => data.currentPassword !== data.newPassword, {
     message: 'Password baru harus berbeda dari password saat ini',
     path: ['newPassword'],
+});
+
+// ─── Reset Password (token-based) ───────────────────────────────────────────
+// Full complexity rules are enforced at runtime by the password policy engine
+// (@/lib/password-policy) — Zod here provides the baseline length bounds.
+export const resetPasswordSchema = z.object({
+    token: z.string().min(1, 'Token wajib diisi'),
+    newPassword: z.string().min(8, 'Password baru minimal 8 karakter').max(128, 'Password maksimal 128 karakter'),
 });
 
 // ============================================

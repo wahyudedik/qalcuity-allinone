@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SyncStatus } from '@/lib/pos-offline/sync';
 import { SyncEngine } from '@/lib/pos-offline/sync';
+import { registerBackgroundSync } from '@/lib/pos-offline/service-worker';
 import { getPendingTransactions, getCachedProducts, searchCachedProducts } from '@/lib/pos-offline/db';
 import type { Product, PendingTransaction } from '@/lib/pos-offline/types';
 import { logger } from '@/lib/logger';
@@ -48,6 +49,10 @@ export interface UsePosOfflineReturn {
     createOfflineTransaction: (tx: PendingTransaction) => Promise<void>;
     /** Refresh the sync status from the engine */
     refreshSyncStatus: () => Promise<void>;
+    /** Retry all FAILED sync operations (resets to PENDING) and process the queue */
+    retryFailedSyncOperations: () => Promise<number>;
+    /** Retry a single FAILED sync operation by id */
+    retrySyncOperation: (operationId: string) => Promise<boolean>;
 }
 
 // =============================================================================
@@ -149,6 +154,20 @@ export function usePosOffline(callbacks?: UsePosOfflineCallbacks): UsePosOffline
         // Start the engine (registers online/offline listeners, starts polling)
         void engine.start();
 
+        // Best-effort Background Sync registration — the browser can trigger a
+        // queue flush when connectivity returns, even if this tab is inactive.
+        void registerBackgroundSync();
+
+        // Listen for SW Background Sync trigger → flush the IndexedDB queue
+        const handleSWMessage = (event: MessageEvent) => {
+            const data = event.data as { type?: string } | null;
+            if (data?.type === 'BACKGROUND_SYNC_TRIGGERED') {
+                logger.info('[POS-Offline Hook] Background sync triggered by Service Worker');
+                void SyncEngine.getInstance().processQueue();
+            }
+        };
+        navigator.serviceWorker.addEventListener('message', handleSWMessage);
+
         // Subscribe to status changes
         const unsubscribe = engine.onStatusChange((status: SyncStatus) => {
             const prevSyncing = prevSyncingRef.current;
@@ -182,6 +201,7 @@ export function usePosOffline(callbacks?: UsePosOfflineCallbacks): UsePosOffline
 
         return () => {
             unsubscribe();
+            navigator.serviceWorker.removeEventListener('message', handleSWMessage);
             void engine.stop();
             engineStartedRef.current = false;
         };
@@ -275,6 +295,9 @@ export function usePosOffline(callbacks?: UsePosOfflineCallbacks): UsePosOffline
             const { createTransaction } = await import('@/lib/pos-offline/api-client');
             await createTransaction(tx);
 
+            // Best-effort Background Sync registration for the newly queued op
+            void registerBackgroundSync();
+
             // Refresh pending count
             const engine = SyncEngine.getInstance();
             const status = await engine.getSyncStatus();
@@ -301,6 +324,47 @@ export function usePosOffline(callbacks?: UsePosOfflineCallbacks): UsePosOffline
         }
     }, []);
 
+    /**
+     * Retry all FAILED sync operations (reset to PENDING) and process the queue.
+     * Returns the number of operations that were reset.
+     */
+    const handleRetryFailedSyncOperations = useCallback(async (): Promise<number> => {
+        try {
+            const engine = SyncEngine.getInstance();
+            const count = await engine.retryFailedOperations();
+
+            const status = await engine.getSyncStatus();
+            setSyncStatus(status);
+            setIsOnline(status.isOnline);
+            setPendingCount(status.pendingCount + status.syncingCount);
+
+            return count;
+        } catch (error) {
+            logger.error('[POS-Offline Hook] Failed to retry failed operations:', error);
+            return 0;
+        }
+    }, []);
+
+    /**
+     * Retry a single FAILED sync operation by id and refresh status.
+     */
+    const handleRetrySyncOperation = useCallback(async (operationId: string): Promise<boolean> => {
+        try {
+            const engine = SyncEngine.getInstance();
+            const ok = await engine.retryOperation(operationId);
+
+            const status = await engine.getSyncStatus();
+            setSyncStatus(status);
+            setIsOnline(status.isOnline);
+            setPendingCount(status.pendingCount + status.syncingCount);
+
+            return ok;
+        } catch (error) {
+            logger.error('[POS-Offline Hook] Failed to retry sync operation:', error);
+            return false;
+        }
+    }, []);
+
     // ---------------------------------------------------------------------------
     // Return
     // ---------------------------------------------------------------------------
@@ -315,5 +379,7 @@ export function usePosOffline(callbacks?: UsePosOfflineCallbacks): UsePosOffline
         searchOfflineProducts: handleSearchOfflineProducts,
         createOfflineTransaction: handleCreateOfflineTransaction,
         refreshSyncStatus: handleRefreshSyncStatus,
+        retryFailedSyncOperations: handleRetryFailedSyncOperations,
+        retrySyncOperation: handleRetrySyncOperation,
     };
 }

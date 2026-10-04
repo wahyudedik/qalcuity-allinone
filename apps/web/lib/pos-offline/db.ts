@@ -92,9 +92,25 @@ export async function openDB(): Promise<IDBDatabase> {
             if (!db.objectStoreNames.contains(STORES.SYNC_QUEUE)) {
                 const syncStore = db.createObjectStore(STORES.SYNC_QUEUE, { keyPath: 'id' });
                 syncStore.createIndex('status', 'status', { unique: false });
-                syncStore.createIndex('operation', 'operation', { unique: false });
+                syncStore.createIndex('type', 'type', { unique: false });
+                syncStore.createIndex('tenantId', 'tenantId', { unique: false });
                 syncStore.createIndex('createdAt', 'createdAt', { unique: false });
                 syncStore.createIndex('nextRetryAt', 'nextRetryAt', { unique: false });
+            }
+
+            // ── v2 upgrade: add missing indexes to existing sync-queue store ──────
+            // (for DBs created at v1 which indexed a non-existent 'operation' field)
+            if (db.objectStoreNames.contains(STORES.SYNC_QUEUE)) {
+                const upgradeTx = (event.target as IDBOpenDBRequest).transaction;
+                if (upgradeTx) {
+                    const syncStore = upgradeTx.objectStore(STORES.SYNC_QUEUE);
+                    if (!syncStore.indexNames.contains('type')) {
+                        syncStore.createIndex('type', 'type', { unique: false });
+                    }
+                    if (!syncStore.indexNames.contains('tenantId')) {
+                        syncStore.createIndex('tenantId', 'tenantId', { unique: false });
+                    }
+                }
             }
 
             // ── Store: config ────────────────────────────────────────────────────
@@ -440,6 +456,173 @@ export async function removeSyncOperation(id: string): Promise<void> {
         logger.error('[POS-Offline] Failed to remove sync operation', error);
         throw error;
     }
+}
+
+/**
+ * Get a sync operation by its ID.
+ */
+export async function getSyncOperationById(id: string): Promise<SyncOperation | null> {
+    try {
+        const db = await openDB();
+        const store = getStore(db, STORES.SYNC_QUEUE, 'readonly');
+        const result = await requestToPromise<SyncOperation | undefined>(store.get(id));
+        return result ?? null;
+    } catch (error) {
+        logger.error('[POS-Offline] Failed to get sync operation', error);
+        throw error;
+    }
+}
+
+/**
+ * Update a sync operation (full upsert by id).
+ */
+export async function updateSyncOperation(operation: SyncOperation): Promise<void> {
+    try {
+        const db = await openDB();
+        const store = getStore(db, STORES.SYNC_QUEUE, 'readwrite');
+        await voidRequest(store.put(operation));
+    } catch (error) {
+        logger.error('[POS-Offline] Failed to update sync operation', error);
+        throw error;
+    }
+}
+
+/**
+ * Retry a single FAILED operation by ID.
+ * Resets status → PENDING, retryCount → 0, nextRetryAt → now.
+ * Linked FAILED pending-transactions are also reset to PENDING.
+ *
+ * @returns true if the operation existed and was FAILED (now reset)
+ */
+export async function retrySyncOperation(id: string): Promise<boolean> {
+    try {
+        const db = await openDB();
+
+        // Reset the queue operation
+        const queueStore = getStore(db, STORES.SYNC_QUEUE, 'readwrite');
+        const existing = await requestToPromise<SyncOperation | undefined>(queueStore.get(id));
+        if (!existing || existing.status !== 'FAILED') {
+            return false;
+        }
+
+        const updated: SyncOperation = {
+            ...existing,
+            status: 'PENDING',
+            retryCount: 0,
+            lastError: undefined,
+            nextRetryAt: Date.now(),
+        };
+        await voidRequest(queueStore.put(updated));
+
+        // Reset linked pending transaction (separate transaction to avoid auto-commit)
+        if (existing.type === 'CREATE_TRANSACTION') {
+            try {
+                const txStore = getStore(db, STORES.PENDING_TRANSACTIONS, 'readwrite');
+                const txRecord = await requestToPromise<PendingTransaction | undefined>(
+                    txStore.get(existing.entityId)
+                );
+                if (txRecord && txRecord.status === 'FAILED') {
+                    await voidRequest(
+                        txStore.put({ ...txRecord, status: 'PENDING', syncError: undefined })
+                    );
+                }
+            } catch {
+                // Best effort — queue reset already succeeded
+            }
+        }
+
+        return true;
+    } catch (error) {
+        logger.error('[POS-Offline] Failed to retry sync operation', error);
+        throw error;
+    }
+}
+
+/**
+ * Mark ALL FAILED operations as PENDING for a bulk manual retry.
+ * Resets retryCount → 0 so a fresh retry cycle begins.
+ * Linked FAILED pending-transactions are also reset to PENDING.
+ *
+ * @returns Number of operations reset for retry
+ */
+export async function markFailedOperationsForRetry(): Promise<number> {
+    try {
+        const db = await openDB();
+        const queue = await getSyncQueue();
+        const failedOps = queue.filter((op) => op.status === 'FAILED');
+        if (failedOps.length === 0) {
+            return 0;
+        }
+
+        const now = Date.now();
+
+        // Reset each queue operation (sequential put — each gets its own request)
+        const queueStore = getStore(db, STORES.SYNC_QUEUE, 'readwrite');
+        const puts: Promise<void>[] = [];
+        for (const op of failedOps) {
+            puts.push(
+                voidRequest(
+                    queueStore.put({
+                        ...op,
+                        status: 'PENDING' as const,
+                        retryCount: 0,
+                        lastError: undefined,
+                        nextRetryAt: now,
+                    })
+                )
+            );
+        }
+        await Promise.all(puts);
+
+        // Reset linked FAILED pending-transactions
+        try {
+            const txStore = getStore(db, STORES.PENDING_TRANSACTIONS, 'readwrite');
+            const txPuts: Promise<void>[] = [];
+            for (const op of failedOps) {
+                if (op.type !== 'CREATE_TRANSACTION') continue;
+                const req = txStore.get(op.entityId);
+                const reset = new Promise<void>((resolve) => {
+                    req.onsuccess = () => {
+                        const record = req.result as PendingTransaction | undefined;
+                        if (record && record.status === 'FAILED') {
+                            voidRequest(
+                                txStore.put({ ...record, status: 'PENDING', syncError: undefined })
+                            ).then(resolve, resolve);
+                        } else {
+                            resolve();
+                        }
+                    };
+                    req.onerror = () => resolve(); // best effort
+                });
+                txPuts.push(reset);
+            }
+            await Promise.all(txPuts);
+        } catch {
+            // Best effort — queue resets already succeeded
+        }
+
+        return failedOps.length;
+    } catch (error) {
+        logger.error('[POS-Offline] Failed to mark failed operations for retry', error);
+        throw error;
+    }
+}
+
+/**
+ * Get pending transactions filtered by tenantId (multi-tenant isolation).
+ */
+export async function getPendingTransactionsByTenant(tenantId: string): Promise<PendingTransaction[]> {
+    const all = await getPendingTransactions();
+    return all.filter((tx) => tx.tenantId === tenantId);
+}
+
+/**
+ * Get sync queue operations filtered by tenantId (multi-tenant isolation).
+ * Ops without tenantId (legacy) are included — server session governs tenant anyway.
+ */
+export async function getSyncQueueByTenant(tenantId: string): Promise<SyncOperation[]> {
+    const all = await getSyncQueue();
+    return all.filter((op) => !op.tenantId || op.tenantId === tenantId);
 }
 
 // =============================================================================

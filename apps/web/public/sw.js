@@ -17,7 +17,7 @@
 // Cache Versioning
 // =============================================================================
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `qalcuity-static-${CACHE_VERSION}`;
 const API_PRODUCTS_CACHE = `qalcuity-api-products-${CACHE_VERSION}`;
 const API_SESSIONS_CACHE = `qalcuity-api-sessions-${CACHE_VERSION}`;
@@ -581,3 +581,33 @@ self.addEventListener('fetch', (event) => {
     console.log('[SW-DIAG] BYPASS (default):', url.pathname);
     return;
 });
+
+// =============================================================================
+// Background Sync Event — Notify open clients to flush the POS sync queue
+// =============================================================================
+//
+// The actual queue flush lives client-side (SyncEngine + IndexedDB), so the SW
+// cannot perform the sync itself. When the browser fires a 'sync' event for our
+// tag, we post a message to every open client; the client hook then calls
+// SyncEngine.processQueue(). If no client is open, the next app open flushes
+// the queue on engine start + online event (foreground fallback).
+
+self.addEventListener('sync', (event) => {
+    console.log('[SW] Background sync event:', event.tag);
+    if (event.tag === 'pos-sync') {
+        event.waitUntil(notifyClientsToSync());
+    }
+});
+
+/**
+ * Post a BACKGROUND_SYNC_TRIGGERED message to all open window clients.
+ */
+async function notifyClientsToSync() {
+    const clientList = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+    });
+    for (const client of clientList) {
+        client.postMessage({ type: 'BACKGROUND_SYNC_TRIGGERED', tag: 'pos-sync' });
+    }
+}

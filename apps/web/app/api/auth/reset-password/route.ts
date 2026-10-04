@@ -5,16 +5,12 @@ import { MSG } from '@/lib/api-messages';
 import { handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
-
-// ─── Reset Password Schema ────────────────────
-const resetPasswordSchema = z.object({
-    token: z.string().min(1, MSG.TOKEN_REQUIRED),
-    newPassword: z.string().min(8, MSG.PASSWORD_MIN_LENGTH),
-});
+import { resetPasswordSchema } from "@/lib/validation-schemas";
+import { getDefaultPolicy, validatePassword } from "@/lib/password-policy";
 
 // ─── POST /api/auth/reset-password ─────────────
 // Validates the reset token and sets a new password.
+// New password is validated against the user's tenant password policy (SEC-07).
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -32,7 +28,7 @@ export async function POST(req: Request) {
             where: {
                 resetToken: token,
             },
-            select: { id: true, resetTokenExpiry: true },
+            select: { id: true, resetTokenExpiry: true, tenantId: true },
         });
 
         // Validate token exists and hasn't expired
@@ -46,6 +42,21 @@ export async function POST(req: Request) {
         if (new Date() > user.resetTokenExpiry) {
             return NextResponse.json(
                 { success: false, error: MSG.RESET_TOKEN_INVALID_OR_EXPIRED },
+                { status: 400 }
+            );
+        }
+
+        // Validate new password against the user's tenant policy (SEC-07)
+        const policy = await getDefaultPolicy(user.tenantId);
+        const passwordCheck = validatePassword(newPassword, policy);
+        if (!passwordCheck.valid) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.PASSWORD_DOES_NOT_MEET_POLICY,
+                    code: 'PASSWORD_POLICY_VIOLATION',
+                    details: { errors: passwordCheck.errors },
+                },
                 { status: 400 }
             );
         }

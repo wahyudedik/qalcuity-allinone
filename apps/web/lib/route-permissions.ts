@@ -267,7 +267,10 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/dashboard/stats': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
 
     // ─── Inbox ──────────────────────────────────────────────────────────────
-    '/api/inbox': { permission: 'dashboard:view', fallbackRole: 'ADMIN' },
+    // All roles can view their own inbox (read-only). Category filtering per
+    // role happens inside the handler (e.g. approval eligibility via
+    // ApprovalLevel.requiredRole + delegation resolution).
+    '/api/inbox': { permission: 'dashboard:view', fallbackRole: 'VIEWER' },
 
     // ─── Projects & Operations Module ────────────────────────────────────────
     '/api/projects': { permission: 'project:view', fallbackRole: 'MEMBER' },

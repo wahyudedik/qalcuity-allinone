@@ -17,6 +17,8 @@ import {
     markTransactionSynced,
     setConfig,
     getConfig,
+    retrySyncOperation,
+    markFailedOperationsForRetry,
 } from './db';
 import { logger } from '@/lib/logger';
 
@@ -107,6 +109,13 @@ export class SyncEngine {
     /** Currently processing operation ID (for status display) */
     private currentSyncItem: string | null = null;
 
+    /**
+     * Tenant context for queue processing (multi-tenant isolation).
+     * When set, only ops whose tenantId matches (or legacy ops without tenantId)
+     * are processed — prevents cross-tenant sync when session tenant differs.
+     */
+    private tenantContext: string | null = null;
+
     /** Listeners for status changes */
     private statusListeners: Array<(status: SyncStatus) => void> = [];
 
@@ -190,6 +199,24 @@ export class SyncEngine {
     // -------------------------------------------------------------------------
     // Queue Processing
     // -------------------------------------------------------------------------
+
+    /**
+     * Set the tenant context for queue processing.
+     * Call from UI when the session tenant is known (e.g., after auth loads).
+     *
+     * @param tenantId - Current session tenant ID, or undefined to clear
+     */
+    setTenantContext(tenantId: string | undefined): void {
+        this.tenantContext = tenantId ?? null;
+        logger.info(`[POS-Sync] Tenant context set: ${this.tenantContext ?? '(none)'}`);
+    }
+
+    /**
+     * Get the current tenant context.
+     */
+    getTenantContext(): string | null {
+        return this.tenantContext;
+    }
 
     /**
      * Process all pending operations in the sync queue.
@@ -283,6 +310,15 @@ export class SyncEngine {
      */
     private async processOperation(op: SyncOperation): Promise<boolean> {
         try {
+            // Data integrity: validate required payload fields before sending.
+            // Invalid payloads can never succeed — mark FAILED without retry.
+            const validationError = this.validateOperationPayload(op);
+            if (validationError) {
+                await this.markOperationFailed(op, `Invalid payload: ${validationError}`);
+                logger.error(`[POS-Sync] Invalid payload for ${op.type}: ${validationError}`);
+                return false;
+            }
+
             // Mark as processing
             await this.updateOperationStatus(op.id, 'PROCESSING');
 
@@ -370,6 +406,15 @@ export class SyncEngine {
                     ? data.transactionNo
                     : undefined;
 
+                // Idempotent replay detection: server returned existing tx
+                // (flag `duplicate` = task contract; `idempotent` kept for backward compat)
+                const isDuplicate = data.duplicate === true || data.idempotent === true;
+                if (isDuplicate) {
+                    logger.info(
+                        `[POS-Sync] Idempotent replay for ${op.entityId} — server returned existing tx ${serverTransactionNo ?? serverId ?? '(unknown)'}`
+                    );
+                }
+
                 await markTransactionSynced(op.entityId, serverId, serverTransactionNo);
             } catch {
                 // Response parsing failed — transaction was still accepted
@@ -377,6 +422,26 @@ export class SyncEngine {
                 await markTransactionSynced(op.entityId);
             }
         }
+    }
+
+    /**
+     * Validate required payload fields before sending an operation.
+     * Catches data-integrity issues early (missing tenant, items, payment, totals)
+     * instead of sending invalid requests that can never succeed.
+     *
+     * @returns Error message if invalid, null if valid
+     */
+    private validateOperationPayload(op: SyncOperation): string | null {
+        if (op.type === 'CREATE_TRANSACTION') {
+            const p = op.payload as Record<string, unknown>;
+            if (!p.sessionId || typeof p.sessionId !== 'string') return 'missing sessionId';
+            if (!Array.isArray(p.items) || p.items.length === 0) return 'missing items';
+            if (typeof p.paidAmount !== 'number') return 'missing paidAmount';
+            const hasPayment = typeof p.paymentMethod === 'string' ||
+                (Array.isArray(p.payments) && p.payments.length > 0);
+            if (!hasPayment) return 'missing paymentMethod/payments';
+        }
+        return null;
     }
 
     // -------------------------------------------------------------------------
@@ -619,13 +684,31 @@ export class SyncEngine {
      * Get operations eligible for processing:
      * - Status is PENDING
      * - nextRetryAt <= now
+     * - Tenant match: when tenant context is set, only ops belonging to that
+     *   tenant (or legacy ops without tenantId) are eligible — multi-tenant isolation.
      */
     private async getEligibleOperations(): Promise<SyncOperation[]> {
         const allOps = await getSyncQueue();
         const now = Date.now();
 
         return allOps
-            .filter((op) => op.status === 'PENDING' && op.nextRetryAt <= now)
+            .filter((op) => {
+                if (op.status !== 'PENDING' || op.nextRetryAt > now) return false;
+
+                // Tenant isolation filter
+                if (this.tenantContext) {
+                    const opTenantId = op.tenantId ??
+                        (typeof op.payload?.tenantId === 'string' ? op.payload.tenantId : undefined);
+                    if (opTenantId && opTenantId !== this.tenantContext) {
+                        logger.warn(
+                            `[POS-Sync] Skipping op ${op.id} — tenant mismatch (op: ${opTenantId}, context: ${this.tenantContext})`
+                        );
+                        return false;
+                    }
+                }
+
+                return true;
+            })
             .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     }
 
@@ -663,6 +746,51 @@ export class SyncEngine {
     // -------------------------------------------------------------------------
     // Public Status Methods
     // -------------------------------------------------------------------------
+
+    /**
+     * Manually retry ALL failed operations.
+     * Resets FAILED ops → PENDING (retryCount 0), then triggers a sync run if online.
+     *
+     * @returns Number of operations reset for retry
+     */
+    async retryFailedOperations(): Promise<number> {
+        try {
+            const count = await markFailedOperationsForRetry();
+            logger.info(`[POS-Sync] ${count} failed operation(s) reset for retry`);
+            this.notifyListeners();
+
+            if (count > 0 && this.isOnline()) {
+                void this.processQueue();
+            }
+            return count;
+        } catch (error) {
+            logger.error('[POS-Sync] Failed to retry failed operations', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Manually retry a single failed operation by ID.
+     * Resets op → PENDING, then triggers a sync run if online.
+     *
+     * @returns true if the operation existed and was reset
+     */
+    async retryOperation(operationId: string): Promise<boolean> {
+        try {
+            const ok = await retrySyncOperation(operationId);
+            if (ok) {
+                logger.info(`[POS-Sync] Operation ${operationId} reset for retry`);
+                this.notifyListeners();
+                if (this.isOnline()) {
+                    void this.processQueue();
+                }
+            }
+            return ok;
+        } catch (error) {
+            logger.error('[POS-Sync] Failed to retry operation', error);
+            return false;
+        }
+    }
 
     /**
      * Get the number of pending operations in the sync queue.
@@ -774,4 +902,28 @@ export function startAutoSync(): void {
 export function stopAutoSync(): void {
     const engine = SyncEngine.getInstance();
     void engine.stop();
+}
+
+/**
+ * Manually retry all failed sync operations (resets FAILED → PENDING).
+ */
+export async function retryFailedSyncOperations(): Promise<number> {
+    const engine = SyncEngine.getInstance();
+    return engine.retryFailedOperations();
+}
+
+/**
+ * Manually retry a single failed sync operation by ID.
+ */
+export async function retrySyncOperationById(operationId: string): Promise<boolean> {
+    const engine = SyncEngine.getInstance();
+    return engine.retryOperation(operationId);
+}
+
+/**
+ * Set the tenant context for queue processing (multi-tenant isolation).
+ */
+export function setSyncTenantContext(tenantId: string | undefined): void {
+    const engine = SyncEngine.getInstance();
+    engine.setTenantContext(tenantId);
 }

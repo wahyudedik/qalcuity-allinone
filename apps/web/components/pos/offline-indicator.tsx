@@ -19,6 +19,7 @@ import {
     X,
 } from 'lucide-react';
 import { usePosOffline } from '@/hooks/use-pos-offline';
+import { useTranslation } from '@/lib/i18n';
 
 // =============================================================================
 // Types
@@ -43,12 +44,14 @@ interface OfflineIndicatorProps {
  * - **Error**: Red banner with retry button
  */
 export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
+    const { t } = useTranslation();
     const {
         isOnline,
         syncStatus,
         pendingCount,
         initialized,
         syncNow,
+        retryFailedSyncOperations,
     } = usePosOffline();
 
     const [dismissed, setDismissed] = useState(false);
@@ -65,7 +68,7 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
                 className={`flex items-center gap-1.5 px-2 py-1 text-xs text-green-700 bg-green-50 border-b border-green-200 ${className}`}
             >
                 <CheckCircle2 className="h-3 w-3" />
-                <span className="font-medium">Online</span>
+                <span className="font-medium">{t('pos.offlineIndicator.online')}</span>
             </div>
         );
     }
@@ -81,7 +84,7 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
                 <div className="flex items-center gap-2">
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     <span className="font-medium">
-                        Menyinkronkan {syncStatus.syncingCount} transaksi...
+                        {t('pos.offlineIndicator.syncing').replace('{count}', String(syncStatus.syncingCount))}
                     </span>
                     {syncStatus.currentSyncItem && (
                         <span className="text-xs text-blue-600 hidden sm:inline">
@@ -94,7 +97,7 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
     }
 
     // -------------------------------------------------------------------------
-    // State: Error (red banner) — failed sync operations
+    // State: Error (red banner) — failed sync operations while offline
     // -------------------------------------------------------------------------
     if (syncStatus.failedCount > 0 && !isOnline) {
         return (
@@ -104,16 +107,16 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
                 <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     <span className="font-medium">
-                        Sync gagal — {pendingCount} transaksi menunggu
+                        {t('pos.offlineIndicator.syncFailedWaiting').replace('{count}', String(pendingCount))}
                     </span>
                 </div>
                 <button
-                    onClick={() => void syncNow()}
+                    onClick={() => void retryFailedSyncOperations()}
                     className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 transition-colors"
                     type="button"
                 >
                     <RefreshCw className="h-3 w-3" />
-                    Coba Lagi
+                    {t('pos.offlineIndicator.retry')}
                 </button>
             </div>
         );
@@ -130,11 +133,11 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
                 <div className="flex items-center gap-2">
                     <WifiOff className="h-4 w-4" />
                     <span className="font-medium">
-                        Mode Offline — Transaksi akan disinkronkan saat online
+                        {t('pos.offlineIndicator.offlineMode')}
                     </span>
                     {pendingCount > 0 && (
                         <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full">
-                            {pendingCount} tertunda
+                            {t('pos.offlineIndicator.pendingBadge').replace('{count}', String(pendingCount))}
                         </span>
                     )}
                 </div>
@@ -142,7 +145,7 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
                     onClick={() => setDismissed(true)}
                     className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors"
                     type="button"
-                    aria-label="Dismiss"
+                    aria-label={t('pos.offlineIndicator.dismiss')}
                 >
                     <X className="h-4 w-4" />
                 </button>
@@ -161,23 +164,23 @@ export function OfflineIndicator({ className = '' }: OfflineIndicatorProps) {
                 <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     <span className="font-medium">
-                        {syncStatus.failedCount} transaksi gagal disinkronkan
+                        {t('pos.offlineIndicator.failedCount').replace('{count}', String(syncStatus.failedCount))}
                     </span>
                 </div>
                 <div className="flex items-center gap-1">
                     <button
-                        onClick={() => void syncNow()}
+                        onClick={() => void retryFailedSyncOperations()}
                         className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 transition-colors"
                         type="button"
                     >
                         <RefreshCw className="h-3 w-3" />
-                        Retry
+                        {t('pos.offlineIndicator.retry')}
                     </button>
                     <button
                         onClick={() => setDismissed(true)}
                         className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
                         type="button"
-                        aria-label="Dismiss"
+                        aria-label={t('pos.offlineIndicator.dismiss')}
                     >
                         <X className="h-4 w-4" />
                     </button>

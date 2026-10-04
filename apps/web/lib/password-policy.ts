@@ -19,22 +19,48 @@ export interface PasswordValidationResult {
     errors: string[];
 }
 
-export interface PasswordPolicyDefaults {
-    minLength: 8;
-    maxLength: 128;
-    requireUppercase: false;
-    requireLowercase: false;
-    requireNumbers: false;
-    requireSpecialChars: false;
-    specialChars: '!@#$%^&*()_+-=[]{}|;:,.<>?';
-    preventReuse: 0;
-    expiryDays: 0;
-    warnBeforeExpiryDays: 7;
-    maxFailedAttempts: 5;
-    lockoutDurationMinutes: 30;
+/**
+ * Password complexity rules — the structural subset shared by all policy
+ * sources (per-tenant Prisma `PasswordPolicy` rows and the platform
+ * `DEFAULT_POLICY` below).
+ *
+ * `validatePassword()` accepts any object that structurally satisfies this
+ * interface, so both sources are validated with the same function.
+ */
+export interface PasswordPolicyRules {
+    minLength: number;
+    maxLength: number;
+    requireUppercase: boolean;
+    requireLowercase: boolean;
+    requireNumbers: boolean;
+    requireSpecialChars: boolean;
+    specialChars: string;
 }
 
-const DEFAULT_POLICY: PasswordPolicyDefaults = {
+/** Full default policy shape (complexity rules + operational defaults). */
+export interface PasswordPolicyDefaults extends PasswordPolicyRules {
+    preventReuse: number;
+    expiryDays: number;
+    warnBeforeExpiryDays: number;
+    maxFailedAttempts: number;
+    lockoutDurationMinutes: number;
+}
+
+/**
+ * Platform-wide default password policy — central config for SEC-07.
+ *
+ * Used when no per-tenant `PasswordPolicy` row exists yet (e.g. tenant
+ * registration, first password reset). Tenants can override every rule via
+ * `updatePasswordPolicy(tenantId, ...)`, which writes to the Prisma
+ * `PasswordPolicy` model; routes then load the tenant policy with
+ * `getDefaultPolicy(tenantId)`.
+ *
+ * Defaults: min 8 / max 128 chars; complexity rules (uppercase, lowercase,
+ * number, special char) are disabled by default for backward compatibility —
+ * enable them per-tenant as needed via `requireUppercase`, `requireLowercase`,
+ * `requireNumbers`, `requireSpecialChars`.
+ */
+export const DEFAULT_POLICY: PasswordPolicyDefaults = {
     minLength: 8,
     maxLength: 128,
     requireUppercase: false,
@@ -60,7 +86,7 @@ const DEFAULT_POLICY: PasswordPolicyDefaults = {
  */
 export function validatePassword(
     password: string,
-    policy: PasswordPolicyConfig
+    policy: PasswordPolicyRules
 ): PasswordValidationResult {
     const errors: string[] = [];
 
@@ -95,6 +121,20 @@ export function validatePassword(
         valid: errors.length === 0,
         errors,
     };
+}
+
+/**
+ * Validate a password against the platform-wide `DEFAULT_POLICY`.
+ *
+ * Convenience helper for flows where no per-tenant policy row exists yet
+ * (e.g. tenant registration) — keeps the default policy centralized in this
+ * module instead of duplicating rule objects in route handlers.
+ *
+ * @param password - The plaintext password to validate
+ * @returns { valid: boolean, errors: string[] } — errors are i18n keys
+ */
+export function validatePasswordWithDefaults(password: string): PasswordValidationResult {
+    return validatePassword(password, DEFAULT_POLICY);
 }
 
 /**

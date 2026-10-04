@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** September 26, 2026 (Session 58: Documentation Audit — CSP Fix, Migration Fixes, RBAC Completion, CI/CD — v11.44.0)
+**Last Updated:** October 3, 2026 (Session 66: Password Policy Configurable + Work Inbox — SEC-07, UCE-21/22/23)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 34.0 — Session 58: Documentation audit following Session 57-58 production fixes. CSP hardened (Cloudflare origins, upgrade-insecure-requests), 3 migration fix rounds (idempotent SQL), RBAC coverage 165→~250 (~94%), Prisma Tenant Extension PoC (6 routes), CI/CD via GitHub Actions (ci.yml + deploy.yml). Session 57: Documentation update following Master Audit (Grade B- / 72/100). Updated statistics: 107 models, 293 indexes, mobile read-only (0% CRUD), RBAC ~41%. Session 56: PDF export (Invoice, Quotation, PO via jsPDF), CSV export improvements (UTF-8 BOM, header mapping, 3 utility functions), CSV export buttons on 6 pages (Contacts, Deals, Leads, Bills, Expenses, Products). Session 55: Master Audit P0/P1 fixes (Prisma Tenant Isolation Middleware, Payment Webhook Verification, 33 new permissions, Optimistic Locking, POS Decimal(19,4), Business Key Unique Constraints, Custom Role Client Support, Approval Escalation, Permission-based Approval Routes, Financial Soft Delete, Mobile API URL Fix). Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs. Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, ~250 RBAC routes
+**Document Version:** 34.1 — Session 66: Password policy configurable (SEC-07: central `DEFAULT_POLICY` + per-tenant `PasswordPolicy`, wired ke register + semua password-change/reset routes) + Work Inbox (UCE-21/22/23: delegated inbox + 6 kategori di `/dashboard/inbox`). Session 58: Documentation audit following Session 57-58 production fixes. CSP hardened (Cloudflare origins, upgrade-insecure-requests), 3 migration fix rounds (idempotent SQL), RBAC coverage 165→~250 (~94%), Prisma Tenant Extension PoC (6 routes), CI/CD via GitHub Actions (ci.yml + deploy.yml). Session 57: Documentation update following Master Audit (Grade B- / 72/100). Updated statistics: 107 models, 293 indexes, mobile read-only (0% CRUD), RBAC ~41%. Session 56: PDF export (Invoice, Quotation, PO via jsPDF), CSV export improvements (UTF-8 BOM, header mapping, 3 utility functions), CSV export buttons on 6 pages (Contacts, Deals, Leads, Bills, Expenses, Products). Session 55: Master Audit P0/P1 fixes (Prisma Tenant Isolation Middleware, Payment Webhook Verification, 33 new permissions, Optimistic Locking, POS Decimal(19,4), Business Key Unique Constraints, Custom Role Client Support, Approval Escalation, Permission-based Approval Routes, Financial Soft Delete, Mobile API URL Fix). Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs. Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, ~250 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -736,7 +736,7 @@ Enterprise-grade security untuk data protection.
 | **NextAuth JWT** | 🚀 `production_ready` | 2026-08-31 | CredentialsProvider, JWT strategy, bcryptjs, NEXTAUTH_SECRET mandatory |
 | **SSO** | 📋 `planned` | — | Belum ada kode |
 | **2FA (TOTP)** | ✅ `implemented` | 2026-09-03 | RFC 6238 compliant TOTP implementation — enable/disable/verify flow, backup codes ([`apps/web/lib/totp.ts`](apps/web/lib/totp.ts), [`apps/web/app/api/settings/security/2fa/route.ts`](apps/web/app/api/settings/security/2fa/route.ts)) |
-| **Password Policy** | ✅ `implemented` | 2026-08-31 | Min 8 chars enforced in register route, password change API ([`apps/web/app/api/settings/security/password/route.ts`](apps/web/app/api/settings/security/password/route.ts)) |
+| **Password Policy** | ✅ `implemented` | 2026-10-03 | Configurable rules — central `DEFAULT_POLICY` (min 8 / max 128) + per-tenant override via Prisma `PasswordPolicy`; enforced di register + semua password-change/reset routes (Session 66) — [`apps/web/lib/password-policy.ts`](apps/web/lib/password-policy.ts) |
 | **Session Management** | 🚀 `production_ready` | 2026-09-16 | Multi-device session control — max 5 sessions per user, session tracker service ([`apps/web/lib/session-tracker.ts`](apps/web/lib/session-tracker.ts)), session management UI ([`/dashboard/settings/sessions`](apps/web/app/dashboard/settings/sessions/page.tsx)), revoke individual/all sessions, daily cleanup cron 03:00 WIB |
 | **Login History** | ✅ `implemented` | 2026-09-03 | LoginLog model — IP address, user agent, success/failure tracking, pagination ([`apps/web/app/api/settings/security/login-history/route.ts`](apps/web/app/api/settings/security/login-history/route.ts)) |
 | **CSP Headers** | ✅ `implemented` | 2026-08-31 | Content-Security-Policy di middleware.ts + next.config.js — `unsafe-eval` removed |
@@ -851,20 +851,20 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **Delegation Scope** | ✅ `implemented` | 2026-09-26 | Siapa → ke siapa, periode, scope, entity types |
 | **Delegation Auto-expire** | ✅ `implemented` | 2026-09-26 | Otomatis berakhir setelah periode selesai — `checkDelegation()` checks endDate |
 | **Delegation Audit Trail** | ✅ `implemented` | 2026-09-26 | Delegator, delegatee, period, reason — logged via `logAudit()` |
-| **Delegated Work Inbox** | 📋 `planned` | — | Delegatee melihat delegated items di Work Inbox |
+| **Delegated Work Inbox** | ✅ `implemented` | 2026-10-03 | Delegatee melihat delegated items di Work Inbox — resolution via `getDelegations()` (auto-expire), badge "Delegated" + nama delegator (Session 66b) — [`apps/web/app/api/inbox/route.ts`](apps/web/app/api/inbox/route.ts) |
 
 ### 12.8 Work Inbox
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **My Work Inbox** | 📋 `planned` | — | Personal dashboard untuk setiap user [ADR-023] |
-| **Overdue Tasks** | 📋 `planned` | — | Tasks yang sudah melewati deadline |
-| **Approval Required** | 📋 `planned` | — | Transaksi menunggu approval user ini |
-| **Awaiting My Action** | 📋 `planned` | — | Transaksi yang perlu input dari user |
-| **Assigned to Me** | 📋 `planned` | — | Task yang ditugaskan ke user |
-| **Escalated to Me** | 📋 `planned` | — | Transaksi yang di-escalate ke user |
-| **Recently Completed** | 📋 `planned` | — | Aktivitas terakhir yang sudah selesai |
-| **Filter & Sorting** | 📋 `planned` | — | Filter dan sorting lanjutan |
+| **My Work Inbox** | ✅ `implemented` | 2026-10-03 | Personal work inbox per user — 6 kategori + badge counts + SLA coloring + dual layout mobile/desktop [ADR-023] (Session 66b) — [`apps/web/app/dashboard/inbox/page.tsx`](apps/web/app/dashboard/inbox/page.tsx) |
+| **Overdue Tasks** | ✅ `implemented` | 2026-10-03 | Task lewat due date + SLA breached + stale approvals ≥24h (Session 66b) |
+| **Approval Required** | ✅ `implemented` | 2026-10-03 | Pending ApprovalRequest sesuai `ApprovalLevel.requiredRole` + delegated (Session 66b) |
+| **Awaiting My Action** | ✅ `implemented` | 2026-10-03 | Task `IN_REVIEW` / due hari ini (Session 66b) |
+| **Assigned to Me** | ✅ `implemented` | 2026-10-03 | Semua open task (`assigneeId` = user) (Session 66b) |
+| **Escalated to Me** | ✅ `implemented` | 2026-10-03 | SLATracker `escalatedTo` user + notifikasi `approval_escalation[_admin]` (Session 66b) |
+| **Recently Completed** | ✅ `implemented` | 2026-10-03 | Task DONE 7 hari + ApprovalRequest `resolvedBy` 7 hari (Session 66b) |
+| **Filter & Sorting** | 📋 `planned` | — | Filter dan sorting lanjutan (di luar scope Session 66b) |
 
 ### 12.9 Locking Engine
 

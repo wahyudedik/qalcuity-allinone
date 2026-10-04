@@ -177,6 +177,8 @@ export async function POST(request: Request) {
 
             if (existingTransaction) {
                 // Return existing transaction (idempotent response — no duplicate created)
+                // `duplicate: true` = task contract flag (offline sync dedup);
+                // `idempotent: true` kept for backward compatibility with existing clients.
                 return NextResponse.json({
                     success: true,
                     data: {
@@ -193,6 +195,7 @@ export async function POST(request: Request) {
                         status: existingTransaction.status,
                         createdAt: existingTransaction.createdAt.toISOString(),
                         idempotent: true,
+                        duplicate: true,
                     },
                 }, { status: 200 });
             }

@@ -1,31 +1,37 @@
 'use client';
 
 /**
- * Work Inbox — Pusat aktivitas user
+ * My Work Inbox — UCE-22 + UCE-23
  *
- * Menampilkan semua tugas, approval pending, item overdue,
- * dan aktivitas terbaru dalam satu halaman terpadu.
+ * Personal work dashboard with 6 inbox categories:
+ *   Overdue, Approval Required, Awaiting Action, Assigned,
+ *   Escalated, Recently Completed.
+ *
+ * Delegated approval items (UCE-21) are marked with a
+ * "Delegated" badge and the delegator's name.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
     Inbox,
-    CheckSquare,
-    CheckCircle,
+    RefreshCw,
     AlertTriangle,
     Clock,
+    CheckSquare,
+    Send,
+    Flame,
+    CheckCircle2,
+    UserCheck,
     FileText,
     ShoppingCart,
     PenLine,
-    ChevronRight,
-    Loader2,
-    Calendar,
+    Bell,
     ArrowRight,
+    Calendar,
     User,
     type LucideIcon,
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useTranslation } from '@/lib/i18n';
 import { useToast } from '@/components/ui/toast';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -33,64 +39,166 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface InboxTask {
-    id: string;
-    title: string;
-    status: string;
-    priority: string;
-    dueDate: string | null;
-    projectName: string;
-    projectId: string;
+type CategoryKey =
+    | 'overdue'
+    | 'approvalRequired'
+    | 'awaitingAction'
+    | 'assigned'
+    | 'escalated'
+    | 'recentlyCompleted';
+
+interface InboxSLAInfo {
+    color: 'green' | 'yellow' | 'red' | 'breached';
+    label: string;
+    hoursRemaining: number;
 }
 
-interface InboxApproval {
+interface InboxItem {
     id: string;
+    title: string;
     entityType: string;
-    entityDisplay: string;
+    entityLabel: string;
     entityAmount: number | null;
-    currentLevel: number;
-    requesterName: string;
-    createdAt: string;
-}
-
-interface OverdueItem {
-    id: string;
-    type: 'TASK' | 'INVOICE';
-    title: string;
-    dueDate: string;
-    daysOverdue: number;
-    details: string;
-}
-
-interface RecentActivity {
-    id: string;
-    action: string;
-    entity: string;
-    entityId: string | null;
+    status: string;
+    link: string;
     timestamp: string;
-    userName: string;
+    dueDate: string | null;
+    sla: InboxSLAInfo | null;
+    delegated: boolean;
+    delegatedFrom: string | null;
+    meta: Record<string, string | number | null>;
 }
 
 interface InboxData {
     summary: {
-        myTasksCount: number;
-        pendingApprovalsCount: number;
-        overdueCount: number;
-        completedTodayCount: number;
+        total: number;
+        overdue: number;
+        approvalRequired: number;
+        awaitingAction: number;
+        assigned: number;
+        escalated: number;
+        recentlyCompleted: number;
     };
-    myTasks: InboxTask[];
-    pendingApprovals: InboxApproval[];
-    overdueItems: OverdueItem[];
-    recentActivity: RecentActivity[];
+    categories: Record<CategoryKey, InboxItem[]>;
+    meta: {
+        delegatedFrom: string[];
+        generatedAt: string;
+        staleApprovalThresholdHours: number;
+        escalationThresholdHours: number;
+    };
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Category config ─────────────────────────────────────────────────────────
 
-const PRIORITY_COLORS: Record<string, string> = {
-    LOW: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-    MEDIUM: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    HIGH: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-    URGENT: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+const CATEGORIES: Array<{
+    key: CategoryKey;
+    icon: LucideIcon;
+    labelKey: string;
+    emptyKey: string;
+    badgeClass: string;
+}> = [
+        {
+            key: 'overdue',
+            icon: AlertTriangle,
+            labelKey: 'inbox.categoryOverdue',
+            emptyKey: 'inbox.emptyOverdue',
+            badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+        },
+        {
+            key: 'approvalRequired',
+            icon: Clock,
+            labelKey: 'inbox.categoryApprovalRequired',
+            emptyKey: 'inbox.emptyApprovalRequired',
+            badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+        },
+        {
+            key: 'awaitingAction',
+            icon: Send,
+            labelKey: 'inbox.categoryAwaitingAction',
+            emptyKey: 'inbox.emptyAwaitingAction',
+            badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+        },
+        {
+            key: 'assigned',
+            icon: CheckSquare,
+            labelKey: 'inbox.categoryAssigned',
+            emptyKey: 'inbox.emptyAssigned',
+            badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+        },
+        {
+            key: 'escalated',
+            icon: Flame,
+            labelKey: 'inbox.categoryEscalated',
+            emptyKey: 'inbox.emptyEscalated',
+            badgeClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+        },
+        {
+            key: 'recentlyCompleted',
+            icon: CheckCircle2,
+            labelKey: 'inbox.categoryRecentlyCompleted',
+            emptyKey: 'inbox.emptyRecentlyCompleted',
+            badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+        },
+    ];
+
+const ENTITY_ICONS: Record<string, LucideIcon> = {
+    TASK: CheckSquare,
+    INVOICE: FileText,
+    PURCHASE_ORDER: ShoppingCart,
+    QUOTATION: PenLine,
+    APPROVAL_REQUEST: Clock,
+    SLA: Flame,
+    NOTIFICATION: Bell,
+};
+
+const ENTITY_COLORS: Record<string, string> = {
+    TASK: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    INVOICE: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
+    PURCHASE_ORDER: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    QUOTATION: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    APPROVAL_REQUEST: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    SLA: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    NOTIFICATION: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+};
+
+const ENTITY_I18N: Record<string, string> = {
+    TASK: 'inbox.typeTask',
+    INVOICE: 'inbox.typeInvoice',
+    PURCHASE_ORDER: 'inbox.typePurchaseOrder',
+    QUOTATION: 'inbox.typeQuotation',
+    APPROVAL_REQUEST: 'inbox.typeApprovalRequest',
+    SLA: 'inbox.typeSla',
+    NOTIFICATION: 'inbox.typeNotification',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+    TODO: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    IN_PROGRESS: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    IN_REVIEW: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+    DONE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    APPROVED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    active: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    breached: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    UNREAD: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    READ: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+};
+
+const STATUS_I18N: Record<string, string> = {
+    TODO: 'dashboard.tasks.status.TODO',
+    IN_PROGRESS: 'dashboard.tasks.status.IN_PROGRESS',
+    IN_REVIEW: 'dashboard.tasks.status.IN_REVIEW',
+    DONE: 'dashboard.tasks.status.DONE',
+    CANCELLED: 'dashboard.tasks.status.CANCELLED',
+    PENDING: 'inbox.statusPending',
+    APPROVED: 'inbox.statusApproved',
+    REJECTED: 'inbox.statusRejected',
+    active: 'inbox.statusActive',
+    breached: 'inbox.statusBreached',
+    UNREAD: 'inbox.statusUnread',
+    READ: 'inbox.statusRead',
 };
 
 const PRIORITY_I18N: Record<string, string> = {
@@ -100,142 +208,93 @@ const PRIORITY_I18N: Record<string, string> = {
     URGENT: 'dashboard.tasks.priority.URGENT',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-    TODO: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    IN_PROGRESS: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    IN_REVIEW: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    DONE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+const SLA_DOT: Record<string, string> = {
+    green: 'bg-green-500',
+    yellow: 'bg-yellow-400',
+    red: 'bg-red-500',
+    breached: 'bg-red-700',
 };
 
-const STATUS_I18N: Record<string, string> = {
-    TODO: 'dashboard.tasks.status.TODO',
-    IN_PROGRESS: 'dashboard.tasks.status.IN_PROGRESS',
-    IN_REVIEW: 'dashboard.tasks.status.IN_REVIEW',
-    DONE: 'dashboard.tasks.status.DONE',
-    CANCELLED: 'dashboard.tasks.status.CANCELLED',
+const SLA_TEXT: Record<string, string> = {
+    green: 'text-green-600 dark:text-green-400',
+    yellow: 'text-yellow-600 dark:text-yellow-400',
+    red: 'text-red-600 dark:text-red-400',
+    breached: 'text-red-700 dark:text-red-500',
 };
 
-const ENTITY_ICONS: Record<string, LucideIcon> = {
-    INVOICE: FileText,
-    PURCHASE_ORDER: ShoppingCart,
-    QUOTATION: PenLine,
-};
-
-const ENTITY_COLORS: Record<string, string> = {
-    INVOICE: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    PURCHASE_ORDER: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    QUOTATION: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-};
-
-const ENTITY_I18N: Record<string, string> = {
-    INVOICE: 'inbox.typeInvoice',
-    PURCHASE_ORDER: 'inbox.typePurchaseOrder',
-    QUOTATION: 'inbox.typeQuotation',
-};
-
-const ACTION_COLORS: Record<string, string> = {
-    CREATE: 'bg-green-100 text-green-700',
-    UPDATE: 'bg-blue-100 text-blue-700',
-    DELETE: 'bg-red-100 text-red-700',
-    APPROVE: 'bg-emerald-100 text-emerald-700',
-    REJECT: 'bg-red-100 text-red-700',
+const SLA_I18N: Record<string, string> = {
+    green: 'inbox.slaGreen',
+    yellow: 'inbox.slaYellow',
+    red: 'inbox.slaRed',
+    breached: 'inbox.slaBreached',
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function SummaryCard({
-    icon: Icon,
-    label,
-    count,
-    color,
-    href,
-}: {
-    icon: LucideIcon;
-    label: string;
-    count: number;
-    color: string;
-    href: string;
-}) {
-    return (
-        <Link
-            href={href}
-            className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
-        >
-            <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${color}`}>
-                <Icon className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</p>
-            </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-        </Link>
-    );
-}
-
-function PriorityBadge({ priority, t }: { priority: string; t: (key: string) => string }) {
-    return (
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[priority] || 'bg-gray-100 text-gray-600'}`}>
-            {t(PRIORITY_I18N[priority] || priority)}
-        </span>
-    );
-}
-
-function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
-    return (
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-600'}`}>
-            {t(STATUS_I18N[status] || status)}
-        </span>
-    );
-}
-
-function EntityBadge({ entityType, t }: { entityType: string; t: (key: string) => string }) {
+function EntityBadge({ entityType, entityLabel, t }: { entityType: string; entityLabel: string; t: (key: string) => string }) {
     const Icon = ENTITY_ICONS[entityType] || FileText;
     return (
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${ENTITY_COLORS[entityType] || 'bg-gray-100 text-gray-600'}`}>
+        <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${ENTITY_COLORS[entityType] || 'bg-gray-100 text-gray-600'}`}
+            title={entityLabel}
+        >
             <Icon className="h-3 w-3" />
             {t(ENTITY_I18N[entityType] || entityType)}
         </span>
     );
 }
 
-// ─── Loading Skeleton ────────────────────────────────────────────────────────
-
-function InboxSkeleton() {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
+    const i18nKey = STATUS_I18N[status];
     return (
-        <div className="space-y-6">
-            {/* Header skeleton */}
-            <div>
-                <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-                <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
-            </div>
-            {/* Summary cards skeleton */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 bg-gray-200 rounded-lg animate-pulse" />
-                            <div className="flex-1">
-                                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-2" />
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            {/* Sections skeleton */}
-            {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4" />
-                    <div className="space-y-3">
-                        {Array.from({ length: 3 }).map((_, j) => (
-                            <div key={j} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-600'}`}>
+            {i18nKey ? t(i18nKey) : status}
+        </span>
+    );
+}
+
+function SLABadge({ sla, t }: { sla: InboxSLAInfo | null; t: (key: string) => string }) {
+    if (!sla) return <span className="text-xs text-gray-400 dark:text-gray-500">—</span>;
+    return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span className={`h-2 w-2 rounded-full ${SLA_DOT[sla.color] || 'bg-gray-400'}`} aria-hidden />
+            <span className={SLA_TEXT[sla.color] || 'text-gray-500'}>{t(SLA_I18N[sla.color] || 'inbox.slaGreen')}</span>
+        </span>
+    );
+}
+
+function DelegatedBadge({ from, t }: { from: string | null; t: (key: string) => string }) {
+    return (
+        <span
+            className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
+            title={from ? `${t('inbox.delegatedFrom')}: ${from}` : t('inbox.delegated')}
+        >
+            <UserCheck className="h-3 w-3" />
+            {t('inbox.delegated')}
+        </span>
+    );
+}
+
+function ItemMeta({ item, t }: { item: InboxItem; t: (key: string) => string }) {
+    const bits: string[] = [];
+
+    if (item.meta.projectName) bits.push(String(item.meta.projectName));
+    if (item.meta.requesterName) bits.push(`${t('inbox.requester')}: ${String(item.meta.requesterName)}`);
+    if (item.meta.reason === 'IN_REVIEW') bits.push(t('inbox.reasonInReview'));
+    if (item.meta.reason === 'DUE_TODAY') bits.push(t('inbox.reasonDueToday'));
+    if (typeof item.meta.hoursWaiting === 'number' && item.entityType === 'APPROVAL_REQUEST') {
+        bits.push(`${item.meta.hoursWaiting} ${t('inbox.hoursWaiting')}`);
+    }
+    if (typeof item.meta.daysOverdue === 'number') {
+        bits.push(`${item.meta.daysOverdue} ${t('inbox.daysOverdue')}`);
+    }
+    if (item.meta.stage) bits.push(String(item.meta.stage));
+
+    if (bits.length === 0) return null;
+    return (
+        <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+            {bits.join(' · ')}
+        </p>
     );
 }
 
@@ -243,65 +302,43 @@ function InboxSkeleton() {
 
 export default function InboxPage() {
     const { t } = useTranslation();
-    const { data: session } = useSession();
     const { addToast } = useToast();
 
     const [inboxData, setInboxData] = useState<InboxData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [markingDone, setMarkingDone] = useState<string | null>(null);
+    const [activeCategory, setActiveCategory] = useState<CategoryKey>('overdue');
+    const [actionPending, setActionPending] = useState<string | null>(null);
 
-    const fetchInbox = useCallback(async () => {
+    const fetchInbox = useCallback(async (isRefresh = false) => {
         try {
-            setLoading(true);
+            if (isRefresh) setRefreshing(true);
+            else setLoading(true);
             setError(null);
 
             const res = await fetch('/api/inbox');
-            if (!res.ok) throw new Error('Failed to fetch inbox');
+            const json = await res.json().catch(() => null);
 
-            const json = await res.json();
-            if (json.success) {
-                setInboxData(json.data);
-            } else {
-                throw new Error(json.error || 'Unknown error');
+            if (!res.ok || !json?.success) {
+                throw new Error(json?.error?.message || json?.error || t('common.error'));
             }
+            setInboxData(json.data);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : t('common.error'));
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         fetchInbox();
     }, [fetchInbox]);
 
-    const handleMarkDone = async (taskId: string) => {
-        try {
-            setMarkingDone(taskId);
-            const res = await fetch(`/api/tasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                // Using PATCH via the tasks endpoint — for now we just update status
-            });
-            // For mark done, we need to update the task status
-            // The tasks API doesn't have a PATCH, so we'll use a direct approach
-            const updateRes = await fetch(`/api/tasks?assigneeId=me`, {
-                method: 'GET',
-            });
-            // Simplified: just refresh the inbox after marking done
-            // In a real implementation, you'd have a PATCH endpoint
-            addToast(t('inbox.markDoneSuccess'), 'success');
-            fetchInbox();
-        } catch {
-            addToast(t('inbox.markDoneError'), 'error');
-        } finally {
-            setMarkingDone(null);
-        }
-    };
-
     const handleApprove = async (approvalId: string) => {
         try {
+            setActionPending(approvalId);
             const res = await fetch(`/api/approval/requests/${approvalId}/approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -309,14 +346,17 @@ export default function InboxPage() {
             });
             if (!res.ok) throw new Error('Failed to approve');
             addToast(t('inbox.approveSuccess'), 'success');
-            fetchInbox();
+            fetchInbox(true);
         } catch {
             addToast(t('inbox.approveError'), 'error');
+        } finally {
+            setActionPending(null);
         }
     };
 
     const handleReject = async (approvalId: string) => {
         try {
+            setActionPending(approvalId);
             const res = await fetch(`/api/approval/requests/${approvalId}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -324,9 +364,11 @@ export default function InboxPage() {
             });
             if (!res.ok) throw new Error('Failed to reject');
             addToast(t('inbox.rejectSuccess'), 'success');
-            fetchInbox();
+            fetchInbox(true);
         } catch {
             addToast(t('inbox.rejectError'), 'error');
+        } finally {
+            setActionPending(null);
         }
     };
 
@@ -334,124 +376,166 @@ export default function InboxPage() {
 
     if (loading) {
         return (
-            <div className="p-6">
-                <InboxSkeleton />
+            <div className="space-y-6 p-6">
+                <div>
+                    <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+                </div>
+                <div className="flex gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="h-9 w-32 bg-gray-200 rounded-lg animate-pulse" />
+                    ))}
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse dark:bg-gray-700" />
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
 
     // ── Error State ────────────────────────────────────────────────────────
 
-    if (error) {
+    if (error || !inboxData) {
         return (
             <div className="p-6">
                 <EmptyState
                     icon={AlertTriangle}
                     title={t('common.error')}
-                    description={error}
+                    description={error || t('common.error')}
                     actionLabel={t('common.tryAgain')}
-                    onAction={fetchInbox}
+                    onAction={() => fetchInbox()}
                 />
             </div>
         );
     }
 
     const data = inboxData;
-    const hasAnyItems =
-        data &&
-        (data.myTasks.length > 0 ||
-            data.pendingApprovals.length > 0 ||
-            data.overdueItems.length > 0 ||
-            data.recentActivity.length > 0);
+    const activeItems = data.categories[activeCategory] || [];
+    const activeConfig = CATEGORIES.find((c) => c.key === activeCategory)!;
+    const pendingTotal =
+        data.summary.overdue +
+        data.summary.approvalRequired +
+        data.summary.awaitingAction +
+        data.summary.assigned +
+        data.summary.escalated;
 
-    // ── Empty State ────────────────────────────────────────────────────────
+    const renderItemMeta = (item: InboxItem) => <ItemMeta item={item} t={t} />;
 
-    if (!hasAnyItems) {
+    const renderActions = (item: InboxItem) => {
+        if (activeCategory !== 'approvalRequired') return null;
         return (
-            <div className="p-6">
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => handleApprove(item.id)}
+                    disabled={actionPending === item.id}
+                    className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+                >
+                    <CheckCircle2 className="h-3 w-3" />
+                    {t('inbox.approve')}
+                </button>
+                <button
+                    onClick={() => handleReject(item.id)}
+                    disabled={actionPending === item.id}
+                    className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50 dark:bg-red-900/20 dark:text-red-400"
+                >
+                    {t('inbox.reject')}
+                </button>
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6 p-6">
+            {/* Header */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        <Inbox className="h-6 w-6 text-blue-500" />
                         {t('inbox.title')}
                     </h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {t('inbox.description')}
                     </p>
+                    <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('inbox.pendingTotal')}: {pendingTotal}
+                    </p>
+                    {data.meta.delegatedFrom.length > 0 && (
+                        <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/20 dark:text-violet-400">
+                            <UserCheck className="h-3 w-3" />
+                            {t('inbox.delegatedFrom')}: {data.meta.delegatedFrom.join(', ')}
+                        </p>
+                    )}
                 </div>
+                <button
+                    onClick={() => fetchInbox(true)}
+                    disabled={refreshing}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                    {refreshing ? t('inbox.refreshing') : t('inbox.refresh')}
+                </button>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label={t('inbox.title')}>
+                {CATEGORIES.map((cat) => {
+                    const count = data.summary[cat.key] ?? 0;
+                    const isActive = cat.key === activeCategory;
+                    const Icon = cat.icon;
+                    return (
+                        <button
+                            key={cat.key}
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => setActiveCategory(cat.key)}
+                            className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${isActive
+                                ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {t(cat.labelKey)}
+                            <span
+                                className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs font-bold ${isActive
+                                    ? 'bg-white/20 text-white'
+                                    : cat.badgeClass
+                                    }`}
+                            >
+                                {count}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Active Category Content */}
+            {activeItems.length === 0 ? (
                 <EmptyState
-                    icon={CheckCircle}
-                    title={t('inbox.emptyTitle')}
-                    description={t('inbox.emptyDescription')}
+                    icon={activeConfig.icon}
+                    title={t(activeConfig.emptyKey)}
+                    description={t('inbox.emptyCategoryDescription')}
+                    actionLabel={t('inbox.refresh')}
+                    onAction={() => fetchInbox(true)}
                 />
-            </div>
-        );
-    }
-
-    // ── Main Render ────────────────────────────────────────────────────────
-
-    return (
-        <div className="space-y-6 p-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {t('inbox.title')}
-                </h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t('inbox.description')}
-                </p>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <SummaryCard
-                    icon={CheckSquare}
-                    label={t('inbox.myTasks')}
-                    count={data.summary.myTasksCount}
-                    color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                    href="/dashboard/tasks"
-                />
-                <SummaryCard
-                    icon={Clock}
-                    label={t('inbox.pendingApprovals')}
-                    count={data.summary.pendingApprovalsCount}
-                    color="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400"
-                    href="/dashboard/approvals"
-                />
-                <SummaryCard
-                    icon={AlertTriangle}
-                    label={t('inbox.overdue')}
-                    count={data.summary.overdueCount}
-                    color="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                    href="/dashboard/tasks"
-                />
-                <SummaryCard
-                    icon={CheckCircle}
-                    label={t('inbox.completedToday')}
-                    count={data.summary.completedTodayCount}
-                    color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                    href="/dashboard/tasks"
-                />
-            </div>
-
-            {/* Tasks Requiring Action */}
-            {data.myTasks.length > 0 && (
+            ) : (
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                     <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <div className="flex items-center gap-3">
-                            <CheckSquare className="h-5 w-5 text-blue-500" />
+                            <activeConfig.icon className={`h-5 w-5 ${activeCategory === 'overdue' || activeCategory === 'escalated' ? 'text-red-500' : 'text-blue-500'}`} />
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {t('inbox.tasksRequiringAction')}
+                                {t(activeConfig.labelKey)}
                             </h2>
-                            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                {data.myTasks.length}
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${activeConfig.badgeClass}`}>
+                                {activeItems.length}
                             </span>
                         </div>
-                        <Link
-                            href="/dashboard/tasks"
-                            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                        >
-                            {t('inbox.viewAll')}
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
+                        <span className="hidden text-xs text-gray-400 sm:block">
+                            {t('inbox.generatedAt')}: {formatDateTime(data.meta.generatedAt)}
+                        </span>
                     </div>
 
                     {/* Desktop: Table */}
@@ -460,73 +544,73 @@ export default function InboxPage() {
                             <thead className="bg-gray-50 dark:bg-gray-700/50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.taskName')}
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.project')}
+                                        {t('inbox.itemTitle')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                         {t('common.status')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('common.priority')}
+                                        SLA
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.dueDate')}
+                                        {t('inbox.time')}
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.action')}
-                                    </th>
+                                    {activeCategory === 'approvalRequired' && (
+                                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                            {t('inbox.flag')}
+                                        </th>
+                                    )}
+                                    {activeCategory === 'approvalRequired' && (
+                                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                            {t('inbox.action')}
+                                        </th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {data.myTasks.map((task) => {
-                                    const isOverdue =
-                                        task.dueDate && new Date(task.dueDate) < new Date();
+                                {activeItems.map((item) => {
+                                    const isOverdueDue =
+                                        item.dueDate && new Date(item.dueDate) < new Date() && item.entityType === 'TASK';
                                     return (
                                         <tr
-                                            key={task.id}
+                                            key={`${item.entityType}-${item.id}`}
                                             className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                         >
                                             <td className="px-6 py-4">
-                                                <Link
-                                                    href={`/dashboard/projects/${task.projectId}/tasks`}
-                                                    className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
-                                                >
-                                                    {task.title}
-                                                </Link>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {task.projectName}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <StatusBadge status={task.status} t={t} />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <PriorityBadge priority={task.priority} t={t} />
-                                            </td>
-                                            <td className={`px-6 py-4 text-sm ${isOverdue ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                                                {task.dueDate ? formatDate(task.dueDate) : '—'}
-                                                {isOverdue && (
-                                                    <span className="ml-1 text-xs text-red-500">
-                                                        ({t('inbox.overdue')})
-                                                    </span>
-                                                )}
+                                                <div className="flex items-start gap-3">
+                                                    <EntityBadge entityType={item.entityType} entityLabel={item.entityLabel} t={t} />
+                                                    <div className="min-w-0">
+                                                        <Link
+                                                            href={item.link}
+                                                            className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
+                                                        >
+                                                            {item.title}
+                                                        </Link>
+                                                        {renderItemMeta(item)}
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <button
-                                                    onClick={() => handleMarkDone(task.id)}
-                                                    disabled={markingDone === task.id}
-                                                    className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100 disabled:opacity-50 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30"
-                                                >
-                                                    {markingDone === task.id ? (
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                <StatusBadge status={item.status} t={t} />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <SLABadge sla={item.sla} t={t} />
+                                            </td>
+                                            <td className={`px-6 py-4 text-sm ${isOverdueDue ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                {item.dueDate ? formatDate(item.dueDate) : formatDateTime(item.timestamp)}
+                                            </td>
+                                            {activeCategory === 'approvalRequired' && (
+                                                <td className="px-6 py-4">
+                                                    {item.delegated ? (
+                                                        <DelegatedBadge from={item.delegatedFrom} t={t} />
                                                     ) : (
-                                                        <CheckCircle className="h-3 w-3" />
+                                                        <span className="text-xs text-gray-400">—</span>
                                                     )}
-                                                    {t('inbox.markDone')}
-                                                </button>
-                                            </td>
+                                                </td>
+                                            )}
+                                            {activeCategory === 'approvalRequired' && (
+                                                <td className="px-6 py-4">{renderActions(item)}</td>
+                                            )}
                                         </tr>
                                     );
                                 })}
@@ -536,43 +620,36 @@ export default function InboxPage() {
 
                     {/* Mobile: Cards */}
                     <div className="divide-y divide-gray-100 md:hidden dark:divide-gray-700">
-                        {data.myTasks.map((task) => {
-                            const isOverdue =
-                                task.dueDate && new Date(task.dueDate) < new Date();
+                        {activeItems.map((item) => {
+                            const isOverdueDue =
+                                item.dueDate && new Date(item.dueDate) < new Date() && item.entityType === 'TASK';
                             return (
-                                <div key={task.id} className="px-4 py-3">
-                                    <div className="flex items-start justify-between">
-                                        <Link
-                                            href={`/dashboard/projects/${task.projectId}/tasks`}
-                                            className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100"
-                                        >
-                                            {task.title}
-                                        </Link>
-                                        <button
-                                            onClick={() => handleMarkDone(task.id)}
-                                            disabled={markingDone === task.id}
-                                            className="ml-2 shrink-0 rounded-lg bg-green-50 p-1.5 text-green-700 hover:bg-green-100 disabled:opacity-50 dark:bg-green-900/20 dark:text-green-400"
-                                        >
-                                            {markingDone === task.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <CheckCircle className="h-4 w-4" />
-                                            )}
-                                        </button>
+                                <div key={`${item.entityType}-${item.id}`} className="px-4 py-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <EntityBadge entityType={item.entityType} entityLabel={item.entityLabel} t={t} />
+                                                <StatusBadge status={item.status} t={t} />
+                                                {item.delegated && <DelegatedBadge from={item.delegatedFrom} t={t} />}
+                                            </div>
+                                            <Link
+                                                href={item.link}
+                                                className="mt-1 block font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100"
+                                            >
+                                                {item.title}
+                                            </Link>
+                                            {renderItemMeta(item)}
+                                            <div className="mt-1 flex flex-wrap items-center gap-3">
+                                                <SLABadge sla={item.sla} t={t} />
+                                                <span className={`text-xs ${isOverdueDue ? 'font-medium text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                    <Calendar className="mr-1 inline h-3 w-3" />
+                                                    {item.dueDate ? formatDate(item.dueDate) : formatDateTime(item.timestamp)}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                            {task.projectName}
-                                        </span>
-                                        <StatusBadge status={task.status} t={t} />
-                                        <PriorityBadge priority={task.priority} t={t} />
-                                    </div>
-                                    {task.dueDate && (
-                                        <p className={`mt-1 text-xs ${isOverdue ? 'font-medium text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
-                                            <Calendar className="mr-1 inline h-3 w-3" />
-                                            {formatDate(task.dueDate)}
-                                            {isOverdue && ` — ${t('inbox.overdue')}`}
-                                        </p>
+                                    {activeCategory === 'approvalRequired' && (
+                                        <div className="mt-2">{renderActions(item)}</div>
                                     )}
                                 </div>
                             );
@@ -581,230 +658,14 @@ export default function InboxPage() {
                 </div>
             )}
 
-            {/* Pending Approvals */}
-            {data.pendingApprovals.length > 0 && (
-                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                        <div className="flex items-center gap-3">
-                            <Clock className="h-5 w-5 text-yellow-500" />
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {t('inbox.pendingApprovalsList')}
-                            </h2>
-                            <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                {data.pendingApprovals.length}
-                            </span>
-                        </div>
-                        <Link
-                            href="/dashboard/approvals"
-                            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                        >
-                            {t('inbox.viewAll')}
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </div>
-
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {data.pendingApprovals.map((approval) => (
-                            <div
-                                key={approval.id}
-                                className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <EntityBadge entityType={approval.entityType} t={t} />
-                                    <div>
-                                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                                            {approval.entityDisplay}
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                            <User className="h-3 w-3" />
-                                            {approval.requesterName}
-                                            {approval.entityAmount !== null && (
-                                                <span className="font-medium text-gray-700 dark:text-gray-300">
-                                                    — {formatCurrency(approval.entityAmount)}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handleApprove(approval.id)}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-green-700"
-                                    >
-                                        <CheckCircle className="h-3 w-3" />
-                                        {t('inbox.approve')}
-                                    </button>
-                                    <button
-                                        onClick={() => handleReject(approval.id)}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
-                                    >
-                                        {t('inbox.reject')}
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Overdue Items */}
-            {data.overdueItems.length > 0 && (
-                <div className="rounded-xl border border-red-200 bg-white dark:border-red-800 dark:bg-gray-800">
-                    <div className="flex items-center justify-between border-b border-red-200 px-6 py-4 dark:border-red-800">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle className="h-5 w-5 text-red-500" />
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {t('inbox.overdueItems')}
-                            </h2>
-                            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                {data.overdueItems.length}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Desktop: Table */}
-                    <div className="hidden md:block">
-                        <table className="w-full">
-                            <thead className="bg-red-50 dark:bg-red-900/10">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.type')}
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.title')}
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.details')}
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        {t('inbox.dueDate')}
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-red-600 dark:text-red-400">
-                                        {t('inbox.daysOverdue')}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {data.overdueItems.map((item) => (
-                                    <tr
-                                        key={`${item.type}-${item.id}`}
-                                        className="bg-red-50/50 hover:bg-red-50 dark:bg-red-900/5 dark:hover:bg-red-900/10"
-                                    >
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${item.type === 'TASK' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'}`}>
-                                                {item.type === 'TASK' ? (
-                                                    <CheckSquare className="h-3 w-3" />
-                                                ) : (
-                                                    <FileText className="h-3 w-3" />
-                                                )}
-                                                {item.type === 'TASK' ? t('inbox.typeTask') : t('inbox.typeInvoice')}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                            {item.title}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                            {item.details}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-red-600 dark:text-red-400">
-                                            {formatDate(item.dueDate)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                                {item.daysOverdue} {t('inbox.daysOverdue')}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Mobile: Cards */}
-                    <div className="divide-y divide-red-100 md:hidden dark:divide-red-900/20">
-                        {data.overdueItems.map((item) => (
-                            <div
-                                key={`${item.type}-${item.id}`}
-                                className="px-4 py-3"
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${item.type === 'TASK' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                                                {item.type === 'TASK' ? (
-                                                    <CheckSquare className="h-3 w-3" />
-                                                ) : (
-                                                    <FileText className="h-3 w-3" />
-                                                )}
-                                                {item.type === 'TASK' ? t('inbox.typeTask') : t('inbox.typeInvoice')}
-                                            </span>
-                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
-                                                {item.daysOverdue} {t('inbox.daysOverdue')}
-                                            </span>
-                                        </div>
-                                        <p className="mt-1 font-medium text-gray-900 dark:text-gray-100">
-                                            {item.title}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {item.details}
-                                        </p>
-                                    </div>
-                                </div>
-                                <p className="mt-1 text-xs text-red-600">
-                                    <Calendar className="mr-1 inline h-3 w-3" />
-                                    {t('inbox.dueDate')}: {formatDate(item.dueDate)}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Recent Activity */}
-            {data.recentActivity.length > 0 && (
-                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                        <div className="flex items-center gap-3">
-                            <Clock className="h-5 w-5 text-gray-500" />
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {t('inbox.recentActivity')}
-                            </h2>
-                        </div>
-                    </div>
-
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {data.recentActivity.map((activity) => (
-                            <div
-                                key={activity.id}
-                                className="flex items-center gap-4 px-6 py-3"
-                            >
-                                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium ${ACTION_COLORS[activity.action] || 'bg-gray-100 text-gray-700'}`}>
-                                    {activity.action === 'CREATE' && <CheckCircle className="h-4 w-4" />}
-                                    {activity.action === 'UPDATE' && <FileText className="h-4 w-4" />}
-                                    {activity.action === 'DELETE' && <AlertTriangle className="h-4 w-4" />}
-                                    {activity.action !== 'CREATE' && activity.action !== 'UPDATE' && activity.action !== 'DELETE' && (
-                                        <Clock className="h-4 w-4" />
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-gray-900 dark:text-gray-100">
-                                        <span className="font-medium">{activity.userName}</span>
-                                        {' '}{t(`inbox.action${activity.action}`) || activity.action.toLowerCase()}{' '}
-                                        <span className="font-medium">{activity.entity}</span>
-                                        {activity.entityId && (
-                                            <span className="text-gray-500 dark:text-gray-400">
-                                                {' '}({activity.entityId.slice(0, 8)}...)
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                                <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
-                                    {formatDateTime(activity.timestamp)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {/* Cross-category hint */}
+            {pendingTotal > 0 && activeItems.length > 0 && (
+                <p className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                    <ArrowRight className="h-3 w-3" />
+                    {t('inbox.crossCategoryHint')}
+                    {typeof data.meta.staleApprovalThresholdHours === 'number' &&
+                        ` — ${t('inbox.staleHint')}`}
+                </p>
             )}
         </div>
     );

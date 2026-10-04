@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity — Remaining Work Documentation
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
-> Diperbarui: 26 September 2026
-> Version: 1.8 — Session 59: Mobile CRUD Complete (P0-5)
+> Diperbarui: 3 October 2026
+> Version: 1.9 — Session 66: Password Policy + Work Inbox (SEC-07, UCE-21/22/23)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -35,15 +35,15 @@
 | **Analytics Studio** | 12 | 5 | 15 | 32 | 38% |
 | **AI Features** | 2 | 1 | 14 | 17 | 12% |
 | **Integration & Ecosystem** | 4 | 2 | 14 | 20 | 20% |
-| **Admin & Security** | 7 | 1 | 13 | 21 | 33% |
-| **Unified Control Engine** | 0 | 0 | 50+ | 50+ | 0% |
+| **Admin & Security** | 8 | 1 | 12 | 21 | 38% |
+| **Unified Control Engine** | 3 | 0 | 47+ | 50+ | 6% |
 | **Architecture Engines** | 25 | 0 | 5+ | 30+ | 83% |
 | **Industry Packs** | 0 | 0 | 50+ | 50+ | 0% |
 | **POS Module** | 11 | 2 | 4 | 17 | 65% |
 | **Mobile** | 0 | 2 | 2 | 4 | 0% |
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
-| **TOTAL** | **~91** | **~22** | **~135** | **~269** | **~34%** |
+| **TOTAL** | **~95** | **~22** | **~131** | **~269** | **~35%** |
 
 ---
 
@@ -90,12 +90,12 @@
   - **Complexity:** Very High → ✅ Complete
   - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — Mobile analysis
 
-- [ ] **[AUDIT-P0-6]** 🟠 **POS offline mode completion**
+- [x] **[AUDIT-P0-6]** 🟠 **POS offline mode completion** — ✅ DONE (Session 67)
   - **File:** [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline/)
-  - **Impact:** 🟠 HIGH — Architecture exists (IndexedDB, sync queue, service worker) but not fully functional
-  - **Action:** Complete offline sync, test conflict resolution, verify data integrity
-  - **Complexity:** High (requires thorough testing)
-  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — POS analysis
+  - **Impact:** 🟠 HIGH → ✅ RESOLVED — Sync engine robust (retry, tenant filter, payload validation), server idempotency + `duplicate: true` flag, full UI completion (i18n, per-transaction status + manual retry, toast callbacks), Background Sync registration + foreground fallback
+  - **Action:** ~~Complete offline sync, test conflict resolution, verify data integrity~~ — Done: sync.ts (retryFailedOperations/retryOperation, tenant filter, validateOperationPayload, exponential backoff), db.ts (DB_VERSION 2 + 7 helpers), api-client.ts (tenantId stamped on all 5 syncOp sites), route.ts (`duplicate: true` alongside `idempotent: true`), UI (offline-indicator + sync-status-badge full i18n + per-tx retry + retry-all), terminal page (onSyncComplete/onSyncFailed toasts + setSyncTenantContext), service worker (CACHE_VERSION v4 + `sync` event + registerBackgroundSync), en.json/id.json (+27 keys `pos.offlineIndicator.*` + `pos.syncBadge.*`), barrel exports (index.ts)
+  - **Complexity:** High → ✅ Complete — `npx tsc --noEmit` 0 errors; 6 reasoning scenarios verified (happy path, offline flow, duplicate prevention, conflict/2 devices, tenant isolation, data integrity)
+  - **Ref:** [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md) — POS analysis; [`plans/pos-offline-mode-implementation.md`](plans/pos-offline-mode-implementation.md) — completion status updated
 
 - [x] **[AUDIT-P0-7]** 🟠 **CI/CD pipeline setup** — ✅ DONE (Session 58)
   - **File:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml), [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
@@ -119,7 +119,7 @@
 | E2E Tests | 78 | **78** | **78** (unchanged) |
 | Unit Tests | 189 | **189** | **189** (unchanged) |
 
-> ⚠️ **Note:** Session 58 resolved 3 P0 items (RBAC, CI/CD, Prisma Tenant PoC). Session 59 resolved mobile CRUD (P0-5). Remaining: secrets rotation (P0-1, P0-2), POS offline (P0-6).
+> ⚠️ **Note:** Session 58 resolved 3 P0 items (RBAC, CI/CD, Prisma Tenant PoC). Session 59 resolved mobile CRUD (P0-5). Session 67 resolved POS offline mode (P0-6). Remaining: secrets rotation (P0-1, P0-2). Session 66 resolved non-P0 completeness items: SEC-07 (password policy) + UCE-21/22/23 (Work Inbox).
 
 ---
 
@@ -183,7 +183,7 @@
   - **Complexity:** Medium
   - **Ref:** [`CURRENT.md`](CURRENT.md) Known Issues #11
 
-- [ ] **[SEC-07]** Password policy configurable rules — Saat ini hanya min 8 chars
+- [x] **[SEC-07]** Password policy configurable rules — ✅ DONE (central config `DEFAULT_POLICY` + `validatePasswordWithDefaults()` di [`apps/web/lib/password-policy.ts`](apps/web/lib/password-policy.ts); wired ke register + semua password-change/reset routes; per-tenant override via Prisma `PasswordPolicy` + `getDefaultPolicy()`)
   - **File:** [`apps/web/app/api/auth/register/route.ts`](apps/web/app/api/auth/register/route.ts)
   - **Dependency:** None
   - **Complexity:** Low
@@ -467,23 +467,26 @@
   - **Complexity:** Low
   - **Status:** ✅ DONE (Session 61) — time-limited with startDate/endDate, auto-check on query
 
-- [ ] **[UCE-21]** Delegated Work Inbox — Delegatee melihat delegated items
-  - **File:** Work inbox extension
+- [x] **[UCE-21]** Delegated Work Inbox — Delegatee melihat delegated items
+  - **File:** [`apps/web/app/api/inbox/route.ts`](apps/web/app/api/inbox/route.ts), [`apps/web/app/dashboard/inbox/page.tsx`](apps/web/app/dashboard/inbox/page.tsx)
   - **Dependency:** UCE-19
   - **Complexity:** Medium
+  - **Status:** ✅ DONE (Session 66b) — delegation resolution via `getDelegations()` (auto-expire from UCE-20), delegated items muncul di kategori Approval Required dengan badge "Delegated" + nama delegator (`delegatedFrom`)
 
 #### Work Inbox
 
-- [ ] **[UCE-22]** My Work Inbox — Personal dashboard untuk setiap user
-  - **File:** `apps/web/app/dashboard/inbox/page.tsx` (new)
+- [x] **[UCE-22]** My Work Inbox — Personal dashboard untuk setiap user
+  - **File:** [`apps/web/app/dashboard/inbox/page.tsx`](apps/web/app/dashboard/inbox/page.tsx), [`apps/web/app/api/inbox/route.ts`](apps/web/app/api/inbox/route.ts)
   - **Dependency:** UCE-01
   - **Complexity:** High
   - **Ref:** ADR-023
+  - **Status:** ✅ DONE (Session 66b) — 6 category tabs + badge counts, SLA color coding (reuse `getSLAColor`), delegated badge, dual layout (mobile cards / desktop table), approve/reject dari tab Approval Required, refresh button, empty state per kategori. RBAC: `/api/inbox` fallbackRole diturunkan ADMIN→VIEWER (semua role baca inbox sendiri)
 
-- [ ] **[UCE-23]** Work Inbox Categories — Overdue, Approval Required, Awaiting Action, Assigned, Escalated, Recently Completed
-  - **File:** Query builders for each category
+- [x] **[UCE-23]** Work Inbox Categories — Overdue, Approval Required, Awaiting Action, Assigned, Escalated, Recently Completed
+  - **File:** [`apps/web/app/api/inbox/route.ts`](apps/web/app/api/inbox/route.ts) (6 query builders dalam 1 GET)
   - **Dependency:** UCE-22
   - **Complexity:** Medium
+  - **Status:** ✅ DONE (Session 66b) — Overdue = Task lewat due date + SLA breached + stale approvals ≥24h; Approval Required = pending ApprovalRequest sesuai `ApprovalLevel.requiredRole` + delegated; Awaiting Action = IN_REVIEW / due hari ini; Assigned = semua open task (`assigneeId`); Escalated = SLATracker `escalatedTo` + notifikasi `approval_escalation[_admin]`; Recently Completed = Task DONE 7d + ApprovalRequest `resolvedBy` 7d
 
 #### Locking Engine
 
@@ -586,6 +589,14 @@
   - **File:** [`apps/web/app/api/finance/periods/`](apps/web/app/api/finance/periods/)
   - **Dependency:** UCE-37
   - **Complexity:** High
+
+#### Approval Schema Precision (Gap — Session 66b)
+
+- [ ] **[UCE-40]** ApprovalRequest field `escalatedAt`/`delegatedTo` — migration untuk query escalated/delegated yang presisi
+  - **File:** [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma) (model `ApprovalRequest`)
+  - **Dependency:** UCE-18
+  - **Complexity:** Medium
+  - **Note:** Gap dicatat di Session 66b — saat ini status escalated/stale di-derive dari umur `createdAt` + tipe notifikasi, dan delegasi di-resolve dari `Tenant.settings` JSON. Field dedicated akan memungkinkan query escalated/delegated yang presisi (indexable) tanpa derive. ⛔ Schema Prisma = Do Not Touch tanpa approval (Rule 5).
 
 ---
 
@@ -2061,7 +2072,7 @@ Phase 9 — Permission Engine ✅ DONE:
 
 Phase 10 — Unified Control Engine (Weeks 11-22):
   → ~~FE-WE-01 to FE-WE-08~~ ✅ DONE (production_ready)
-  → UCE-01 to UCE-39
+  → UCE-01 to UCE-40
 
 Phase 11 — Industry Configuration (Weeks 23-32):
   → ~~FE-ICE-01 to FE-ICE-09~~ ✅ DONE (production_ready)

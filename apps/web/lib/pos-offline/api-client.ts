@@ -273,6 +273,7 @@ export async function createTransaction(
             retryCount: 0,
             maxRetries: 10,
             nextRetryAt: Date.now(),
+            tenantId: tx.tenantId || undefined,
         };
 
         await addToSyncQueue(syncOp);
@@ -321,6 +322,7 @@ export async function createTransaction(
                 retryCount: 0,
                 maxRetries: 10,
                 nextRetryAt: Date.now(),
+                tenantId: tx.tenantId || undefined,
             };
             await addToSyncQueue(syncOp);
 
@@ -363,6 +365,7 @@ export async function createTransaction(
             retryCount: 0,
             maxRetries: 10,
             nextRetryAt: Date.now(),
+            tenantId: tx.tenantId || undefined,
         };
         await addToSyncQueue(syncOp);
 
@@ -393,6 +396,9 @@ export async function closeSession(
     closingData?: { closingCash?: number; notes?: string }
 ): Promise<Session | null> {
     if (!isOnline()) {
+        // Read cached session first — needed for tenantId on the queued op
+        const cached = await getCachedSession(sessionId);
+
         // Queue for sync
         const syncOp: SyncOperation = {
             id: `sync-close-${sessionId}-${Date.now()}`,
@@ -413,12 +419,12 @@ export async function closeSession(
             retryCount: 0,
             maxRetries: 10,
             nextRetryAt: Date.now(),
+            tenantId: cached?.tenantId,
         };
 
         await addToSyncQueue(syncOp);
 
         // Update local cache
-        const cached = await getCachedSession(sessionId);
         if (cached) {
             const updatedSession: Session = {
                 ...cached,
@@ -448,6 +454,9 @@ export async function closeSession(
     } catch (error) {
         logger.warn('[POS-ApiClient] Failed to close session on server, queuing:', { detail: error instanceof Error ? error.message : String(error) });
 
+        // Read cached session first — needed for tenantId on the queued op
+        const cached = await getCachedSession(sessionId);
+
         // Queue for sync
         const syncOp: SyncOperation = {
             id: `sync-close-${sessionId}-${Date.now()}`,
@@ -468,11 +477,11 @@ export async function closeSession(
             retryCount: 0,
             maxRetries: 10,
             nextRetryAt: Date.now(),
+            tenantId: cached?.tenantId,
         };
         await addToSyncQueue(syncOp);
 
         // Update local cache
-        const cached = await getCachedSession(sessionId);
         if (cached) {
             const updatedSession: Session = {
                 ...cached,

@@ -239,6 +239,8 @@ export default function ProfileSettingsPage() {
         try {
             const res = await fetch('/api/settings/profile', {
                 method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm: 'HAPUS' }),
             })
             const data = await res.json()
             if (data.success) {

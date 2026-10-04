@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 import { changePasswordSchema, formatZodError } from '@/lib/validation-schemas'
 import { handleApiError } from '@/lib/api-error';
+import { getDefaultPolicy, validatePassword } from '@/lib/password-policy'
 
 /**
  * POST /api/settings/security/password â€” Change user password
@@ -51,6 +52,21 @@ export async function POST(request: Request) {
         if (!isCurrentPasswordValid) {
             return NextResponse.json(
                 { success: false, error: MSG.INVALID_CURRENT_PASSWORD, code: 'INVALID_PASSWORD' },
+                { status: 400 }
+            )
+        }
+
+        // Validate new password against tenant password policy (SEC-07)
+        const policy = await getDefaultPolicy(tenantId)
+        const passwordCheck = validatePassword(newPassword, policy)
+        if (!passwordCheck.valid) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.PASSWORD_DOES_NOT_MEET_POLICY,
+                    code: 'PASSWORD_POLICY_VIOLATION',
+                    details: { errors: passwordCheck.errors },
+                },
                 { status: 400 }
             )
         }

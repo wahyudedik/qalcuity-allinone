@@ -15,6 +15,7 @@ import { OfflineIndicator } from '@/components/pos/offline-indicator'
 import { SyncStatusBadge } from '@/components/pos/sync-status-badge'
 import POSReceipt, { type POSReceiptData } from '@/components/pos/pos-receipt'
 import { usePosOffline } from '@/hooks/use-pos-offline'
+import { setSyncTenantContext } from '@/lib/pos-offline/sync'
 import { usePosProducts } from '@/hooks/use-pos-products'
 
 type Product = {
@@ -81,7 +82,19 @@ export default function POSTerminalPage() {
         pendingCount,
         syncNow,
         createOfflineTransaction,
-    } = usePosOffline()
+    } = usePosOffline({
+        onSyncComplete: (count: number) => {
+            setToast({ message: t('pos.offline.syncComplete').replace('{count}', String(count)), type: 'success' })
+        },
+        onSyncFailed: (count: number) => {
+            setToast({ message: t('pos.offline.syncFailed').replace('{count}', String(count)), type: 'error' })
+        },
+    })
+
+    // Multi-tenant isolation: stamp the sync engine tenant context from the session
+    useEffect(() => {
+        setSyncTenantContext(session?.user?.tenantId)
+    }, [session?.user?.tenantId])
     const {
         products: allProducts,
         loading: loadingProducts,

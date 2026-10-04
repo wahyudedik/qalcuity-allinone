@@ -2,7 +2,7 @@
 
 > **Date:** 18 September 2026
 > **Production URL:** https://qalcuity.com
-> **Status:** Investigation Complete — Fix Recommendations Below
+> **Status:** Batch 1 (18 Sep 2026) — Fix Recommendations Below; Batch 2 (3 Okt 2026) — Fixes Applied / Verified (Session 66c)
 
 ---
 
@@ -15,6 +15,8 @@
 | 3 | CSP blocks Swagger UI CDN | CSP Violation | 🟡 Medium | `cdn.jsdelivr.net` tidak ada di CSP directive | Low (config change) |
 | 4 | Logo 404 | 404 | 🟡 Medium | File upload tidak persist di server production | Low (config/deploy) |
 | 5 | `startTime` undefined | JS Error | 🟢 Low | Next.js 14 internal web vitals bug | **SKIP — Safe to ignore** |
+| 6 | `/api/settings/profile` DELETE | 405 | 🔴 High | Route hanya export GET+PUT; frontend memanggil DELETE (pre-existing) | ✅ Fixed — Session 66c |
+| 7 | React #418 (×3) + #423 (×1) | — | 🟡 Medium | Hydration mismatch layout chain — fix sudah di codebase (`bcde957`, 30 Sep 2026) | ✅ Verified — production perlu redeploy |
 
 ---
 
@@ -303,5 +305,66 @@ cd packages/db && npx prisma generate
 
 ---
 
-**Last Updated:** 18 September 2026
+# 🐛 Production Console Errors — Batch 2 (3 Oktober 2026)
+
+> **Reported:** React #418 (×3) hydration failed + React #423 (×1) server did not match client + 405 `/api/settings/profile` (×2)
+> **Context:** Setelah batch Session 66 (password policy + Work Inbox rewrite). User melaporkan error dari console production qalcuity.com.
+> **Status:** ✅ Fixed / Verified — Session 66c
+
+## Summary Batch 2
+
+| # | Error | HTTP Status | Severity | Root Cause | Status |
+|---|-------|-------------|----------|------------|--------|
+| 6 | `/api/settings/profile` DELETE | 405 | 🔴 High | Route hanya export GET+PUT; frontend memanggil DELETE | ✅ Fixed — DELETE handler ditambahkan (Session 66c) |
+| 7 | React #418 (×3) + #423 (×1) | — | 🟡 Medium | Hydration mismatch layout chain (sidebar/header/notification-center) | ✅ Fix sudah di codebase (commit `bcde957`, 30 Sep 2026) — production perlu redeploy |
+
+## Error 6: 405 `/api/settings/profile` — Method Not Allowed (×2)
+
+### Root Cause (TERBUKTI — 100%)
+
+1. [`apps/web/app/dashboard/settings/page.tsx`](apps/web/app/dashboard/settings/page.tsx) — `handleDeleteAccount()` memanggil `fetch('/api/settings/profile', { method: 'DELETE' })` (tombol "Hapus Akun" di danger zone, gate ketik "HAPUS" di client).
+2. [`apps/web/app/api/settings/profile/route.ts`](apps/web/app/api/settings/profile/route.ts) hanya export `GET` (baris 12) dan `PUT` (baris 76) — **tidak ada export `DELETE`** → Next.js App Router return 405 Method Not Allowed untuk method yang tidak di-export.
+3. Middleware bukan sumbernya — tidak ada logika 405 di [`apps/web/middleware.ts`](apps/web/middleware.ts).
+4. Build artifact `.next/server/app/api/settings/profile/route.js` juga hanya berisi export GET+PUT.
+5. **Pre-existing, bukan regression:** `git log` route terakhir 2026-09-10 (`1911dee`) — batch Session 66 tidak menyentuh file ini; frontend sudah memanggil DELETE sejak ≥2026-09-16.
+
+### Fix Applied (Session 66c)
+
+1. Tambah export `DELETE` di [`apps/web/app/api/settings/profile/route.ts`](apps/web/app/api/settings/profile/route.ts) — pola soft delete mengikuti [`apps/web/app/api/settings/team/route.ts`](apps/web/app/api/settings/team/route.ts):
+   - Rate limit ketat 5 req/menit/IP (operasi destruktif)
+   - `requirePermissionForRoute` (route-permissions: `settings:view`, fallbackRole `MEMBER`)
+   - Validasi Zod `deleteAccountSchema` — `confirm` harus `'HAPUS'` (defense-in-depth)
+   - Tenant isolation: `prisma.user.findFirst({ where: { id: userId, tenantId, deletedAt: null } })`
+   - Soft delete: `prisma.user.update({ where: { id: userId }, data: { deletedAt: new Date(), isActive: false } })`
+   - Audit log non-blocking: `void logAudit({ action: 'DELETE', entity: 'User', ... })`
+2. Tambah `deleteAccountSchema` di [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts).
+3. Frontend [`apps/web/app/dashboard/settings/page.tsx`](apps/web/app/dashboard/settings/page.tsx) kirim body `{ confirm: 'HAPUS' }` + Content-Type JSON (sinkron dengan validasi server-side).
+
+## Error 7: React #418 (×3) + React #423 (×1) — Hydration Mismatch
+
+### Root Cause (TERBUKTI — pre-existing, fix sudah di codebase)
+
+1. Commit `bcde957` — 30 Sep 2026 — `fix: hydration mismatch #418/#423 di layout chain (sidebar/header/notification-center)` — **secara eksplisit** memperbaiki error dengan kode yang sama, tepat di 3 komponen global → cocok dengan pola "#418 ×3" (satu error per komponen: sidebar, header, notification-center) + "#423 ×1" (warning konsekuensial "Text content did not match").
+2. Inspeksi menyeluruh semua kandidat di codebase saat ini — **semua hydration-safe**:
+   - Layout chain: `sidebar.tsx`, `header.tsx`, `notification-center.tsx`, `platform-sidebar.tsx`, `platform-header.tsx` — semua punya `isMounted` guard + fallback text identik server/client (teknik `invisible` class di sidebar)
+   - Providers: `i18n.tsx` (default locale `'id'` di `useState`, localStorage dibaca di `useEffect`), `use-dark-mode.ts` (default `'system'`, apply di `useEffect`), `toast.tsx` (state awal kosong)
+   - Pages: inbox page (Session 66b rewrite) render loading skeleton di **kedua** sisi (`loading=true` initial); settings page — konten dinamis hanya di event handler (bukan render)
+   - Komponen global dashboard: `ai-chat.tsx` (state awal `isOpen=false` → button statis), `onboarding-modal.tsx` (null kecuali `?onboard=true`), `search-modal.tsx` (null kecuali `isOpen`), `empty-state.tsx` (presentasional)
+   - `suppressHydrationWarning` hanya di `<html>`/`<body>` (justified — dark mode class injection)
+3. Session 66 batch files (inbox route/page rewrite, route-permissions, messages) menunjukkan pola client-side yang benar — tidak ada sumber hydration baru.
+
+### Verdict
+
+**Pre-existing issue yang fix-nya SUDAH ada di codebase** (commit `bcde957`, 30 Sep 2026). Production build yang melaporkan error predates commit tersebut. **Action item: redeploy production (`bash update.sh`) — bukan perubahan kode baru.**
+
+### Confidence
+
+| Error | Root Cause Confidence | Reasoning |
+|-------|----------------------|-----------|
+| #6 405 settings/profile | **100%** — method mismatch | Route tidak export DELETE; frontend memanggil DELETE; middleware tanpa logika 405; build artifact + git history membuktikan pre-existing dan root cause-nya jelas. |
+| #7 #418/#423 hydration | **95%** — stale production build | Commit `bcde957` secara eksplisit fix "#418/#423" di 3 komponen layout; inspeksi codebase saat ini tidak menemukan sisa mismatch di komponen yang selalu mounted. Satu-satunya penjelasan koheren untuk error yang masih muncul = build production predates fix. |
+
+---
+
+**Last Updated:** 3 Oktober 2026 (Batch 2 — Session 66c: Fix 405 + Verifikasi Hydration)
 **Investigator:** Roo (Debug Agent)

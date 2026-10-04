@@ -1,6 +1,181 @@
-> **Last Updated:** 30 September 2026 (Session 65: Upload Storage Persistent — Fix 404 `/uploads/` di Production)
-> **Version:** v11.51.0
-> **Status:** ✅ STABLE — Session 65: Jalur A — storage persistent `UPLOAD_DIR` (di luar tree aplikasi) + serving route `/uploads/[...path]` + onError avatar. TypeScript: 0 errors.
+> **Last Updated:** 4 Oktober 2026 (Session 67: POS Offline Mode Completion)
+> **Version:** v11.54.0
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6). TypeScript: 0 errors.
+
+## 🔧 Session 67 — [AUDIT-P0-6] POS Offline Mode Completion — 4 Okt 2026
+
+> **Focus:** Menyelesaikan POS offline mode — sync engine robust (retry + tenant filter + payload validation), server idempotency dengan flag `duplicate: true`, UI completion (i18n + per-transaction manual retry + toast), Background Sync via service worker
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 67 Summary
+
+#### Temuan Inspeksi
+
+1. Sync engine ([`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts)) sudah punya mutex + exponential backoff, tapi **belum ada** retry manual untuk operasi berstatus `FAILED`, belum ada filter tenant context, belum ada validasi payload sebelum sync.
+2. DB layer ([`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts)) belum punya helper `getSyncOperationById`, `updateSyncOperation`, `retrySyncOperation`, `markFailedOperationsForRetry`, dan query per-tenant — operasi `FAILED` tidak bisa di-retry dari UI.
+3. API client ([`apps/web/lib/pos-offline/api-client.ts`](apps/web/lib/pos-offline/api-client.ts)) membuat `SyncOperation` di 5 titik (createTransaction offline/server-rejected/network-error + closeSession offline/online-catch) **tanpa** `tenantId` — queue tidak terisolasi per tenant.
+4. POS transaction route ([`apps/web/app/api/pos/transactions/route.ts`](apps/web/app/api/pos/transactions/route.ts)) sudah mendukung idempotency (`idempotent: true`) tapi **belum** mengembalikan flag `duplicate: true` untuk membedakan "transaksi diproses ulang" vs "transaksi baru dibuat".
+5. UI ([`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx) + [`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx)) hardcode string Bahasa Indonesia, tidak ada daftar status per transaksi, tidak ada tombol retry per transaksi gagal.
+6. Service worker ([`apps/web/public/sw.js`](apps/web/public/sw.js)) belum punya event handler `sync` (Background Sync API) — sync hanya berjalan saat foreground.
+7. Terminal page ([`apps/web/app/dashboard/pos/terminal/page.tsx`](apps/web/app/dashboard/pos/terminal/page.tsx)) memanggil `usePosOffline()` tanpa callback `onSyncComplete`/`onSyncFailed` — cashier tidak mendapat toast saat sync berhasil/gagal. Tenant context sync engine belum di-set dari session.
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/lib/pos-offline/types.ts`](apps/web/lib/pos-offline/types.ts) | `SyncOperation.tenantId?: string` (optional, backward compat); `DB_VERSION` 1→2 (index `type` + `tenantId` pada store `sync-queue`, upgrade path untuk DB v1 lama) |
+| 2 | [`apps/web/lib/pos-offline/db.ts`](apps/web/lib/pos-offline/db.ts) | +7 helper: `getSyncOperationById`, `updateSyncOperation`, `retrySyncOperation` (reset status/retryCount/errorMessage/timestamps), `markFailedOperationsForRetry` (bulk), `getPendingTransactionsByTenant`, `getSyncQueueByTenant`; upgrade path `onupgradeneeded` v1→v2 |
+| 3 | [`apps/web/lib/pos-offline/sync.ts`](apps/web/lib/pos-offline/sync.ts) | `setTenantContext()` + filter `getEligibleOperations()` skip op yang tenantId-nya tidak cocok (warn log); `validateOperationPayload()` — CREATE_TRANSACTION wajib `sessionId`/`items[]`/`paidAmount`/`paymentMethod` → invalid = `markOperationFailed` (tanpa retry); parse response `duplicate` di `handleSyncSuccess`; `retryFailedOperations()` (bulk) + `retryOperation(operationId)` (per-op) + standalone exports (`syncNow`, `getSyncStatus`, `startAutoSync`, `stopAutoSync`, `retryFailedSyncOperations`, `retrySyncOperationById`, `setSyncTenantContext`, tipe `SyncError`) |
+| 4 | [`apps/web/lib/pos-offline/api-client.ts`](apps/web/lib/pos-offline/api-client.ts) | Semua 5 pembuatan `SyncOperation` kini membawa `tenantId` (dari `tx.tenantId` / cached session via `getCachedSession()` yang dipanggil sebelum enqueue) |
+| 5 | [`apps/web/app/api/pos/transactions/route.ts`](apps/web/app/api/pos/transactions/route.ts) | Response idempotent kini menyertakan `duplicate: true` di samping `idempotent: true` (backward compatible) — membedakan replay dari transaksi baru |
+| 6 | [`apps/web/lib/pos-offline/index.ts`](apps/web/lib/pos-offline/index.ts) | Barrel export lengkap: 6 helper DB + `SyncError` + 7 standalone sync exports + `registerBackgroundSync` |
+| 7 | [`apps/web/hooks/use-pos-offline.ts`](apps/web/hooks/use-pos-offline.ts) | +2 action: `retryFailedSyncOperations()` (bulk, return jumlah) + `retrySyncOperation(operationId)` (per-op, return boolean); engine-start effect memanggil `registerBackgroundSync()` + listen pesan SW `BACKGROUND_SYNC_TRIGGERED` → `processQueue()`; `handleCreateOfflineTransaction` juga register background sync |
+| 8 | [`apps/web/components/pos/offline-indicator.tsx`](apps/web/components/pos/offline-indicator.tsx) | Full i18n (`pos.offlineIndicator.*`, 8 key); tombol retry di error-state kini memanggil `retryFailedSyncOperations()` |
+| 9 | [`apps/web/components/pos/sync-status-badge.tsx`](apps/web/components/pos/sync-status-badge.tsx) | Full i18n (`pos.syncBadge.*`, 19 key); daftar status per transaksi (PendingTransaction × SyncOperation, hanya yang belum `COMPLETED`); tombol retry per operasi `FAILED` (`retrySyncOperation(op.id)` + spinner `retryingOpId`); tombol "retry all failed" di footer; format mata uang `Intl.NumberFormat('id-ID', IDR)` |
+| 10 | [`apps/web/app/dashboard/pos/terminal/page.tsx`](apps/web/app/dashboard/pos/terminal/page.tsx) | `usePosOffline({ onSyncComplete, onSyncFailed })` → toast sukses/gagal via `t('pos.offline.syncComplete').replace('{count}', String(n))`; `useEffect` set `setSyncTenantContext(session?.user?.tenantId)` |
+| 11 | [`apps/web/lib/pos-offline/service-worker.ts`](apps/web/lib/pos-offline/service-worker.ts) | `registerBackgroundSync(tag = 'pos-sync')` — cast `registration.sync` (SyncManager, graceful degradation jika tidak didukung) |
+| 12 | [`apps/web/public/sw.js`](apps/web/public/sw.js) | `CACHE_VERSION` v3→v4 (cache cleanup otomatis di activate); event `sync` handler → `notifyClientsToSync()` post pesan `BACKGROUND_SYNC_TRIGGERED` ke semua window client |
+| 13 | [`apps/web/messages/en.json`](apps/web/messages/en.json) + [`apps/web/messages/id.json`](apps/web/messages/id.json) | +27 key `pos.offlineIndicator.*` (8) + `pos.syncBadge.*` (19) per locale, dengan pola `{count}` + `.replace('{count}', String(n))` |
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `apps/web/lib/session.ts`, `apps/web/middleware.ts`, `packages/db/prisma/schema.prisma`, `apps/web/lib/audit.ts` tidak disentuh. `PosTransaction` sudah punya `idempotencyKey` + `@@unique([tenantId, idempotencyKey])` di schema existing — tidak ada perubahan schema.
+
+#### Conflict Resolution Strategy
+
+- **Primary: idempotency-key dedup** — `PosTransaction` tidak punya field `version`, sehingga optimistic locking tidak applicable. Setiap transaksi offline membawa `X-Idempotency-Key` (dari `PendingTransaction.localId`); server dedup via compound unique `@@unique([tenantId, idempotencyKey])` → sync 2x (mis. retry setelah timeout) tidak pernah membuat duplikat. PostgreSQL unique mengizinkan banyak `NULL` → backward compatible dengan transaksi lama tanpa key.
+- **Secondary: handleConflict** — jika server tetap mengembalikan 409, `CREATE_TRANSACTION` dianggap client-wins (transaksi lokal dianggap sudah tersimpan → `markSynced`), `CLOSE_SESSION` dianggap server-wins (ikuti state server).
+- **Rationale:** route POS transaction tidak mengurangi stok (stok lewat `/api/pos/stock-adjustment` terpisah) → dedup sepenuhnya mencegah efek ganda tanpa perlu checksum/locking version.
+
+#### Behavior Notes
+
+- **Cashier offline:** banner Offline + badge antrian tampil; transaksi disimpan ke IndexedDB + antrian sync; saat online kembali, auto-sync berjalan (event `online` + polling 30s + Background Sync via SW `sync` event sebagai fallback) dan toast sukses/gagal muncul di terminal.
+- **Retry:** operasi `FAILED` (sampai max 10 retry dengan exponential backoff 1s→60s) bisa di-retry manual — per transaksi (tombol di modal sync status) atau bulk (tombol "Coba Lagi" di OfflineIndicator / "Retry All Failed" di modal).
+- **Idempotency:** sync ganda (auto-retry + manual + Background Sync bersamaan) aman — server mengembalikan `duplicate: true` dan sync engine menandai op sebagai `COMPLETED`.
+- **Multi-tenant:** semua operasi antrian membawa `tenantId`; sync engine hanya memproses op milik tenant context yang aktif (di-set dari session user di terminal page).
+- **Batas offline:** maksimum 50 transaksi offline per sesi (guard di api-client); payload invalid (items kosong, tanpa paymentMethod) otomatis ditandai gagal tanpa retry loop.
+
+#### TypeScript: 0 errors
+
+---
+
+## 🔧 Session 66 — [SEC-07] Password Policy Configurable Rules — 3 Okt 2026
+
+> **Focus:** Password policy konfigurabel terpusat — register + semua password-change/reset routes di-wire ke policy engine
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 66 Summary
+
+#### Temuan Inspeksi
+
+1. [`apps/web/lib/password-policy.ts`](apps/web/lib/password-policy.ts) sudah ada (294 baris): engine lengkap per-tenant via model Prisma `PasswordPolicy` — `validatePassword()`, `getDefaultPolicy(tenantId)`, `checkPasswordHistory()`, `savePasswordHistory()`, `updatePasswordPolicy()`, `isPasswordExpired()`. **Reuse, jangan duplikat.**
+2. [`apps/web/app/api/auth/register/route.ts`](apps/web/app/api/auth/register/route.ts) sudah memanggil `validatePassword()` tapi **menduplikasi** objek policy hardcoded inline (12 field) — bukan reuse dari lib; catch block belum pakai `handleApiError()`.
+3. [`apps/web/app/api/auth/change-password/route.ts`](apps/web/app/api/auth/change-password/route.ts) sudah lengkap wired (tenant policy + history + handleApiError) — tidak diubah.
+4. Gap wiring: [`apps/web/app/api/settings/security/password/route.ts`](apps/web/app/api/settings/security/password/route.ts), [`apps/web/app/api/settings/security/route.ts`](apps/web/app/api/settings/security/route.ts) (PUT), dan [`apps/web/app/api/auth/reset-password/route.ts`](apps/web/app/api/auth/reset-password/route.ts) hanya validasi Zod min 8 — **tanpa** policy check.
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/lib/password-policy.ts`](apps/web/lib/password-policy.ts) | Export `DEFAULT_POLICY` (central config: min 8 / max 128, complexity rules default off — komentar eksplisit); tambah interface `PasswordPolicyRules` (structural subset) yang dipakai `validatePassword()`; helper baru `validatePasswordWithDefaults(password)` |
+| 2 | [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) | `changePasswordSchema`: tambah `.max(128)` (konsisten dengan `changePasswordApiSchema`); tambah `resetPasswordSchema` (pindah dari inline di route) |
+| 3 | [`apps/web/app/api/auth/register/route.ts`](apps/web/app/api/auth/register/route.ts) | Ganti duplikasi policy inline → `validatePasswordWithDefaults()`; catch block → `handleApiError()` (Prisma P2002/P2003/P2025 ditangani standar) |
+| 4 | [`apps/web/app/api/settings/security/password/route.ts`](apps/web/app/api/settings/security/password/route.ts) | Wire `getDefaultPolicy(tenantId)` + `validatePassword()` → 400 `MSG.PASSWORD_DOES_NOT_MEET_POLICY` + `details.errors` |
+| 5 | [`apps/web/app/api/settings/security/route.ts`](apps/web/app/api/settings/security/route.ts) | Sama — wire policy di PUT (change password) |
+| 6 | [`apps/web/app/api/auth/reset-password/route.ts`](apps/web/app/api/auth/reset-password/route.ts) | Select `tenantId` dari user; wire policy check; schema via `resetPasswordSchema` (shared) |
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `apps/web/lib/session.ts`, `apps/web/middleware.ts`, `apps/web/app/api/auth/change-password/route.ts` (sudah benar) tidak disentuh. Pengecualian Rule 5 yang disetujui hanya untuk `register/route.ts` + password-change/reset routes, SOLELY untuk integrasi password policy.
+
+#### Behavior Notes
+
+- **Register (tenant baru):** policy = `DEFAULT_POLICY` (min 8, no complexity) — karena tenant belum punya row `PasswordPolicy`. Tenant dapat mengaktifkan complexity rules (uppercase/lowercase/number/special) per-tenant via `updatePasswordPolicy(tenantId, {...})`.
+- **Change/reset password (tenant existing):** policy = `getDefaultPolicy(tenantId)` — per-tenant configurable (Prisma `PasswordPolicy` model, auto-create default row jika belum ada).
+- **Failure mode:** 400 `{ success: false, error: MSG.PASSWORD_DOES_NOT_MEET_POLICY, code: 'PASSWORD_POLICY_VIOLATION', details: { errors: [...] } }` — errors = i18n keys dari `validatePassword()`.
+- **Regression check:** `auth/change-password` (sudah wired) tidak berubah; Zod schemas tetap jadi baseline (min 8 / max 128) sebelum policy engine cek complexity.
+
+#### TypeScript: 0 errors
+
+---
+
+## 🔧 Session 66b — UCE-21/22/23 Work Inbox (Delegated Inbox + 6 Categories) — 3 Okt 2026
+
+> **Focus:** Delegated Work Inbox (UCE-21), My Work Inbox (UCE-22), Work Inbox Categories (UCE-23) — batch REMAINING-WORK
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 66b Summary
+
+#### Temuan Inspeksi
+
+1. Inbox lama sudah ada tapi minimal: [`apps/web/app/api/inbox/route.ts`](apps/web/app/api/inbox/route.ts) hanya myTasks/pendingApprovals/overdue/recentActivity (tanpa 6 kategori, tanpa delegasi); [`apps/web/app/dashboard/inbox/page.tsx`](apps/web/app/dashboard/inbox/page.tsx) tanpa category tabs. → Full rewrite, bukan patch.
+2. Sidebar sudah punya menu Inbox (`nav.inbox`) — tidak perlu ditambah.
+3. [`apps/web/lib/delegation.ts`](apps/web/lib/delegation.ts) (delegasi di `Tenant.settings` JSON, auto-expire via startDate/endDate) + [`apps/web/lib/sla-monitor.ts`](apps/web/lib/sla-monitor.ts) (`getSLAColor`) + tipe notifikasi [`apps/web/lib/approval-escalation.ts`](apps/web/lib/approval-escalation.ts) — semua direuse, tidak ada duplikasi.
+4. Gap schema (DICATAT, tidak diubah — Do Not Touch schema.prisma): `ApprovalRequest` tidak punya field `escalatedAt`/`delegatedTo`. Status escalated/stale di-derive dari umur `createdAt` + tipe notifikasi; delegasi di-resolve dari `Tenant.settings`.
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/app/api/inbox/route.ts`](apps/web/app/api/inbox/route.ts) | Rewrite GET — 6 query builders kategori (overdue, approvalRequired, awaitingAction, assigned, escalated, recentlyCompleted), delegation resolution via `getDelegations(tenantId)` (filter `toUserId` + auto-expire), SLA coloring via `getSLAColor`, stale approval threshold 24h / escalation 48h / admin-notify 72h, batch enrichment (requester + tampilan invoice/PO/quotation, semua query filter `tenantId`) |
+| 2 | [`apps/web/app/dashboard/inbox/page.tsx`](apps/web/app/dashboard/inbox/page.tsx) | Rewrite UI — 6 category tabs + badge counts, EntityBadge/StatusBadge/SLABadge/DelegatedBadge, dual layout (mobile cards ≤768px / desktop table >768px), approve/reject di tab Approval Required (`/api/approval/requests/{id}/approve|reject`), banner delegatedFrom, refresh, EmptyState per kategori, loading skeleton + error state |
+| 3 | [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) | `/api/inbox` fallbackRole `ADMIN` → `VIEWER` (semua role boleh baca inbox sendiri — read-only; eligibility approval per-role di-handle di handler via `ApprovalLevel.requiredRole`) |
+| 4 | [`apps/web/messages/en.json`](apps/web/messages/en.json) + [`apps/web/messages/id.json`](apps/web/messages/id.json) | +41 key `inbox.*` per locale: nama 6 kategori, empty state per kategori, delegated/delegatedFrom, typeApprovalRequest/Sla/Notification, status labels, SLA labels (On track/At risk/Critical/Breached), reasonInReview/DueToday, hoursWaiting, refresh, generatedAt, pendingTotal, crossCategoryHint, staleHint |
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `apps/web/lib/session.ts` (hanya import `requirePermissionForRoute`), `apps/web/middleware.ts`, `packages/db/prisma/schema.prisma`, `apps/web/lib/audit.ts` tidak disentuh. Sidebar tidak diubah (menu Inbox sudah ada).
+
+#### Behavior Notes
+
+- **Kategori & sumber data:** Overdue = Task `dueDate` lampau + `SLATracker.status='breached'` + persetujuan stale (`hoursWaiting ≥ 24`). Approval Required = `ApprovalRequest.status='PENDING'` yang eligible untuk role user (via `ApprovalLevel.requiredRole` + `ROLE_HIERARCHY`, atau `approval:viewAll`) **atau** berasal dari delegator aktif. Awaiting Action = Task `IN_REVIEW` / due hari ini. Assigned = semua open task (`TODO/IN_PROGRESS/IN_REVIEW`, `assigneeId = user`). Escalated = `SLATracker.escalatedTo = user` (status active/breached) + `InAppNotification` bertipe `approval_escalation`/`approval_escalation_admin` (7 hari). Recently Completed = Task `DONE` 7 hari + `ApprovalRequest.resolvedBy = user` 7 hari.
+- **Delegasi (UCE-21):** resolusi = `getDelegations(tenantId)` → filter `toUserId === currentUser && enabled && module cocok ('all' atau spesifik via `entityTypeToModule`) && startDate ≤ now ≤ endDate`. Item delegated diberi `delegated: true` + `delegatedFrom` (nama delegator) dan tampil di tab Approval Required dengan badge violet "Delegated".
+- **RBAC:** semua role (VIEWER s/d SUPERADMIN) dapat membuka `/dashboard/inbox` dan membaca inbox sendiri. Approval eligibility tetap dijaga: MEMBER/VIEWER tanpa `ApprovalLevel.requiredRole` yang cocok tidak melihat item persetujuan (kecuali hasil delegasi). Aksi approve/reject di UI memanggil approval API existing yang punya guard sendiri.
+- **Multi-tenant:** SEMUA query di handler filter `tenantId` dari `requirePermissionForRoute()`; enrichment (requester name, invoice/PO/quotation display) juga scoped per tenant.
+- **Rate limit:** GET `/api/inbox` memakai rate limit config yang sudah ada untuk route tersebut.
+
+#### TypeScript: 0 errors
+
+---
+
+## 🪲 Session 66c — Fix 405 `/api/settings/profile` + Diagnosis Hydration #418/#423 — 3 Okt 2026
+
+> **Focus:** Production console errors — React #418 (×3) + #423 (×1) hydration mismatch + 405 Method Not Allowed `/api/settings/profile` (×2)
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 66c Summary
+
+#### Root Cause 1 — 405 `/api/settings/profile` (TERBUKTI)
+
+1. Frontend [`apps/web/app/dashboard/settings/page.tsx`](apps/web/app/dashboard/settings/page.tsx) memanggil `fetch('/api/settings/profile', { method: 'DELETE' })` di `handleDeleteAccount()` (tombol "Hapus Akun" — danger zone).
+2. Route [`apps/web/app/api/settings/profile/route.ts`](apps/web/app/api/settings/profile/route.ts) hanya export `GET` dan `PUT` — **tidak ada export `DELETE`** → Next.js App Router return 405 Method Not Allowed. Middleware bukan sumbernya (tanpa logika 405).
+3. **Pre-existing, bukan regression Session 66:** `git log` route menunjukkan commit terakhir 2026-09-10 (`1911dee`) — tidak ada perubahan di batch Session 66; frontend sudah memanggil DELETE sejak ≥2026-09-16.
+
+#### Root Cause 2 — React #418/#423 Hydration Mismatch (PRE-EXISTING — FIX SUDAH DI CODEBASE)
+
+1. Commit `bcde957` (30 Sep 2026) — `fix: hydration mismatch #418/#423 di layout chain (sidebar/header/notification-center)` — sudah memperbaiki tepat 3 komponen global → cocok dengan pola "#418 ×3" (satu error per komponen) + "#423 ×1" (warning konsekuensial).
+2. Inspeksi semua kandidat: `sidebar.tsx`, `header.tsx`, `notification-center.tsx`, `platform-sidebar.tsx`, `platform-header.tsx` (isMounted guards), `i18n.tsx` (default locale 'id' + localStorage di useEffect), `use-dark-mode.ts`, inbox page (loading skeleton di kedua sisi render), settings page (konten dinamis hanya di event handler), `ai-chat.tsx`, `onboarding-modal.tsx`, `search-modal.tsx`, `empty-state.tsx`, `toast.tsx` — **semua hydration-safe di codebase saat ini**.
+3. **Verdict: production build yang melaporkan error predates commit bcde957 (30 Sep 2026) — perlu redeploy (`bash update.sh`), bukan bug code baru.**
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/app/api/settings/profile/route.ts`](apps/web/app/api/settings/profile/route.ts) | Tambah export `DELETE` — self-service account deletion: rate limit ketat (5 req/menit/IP), validasi Zod `deleteAccountSchema` (confirm === 'HAPUS'), tenant isolation (`findFirst` filter `tenantId` + `deletedAt: null`), soft delete (`deletedAt` + `isActive: false` — pola team route), audit log non-blocking via `logAudit` |
+| 2 | [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) | Tambah `deleteAccountSchema` — `{ confirm: z.string().refine(val => val === 'HAPUS', { message: 'Confirmation text must be "HAPUS"' }) }` |
+| 3 | [`apps/web/app/dashboard/settings/page.tsx`](apps/web/app/dashboard/settings/page.tsx) | `handleDeleteAccount()` kirim body `{ confirm: 'HAPUS' }` + header Content-Type JSON (sinkron dengan validasi server-side) |
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `apps/web/lib/session.ts`, `apps/web/middleware.ts`, `packages/db/prisma/schema.prisma`, `apps/web/lib/audit.ts` tidak disentuh.
+
+#### Behavior Notes
+
+- **DELETE `/api/settings/profile`:** auth via `requirePermissionForRoute` (route-permissions: `settings:view`, fallbackRole `MEMBER`) → rate limit 5/menit/IP → Zod confirm 'HAPUS' → soft delete akun sendiri → `{ success: true }` → frontend redirect `/auth/login?deleted=true`.
+- **Failure mode:** 400 `{ success: false, error: 'Confirmation text must be "HAPUS"', message: 'Validasi gagal', details }`; 404 `MSG.USER_NOT_FOUND`; 429 `MSG.TOO_MANY_REQUESTS`.
+- **Multi-tenant:** `findFirst({ where: { id: userId, tenantId, deletedAt: null } })` — tenant isolation terjaga.
+- **Hydration #418/#423:** TIDAK ada kode baru yang ditambahkan — fix sudah ada di codebase (commit `bcde957`). Action item: **redeploy production** (`bash update.sh`) agar build production menyertakan fix hydration + DELETE handler baru.
+- **Regression check:** GET/PUT profile tidak berubah; UI settings page hanya menambah body pada fetch DELETE yang sebelumnya gagal 405.
+
+#### TypeScript: 0 errors
+
+---
 
 ## 🔧 Session 65 — Upload Storage Persistent (Jalur A) — Fix 404 `/uploads/` di Production — 30 Sep 2026
 

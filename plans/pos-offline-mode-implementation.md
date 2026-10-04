@@ -21,24 +21,24 @@
 
 POS Offline Mode architecture sudah **~85% terbangun**. Core components (IndexedDB, SyncEngine, Service Worker, React Hooks, UI Components) sudah ada dan functional. Yang belum fully functional adalah **server-side idempotency support** dan **beberapa integration gaps**.
 
-### Completion Status
+### Completion Status (Updated — Session 67)
 
 | Layer | Status | Notes |
 |-------|--------|-------|
-| **IndexedDB Core** | ✅ Complete | Full CRUD, 5 stores, indexes |
-| **Sync Engine** | ✅ Complete | Mutex, retry, exponential backoff, conflict resolution |
-| **API Client** | ✅ Complete | Online/offline aware, cache fallback |
-| **Service Worker** | ✅ Complete | 6 cache stores, 3 strategies, auth bypass |
-| **React Hooks** | ✅ Complete | usePosOffline, usePosProducts |
-| **UI Components** | ✅ Complete | OfflineIndicator, SyncStatusBadge |
-| **Terminal Integration** | ✅ Complete | Offline payment flow, receipt, banners |
-| **Server Idempotency** | ❌ Missing | No idempotencyKey in schema or API |
-| **i18n Keys** | ❌ Missing | Offline UI strings not in translation files |
-| **PWA Manifest** | ❌ Missing | No manifest.json |
-| **Barrel Export** | ❌ Missing | No index.ts for pos-offline module |
-| **Sync Notifications** | ⚠️ Partial | Toast not shown on sync complete/fail |
-| **Offline Limits** | ❌ Missing | No cap on offline transactions |
-| **Data Integrity** | ❌ Missing | No checksums before sync |
+| **IndexedDB Core** | ✅ Complete | Full CRUD, 5 stores, indexes (DB_VERSION 2: +type/tenantId indexes on sync-queue) |
+| **Sync Engine** | ✅ Complete | Mutex, retry, exponential backoff, conflict resolution, tenant filter, payload validation, manual retry (bulk + per-op) |
+| **API Client** | ✅ Complete | Online/offline aware, cache fallback, tenantId stamped on all 5 syncOp sites |
+| **Service Worker** | ✅ Complete | 6 cache stores, 3 strategies, auth bypass, `sync` event handler (Background Sync, CACHE_VERSION v4) |
+| **React Hooks** | ✅ Complete | usePosOffline (retry actions + SW message listener), usePosProducts |
+| **UI Components** | ✅ Complete | OfflineIndicator + SyncStatusBadge — full i18n, per-transaction status list, manual per-op retry, retry-all button |
+| **Terminal Integration** | ✅ Complete | Offline payment flow, receipt, banners, onSyncComplete/onSyncFailed toasts, setSyncTenantContext wiring |
+| **Server Idempotency** | ✅ Complete | `idempotencyKey` + `@@unique([tenantId, idempotencyKey])` already in schema; route returns `duplicate: true` alongside `idempotent: true` (Session 67) |
+| **i18n Keys** | ✅ Complete | `pos.offlineIndicator.*` (8 keys) + `pos.syncBadge.*` (19 keys) in en.json + id.json (Session 67) |
+| **PWA Manifest** | ✅ Complete | [`apps/web/public/manifest.json`](apps/web/public/manifest.json) exists — "Qalcuity POS", start_url `/dashboard/pos` |
+| **Barrel Export** | ✅ Complete | [`apps/web/lib/pos-offline/index.ts`](apps/web/lib/pos-offline/index.ts) — full barrel incl. sync standalone exports + registerBackgroundSync (Session 67) |
+| **Sync Notifications** | ✅ Complete | Toast on sync complete/fail wired in terminal page via onSyncComplete/onSyncFailed callbacks (Session 67) |
+| **Offline Limits** | ✅ Complete | OFFLINE_TRANSACTION_LIMIT = 50 in api-client |
+| **Data Integrity** | ✅ Complete | `validateOperationPayload()` before sync — invalid payload marked FAILED (no retry loop). Checksums intentionally omitted: POS transaction route does not mutate stock (separate endpoint), so idempotency dedup fully prevents double effects |
 
 ---
 

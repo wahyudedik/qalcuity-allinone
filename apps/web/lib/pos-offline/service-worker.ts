@@ -278,6 +278,47 @@ export async function getRegistration(): Promise<ServiceWorkerRegistration | nul
     }
 }
 
+/**
+ * Register the POS sync queue for Background Sync.
+ *
+ * Uses the Background Sync API (`registration.sync.register`) so the browser
+ * can trigger a sync when connectivity is restored. The SW `sync` handler
+ * posts a `BACKGROUND_SYNC_TRIGGERED` message to open clients, which then
+ * flush the IndexedDB sync queue via SyncEngine. Falls back gracefully
+ * (returns false) where the API is unavailable — the foreground `online`
+ * event listener remains the primary fallback.
+ *
+ * @param tag - Background Sync registration tag
+ * @returns true if registration succeeded
+ */
+export async function registerBackgroundSync(tag = 'pos-sync'): Promise<boolean> {
+    if (!isServiceWorkerSupported()) {
+        return false;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const syncManager = (
+            registration as ServiceWorkerRegistration & {
+                sync?: { register(syncTag: string): Promise<void> };
+            }
+        ).sync;
+
+        if (!syncManager) {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('[SW] Background Sync API not available in this browser');
+            }
+            return false;
+        }
+
+        await syncManager.register(tag);
+        return true;
+    } catch (error) {
+        console.warn('[SW] Background Sync registration failed:', error);
+        return false;
+    }
+}
+
 // =============================================================================
 // Event Listeners
 // =============================================================================

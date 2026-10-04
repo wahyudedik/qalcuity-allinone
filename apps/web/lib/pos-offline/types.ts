@@ -110,6 +110,13 @@ export interface SyncOperation {
   maxRetries: number;
   lastError?: string;
   nextRetryAt: number;
+  /**
+   * Tenant that owns this operation (multi-tenant isolation).
+   * Used by SyncEngine to filter queue processing per tenant —
+   * prevents cross-tenant sync when session tenant differs from op tenant.
+   * Optional for backward compatibility with ops created before this field existed.
+   */
+  tenantId?: string;
 }
 
 // =============================================================================
@@ -163,8 +170,8 @@ export interface StorageUsage {
 /** IndexedDB database name */
 export const DB_NAME = 'qalcuity-pos-offline' as const;
 
-/** IndexedDB database version */
-export const DB_VERSION = 1 as const;
+/** IndexedDB database version (v2: +type/tenantId indexes on sync-queue) */
+export const DB_VERSION = 2 as const;
 
 /** Store name constants */
 export const STORES = {

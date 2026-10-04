@@ -39,6 +39,12 @@ export {
     addToSyncQueue,
     getSyncQueue,
     removeSyncOperation,
+    getSyncOperationById,
+    updateSyncOperation,
+    retrySyncOperation,
+    markFailedOperationsForRetry,
+    getPendingTransactionsByTenant,
+    getSyncQueueByTenant,
     getConfig,
     setConfig,
     clearAllData,
@@ -47,7 +53,16 @@ export {
 
 // ─── Sync Engine ────────────────────────────────────────────────────────────
 export { SyncEngine } from './sync';
-export type { SyncResult, SyncStatus } from './sync';
+export type { SyncResult, SyncStatus, SyncError } from './sync';
+export {
+    syncNow,
+    getSyncStatus,
+    startAutoSync,
+    stopAutoSync,
+    retryFailedSyncOperations,
+    retrySyncOperationById,
+    setSyncTenantContext,
+} from './sync';
 
 // ─── API Client ─────────────────────────────────────────────────────────────
 export {
@@ -68,6 +83,7 @@ export type { ApiResponse, TransactionResult } from './api-client';
 // ─── Service Worker ─────────────────────────────────────────────────────────
 export {
     registerServiceWorker,
+    registerBackgroundSync,
     unregisterServiceWorker,
     getCacheUsage,
     clearAllCaches,

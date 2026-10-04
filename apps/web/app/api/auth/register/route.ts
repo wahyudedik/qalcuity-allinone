@@ -7,10 +7,10 @@ import prisma from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeInput } from "@/lib/sanitize";
 import { sendWelcomeEmail } from "@/lib/email";
-import { logger } from '@/lib/logger';
 import { registerSchema, formatZodError } from '@/lib/validation-schemas';
 import { getPlatformSettings, checkPlanTenantLimit } from '@/lib/platform-settings';
-import { validatePassword, type PasswordPolicyConfig } from '@/lib/password-policy';
+import { validatePasswordWithDefaults } from '@/lib/password-policy';
+import { handleApiError } from '@/lib/api-error';
 
 export async function POST(request: Request) {
     try {
@@ -72,26 +72,12 @@ export async function POST(request: Request) {
             );
         }
 
-        // Validate password against default policy (new tenants use default policy)
-        const defaultPolicy: PasswordPolicyConfig = {
-            id: '',
-            tenantId: '',
-            minLength: 8,
-            maxLength: 128,
-            requireUppercase: false,
-            requireLowercase: false,
-            requireNumbers: false,
-            requireSpecialChars: false,
-            specialChars: '!@#$%^&*()_+-=[]{}|;:,.<>?',
-            preventReuse: 0,
-            expiryDays: 0,
-            warnBeforeExpiryDays: 7,
-            maxFailedAttempts: 5,
-            lockoutDurationMinutes: 30,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        };
-        const passwordCheck = validatePassword(password, defaultPolicy);
+        // Validate password against the central default policy (SEC-07).
+        // New tenants have no per-tenant PasswordPolicy row yet, so the
+        // platform default from @/lib/password-policy is used; existing
+        // tenants enforce their own policy on password change via
+        // getDefaultPolicy(tenantId).
+        const passwordCheck = validatePasswordWithDefaults(password);
         if (!passwordCheck.valid) {
             return NextResponse.json(
                 {
@@ -158,51 +144,7 @@ export async function POST(request: Request) {
             { status: 201 }
         );
     } catch (error: unknown) {
-        // Handle Prisma-specific errors
-        if (error && typeof error === 'object' && 'code' in error) {
-            const prismaError = error as { code: string; meta?: Record<string, unknown> };
-
-            // Unique constraint violation
-            if (prismaError.code === 'P2002') {
-                const target = prismaError.meta?.target;
-                const field = Array.isArray(target) ? target[0] : 'field';
-                logger.error(`[Register] Unique constraint violation on field: ${field}`);
-                return NextResponse.json(
-                    { error: `Data already exists for ${String(field)}`, code: 'DUPLICATE_DATA' },
-                    { status: 400 }
-                );
-            }
-
-            // Foreign key constraint
-            if (prismaError.code === 'P2003') {
-                logger.error("[Register] Foreign key constraint violation");
-                return NextResponse.json(
-                    { error: "Invalid data reference", code: 'INVALID_REFERENCE' },
-                    { status: 400 }
-                );
-            }
-
-            // Record not found
-            if (prismaError.code === 'P2025') {
-                logger.error("[Register] Record not found");
-                return NextResponse.json(
-                    { error: "Data not found", code: 'NOT_FOUND' },
-                    { status: 404 }
-                );
-            }
-
-            logger.error("[Register] Prisma error:", prismaError.code);
-            return NextResponse.json(
-                { error: "A database error occurred", code: 'DATABASE_ERROR' },
-                { status: 500 }
-            );
-        }
-
-        // Handle other errors
-        logger.error("[Register] Unexpected error:", error instanceof Error ? error.message : 'Unknown error');
-        return NextResponse.json(
-            { error: "An internal server error occurred", code: 'INTERNAL_SERVER_ERROR' },
-            { status: 500 }
-        );
+        // Standardized error handling (Prisma/Zod/generic) — SEC-07
+        return handleApiError(error);
     }
 }
