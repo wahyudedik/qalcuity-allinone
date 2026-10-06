@@ -8,7 +8,10 @@ import { logAudit, toAuditPayload } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateYearlyPeriods } from '@/lib/period-closing';
 import { handleApiError } from '@/lib/api-error';
-import { createPeriodSchema, generatePeriodsSchema } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
+import { formatZodError, createPeriodSchema, generatePeriodsSchema, reopenPeriodSchema } from '@/lib/validation-schemas';
+import { getLockPolicy, enforceAutoLock } from '@/lib/lock-policy';
+import { getActiveTemporaryUnlocks, getActiveTemporaryUnlockForPeriod, unlockReopenMarker } from '@/lib/unlock-request';
 
 // ============================================
 // GET â€” List periods
@@ -45,17 +48,26 @@ export async function GET(request: Request) {
             orderBy: { startDate: 'desc' },
         });
 
-        const data = periods.map((p) => ({
-            id: p.id,
-            name: p.name,
-            startDate: p.startDate.toISOString(),
-            endDate: p.endDate.toISOString(),
-            status: p.status,
-            closedBy: p.closedBy,
-            closedAt: p.closedAt?.toISOString() || null,
-            closeNotes: p.closeNotes,
-            createdAt: p.createdAt.toISOString(),
-        }));
+        // Indikator temporary unlock aktif (UCE-26) — untuk UI periods page
+        const activeUnlocks = await getActiveTemporaryUnlocks(tenantId);
+
+        const data = periods.map((p) => {
+            const unlock = activeUnlocks.find((u) => u.periodIds.includes(p.id));
+            return {
+                id: p.id,
+                name: p.name,
+                startDate: p.startDate.toISOString(),
+                endDate: p.endDate.toISOString(),
+                status: p.status,
+                closedBy: p.closedBy,
+                closedAt: p.closedAt?.toISOString() || null,
+                closeNotes: p.closeNotes,
+                createdAt: p.createdAt.toISOString(),
+                temporaryUnlockActive: !!unlock,
+                temporaryUnlockExpiresAt: unlock?.expiresAt ?? null,
+                temporaryUnlockRequestId: unlock?.unlockRequestId ?? null,
+            };
+        });
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
@@ -171,6 +183,144 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json({ success: true, data: period }, { status: 201 });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+// ============================================
+// PUT — Reopen closed period (UCE-26 Unlock as Exception)
+// ============================================
+// Reopen hanya diizinkan jika:
+// 1. Ada temporary unlock aktif yang mencakup periode ini (hasil approval
+//    unlock request) → closeNotes di-set ke marker `unlock:<requestId>`
+//    sehingga sweepExpiredTemporaryUnlocks bisa auto re-lock saat expired; atau
+// 2. policy.requireApprovalForUnlock = false, atau role SUPERADMIN (emergency
+//    override, konsisten dengan perilaku UI lama yang SUPERADMIN-gated).
+
+export async function PUT(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const ip = getClientIp(request);
+        const rateLimitResult = checkRateLimit(`api:periods:PUT:${ip}`, 30, 60000);
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: MSG.TOO_MANY_REQUESTS },
+                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+            );
+        }
+
+        const auth = await requirePermissionForRoute(request);
+        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+        const { userId, tenantId, role } = auth;
+
+        const body = await request.json();
+        const sanitizedBody = sanitizeObject(body);
+        const validation = reopenPeriodSchema.safeParse(sanitizedBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { success: false, error: formatZodError(validation.error), code: 'VALIDATION_ERROR' },
+                { status: 400 }
+            );
+        }
+
+        const period = await prisma.accountingPeriod.findFirst({
+            where: { id: params.id, tenantId },
+        });
+        if (!period) {
+            return NextResponse.json(
+                { success: false, error: MSG.DATA_NOT_FOUND, code: 'DATA_NOT_FOUND' },
+                { status: 404 }
+            );
+        }
+
+        if (period.status !== 'CLOSED') {
+            return NextResponse.json(
+                { success: false, error: 'Period is not closed', code: 'PERIOD_NOT_CLOSED' },
+                { status: 400 }
+            );
+        }
+
+        // Lazy auto-lock enforcement (UCE-25) — no-op jika autoLockAfterDays = 0
+        const policy = await getLockPolicy(tenantId);
+        await enforceAutoLock(tenantId, policy);
+
+        // Temporary unlock aktif untuk periode ini? (UCE-26)
+        const activeUnlock = await getActiveTemporaryUnlockForPeriod(tenantId, period.id);
+
+        if (!activeUnlock && policy.requireApprovalForUnlock && role !== 'SUPERADMIN') {
+            // Tidak ada temporary unlock + policy mewajibkan approval →
+            // arahkan user mengajukan unlock request.
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.UNLOCK_APPROVAL_REQUIRED,
+                    code: 'UNLOCK_APPROVAL_REQUIRED',
+                },
+                { status: 403 }
+            );
+        }
+
+        // Reopen. Jika via temporary unlock, closeNotes WAJIB marker persis
+        // (sweep membandingkan string equality untuk auto re-lock).
+        const reopenNotes = activeUnlock
+            ? unlockReopenMarker(activeUnlock.unlockRequestId)
+            : validation.data.closeNotes || 'Dibuka kembali oleh Super Admin';
+
+        const updated = await prisma.accountingPeriod.update({
+            where: { id: period.id },
+            data: {
+                status: 'OPEN',
+                closedAt: null,
+                closedBy: null,
+                closeNotes: reopenNotes,
+            },
+        });
+
+        void logAudit({
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'AccountingPeriod',
+            entityId: period.id,
+            oldValues: {
+                status: 'CLOSED',
+                closedAt: period.closedAt?.toISOString() || null,
+                closeNotes: period.closeNotes,
+            },
+            newValues: {
+                status: 'OPEN',
+                closeNotes: reopenNotes,
+                viaUnlockRequest: !!activeUnlock,
+                temporaryUnlockRequestId: activeUnlock?.unlockRequestId ?? null,
+                temporaryUnlockExpiresAt: activeUnlock?.expiresAt ?? null,
+            },
+            request,
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: updated.id,
+                name: updated.name,
+                startDate: updated.startDate.toISOString(),
+                endDate: updated.endDate.toISOString(),
+                status: updated.status,
+                closedBy: updated.closedBy,
+                closedAt: updated.closedAt?.toISOString() || null,
+                closeNotes: updated.closeNotes,
+            },
+            temporaryUnlock: activeUnlock
+                ? {
+                    id: activeUnlock.id,
+                    unlockRequestId: activeUnlock.unlockRequestId,
+                    expiresAt: activeUnlock.expiresAt,
+                }
+                : null,
+            message: activeUnlock ? MSG.UNLOCK_GRANTED : 'Period reopened',
+        });
     } catch (error) {
         return handleApiError(error);
     }

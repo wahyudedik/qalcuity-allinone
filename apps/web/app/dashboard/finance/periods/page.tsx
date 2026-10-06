@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from '@/lib/i18n'
 import { logger } from '@/lib/logger'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
     Calendar,
@@ -20,6 +21,8 @@ import {
     ArrowRight,
     RefreshCw,
     Loader2,
+    TimerOff,
+    ShieldAlert,
 } from 'lucide-react'
 
 // ============================================
@@ -36,6 +39,9 @@ type Period = {
     closedAt: string | null
     closeNotes: string | null
     createdAt: string
+    temporaryUnlockActive: boolean
+    temporaryUnlockExpiresAt: string | null
+    temporaryUnlockRequestId: string | null
 }
 
 type PeriodDetail = Period & {
@@ -64,6 +70,17 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
     OPEN: { label: 'Terbuka', color: 'bg-green-100 text-green-700', icon: Unlock },
     CLOSING: { label: 'Proses Tutup', color: 'bg-yellow-100 text-yellow-700', icon: Loader2 },
     CLOSED: { label: 'Ditutup', color: 'bg-gray-100 text-gray-500', icon: Lock },
+}
+
+function formatUnlockRemaining(expiresAt: string | null): string {
+    if (!expiresAt) return ''
+    const diff = new Date(expiresAt).getTime() - Date.now()
+    if (diff <= 0) return 'Berakhir'
+    const minutes = Math.floor(diff / 60000)
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    if (h > 0) return `${h}j ${m}m lagi`
+    return `${m}m lagi`
 }
 
 // ============================================
@@ -359,24 +376,33 @@ export default function PeriodsPage() {
                         Kelola periode akuntansi dan tutup buku secara berkala
                     </p>
                 </div>
-                {isAdmin && (
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowGenerateForm(!showGenerateForm)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Generate Tahunan
-                        </button>
-                        <button
-                            onClick={() => setShowCreateForm(!showCreateForm)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Buat Periode
-                        </button>
-                    </div>
-                )}
+                <div className="flex gap-2">
+                    <Link
+                        href="/dashboard/finance/unlock-requests"
+                        className="inline-flex items-center gap-2 rounded-lg border border-purple-300 bg-white px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:bg-gray-800 dark:text-purple-300 dark:hover:bg-gray-700"
+                    >
+                        <Unlock className="h-4 w-4" />
+                        Unlock Requests
+                    </Link>
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={() => setShowGenerateForm(!showGenerateForm)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Generate Tahunan
+                            </button>
+                            <button
+                                onClick={() => setShowCreateForm(!showCreateForm)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Buat Periode
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Generate Form */}
@@ -594,6 +620,12 @@ export default function PeriodsPage() {
                                             </td>
                                             <td className="whitespace-nowrap px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {period.temporaryUnlockActive && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                                                            <TimerOff className="h-3 w-3" />
+                                                            {formatUnlockRemaining(period.temporaryUnlockExpiresAt)}
+                                                        </span>
+                                                    )}
                                                     {period.status === 'OPEN' && isAdmin && (
                                                         <button
                                                             onClick={() => startCloseWizard(period)}
@@ -611,6 +643,15 @@ export default function PeriodsPage() {
                                                             <Unlock className="h-3 w-3" />
                                                             Buka Kembali
                                                         </button>
+                                                    )}
+                                                    {period.status === 'CLOSED' && !isSuperAdmin && (
+                                                        <Link
+                                                            href="/dashboard/finance/unlock-requests"
+                                                            className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                                                        >
+                                                            <ShieldAlert className="h-3 w-3" />
+                                                            Request Unlock
+                                                        </Link>
                                                     )}
                                                 </div>
                                             </td>
@@ -651,6 +692,14 @@ export default function PeriodsPage() {
                                     {period.closeNotes && (
                                         <p className="mt-2 text-xs text-gray-400 truncate">Catatan: {period.closeNotes}</p>
                                     )}
+                                    {period.temporaryUnlockActive && (
+                                        <div className="mt-2">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                                                <TimerOff className="h-3 w-3" />
+                                                Unlock sementara: {formatUnlockRemaining(period.temporaryUnlockExpiresAt)}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="mt-3 flex gap-2">
                                         {period.status === 'OPEN' && isAdmin && (
                                             <button
@@ -669,6 +718,15 @@ export default function PeriodsPage() {
                                                 <Unlock className="h-3 w-3" />
                                                 Buka Kembali
                                             </button>
+                                        )}
+                                        {period.status === 'CLOSED' && !isSuperAdmin && (
+                                            <Link
+                                                href="/dashboard/finance/unlock-requests"
+                                                className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                                            >
+                                                <ShieldAlert className="h-3 w-3" />
+                                                Request Unlock
+                                            </Link>
                                         )}
                                     </div>
                                 </div>

@@ -124,6 +124,10 @@
         "activityDetail": {
             "title": "Activity Detail Error",
             "description": "An error occurred while loading activity detail. Please try again."
+        },
+        "unlockRequests": {
+            "title": "Unlock Requests Error",
+            "description": "An error occurred while loading unlock requests. Please try again."
         }
     },
     "nav": {
@@ -1267,6 +1271,74 @@
                 "fetchError": "Failed to load aging report",
                 "asOf": "As of:",
                 "overdueWarning": "have exceeded 90 days — immediate attention required."
+            }
+        },
+        "lockPolicy": {
+            "title": "Lock Policy",
+            "description": "Configure which lock levels are available, auto-lock timing, and which roles may lock/unlock or approve unlock requests."
+        },
+        "unlockRequests": {
+            "title": "Unlock Requests",
+            "subtitle": "Request temporary reopening of closed accounting periods through the approval workflow",
+            "backToPeriods": "Accounting Periods",
+            "newRequest": "New Request",
+            "createTitle": "New Unlock Request",
+            "level": "Unlock Level",
+            "targetPeriod": "Target Period",
+            "selectPeriod": "-- Select a closed period --",
+            "reason": "Reason",
+            "reasonPlaceholder": "Explain the reason for reopening the period (e.g. correction of a closed journal entry affecting reports)...",
+            "submit": "Submit Request",
+            "approvalNote": "The request will be routed to the authorized approver. If approved, the period is temporarily reopened and automatically re-locked after the configured duration.",
+            "approveTitle": "Approve Unlock Request",
+            "rejectTitle": "Reject Unlock Request",
+            "approveWarning": "An approved request temporarily reopens the target period for the policy-configured duration, then it is automatically re-locked.",
+            "requestedBy": "Requested by",
+            "unlockDurationNote": "Unlock duration follows the policy configuration (temporaryUnlockDurationHours)",
+            "comments": "Comments (optional)",
+            "rejectComments": "Rejection reason (required)",
+            "approve": "Approve",
+            "reject": "Reject",
+            "approved": "Request approved",
+            "rejected": "Request rejected",
+            "created": "Unlock request created",
+            "loadError": "Failed to load unlock requests",
+            "createError": "Failed to create unlock request",
+            "decideError": "Failed to process the request",
+            "detailLoadError": "Failed to load unlock request detail",
+            "reasonTooShort": "Reason must be at least 20 characters",
+            "periodRequired": "Please select the period to reopen",
+            "rejectReasonRequired": "Rejection reason is required",
+            "emptyTitle": "No unlock requests yet",
+            "emptyDescription": "Requests to reopen closed periods will appear here.",
+            "page": "Page",
+            "table": {
+                "level": "Level",
+                "periods": "Target Periods",
+                "requestedBy": "Requested By",
+                "status": "Status",
+                "requestedAt": "Requested At",
+                "temporaryUnlock": "Temporary Unlock"
+            },
+            "detail": {
+                "title": "Unlock Request Detail",
+                "status": "Request Status",
+                "level": "Level",
+                "requestedBy": "Requested by",
+                "requestedAt": "Requested at",
+                "temporaryUnlock": "Temporary Unlock",
+                "expiresAt": "Expires at",
+                "unlockedPeriods": "Unlocked periods",
+                "autoRelockNote": "Periods are automatically re-locked once the unlock duration ends.",
+                "unlockExpired": "The temporary unlock has ended and the periods have been re-locked.",
+                "unlockNotActive": "No temporary unlock yet. The unlock becomes active once the request is approved.",
+                "targetPeriods": "Target Periods",
+                "reason": "Reopening Reason",
+                "decision": "Decision",
+                "decidedBy": "Decided by",
+                "decidedAt": "Decided at",
+                "decisionComments": "Decision comments",
+                "duration": "Unlock duration"
             }
         },
         "invoice": {

@@ -1,6 +1,8 @@
 import { getServerSession, Session } from "next-auth";
 import { authOptions } from "./auth";
 import { getPermissionForRoute } from "./route-permissions";
+import { logger } from "./logger";
+import { MSG } from "./api-messages";
 
 export async function getSession() {
     return await getServerSession(authOptions);
@@ -22,6 +24,12 @@ export async function requireAuth() {
  * Cek apakah user boleh melakukan operasi mutasi (create, update, delete).
  * VIEWER tidak boleh melakukan operasi mutasi.
  * Backward compatible — tetap menggunakan role string check.
+ *
+ * @deprecated (FE-PE-09a) Legacy 4-Role RBAC helper. Gunakan
+ * `requirePermissionForRoute(req)` (Permission Engine) untuk route baru.
+ * Migration path: `const auth = await requirePermissionForRoute(req);
+ * if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });`
+ * Dipertahankan untuk backward compatibility (callers: finance/recurring-invoices routes).
  */
 export async function requireMutateAuth() {
     const auth = await requireAuth();
@@ -35,6 +43,11 @@ export async function requireMutateAuth() {
  * Cek apakah user adalah ADMIN atau SUPERADMIN.
  * Digunakan untuk halaman/endpoint yang hanya boleh diakses ADMIN+.
  * Backward compatible — tetap menggunakan role string check.
+ *
+ * @deprecated (FE-PE-09a) Legacy 4-Role RBAC helper. Gunakan
+ * `requirePermissionForRoute(req)` dengan permission entry yang sesuai
+ * (mis. `system:admin` / `platform:view`) untuk route baru.
+ * Dipertahankan untuk backward compatibility (callers: admin/plans routes).
  */
 export async function requireAdminAuth() {
     const auth = await requireAuth();
@@ -165,6 +178,14 @@ export type PermissionAuthResult =
  * - /api/dashboard/stats (dashboard stats)
  * - /api/platform/* (platform admin)
  *
+ * Strict mode (RBAC_STRICT=true env var):
+ * - Route WITHOUT permission entry → 403 reject (instead of silent allow)
+ * - Permission check failed → 403 reject (no role-hierarchy fallback)
+ * Default (unset/false): backward-compatible fallback behavior preserved.
+ *
+ * Observability: every fallback-path usage is logged via logger with route,
+ * userId, permission, fallbackRole, and reason (FE-PE-09a).
+ *
  * @param req - The incoming Request object
  * @returns PermissionAuthResult — check `.error` for failure, or destructure `.userId`, `.tenantId`, `.role` on success
  */
@@ -193,9 +214,29 @@ export async function requirePermissionForRoute(req: Request): Promise<Permissio
         };
     }
 
+    // Strict mode flag — read at call time so env changes apply without rebuild.
+    // Default (unset/false) keeps backward-compatible fallback behavior.
+    const rbacStrict = process.env.RBAC_STRICT === 'true';
+
     const routeConfig = getPermissionForRoute(pathname, method);
     if (!routeConfig) {
-        // No permission config found — allow (backward compatible)
+        if (rbacStrict) {
+            logger.warn('[RBAC_STRICT] Route rejected — no permission entry', {
+                route: pathname,
+                method,
+                userId: session.user.id,
+                role: session.user.role,
+                reason: 'route_without_entry',
+            });
+            return { error: MSG.RBAC_STRICT_ROUTE_NOT_REGISTERED, status: 403 };
+        }
+        // No permission config found — allow (backward compatible).
+        // Log at debug level for observability of unregistered routes.
+        logger.debug('[RBAC] Route without permission entry — allowed (backward compat)', {
+            route: pathname,
+            method,
+            userId: session.user.id,
+        });
         return {
             userId: session.user.id,
             tenantId: session.user.tenantId,
@@ -204,6 +245,7 @@ export async function requirePermissionForRoute(req: Request): Promise<Permissio
     }
 
     // Try permission-based check first
+    let permissionError: unknown = null;
     try {
         const { hasPermission: checkPermission } = await import("./permissions");
         const hasPerm = await checkPermission(session, routeConfig.permission);
@@ -214,8 +256,24 @@ export async function requirePermissionForRoute(req: Request): Promise<Permissio
                 role: session.user.role,
             };
         }
-    } catch {
-        // Permission engine error — fall through to role fallback
+    } catch (error) {
+        // Permission engine error — fall through to role fallback (or strict reject)
+        permissionError = error;
+    }
+
+    // Strict mode — permission check failed (or engine error): reject, NO role fallback
+    if (rbacStrict) {
+        logger.warn('[RBAC_STRICT] Permission check failed — role fallback disabled', {
+            route: pathname,
+            method,
+            userId: session.user.id,
+            role: session.user.role,
+            permission: routeConfig.permission,
+            fallbackRole: routeConfig.fallbackRole || 'ADMIN',
+            reason: permissionError ? 'permission_engine_error' : 'permission_check_failed',
+            engineError: permissionError instanceof Error ? permissionError.message : undefined,
+        });
+        return { error: MSG.RBAC_STRICT_PERMISSION_DENIED, status: 403 };
     }
 
     // Fallback to role-based check (backward compatible)
@@ -234,6 +292,16 @@ export async function requirePermissionForRoute(req: Request): Promise<Permissio
     const requiredRoleLevel = roleHierarchy[fallbackRole] || 3;
 
     if (userRoleLevel >= requiredRoleLevel) {
+        // Observability — fallback path used (4-Role RBAC safety net still active)
+        logger.info('[RBAC] Fallback role-hierarchy used (backward compat)', {
+            route: pathname,
+            method,
+            userId: session.user.id,
+            role,
+            permission: routeConfig.permission,
+            fallbackRole,
+            reason: permissionError ? 'permission_engine_error' : 'permission_check_failed',
+        });
         return {
             userId: session.user.id,
             tenantId: session.user.tenantId,

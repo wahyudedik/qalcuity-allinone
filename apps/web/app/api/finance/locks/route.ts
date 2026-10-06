@@ -9,6 +9,9 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import { handleApiError } from '@/lib/api-error';
 import { z } from 'zod';
+import { getLockPolicy, isRoleAllowed, enforceAutoLock } from '@/lib/lock-policy';
+import { getActiveTemporaryUnlocks, getActiveTemporaryUnlockForPeriod } from '@/lib/unlock-request';
+import type { TemporaryUnlock } from '@/lib/unlock-request';
 
 // ─── Zod Schemas ────────────────────────────────────────────────────────────
 
@@ -64,7 +67,10 @@ export async function GET(request: Request) {
             createdAt: lock.createdAt.toISOString(),
         }));
 
-        return NextResponse.json({ success: true, data });
+        // Temporary unlock aktif (UCE-26) — indikator untuk UI
+        const temporaryUnlocks = await getActiveTemporaryUnlocks(tenantId);
+
+        return NextResponse.json({ success: true, data, temporaryUnlocks });
     } catch (error) {
         return handleApiError(error);
     }
@@ -85,12 +91,50 @@ export async function POST(request: Request) {
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
+        const { userId, tenantId, role } = auth;
 
         const body = await request.json();
         const sanitizedBody = sanitizeObject(body);
 
         const validated = acquireLockSchema.parse(sanitizedBody);
+
+        // ── UCE-25 Lock Policy: role check + lazy auto-lock ────────────────
+        const policy = await getLockPolicy(tenantId);
+        await enforceAutoLock(tenantId, policy);
+
+        const isPeriodLock =
+            validated.lockType === 'period_close' || validated.entityType === 'ACCOUNTING_PERIOD';
+
+        let periodTemporaryUnlock: TemporaryUnlock | null = null;
+        if (isPeriodLock) {
+            if (!isRoleAllowed(policy, role, 'lock')) {
+                return NextResponse.json(
+                    { success: false, error: MSG.LOCK_FORBIDDEN_ROLE, code: 'LOCK_FORBIDDEN_ROLE' },
+                    { status: 403 }
+                );
+            }
+
+            const period = await prisma.accountingPeriod.findFirst({
+                where: { id: validated.entityId, tenantId },
+                select: { id: true, status: true },
+            });
+
+            if (period && period.status === 'CLOSED') {
+                // Periode tertutup — hanya boleh di-lock untuk edit jika ada
+                // temporary unlock aktif (UCE-26), dengan batas waktu unlock.
+                periodTemporaryUnlock = await getActiveTemporaryUnlockForPeriod(tenantId, period.id);
+                if (!periodTemporaryUnlock) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            error: MSG.PERIOD_LOCKED_UNLOCK_REQUIRED,
+                            code: 'PERIOD_LOCKED_UNLOCK_REQUIRED',
+                        },
+                        { status: 403 }
+                    );
+                }
+            }
+        }
 
         // Check existing lock
         const existing = await prisma.lockRecord.findUnique({
@@ -143,6 +187,13 @@ export async function POST(request: Request) {
                         reason: updated.reason,
                         createdAt: updated.createdAt.toISOString(),
                     },
+                    temporaryUnlock: periodTemporaryUnlock
+                        ? {
+                            id: periodTemporaryUnlock.id,
+                            unlockRequestId: periodTemporaryUnlock.unlockRequestId,
+                            expiresAt: periodTemporaryUnlock.expiresAt,
+                        }
+                        : null,
                     message: 'Lock extended',
                 });
             }
@@ -189,6 +240,13 @@ export async function POST(request: Request) {
                 reason: lock.reason,
                 createdAt: lock.createdAt.toISOString(),
             },
+            temporaryUnlock: periodTemporaryUnlock
+                ? {
+                    id: periodTemporaryUnlock.id,
+                    unlockRequestId: periodTemporaryUnlock.unlockRequestId,
+                    expiresAt: periodTemporaryUnlock.expiresAt,
+                }
+                : null,
         }, { status: 201 });
     } catch (error) {
         return handleApiError(error);

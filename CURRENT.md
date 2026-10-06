@@ -1,6 +1,110 @@
-> **Last Updated:** 4 Oktober 2026 (Session 67: POS Offline Mode Completion)
-> **Version:** v11.54.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6). TypeScript: 0 errors.
+> **Last Updated:** 6 Oktober 2026 (Session 69: FE-PE-09a RBAC Migration Completion & Hardening)
+> **Version:** v11.55.0
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a). TypeScript: 0 errors.
+
+## 🔧 Session 69 — [FE-PE-09a] RBAC Migration Completion & Hardening — 6 Okt 2026
+
+> **Focus:** Menyelesaikan sisa gap migrasi 4-Role RBAC → Permission Engine (observability logging, strict mode flag, audit route coverage, mobile exception, legacy helper deprecation)
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 69 Summary
+
+#### Temuan Inspeksi
+
+1. **Batch A (audit route coverage):** 228 route files di `apps/web/app/api/` dibandingkan dengan 278 entries di `ROUTE_PERMISSIONS`. Hasil: **semua route non-skip sudah tercakup** — exact match atau prefix match (mis. `/api/finance/periods/[id]/summary` via prefix `/api/finance/periods/[id]`). Route tanpa entry = intentionally skipped (NextAuth `/api/auth/*`, `/api/mobile/*`, `/api/health`, `/api/search`, `/api/demo/load`, public webhooks). **0 entry baru diperlukan.**
+2. **fallbackRole compat layer** (`session.ts`): `requirePermissionForRoute()` fallback ke role hierarchy hardcoded (SUPERADMIN:4 … VIEWER:1) terhadap `fallbackRole || 'ADMIN'`; route tanpa entry diizinkan diam-diam (backward compatible). Selama layer ini hidup, 4-Role RBAC masih jadi safety net.
+3. **Mobile routes:** 8 file di `apps/web/app/api/mobile/*` (crm/contacts ×2, finance/invoices ×2, hr/employees ×2, inventory/products ×2) berisi hardcoded `user.role === 'VIEWER'` checks; mobile pakai JWT auth terpisah (`mobile-auth.ts`) yang di-skip dari `requirePermissionForRoute()`.
+4. **Middleware:** 2 hardcoded gates (maintenance mode + `/platform/*`) — terkait Edge Runtime (permission engine tidak bisa dipanggil di edge).
+5. **Legacy helpers:** `requireMutateAuth` (3 callers: finance/recurring-invoices routes), `requireAdminAuth` (2 files: admin/plans routes), `requirePermissionOrRole` (0 callers).
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/lib/session.ts`](apps/web/lib/session.ts) | `requirePermissionForRoute()`: +observability logging (`logger`) ketika fallback path terpakai (route, userId, permission, fallbackRole, reason: `permission_engine_error`/`permission_check_failed`/`route_without_entry`); +**strict mode** via env `RBAC_STRICT=true` — route tanpa entry → 403 + permission check gagal → 403 tanpa role fallback (message via `MSG.RBAC_STRICT_*`); default unset/false = backward compatible. +`@deprecated` JSDoc pada `requireMutateAuth` + `requireAdminAuth` (signature tidak berubah). Import `logger` + `MSG` ditambahkan. |
+| 2 | [`apps/web/lib/api-messages.ts`](apps/web/lib/api-messages.ts) | +2 constants: `RBAC_STRICT_ROUTE_NOT_REGISTERED`, `RBAC_STRICT_PERMISSION_DENIED` |
+| 3 | [`apps/web/lib/permissions.ts`](apps/web/lib/permissions.ts) | `requirePermissionOrRole()`: +`@deprecated` JSDoc (0 callers, migration path → `requirePermissionForRoute`) |
+| 4 | [`apps/web/middleware.ts`](apps/web/middleware.ts) | Komentar eksplisit di 2 gates (maintenance mode + `/platform/*`): intentional Edge Runtime constraint + defense-in-depth; rencana future JWT permissions claim (butuh approval `auth.ts`). **Logic tidak berubah.** |
+| 5 | 8 mobile route files (`apps/web/app/api/mobile/{crm/contacts,finance/invoices,hr/employees,inventory/products}` × list + `[id]`) | Komentar "RBAC EXCEPTION (FE-PE-09a)" di header — hardcoded role checks = intentional exception (mobile JWT auth terpisah). **Option 2 dipilih (lebih aman) — mobile auth flow tidak diubah.** |
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `packages/db/prisma/schema.prisma`, `apps/web/lib/audit.ts` tidak disentuh. `session.ts` hanya diubah di `requirePermissionForRoute` + helper RBAC-nya (approval eksplisit user). Mobile auth (`mobile-auth.ts`, `mobile-auth-guard.ts`) tidak diubah. Tidak ada perubahan signature fungsi auth.
+
+#### Documented Decisions & Gaps
+
+1. **Strict mode — cara mengaktifkan:** Set `RBAC_STRICT=true` di `.env` / `.env.production` (apps/web). Efek: (a) route TANPA entry di `ROUTE_PERMISSIONS` → 403 `RBAC_STRICT_ROUTE_NOT_REGISTERED`; (b) permission check gagal → 403 `RBAC_STRICT_PERMISSION_DENIED` tanpa fallback role hierarchy. **Default tidak diset/false = backward compatible** (fallback hidup, route tanpa entry diizinkan). Aktifkan hanya setelah semua route dipastikan terdaftar.
+2. **Mobile RBAC exception (official decision):** Hardcoded `VIEWER` checks di 8 mobile route files dipertahankan sebagai intentional exception — mobile pakai JWT auth terpisah yang di-skip `requirePermissionForRoute()`. Dokumentasi sebagai exception resmi (bukan gap). Migration path future: port mobile routes ke permission engine setelah mobile auth flow terintegrasi dengan engine.
+3. **Legacy helpers:** Ketiga helper ditandai `@deprecated` (JSDoc) tanpa mengubah signature/behavior. Callers: `requireMutateAuth` 3 call sites (finance/recurring-invoices), `requireAdminAuth` 5 call sites (admin/plans), `requirePermissionOrRole` 0. **Tidak dihapus, callers tidak diport** — perubahan auth flow di route admin/plans tidak trivial; backward compatibility > completeness.
+4. **Middleware JWT permissions claim (future):** Rencana menambah `permissions` array claim di JWT saat login agar middleware cukup baca claim tanpa memanggil engine. **DI LUAR SCOPE** — butuh modifikasi `apps/web/lib/auth.ts` (Do Not Touch, butuh approval eksplisit).
+5. **Scope enforcement (FE-PE-09b):** `can(user, action, resource, context)` dengan scope branch/department per ADR-013 — dipecah jadi item terpisah di REMAINING-WORK.md, butuh kebutuhan multi-branch nyata + schema scope. **Tidak disentuh di session ini.**
+
+#### Behavior Notes
+
+- **Default behavior tidak berubah** — `RBAC_STRICT` tidak diset = fallback role hierarchy tetap hidup, route tanpa entry tetap diizinkan (backward compatible). Logging bersifat observability saja (`logger.debug`/`info`/`warn`).
+- **Tenant isolation terjaga** — perubahan hanya di auth gating layer; tidak ada query database yang diubah; fallback removal (saat strict aktif) tidak membuka cross-tenant access (permission engine tetap jadi gate utama).
+
+## 🔧 Session 68 — [UCE-25/26] Lock Policy + Unlock as Exception — 6 Okt 2026
+
+> **Focus:** Lock policy konfigurabel per-tenant + unlock sebagai workflow exception (request → approval → temporary unlock → auto re-lock) sesuai ADR-021
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 68 Summary
+
+#### Temuan Inspeksi
+
+1. [`apps/web/lib/lock-policy.ts`](apps/web/lib/lock-policy.ts) belum ada — lock/unlock role check hardcode di routes, tidak ada auto-lock timing, tidak ada `requireApprovalForUnlock`.
+2. [`apps/web/lib/unlock-request.ts`](apps/web/lib/unlock-request.ts) belum ada — tidak ada alur request → approval → temporary unlock; tidak ada self-approval prevention; tidak ada auto re-lock.
+3. `Tenant.settings` Json column tersedia (pattern delegation.ts) — bisa dipakai untuk menyimpan policy + temporary unlock state **tanpa** menambah model ke schema.prisma (sesuai hard rule Do Not Touch).
+4. [`apps/web/app/dashboard/finance/periods/page.tsx`](apps/web/app/dashboard/finance/periods/page.tsx) memanggil PUT `/api/finance/periods/[id]` tapi handler-nya belum ada (hanya GET+POST) — "Buka Kembali" SuperAdmin akan 404/405.
+5. Pre-existing bug: [`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts) byte-for-byte duplikat dari `periods/[id]/route.ts` — wizard POST ke `/close` tidak menjalankan `closePeriod`/`runPreCloseChecks` (out of scope, didokumentasikan).
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/lib/lock-policy.ts`](apps/web/lib/lock-policy.ts) | Engine baru: `getLockPolicy`/`updateLockPolicy` (Tenant.settings), `isRoleAllowed(policy, role, 'lock'\|'unlock'\|'unlockRequest'\|'unlockApprove')`, `isLockLevelEnabled`, `enforceAutoLock` (lazy, per periode OPEN yang lewat `endDate - autoLockAfterDays`) |
+| 2 | [`apps/web/lib/unlock-request.ts`](apps/web/lib/unlock-request.ts) | Engine baru (904 baris): `requestUnlock` (resolve target periods via window-overlap; auto-approve jika `requireApprovalForUnlock=false`), `decideUnlockRequest` (PENDING-only, self-approval blocked → `UNLOCK_SELF_APPROVAL_FORBIDDEN`, hitung `expiresAt = now + durationHours`, sync ApprovalRequest jika entityType `UNLOCK_REQUEST` dikonfigurasi), `listUnlockRequests` (filter status/user/mine, derive EXPIRED), `getUnlockRequestById`, `sweepExpiredTemporaryUnlocks` (re-lock via closeNotes marker `unlock:<requestId>`, prune expired entries), `hasActiveTemporaryUnlock`, `getActiveTemporaryUnlockForPeriod`, `unlockReopenMarker` |
+| 3 | [`apps/web/lib/api-messages.ts`](apps/web/lib/api-messages.ts) | +MSG constants: `LOCK_FORBIDDEN_ROLE`, `PERIOD_LOCKED_UNLOCK_REQUIRED`, `UNLOCK_APPROVAL_REQUIRED`, `UNLOCK_GRANTED`, `UNLOCK_REJECTED`, `UNLOCK_REQUEST_CREATED`, `UNLOCK_REQUEST_ALREADY_EXISTS`, `UNLOCK_REQUEST_NOT_FOUND`, `LOCK_POLICY_UPDATED` |
+| 4 | [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) | +`updateLockPolicySchema` (VIEWER excluded dari role arrays), `createUnlockRequestSchema` (level enum, periodId wajib saat SPECIFIC via refine, reason 20-1000), `decideUnlockRequestSchema` (decision enum + comments max 1000), `reopenPeriodSchema` (literal OPEN) |
+| 5 | [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts) | +9 route entries: `lock-policy` (settings:edit, ADMIN), `locks/unlock-request` (approval:create, MEMBER), `locks/unlock-requests` + `[id]` + `[id]/status` (approval:view, MEMBER), `[id]/approve` (approval:approve, ADMIN), `[id]/reject` (approval:reject, ADMIN) |
+| 6 | [`apps/web/app/api/finance/lock-policy/route.ts`](apps/web/app/api/finance/lock-policy/route.ts) | GET (100/60s) + PUT (20/60s, ADMIN-only explicit gate, audit old/new policy) |
+| 7 | [`apps/web/app/api/finance/locks/unlock-request/route.ts`](apps/web/app/api/finance/locks/unlock-request/route.ts) | POST — VIEWER 403, Zod createUnlockRequestSchema, response `{data, temporaryUnlock, autoApproved, duplicate, message}` |
+| 8 | [`apps/web/app/api/finance/locks/unlock-requests/route.ts`](apps/web/app/api/finance/locks/unlock-requests/route.ts) | GET list — filter status/active/mine/page/limit, VIEWER forced own-only |
+| 9 | [`apps/web/app/api/finance/locks/unlock-requests/[id]/route.ts`](apps/web/app/api/finance/locks/unlock-requests/[id]/route.ts) | GET detail — VIEWER own-only 403 |
+| 10 | [`apps/web/app/api/finance/locks/unlock-requests/[id]/approve/route.ts`](apps/web/app/api/finance/locks/unlock-requests/[id]/approve/route.ts) | POST — optional `{comments}`, `decideErrorStatus()` (404/403/409/400), rate 20/60s |
+| 11 | [`apps/web/app/api/finance/locks/unlock-requests/[id]/reject/route.ts`](apps/web/app/api/finance/locks/unlock-requests/[id]/reject/route.ts) | POST — struktur sama dengan approve, `decision: 'REJECTED'` |
+| 12 | [`apps/web/app/api/finance/locks/unlock-requests/[id]/status/route.ts`](apps/web/app/api/finance/locks/unlock-requests/[id]/status/route.ts) | GET — `{requestId, status, active, expiresAt, minutesRemaining, level, periodIds, temporaryUnlock, request}` |
+| 13 | [`apps/web/app/api/finance/locks/route.ts`](apps/web/app/api/finance/locks/route.ts) | GET +`temporaryUnlocks` array; POST +policy role check `isRoleAllowed(..., 'lock')` + `enforceAutoLock` + closed-period check → 403 `PERIOD_LOCKED_UNLOCK_REQUIRED` tanpa active temporary unlock; responses +`temporaryUnlock` summary |
+| 14 | [`apps/web/app/api/finance/locks/[id]/route.ts`](apps/web/app/api/finance/locks/[id]/route.ts) | DELETE release: lockType `period_close` non-holder → policy `isRoleAllowed(..., 'unlock')` else 403 `LOCK_FORBIDDEN_ROLE` |
+| 15 | [`apps/web/app/api/finance/periods/route.ts`](apps/web/app/api/finance/periods/route.ts) | GET mapping +`temporaryUnlockActive`/`temporaryUnlockExpiresAt`/`temporaryUnlockRequestId` |
+| 16 | [`apps/web/app/api/finance/periods/[id]/route.ts`](apps/web/app/api/finance/periods/[id]/route.ts) | GET mapping +3 field temporary unlock; **+PUT handler baru** (reopenPeriodSchema, PERIOD_CLOSED 400, lazy enforceAutoLock, activeUnlock check, `requireApprovalForUnlock` gate dengan SUPERADMIN override, reopen dengan closeNotes = `unlockReopenMarker` saat via unlock, audit, response + temporaryUnlock summary) |
+| 17 | [`apps/web/app/dashboard/finance/unlock-requests/page.tsx`](apps/web/app/dashboard/finance/unlock-requests/page.tsx) | UI baru — list + filter pills (All/Pending/Approved/Rejected/Expired) + pagination + create form (level select + SPECIFIC → CLOSED periods picker + reason textarea 20-100 counter) + decision modal (approve/reject + comments) gated `canApprove('finance')\|\|isAdmin()`; **dual layout** desktop table + mobile cards |
+| 18 | [`apps/web/app/dashboard/finance/unlock-requests/[id]/page.tsx`](apps/web/app/dashboard/finance/unlock-requests/[id]/page.tsx) | UI baru — detail: status card + temporary unlock countdown panel (minutesRemaining, periodNames) + target periods grid + reason + decision info; approve/reject header buttons (PENDING + canApprove) |
+| 19 | [`apps/web/app/dashboard/finance/unlock-requests/[id]/loading.tsx`](apps/web/app/dashboard/finance/unlock-requests/[id]/loading.tsx) | Skeleton loading (pattern periods/loading.tsx) |
+| 20 | [`apps/web/app/dashboard/finance/unlock-requests/[id]/error.tsx`](apps/web/app/dashboard/finance/unlock-requests/[id]/error.tsx) | `ModuleError` + `t('errors.unlockRequests.*')` |
+| 21 | [`apps/web/app/dashboard/finance/periods/page.tsx`](apps/web/app/dashboard/finance/periods/page.tsx) | `Period` type +3 field temporary unlock; header +Link "Unlock Requests" (semua role non-gated); desktop action cells +mobile cards: temporary unlock countdown badge (`TimerOff` + `formatUnlockRemaining`) + "Request Unlock" button (CLOSED + !isSuperAdmin) |
+| 22 | [`apps/web/messages/en.json`](apps/web/messages/en.json) + [`apps/web/messages/id.json`](apps/web/messages/id.json) | +`errors.unlockRequests.*` (2 key), `finance.lockPolicy.*` (2), `finance.unlockRequests.*` (~45 key: title/subtitle/create/table/detail/decision) per locale |
+
+> ⛔ **Do Not Touch dipertahankan:** `apps/web/lib/auth.ts`, `apps/web/lib/session.ts`, `apps/web/middleware.ts`, `packages/db/prisma/schema.prisma`, `apps/web/lib/audit.ts` tidak disentuh. Policy + temporary unlock state disimpan di `Tenant.settings` Json — **tidak ada model baru**, tidak ada migration.
+
+#### Documented Gaps
+
+1. **`AccountingPeriod` tanpa field level** — schema tidak punya kolom `level` (DAY/MONTH/QUARTER/YEAR). Level dihitung via window-overlap query (range tanggal periode vs window level). Jika butuh level persisten, perlu schema change (di luar hard rule session ini).
+2. **Auto-lock lazy, bukan cron** — `enforceAutoLock` dipanggil read-time (saat GET locks/periods, saat PUT reopen) — bukan scheduled task. Cukup untuk correctness; cron dapat ditambahkan via Unified Cron Scheduler (`docs/CRON-JOBS.md`) di session mendatang jika diperlukan.
+3. **Pre-existing `periods/[id]/close` duplication** — route `/close` byte-for-byte duplikat `periods/[id]/route.ts` (GET+POST), POST-nya tidak menjalankan `closePeriod`/`runPreCloseChecks` — wizard UI POST ke `/close` mengharapkan `data.checks` yang tidak pernah dihasilkan. Out of scope session ini; perlu cleanup tersendiri.
+4. **ApprovalRequest cross-ref** — row `ApprovalRequest` hanya dibuat jika tenant punya `ApprovalLevel` dengan `entityType: 'UNLOCK_REQUEST'`; decision tetap lewat dedicated approve/reject endpoints; sync via guarded `updateMany` (status PENDING filter).
+
+#### Behavior Notes
+
+- **Lock Policy:** ADMIN mengubah policy via PUT `/api/finance/lock-policy` (Zod validated, audit old/new). Role check berlaku untuk lock acquire (locks POST), unlock/lock release (locks DELETE `period_close`), request unlock, dan approve unlock.
+- **Unlock flow:** MEMBER+ mengajukan (alasan wajib 20-1000) → jika `requireApprovalForUnlock=false` auto-approve → jika true menunggu approval (self-approval diblokir 403) → temporary unlock aktif `temporaryUnlockDurationHours` → periode dibuka via PUT (closeNotes = marker `unlock:<id>`) → saat expires, sweep re-locks periode OPEN yang closeNotes-nya marker dan menandai request EXPIRED.
+- **Periods page:** badge countdown unlock sementara tampil di desktop table + mobile cards; tombol "Request Unlock" untuk periode CLOSED (non-SuperAdmin) mengarah ke halaman unlock-requests; SuperAdmin tetap punya "Buka Kembali" emergency (requireApprovalForUnlock di-override).
+- **Multi-tenant:** semua engine query filter `tenantId`; state policy/unlock di `Tenant.settings` per-tenant; VIEWER dibatasi own-only di list/detail/status endpoints.
+
+#### TypeScript: 0 errors
+
+---
 
 ## 🔧 Session 67 — [AUDIT-P0-6] POS Offline Mode Completion — 4 Okt 2026
 

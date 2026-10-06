@@ -9,6 +9,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { getLockPolicy, isRoleAllowed } from '@/lib/lock-policy';
 
 // ─── DELETE: Release lock ────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ export async function DELETE(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
+        const { userId, tenantId, role } = auth;
 
         const lock = await prisma.lockRecord.findFirst({
             where: {
@@ -44,20 +45,38 @@ export async function DELETE(
             );
         }
 
-        // Only the lock holder or an admin can release the lock
+        // Only the lock holder or an authorized role can release the lock
         if (lock.lockedBy !== userId) {
-            const session = await getServerSession(authOptions);
-            const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN';
+            if (lock.lockType === 'period_close') {
+                // Period-close lock: kebijakan lock policy tenant (UCE-25) —
+                // role harus diizinkan policy untuk aksi unlock
+                // (default: ADMIN/SUPERADMIN, sama dengan perilaku lama).
+                const policy = await getLockPolicy(tenantId);
+                if (!isRoleAllowed(policy, role, 'unlock')) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            error: MSG.LOCK_FORBIDDEN_ROLE,
+                            code: 'LOCK_FORBIDDEN_ROLE',
+                        },
+                        { status: 403 }
+                    );
+                }
+            } else {
+                // Lock biasa (edit/delete): holder atau admin
+                const session = await getServerSession(authOptions);
+                const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN';
 
-            if (!isAdmin) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        error: 'Only the lock holder or an admin can release this lock',
-                        code: 'LOCK_FORBIDDEN',
-                    },
-                    { status: 403 }
-                );
+                if (!isAdmin) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            error: 'Only the lock holder or an admin can release this lock',
+                            code: 'LOCK_FORBIDDEN',
+                        },
+                        { status: 403 }
+                    );
+                }
             }
         }
 

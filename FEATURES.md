@@ -3,9 +3,9 @@
 > **"All-in-One B2B Operating System untuk UKM & Mid-Market Indonesia"**
 > Ganti 5–7 tools jadi 1, mobile-first, Coretax-ready, dan AI yang benar-benar kerja.
 
-**Last Updated:** October 3, 2026 (Session 66: Password Policy Configurable + Work Inbox — SEC-07, UCE-21/22/23)
+**Last Updated:** October 6, 2026 (Session 68: Lock Policy + Unlock as Exception — UCE-25, UCE-26)
 **Maintainer:** Qalcuity Product Team
-**Document Version:** 34.1 — Session 66: Password policy configurable (SEC-07: central `DEFAULT_POLICY` + per-tenant `PasswordPolicy`, wired ke register + semua password-change/reset routes) + Work Inbox (UCE-21/22/23: delegated inbox + 6 kategori di `/dashboard/inbox`). Session 58: Documentation audit following Session 57-58 production fixes. CSP hardened (Cloudflare origins, upgrade-insecure-requests), 3 migration fix rounds (idempotent SQL), RBAC coverage 165→~250 (~94%), Prisma Tenant Extension PoC (6 routes), CI/CD via GitHub Actions (ci.yml + deploy.yml). Session 57: Documentation update following Master Audit (Grade B- / 72/100). Updated statistics: 107 models, 293 indexes, mobile read-only (0% CRUD), RBAC ~41%. Session 56: PDF export (Invoice, Quotation, PO via jsPDF), CSV export improvements (UTF-8 BOM, header mapping, 3 utility functions), CSV export buttons on 6 pages (Contacts, Deals, Leads, Bills, Expenses, Products). Session 55: Master Audit P0/P1 fixes (Prisma Tenant Isolation Middleware, Payment Webhook Verification, 33 new permissions, Optimistic Locking, POS Decimal(19,4), Business Key Unique Constraints, Custom Role Client Support, Approval Escalation, Permission-based Approval Routes, Financial Soft Delete, Mobile API URL Fix). Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs. Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, ~250 RBAC routes
+**Document Version:** 34.2 — Session 68: Lock Policy + Unlock as Exception (UCE-25/26) — per-tenant lock policy di `Tenant.settings` JSON (tanpa Prisma migration) + unlock request → approval → temporary unlock → auto re-lock via closeNotes marker (7 API routes + UI unlock-requests, dual layout). Session 66: Password policy configurable (SEC-07: central `DEFAULT_POLICY` + per-tenant `PasswordPolicy`, wired ke register + semua password-change/reset routes) + Work Inbox (UCE-21/22/23: delegated inbox + 6 kategori di `/dashboard/inbox`). Session 58: Documentation audit following Session 57-58 production fixes. CSP hardened (Cloudflare origins, upgrade-insecure-requests), 3 migration fix rounds (idempotent SQL), RBAC coverage 165→~250 (~94%), Prisma Tenant Extension PoC (6 routes), CI/CD via GitHub Actions (ci.yml + deploy.yml). Session 57: Documentation update following Master Audit (Grade B- / 72/100). Updated statistics: 107 models, 293 indexes, mobile read-only (0% CRUD), RBAC ~41%. Session 56: PDF export (Invoice, Quotation, PO via jsPDF), CSV export improvements (UTF-8 BOM, header mapping, 3 utility functions), CSV export buttons on 6 pages (Contacts, Deals, Leads, Bills, Expenses, Products). Session 55: Master Audit P0/P1 fixes (Prisma Tenant Isolation Middleware, Payment Webhook Verification, 33 new permissions, Optimistic Locking, POS Decimal(19,4), Business Key Unique Constraints, Custom Role Client Support, Approval Escalation, Permission-based Approval Routes, Financial Soft Delete, Mobile API URL Fix). Session 52: Financial Statements + Analytics Read Model + Session Control + API Docs. Session 44: Full i18n migration (350+ keys). Session 28-29: Industry Packs, POS Kitchen × Table, AI Agents, Control Engine. Session 26+: NLU parser, anomaly detection, AES-256-GCM, Xendit, SSE, batch extraction, 153 Zod schemas, 400+ API routes, ~250 RBAC routes
 
 > **📄 Dokumentasi lengkap semua remaining work ada di [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md).**
 > File tersebut berisi daftar detail semua fitur yang belum diimplementasi, organized by priority (CRITICAL → HIGH → MEDIUM → LOW), dengan item ID, complexity estimate, dependency, dan file references. Gunakan sebagai **single source of truth** untuk sprint planning dan task breakdown.
@@ -871,7 +871,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Locking Engine** | ✅ `implemented` | 2026-09-26 | Pessimistic locking with timeout + admin override — API: `/api/finance/locks` |
-| **Lock Policy** | ✅ `implemented` | 2026-09-26 | Configurable lock type (exclusive/shared), duration, reason |
+| **Lock Policy** | ✅ `implemented` | 2026-10-06 | Per-tenant configurable lock policy — role-based access (lock/unlock/unlockRequest/unlockApprove), auto-lock timing (`autoLockAfterDays`), `requireApprovalForUnlock`, `temporaryUnlockDurationHours`. State di `Tenant.settings` JSON (tanpa Prisma migration baru) (Session 68) — [`apps/web/lib/lock-policy.ts`](apps/web/lib/lock-policy.ts) |
 | **Locked Edit** | 📋 `planned` | — | Edit locked transaction requires approval |
 | **Backdated Transaction** | 📋 `planned` | — | Backdated transaction requires approval |
 
@@ -879,12 +879,14 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Unlock Request** | 📋 `planned` | — | User request unlock dengan reason [ADR-021] |
-| **Unlock Approval** | 📋 `planned` | — | Manager approval untuk unlock |
-| **Temporary Unlock** | 📋 `planned` | — | Unlock dengan waktu timeout (misal 2 jam) |
-| **Re-approval Flow** | 📋 `planned` | — | Edit → Re-submit → Re-approval → Re-lock |
-| **Unlock Audit Trail** | 📋 `planned` | — | Setiap step ada audit trail |
-| **Unlock Permission** | 📋 `planned` | — | Hanya role ADMIN+ yang bisa unlock |
+| **Unlock Request** | ✅ `implemented` | 2026-10-06 | User request unlock dengan reason wajib (20-1000 char), level DAY/MONTH/QUARTER/YEAR/SPECIFIC (Session 68) — [`apps/web/lib/unlock-request.ts`](apps/web/lib/unlock-request.ts) [ADR-021] |
+| **Unlock Approval** | ✅ `implemented` | 2026-10-06 | Manager approval — PENDING-only, self-approval diblokir (403 `UNLOCK_SELF_APPROVAL_FORBIDDEN`), optional comments (Session 68) |
+| **Temporary Unlock** | ✅ `implemented` | 2026-10-06 | Unlock dengan timeout `temporaryUnlockDurationHours`, auto re-lock via sweep + closeNotes marker `unlock:<requestId>` (Session 68) |
+| **Re-approval Flow** | ✅ `implemented` | 2026-10-06 | Edit saat temporary unlock → auto re-lock saat expired → request baru untuk edit berikutnya (Session 68) |
+| **Unlock Audit Trail** | ✅ `implemented` | 2026-10-06 | Audit logging di semua mutation unlock (create/approve/reject/reopen) (Session 68) |
+| **Unlock Permission** | ✅ `implemented` | 2026-10-06 | Role-based via policy config (`allowedUnlockRequestRoles`, `allowedUnlockApproveRoles`), VIEWER dibatasi own-only (Session 68) |
+
+> **Catatan arsitektur (Session 68):** Lock policy state disimpan di `Tenant.settings` JSON — **bukan model Prisma baru, tanpa migration**. Temporary unlock mechanism: reopen periode via PUT `/api/finance/periods/[id]` dengan `closeNotes` marker `unlock:<requestId>`; saat unlock expired, sweep otomatis re-locks periode OPEN yang closeNotes-nya marker tersebut.
 
 ### 12.11 Exception Center
 
@@ -991,7 +993,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **Tenant Permissions** | 🚀 `production_ready` | 2026-09-01 | Customer org: invoice.approve, employee.view, payroll.manage |
 | **Scope Support** | 🚀 `production_ready` | 2026-09-01 | Branch + Department level permissions |
 | **Cross-platform Enforcement** | 🚀 `production_ready` | 2026-09-01 | Web, Mobile, Desktop, API, AI Agent — same engine |
-| **Migration from 4-Role RBAC** | 🔄 `partial` | 2026-09-23 | 12 hardcoded role checks replaced in Session 55 (7 approval routes + 5 client files), strategy defined, `@qalcuity/permissions` active — remaining routes tracked |
+| **Migration from 4-Role RBAC** | ✅ `implemented` | 2026-10-06 | FE-PE-09a hardening complete (Session 69): 278 RBAC entries, 242+ API routes integrated, UI 100% usePermission(), observability logging + RBAC_STRICT strict mode (default off), mobile RBAC exception documented, legacy helpers @deprecated — FE-PE-09b scope enforcement (branch/department per ADR-013) remaining as separate item |
 
 ### 13.2 Workflow Engine
 

@@ -74,6 +74,13 @@ export default withAuth(
         // ─── Maintenance Mode — block non-admin users ─────────────────────────
         // Uses synchronous cached settings (Edge-safe, no DB query).
         // SUPERADMIN and ADMIN are always allowed through (they need access to fix things).
+        // INTENTIONAL hardcoded role check (FE-PE-09a decision): Edge Runtime
+        // cannot call the Permission Engine (Node.js-only APIs). This role-string
+        // gate is defense-in-depth on top of route-level RBAC
+        // (requirePermissionForRoute, enforced in Node runtime per API route).
+        // FUTURE (needs approval — auth.ts is Do Not Touch): embed a `permissions`
+        // array claim in the JWT at login so middleware can read granular
+        // permissions from the token without invoking the engine.
         const settings = getPlatformSettingsCached();
         if (settings?.maintenanceMode) {
             const role = req.nextauth?.token?.role;
@@ -145,6 +152,10 @@ export default withAuth(
 
                 // Block /platform/* for non-SUPERADMIN users (defense-in-depth)
                 // Even if layout.tsx checks email, middleware blocks by role as first gate
+                // INTENTIONAL hardcoded role check (FE-PE-09a decision): Edge Runtime
+                // cannot call the Permission Engine. JWT role-claim check as the first
+                // gate; /api/platform/* routes additionally enforce `platform:view`
+                // via requirePermissionForRoute in Node runtime (defense-in-depth).
                 if (pathname.startsWith("/platform")) {
                     return token?.role === "SUPERADMIN";
                 }

@@ -2254,3 +2254,68 @@ export const checkSoDConflictSchema = z.object({
 export const applyPolicyTemplateSchema = z.object({
     templateId: z.string().min(1, 'Template ID wajib diisi'),
 });
+
+// ─── Lock Policy & Unlock Exception Schemas (UCE-25 / UCE-26) ───────────────
+
+const lockPolicyRoleEnum = z.enum(['SUPERADMIN', 'ADMIN', 'MEMBER', 'VIEWER']);
+const lockLevelEnum = z.enum(['DAY', 'MONTH', 'QUARTER', 'YEAR']);
+
+export const updateLockPolicySchema = z
+    .object({
+        enabledLockLevels: z.array(lockLevelEnum).min(1, 'Minimal 1 lock level harus diaktifkan').optional(),
+        allowedLockRoles: z.array(lockPolicyRoleEnum).min(1, 'Minimal 1 role harus diizinkan').optional(),
+        allowedUnlockRequestRoles: z.array(lockPolicyRoleEnum).min(1, 'Minimal 1 role harus diizinkan').optional(),
+        allowedUnlockApproverRoles: z.array(lockPolicyRoleEnum).min(1, 'Minimal 1 role harus diizinkan').optional(),
+        autoLockAfterDays: z.number().int().min(0, 'autoLockAfterDays minimal 0').max(30, 'autoLockAfterDays maksimal 30').optional(),
+        requireApprovalForUnlock: z.boolean().optional(),
+        temporaryUnlockDurationHours: z.number().int().min(1, 'Durasi minimal 1 jam').max(168, 'Durasi maksimal 168 jam').optional(),
+    })
+    .refine(
+        (data) => {
+            if (!data.allowedUnlockApproverRoles) return true;
+            return !data.allowedUnlockApproverRoles.includes('VIEWER');
+        },
+        {
+            message: 'VIEWER tidak boleh menjadi approver unlock',
+            path: ['allowedUnlockApproverRoles'],
+        }
+    )
+    .refine(
+        (data) => {
+            if (!data.allowedUnlockRequestRoles) return true;
+            return !data.allowedUnlockRequestRoles.includes('VIEWER');
+        },
+        {
+            message: 'VIEWER tidak boleh mengajukan unlock request',
+            path: ['allowedUnlockRequestRoles'],
+        }
+    );
+
+export const createUnlockRequestSchema = z
+    .object({
+        level: z.enum(['DAY', 'MONTH', 'QUARTER', 'YEAR', 'SPECIFIC'], {
+            message: 'Level harus DAY, MONTH, QUARTER, YEAR, atau SPECIFIC',
+        }),
+        periodId: z.string().min(1, 'Period ID wajib diisi untuk level SPECIFIC').max(255).optional(),
+        reason: z
+            .string()
+            .trim()
+            .min(20, 'Alasan minimal 20 karakter')
+            .max(1000, 'Alasan maksimal 1000 karakter'),
+    })
+    .refine((data) => (data.level === 'SPECIFIC' ? !!data.periodId : true), {
+        message: 'periodId wajib diisi untuk level SPECIFIC',
+        path: ['periodId'],
+    });
+
+export const decideUnlockRequestSchema = z.object({
+    decision: z.enum(['APPROVED', 'REJECTED'], {
+        message: 'Decision harus "APPROVED" atau "REJECTED"',
+    }),
+    comments: z.string().trim().max(1000, 'Komentar maksimal 1000 karakter').optional(),
+});
+
+export const reopenPeriodSchema = z.object({
+    status: z.literal('OPEN', { message: 'Status harus "OPEN" untuk membuka kembali periode' }),
+    closeNotes: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
+});

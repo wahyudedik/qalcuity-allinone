@@ -9,6 +9,11 @@ export const dynamic = 'force-dynamic';
  *
  * Auth: JWT Bearer token via requireMobileAuth()
  * Tenant: Filtered by user.tenantId
+ *
+ * RBAC EXCEPTION (FE-PE-09a): Intentional hardcoded role check — mobile uses a
+ * separate JWT auth flow (mobile-auth.ts / mobile-auth-guard.ts) that is skipped
+ * by requirePermissionForRoute(). The role check below is the enforcement layer
+ * for this route. Official exception documented in docs/REMAINING-WORK.md (FE-PE-09a).
  */
 
 import { NextResponse } from 'next/server';

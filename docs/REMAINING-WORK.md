@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity — Remaining Work Documentation
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
-> Diperbarui: 3 October 2026
-> Version: 1.9 — Session 66: Password Policy + Work Inbox (SEC-07, UCE-21/22/23)
+> Diperbarui: 6 October 2026
+> Version: 1.10 — Session 68: Lock Policy + Unlock as Exception (UCE-25, UCE-26)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -36,14 +36,16 @@
 | **AI Features** | 2 | 1 | 14 | 17 | 12% |
 | **Integration & Ecosystem** | 4 | 2 | 14 | 20 | 20% |
 | **Admin & Security** | 8 | 1 | 12 | 21 | 38% |
-| **Unified Control Engine** | 3 | 0 | 47+ | 50+ | 6% |
+| **Unified Control Engine** | 5 | 0 | 45+ | 50+ | 10% |
 | **Architecture Engines** | 25 | 0 | 5+ | 30+ | 83% |
 | **Industry Packs** | 0 | 0 | 50+ | 50+ | 0% |
 | **POS Module** | 11 | 2 | 4 | 17 | 65% |
 | **Mobile** | 0 | 2 | 2 | 4 | 0% |
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
-| **TOTAL** | **~95** | **~22** | **~131** | **~269** | **~35%** |
+| **TOTAL** | **~97** | **~22** | **~129** | **~269** | **~36%** |
+
+> **Catatan Foundation Engines (Session 69 — FE-PE-09a):** Item **[FE-PE-09]** (Migration from 4-Role RBAC) **tetap `[ ]`** — migrasi ~94–98% sudah dieksekusi (278 RBAC entries, 242+ API route files terintegrasi, UI 100% `usePermission()`), hardening FE-PE-09a selesai (observability logging + `RBAC_STRICT` strict mode + audit route coverage + mobile exception + legacy helper `@deprecated`). **Scope enforcement (branch/department per ADR-013) dipecah jadi item baru [FE-PE-09b]** — progress kategori **Architecture Engines** (yang mencakup 3 Foundation Engine packages) naik, tetapi item tetap terbuka sampai FE-PE-09b selesai.
 
 ---
 
@@ -241,10 +243,19 @@
   - **Dependency:** FE-PE-02
   - **Complexity:** High
 
-- [ ] **[FE-PE-09]** Migration from 4-Role RBAC — Strategy migrasi dari current 4 hardcoded roles
-  - **File:** All API routes + middleware + UI
+- [ ] **[FE-PE-09]** Migration from 4-Role RBAC — **Migration Completion & Hardening (FE-PE-09a)**
+  - **File:** [`apps/web/lib/session.ts`](apps/web/lib/session.ts) (`requirePermissionForRoute`) + [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts)
   - **Dependency:** FE-PE-02, FE-PE-03
-  - **Complexity:** Very High
+  - **Complexity:** Medium (re-scoped — originally Very High)
+  - **Status note (Session 69 — FE-PE-09a ✅ selesai):** Migrasi ~94–98% sudah dieksekusi — 278 entries di `ROUTE_PERMISSIONS`, 242+ API route files import `requirePermissionForRoute`, UI 100% `usePermission()`. Audit Batch A: **semua route non-skip sudah tercakup** (exact/prefix match) — 0 entry baru diperlukan. Hardening: observability logging fallback path + strict mode `RBAC_STRICT=true` (route tanpa entry → 403; permission gagal → 403 tanpa role fallback; default unset/false = backward compatible) + mobile RBAC exception (8 files, Option 2 intentional exception) + middleware 2 gates dikomentari (Edge Runtime constraint) + legacy helpers (`requireMutateAuth`, `requireAdminAuth`, `requirePermissionOrRole`) ditandai `@deprecated`. **Scope enforcement dipecah jadi [FE-PE-09b]** — item ini tetap `[ ]` sampai FE-PE-09b selesai.
+  - **Strict mode:** Set `RBAC_STRICT=true` di env apps/web untuk mengaktifkan strict enforcement. Default (unset/false) = backward compatible (fallback role hierarchy tetap hidup).
+  - **Ref:** Session 69 (FE-PE-09a); [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md)
+
+- [ ] **[FE-PE-09b]** Scope Enforcement (branch/department per ADR-013)
+  - **File:** Permission engine (`@qalcuity/permissions`) + schema + UI
+  - **Dependency:** FE-PE-09a
+  - **Complexity:** High
+  - **Catatan:** Butuh kebutuhan multi-branch nyata + schema scope. `can(user, action, resource, context)` dengan scope context (branch/department). Jangan dikerjakan sebelum kebutuhan multi-branch terkonfirmasi.
 
 #### Workflow Engine (Phase 10)
 
@@ -497,16 +508,18 @@
   - **Ref:** ADR-016
   - **Status:** ✅ DONE (Session 61) — pessimistic lock acquire/release/list with timeout + admin override
 
-- [ ] **[UCE-25]** Lock Policy — Per-company configurable lock policy
-  - **File:** Lock configuration
+- [x] **[UCE-25]** Lock Policy — Per-company configurable lock policy
+  - **File:** [`apps/web/lib/lock-policy.ts`](apps/web/lib/lock-policy.ts) (engine) + [`apps/web/app/api/finance/lock-policy/route.ts`](apps/web/app/api/finance/lock-policy/route.ts) (GET/PUT)
   - **Dependency:** UCE-24
   - **Complexity:** Medium
+  - **Status:** ✅ DONE (Session 68) — policy per-tenant di `Tenant.settings` (enabledLockLevels, allowedLock/unlockRequest/unlockApproveRoles, autoLockAfterDays, requireApprovalForUnlock, temporaryUnlockDurationHours); lazily enforceAutoLock; wiring ke locks/periods routes. Schema gap: `AccountingPeriod` tanpa field level — level dihitung via window-overlap query.
 
-- [ ] **[UCE-26]** Unlock as Exception — User Request → Reason → Manager Approval → Temporary Unlock → Edit → Re-submit
-  - **File:** Unlock workflow
+- [x] **[UCE-26]** Unlock as Exception — User Request → Reason → Manager Approval → Temporary Unlock → Edit → Re-submit
+  - **File:** [`apps/web/lib/unlock-request.ts`](apps/web/lib/unlock-request.ts) (engine) + [`apps/web/app/api/finance/locks/unlock-request/`](apps/web/app/api/finance/locks/unlock-request/route.ts) & [`apps/web/app/api/finance/locks/unlock-requests/`](apps/web/app/api/finance/locks/unlock-requests/route.ts) (6 routes) + UI [`apps/web/app/dashboard/finance/unlock-requests/`](apps/web/app/dashboard/finance/unlock-requests/page.tsx)
   - **Dependency:** UCE-24
   - **Complexity:** High
   - **Ref:** ADR-021
+  - **Status:** ✅ DONE (Session 68) — request (level DAY/MONTH/QUARTER/YEAR/SPECIFIC) + alasan wajib (20-1000) → approval (self-approval blocked, PENDING-only) → temporary unlock (expires N hours via Tenant.settings, auto re-lock via closeNotes marker `unlock:<id>`) → sweep expired. UI: list + filter + create form + detail + approve/reject (dual layout mobile/desktop). Pre-existing gap documented: `periods/[id]/close` route duplicates `periods/[id]/route.ts` (wizard POST ke /close tidak menjalankan closePeriod — out of scope).
 
 #### Exception Center
 

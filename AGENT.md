@@ -304,7 +304,7 @@ docs/UI_UX.md     ← Aturan UI/UX
 | `@qalcuity/validation` | ✅ Active | Validation functions (email, phone, NIK, NPWP, etc.) |
 | `@qalcuity/i18n` | ✅ Active | i18n utilities |
 | `@qalcuity/ui` | ✅ Active | 9 React components + theme system |
-| `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with 165 API routes |
+| `@qalcuity/permissions` | ✅ Active | Permission engine (`can()` function) — integrated with 242+ API routes (278 RBAC entries, ~94-98% coverage per audit Session 69) |
 | `@qalcuity/workflow` | ✅ Active | Workflow engine (state machine) — integrated with 8 entities |
 | `@qalcuity/industry-config` | ✅ Active | Industry configuration engine (11 industry packs) |
 | `@qalcuity/analytics` | ✅ Active | Analytics engine (dimensions, metrics, utils) |
@@ -318,7 +318,7 @@ docs/UI_UX.md     ← Aturan UI/UX
 | TypeScript files (packages) | 52 |
 | API route files | 228 |
 | API routes | 400+ (handlers across 228 files) |
-| RBAC route entries | 165 |
+| RBAC route entries | 278 (Session 69 audit: all non-skip routes covered via exact/prefix match; FE-PE-09a hardening: RBAC_STRICT strict mode + observability logging) |
 | Pages | 127 |
 | Prisma models | 100 |
 | Database indexes | 277 (@@index + @@unique) |

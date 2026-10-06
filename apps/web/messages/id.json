@@ -124,6 +124,10 @@
         "activityDetail": {
             "title": "Kesalahan Detail Aktivitas",
             "description": "Terjadi kesalahan saat memuat detail aktivitas. Silakan coba lagi."
+        },
+        "unlockRequests": {
+            "title": "Kesalahan Permintaan Unlock",
+            "description": "Terjadi kesalahan saat memuat permintaan unlock. Silakan coba lagi."
         }
     },
     "nav": {
@@ -1267,6 +1271,74 @@
                 "fetchError": "Gagal memuat laporan umur piutang & utang",
                 "asOf": "Per per:",
                 "overdueWarning": "telah melewati 90 hari — perhatian segera diperlukan."
+            }
+        },
+        "lockPolicy": {
+            "title": "Kebijakan Lock",
+            "description": "Atur level lock yang tersedia, waktu auto-lock, dan role yang boleh mengunci/membuka serta menyetujui permintaan unlock."
+        },
+        "unlockRequests": {
+            "title": "Permintaan Unlock",
+            "subtitle": "Ajukan pembukaan sementara periode akuntansi yang sudah ditutup melalui prosedur approval",
+            "backToPeriods": "Periode Akuntansi",
+            "newRequest": "Buat Permintaan",
+            "createTitle": "Permintaan Buka Periode Baru",
+            "level": "Level Pembukaan",
+            "targetPeriod": "Periode Target",
+            "selectPeriod": "-- Pilih periode yang ditutup --",
+            "reason": "Alasan Pembukaan",
+            "reasonPlaceholder": "Jelaskan alasan pembukaan periode (misal: koreksi jurnal tertutup yang berdampak pada laporan)...",
+            "submit": "Ajukan Permintaan",
+            "approvalNote": "Permintaan akan diajukan ke approver yang berwenang. Jika disetujui, periode akan dibuka sementara dan terkunci kembali otomatis setelah waktu yang ditentukan.",
+            "approveTitle": "Setujui Permintaan Unlock",
+            "rejectTitle": "Tolak Permintaan Unlock",
+            "approveWarning": "Permintaan yang disetujui akan membuka periode target secara sementara sesuai durasi kebijakan, lalu terkunci kembali otomatis.",
+            "requestedBy": "Diajukan oleh",
+            "unlockDurationNote": "Durasi unlock mengikuti konfigurasi kebijakan (temporaryUnlockDurationHours)",
+            "comments": "Komentar (opsional)",
+            "rejectComments": "Alasan Penolakan (wajib)",
+            "approve": "Setujui",
+            "reject": "Tolak",
+            "approved": "Permintaan disetujui",
+            "rejected": "Permintaan ditolak",
+            "created": "Permintaan unlock dibuat",
+            "loadError": "Gagal memuat permintaan unlock",
+            "createError": "Gagal membuat permintaan unlock",
+            "decideError": "Gagal memproses permintaan",
+            "detailLoadError": "Gagal memuat detail permintaan unlock",
+            "reasonTooShort": "Alasan minimal 20 karakter",
+            "periodRequired": "Pilih periode yang akan dibuka",
+            "rejectReasonRequired": "Alasan penolakan wajib diisi",
+            "emptyTitle": "Belum ada permintaan unlock",
+            "emptyDescription": "Permintaan pembukaan periode yang sudah ditutup akan muncul di sini.",
+            "page": "Halaman",
+            "table": {
+                "level": "Level",
+                "periods": "Periode Target",
+                "requestedBy": "Diajukan Oleh",
+                "status": "Status",
+                "requestedAt": "Tanggal Pengajuan",
+                "temporaryUnlock": "Unlock Sementara"
+            },
+            "detail": {
+                "title": "Detail Permintaan Unlock",
+                "status": "Status Permintaan",
+                "level": "Level",
+                "requestedBy": "Diajukan oleh",
+                "requestedAt": "Waktu Pengajuan",
+                "temporaryUnlock": "Unlock Sementara",
+                "expiresAt": "Berakhir pada",
+                "unlockedPeriods": "Periode yang dibuka",
+                "autoRelockNote": "Periode akan terkunci kembali otomatis setelah waktu unlock berakhir.",
+                "unlockExpired": "Unlock sementara sudah berakhir dan periode telah dikunci kembali.",
+                "unlockNotActive": "Belum ada unlock sementara. Unlock akan aktif setelah permintaan disetujui.",
+                "targetPeriods": "Periode Target",
+                "reason": "Alasan Pembukaan",
+                "decision": "Keputusan",
+                "decidedBy": "Diputuskan oleh",
+                "decidedAt": "Waktu Keputusan",
+                "decisionComments": "Komentar Keputusan",
+                "duration": "Durasi unlock"
             }
         },
         "invoice": {

@@ -9,6 +9,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { generateYearlyPeriods } from '@/lib/period-closing';
 import { handleApiError } from '@/lib/api-error';
 import { createPeriodSchema, generatePeriodsSchema } from '@/lib/validation-schemas';
+import { getActiveTemporaryUnlocks } from '@/lib/unlock-request';
 
 // ============================================
 // GET â€” List periods
@@ -45,17 +46,26 @@ export async function GET(request: Request) {
             orderBy: { startDate: 'desc' },
         });
 
-        const data = periods.map((p) => ({
-            id: p.id,
-            name: p.name,
-            startDate: p.startDate.toISOString(),
-            endDate: p.endDate.toISOString(),
-            status: p.status,
-            closedBy: p.closedBy,
-            closedAt: p.closedAt?.toISOString() || null,
-            closeNotes: p.closeNotes,
-            createdAt: p.createdAt.toISOString(),
-        }));
+        // Indikator temporary unlock aktif (UCE-26) — untuk UI periods page
+        const activeUnlocks = await getActiveTemporaryUnlocks(tenantId);
+
+        const data = periods.map((p) => {
+            const unlock = activeUnlocks.find((u) => u.periodIds.includes(p.id));
+            return {
+                id: p.id,
+                name: p.name,
+                startDate: p.startDate.toISOString(),
+                endDate: p.endDate.toISOString(),
+                status: p.status,
+                closedBy: p.closedBy,
+                closedAt: p.closedAt?.toISOString() || null,
+                closeNotes: p.closeNotes,
+                createdAt: p.createdAt.toISOString(),
+                temporaryUnlockActive: !!unlock,
+                temporaryUnlockExpiresAt: unlock?.expiresAt ?? null,
+                temporaryUnlockRequestId: unlock?.unlockRequestId ?? null,
+            };
+        });
 
         return NextResponse.json({ success: true, data });
     } catch (error) {

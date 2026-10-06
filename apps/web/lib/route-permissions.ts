@@ -61,8 +61,21 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/finance/sod-exceptions/[id]': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
     '/api/finance/sla/trackers': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
     '/api/finance/sla/dashboard': { permission: 'settings:view', fallbackRole: 'ADMIN' },
-    '/api/finance/locks': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
-    '/api/finance/locks/[id]': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    // Locks (UCE-24): fallbackRole MEMBER — in-route check menegakkan lock policy
+    // per-tenant (allowedLockRoles). Fallback ADMIN sebelumnya memblokir MEMBER
+    // yang memang diizinkan oleh default policy untuk mengajukan unlock request.
+    '/api/finance/locks': { permission: 'settings:edit', fallbackRole: 'MEMBER' },
+    '/api/finance/locks/[id]': { permission: 'settings:edit', fallbackRole: 'MEMBER' },
+    // Lock Policy (UCE-25) — hanya ADMIN+ yang boleh update config
+    '/api/finance/lock-policy': { permission: 'settings:edit', fallbackRole: 'ADMIN' },
+    // Unlock as Exception (UCE-26) — semua role non-VIEWER boleh request;
+    // approve/reject dijaga in-route oleh policy.allowedUnlockApproverRoles
+    '/api/finance/locks/unlock-request': { permission: 'approval:create', fallbackRole: 'MEMBER' },
+    '/api/finance/locks/unlock-requests': { permission: 'approval:view', fallbackRole: 'MEMBER' },
+    '/api/finance/locks/unlock-requests/[id]': { permission: 'approval:view', fallbackRole: 'MEMBER' },
+    '/api/finance/locks/unlock-requests/[id]/approve': { permission: 'approval:approve', fallbackRole: 'ADMIN' },
+    '/api/finance/locks/unlock-requests/[id]/reject': { permission: 'approval:reject', fallbackRole: 'ADMIN' },
+    '/api/finance/locks/unlock-requests/[id]/status': { permission: 'approval:view', fallbackRole: 'MEMBER' },
     '/api/finance/controls/dashboard': { permission: 'settings:view', fallbackRole: 'ADMIN' },
 
     // ─── Finance Reports ──────────────────────────────────────────────────────

@@ -125,6 +125,10 @@ export async function requirePermission(permission: string): Promise<Session> {
  * Require permission atau role fallback — untuk backward compatibility.
  * Cek permission dulu, jika tidak ada permission system, fallback ke role check.
  *
+ * @deprecated (FE-PE-09a) Legacy 4-Role RBAC helper — 0 callers aktif di codebase.
+ * Gunakan `requirePermissionForRoute(req)` (session.ts) atau `requirePermission(permission)`
+ * untuk route baru. Dipertahankan untuk backward compatibility (exported API).
+ *
  * @param permission - Permission string
  * @param roleFallback - Callback untuk role-based check (backward compat)
  * @returns Session object jika authorized

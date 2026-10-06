@@ -58,6 +58,13 @@ export const MSG = {
     TENANT_NOT_FOUND: 'Tenant not found',
 
     // ---------------------------------------------------------------------------
+    // RBAC (strict mode — FE-PE-09a)
+    // Used by requirePermissionForRoute() when RBAC_STRICT=true.
+    // ---------------------------------------------------------------------------
+    RBAC_STRICT_ROUTE_NOT_REGISTERED: 'Route is not registered in the RBAC permission map. Access denied (RBAC_STRICT mode).',
+    RBAC_STRICT_PERMISSION_DENIED: 'Permission denied. Role-based fallback is disabled (RBAC_STRICT mode).',
+
+    // ---------------------------------------------------------------------------
     // Tasks / Projects
     // ---------------------------------------------------------------------------
     TASK_NOT_FOUND: 'Task not found',
@@ -125,6 +132,26 @@ export const MSG = {
     BOOK_TRANSACTION_NOT_FOUND: 'Book transaction not found',
     BANK_TRANSACTION_ID_REQUIRED: 'bankTransactionId is required',
     BANK_AND_BOOK_IDS_REQUIRED: 'bankTransactionId and bookTransactionId are required',
+
+    // ---------------------------------------------------------------------------
+    // Finance — Lock Policy & Unlock Exception (UCE-25 / UCE-26)
+    // ---------------------------------------------------------------------------
+    LOCK_POLICY_UPDATED: 'Lock policy updated successfully',
+    LOCK_FORBIDDEN_ROLE: 'Your role is not allowed to perform this lock action',
+    LOCK_LEVEL_NOT_ALLOWED: 'This lock level is not enabled by your company lock policy',
+    PERIOD_LOCKED_UNLOCK_REQUIRED: 'Period is closed and locked. Submit an unlock request to edit.',
+    UNLOCK_APPROVAL_REQUIRED: 'Unlock requires approval. Submit an unlock request first.',
+    UNLOCK_REQUEST_CREATED: 'Unlock request submitted successfully',
+    UNLOCK_REQUEST_NOT_FOUND: 'Unlock request not found',
+    UNLOCK_REQUEST_NOT_PENDING: 'Unlock request is not pending',
+    UNLOCK_REQUEST_ALREADY_EXISTS: 'A pending unlock request already exists for this target',
+    UNLOCK_SELF_APPROVAL_FORBIDDEN: 'Cannot approve or reject your own unlock request',
+    UNLOCK_APPROVAL_FORBIDDEN_ROLE: 'Your role is not allowed to approve or reject unlock requests',
+    UNLOCK_GRANTED: 'Temporary unlock granted',
+    UNLOCK_REJECTED: 'Unlock request rejected',
+    UNLOCK_EXPIRED: 'Temporary unlock has expired. The period has been re-locked.',
+    UNLOCK_NO_ACTIVE: 'No active temporary unlock for this target',
+    REASON_MIN_MAX: 'Reason must be between 20 and 1000 characters',
 
     // ---------------------------------------------------------------------------
     // CRM
