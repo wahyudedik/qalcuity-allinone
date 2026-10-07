@@ -44,7 +44,7 @@ export default function AttendancePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'today' | 'history'>('today')
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+    const [selectedDate, setSelectedDate] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null)
@@ -58,6 +58,12 @@ export default function AttendancePage() {
             return () => clearTimeout(timer)
         }
     }, [toast])
+
+    // Hydration guard: set today's date after mount
+    // (SSR runs in VPS timezone — UTC — while browser runs in WIB)
+    useEffect(() => {
+        setSelectedDate(new Date().toISOString().split('T')[0])
+    }, [])
 
     const statusConfig = {
         present: { label: t('hr.attendance.present') || 'Hadir', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
@@ -98,6 +104,7 @@ export default function AttendancePage() {
     }
 
     useEffect(() => {
+        if (!selectedDate) return
         fetchAttendance()
     }, [selectedDate, searchQuery])
 

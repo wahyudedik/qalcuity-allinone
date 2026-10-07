@@ -13,7 +13,7 @@
  * Responsive: charts stack on mobile.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart3, Calendar, Download, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { PosSalesChart } from '@/components/pos/pos-sales-chart';
@@ -23,14 +23,17 @@ import { PosCustomerInsights } from '@/components/pos/pos-customer-insights';
 
 export default function POSAnalyticsPage() {
     const { t } = useTranslation();
-    const [dateFrom, setDateFrom] = useState(() => {
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+
+    // Hydration guard: compute default range after mount
+    // (SSR runs in VPS timezone — UTC — while browser runs in WIB)
+    useEffect(() => {
         const d = new Date();
         d.setDate(d.getDate() - 30);
-        return d.toISOString().split('T')[0];
-    });
-    const [dateTo, setDateTo] = useState(() => {
-        return new Date().toISOString().split('T')[0];
-    });
+        setDateFrom(d.toISOString().split('T')[0]);
+        setDateTo(new Date().toISOString().split('T')[0]);
+    }, []);
     const [refreshKey, setRefreshKey] = useState(0);
 
     const handleRefresh = () => {
@@ -91,8 +94,8 @@ export default function POSAnalyticsPage() {
                                     setDateTo(to.toISOString().split('T')[0]);
                                 }}
                                 className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${isActive
-                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                        : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                                     }`}
                             >
                                 {preset.label}

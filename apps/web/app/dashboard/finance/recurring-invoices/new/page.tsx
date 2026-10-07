@@ -42,7 +42,7 @@ export default function NewRecurringInvoicePage() {
         frequency: 'MONTHLY',
         dayOfMonth: 1,
         dayOfWeek: 1,
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: '',
         endDate: '',
         notes: '',
         taxRate: 0,
@@ -54,6 +54,12 @@ export default function NewRecurringInvoicePage() {
 
     useEffect(() => {
         fetchContacts()
+    }, [])
+
+    // Hydration guard: set default start date after mount
+    // (SSR runs in VPS timezone — UTC — while browser runs in WIB)
+    useEffect(() => {
+        setForm(prev => ({ ...prev, startDate: new Date().toISOString().split('T')[0] }))
     }, [])
 
     useEffect(() => {

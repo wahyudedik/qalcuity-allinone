@@ -105,6 +105,14 @@ export default function SecuritySettingsPage() {
         page: 1, limit: 10, total: 0, totalPages: 0,
     })
 
+    // Hydration guard: render time-dependent text only after client mount
+    // (server renders in VPS timezone — UTC — while browser runs in WIB)
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
     // ─── Toast auto-dismiss ───────────────────────────────────────────────────
 
     useEffect(() => {
@@ -502,7 +510,7 @@ export default function SecuritySettingsPage() {
                         <div>
                             <h3 className="font-medium text-gray-900">{t('settings.changePassword')}</h3>
                             <p className="text-sm text-gray-500">
-                                {t('settings.lastChanged')}: {formatDateTime(new Date().toISOString())}
+                                {t('settings.lastChanged')}: {isMounted ? formatDateTime(new Date().toISOString()) : '—'}
                             </p>
                         </div>
                     </div>

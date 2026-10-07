@@ -76,6 +76,30 @@ Komentar [`apps/web/app/api/billing/plans/route.ts`](apps/web/app/api/billing/pl
 
 Script [`scripts/diagnose-deploy.sh`](scripts/diagnose-deploy.sh) (read-only) untuk diagnosis artifact .next/proses/pricing production — 9 section: git state, artifact .next, proses Node, referensi asset HTML, localhost vs public, teks pricing SSR, data plan DB, disk/nginx hints, ringkasan otomatis.
 
+#### 70e — Fix hydration mismatch #418/#423 dashboard + diagnosa #329 — 7 Okt 2026
+
+**Root cause #418/#423 (CONFIRMED).** Component dashboard merender nilai waktu `new Date()` saat SSR tanpa mount guard. Server (VPS, timezone OS = UTC) dan browser (WIB, UTC+7) menghitung waktu berbeda 7 jam → teks/value SSR ≠ render pertama client → hydration mismatch (#418) + gagal di implicit Suspense boundary (#423). Kandidat terkonfirmasi: [`apps/web/app/dashboard/settings/security/page.tsx`](apps/web/app/dashboard/settings/security/page.tsx) baris 505 `{t('settings.lastChanged')}: {formatDateTime(new Date().toISOString())}` — `formatDateTime` di [`apps/web/lib/utils.ts`](apps/web/lib/utils.ts) memakai `Intl.DateTimeFormat("id-ID")` **tanpa opsi timezone** → format pakai timezone OS server. (Catatan: baris ini juga bug semantik — menampilkan "sekarang", bukan tanggal password terakhir berubah; data aktual tidak tersedia di API, sehingga flag `isMounted` hanya memperbaiki hydration.) Kandidat turunan: halaman yang me-render default tanggal input via `new Date().toISOString().split('T')[0]` di SSR — mismatch terjadi saat UTC date ≠ WIB date (jendela 00:00–07:00 WIB).
+
+**Fix (mounted-guard, 4 file):**
+1. [`apps/web/app/dashboard/settings/security/page.tsx`](apps/web/app/dashboard/settings/security/page.tsx) — +`isMounted` state + effect `[]`; baris 505 render `'—'` pre-mount, tanggal terformat post-mount.
+2. [`apps/web/app/dashboard/pos/analytics/page.tsx`](apps/web/app/dashboard/pos/analytics/page.tsx) — `dateFrom`/`dateTo` init `''` + effect mount menghitung default 30 hari; children (`PosSalesChart` dsb.) handle empty via `if (dateFrom)` → fetch pertama tanpa param date, refetch saat date terisi (sekali, harmless).
+3. [`apps/web/app/dashboard/hr/attendance/page.tsx`](apps/web/app/dashboard/hr/attendance/page.tsx) — `selectedDate` init `''` + effect mount set tanggal hari ini; effect fetch di-gate `if (!selectedDate) return` → tidak ada fetch dengan date kosong.
+4. [`apps/web/app/dashboard/finance/recurring-invoices/new/page.tsx`](apps/web/app/dashboard/finance/recurring-invoices/new/page.tsx) — `form.startDate` init `''` + effect mount set tanggal (hanya dipakai submit/preview, tanpa fetch gating).
+
+**Tidak di-fix (diverifikasi: nilai tanggal TIDAK masuk SSR HTML):** `hr/payroll/page.tsx` (`calcForm.period` hanya render saat `activeTab === 'calculate'`, default `'list'`); `finance/journal-entries/page.tsx` (`createForm.date` hanya render saat `showCreateModal`, default `false`); `pos/reports/page.tsx` (input date hanya render saat `selectedPeriod === 'custom'`, default `'weekly'` — date hanya dikirim sebagai URL param fetch, tidak mempengaruhi HTML SSR).
+
+**Verifikasi:** `npx tsc --noEmit` exit 0.
+
+**Diagnosis #329 (Maximum update depth exceeded) — root cause TIDAK terkonfirmasi.** Audit penuh layout chain dashboard ([`apps/web/components/layout/dashboard-layout.tsx`](apps/web/components/layout/dashboard-layout.tsx), sidebar, header, notification-center), dashboard home, billing, inbox, unlock-requests, charts, `use-permission`, `use-pos-offline` — **tidak ada** setState-during-render, tidak ada unstable effect deps, tidak ada duplicate React (peerDeps only). Sisa hipotesis: (a) unstable deps di subpage yang belum diaudit, (b) cascade dari hydration failure (reconcile state setelah #418), (c) stale SW cache POS ([`apps/web/public/sw.js`](apps/web/public/sw.js) cache v4, PAGES TTL 24h) mencampur asset lama/baru — hanya untuk user POS. **Production test cases (tanpa diagnostic logs, sesuai keputusan):**
+1. **Reproduce per-role:** login sebagai ADMIN → buka `/dashboard`, `/dashboard/inbox`, `/dashboard/settings/billing` → cek console; ulangi sebagai MEMBER & VIEWER. Jika #329 hanya muncul di role tertentu → trigger di RBAC-gated subtree.
+2. **Reproduce per-halaman:** buka satu per satu seluruh submenu dashboard (finance, HR, inventory, POS, CRM, settings) dalam 1 sesi → catat halaman pertama yang memunculkan #329 → audit halaman tsb.
+3. **Cek cascade hydration:** akses `/dashboard/settings/security` antara 00:00–07:00 WIB (setelah fix ini #418 hilang) → apakah #329 masih muncul? Jika tidak → #329 cascade dari #418.
+4. **Hard reload vs soft navigation:** navigate client-side ke halaman yang error vs buka langsung via URL baru. Jika hanya soft-nav yang error → loop di effect cleanup/re-run saat route change.
+5. **POS saja:** login user POS → `/dashboard/pos/terminal` → reload 2× (SW aktif) → apakah #329/#418 muncul? Jika ya → unregister SW (DevTools → Application → Service Workers) → reload → jika hilang → stale cache asset mixing.
+6. **Tanpa extension:** uji di incognito tanpa extension (extension bisa mempercepat/mengubah timing deteksi loop React).
+
+**Kenapa error tidak muncul di browser public (fresh, belum login):** semua kandidat berada di component tree dashboard yang hanya di-render **setelah login** — middleware auth redirect `/dashboard/*` ke `/login` untuk sesi kosong, sehingga component dengan `new Date()` SSR tersebut tidak pernah dieksekusi pada halaman public.
+
 ## 🔧 Session 69 — [FE-PE-09a] RBAC Migration Completion & Hardening — 6 Okt 2026
 
 > **Focus:** Menyelesaikan sisa gap migrasi 4-Role RBAC → Permission Engine (observability logging, strict mode flag, audit route coverage, mobile exception, legacy helper deprecation)
