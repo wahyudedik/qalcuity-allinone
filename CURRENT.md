@@ -68,6 +68,14 @@
 
 `apps/web/package.json` mendeklarasikan `jspdf-autotable: ^3.8.2` sementara `pnpm-lock.yaml` resolve `5.0.8(jspdf@4.2.1)` → `pnpm install --frozen-lockfile` di production VPS gagal `ERR_PNPM_OUTDATED_LOCKFILE`, sehingga `update.sh` jatuh ke fallback install tanpa frozen + turbo build cache-hit (build TIDAK compile kode baru). Fix: align specifier package.json ke `^5.0.8` — v5 tetap punya default export `autoTable(doc, opts)` (kompatibel dengan pemakaian di [`apps/web/lib/pdf-generator.ts`](apps/web/lib/pdf-generator.ts)); lockfile tidak di-regenerate (resolved version & lockfileVersion 9.0 tidak berubah — hanya entry dipindah dari blok `devDependencies` ke `dependencies` di importer `apps/web`, karena pnpm frozen-lockfile memvalidasi section+specifier persis). Verifikasi lokal: `pnpm install --frozen-lockfile` PASS ("Lockfile is up to date") + `npx tsc --noEmit` exit 0. Scan seluruh 16 workspace package.json vs lockfile: tidak ada mismatch dependency lain. `migrate-plans` sudah jalan di production DB (idempoten — tidak perlu dijalankan ulang).
 
+#### 70c — Docs: koreksi deskripsi /api/billing/plans — 7 Okt 2026
+
+Komentar [`apps/web/app/api/billing/plans/route.ts`](apps/web/app/api/billing/plans/route.ts) menyebutnya "public endpoint" padahal route dilindungi middleware auth (`PUBLIC_API_PATHS` tidak mencakupnya — request tanpa session di-redirect 307 ke `/login`). Komentar dikoreksi: handler tidak menambah auth check; landing page query Prisma langsung di [`apps/web/app/page.tsx`](apps/web/app/page.tsx) tanpa HTTP ke API. OpenAPI spec tidak memiliki entry untuk route ini. `npx tsc --noEmit` exit 0. Tanpa perubahan behavior.
+
+#### 70d — Script diagnostik production read-only — 7 Okt 2026
+
+Script [`scripts/diagnose-deploy.sh`](scripts/diagnose-deploy.sh) (read-only) untuk diagnosis artifact .next/proses/pricing production — 9 section: git state, artifact .next, proses Node, referensi asset HTML, localhost vs public, teks pricing SSR, data plan DB, disk/nginx hints, ringkasan otomatis.
+
 ## 🔧 Session 69 — [FE-PE-09a] RBAC Migration Completion & Hardening — 6 Okt 2026
 
 > **Focus:** Menyelesaikan sisa gap migrasi 4-Role RBAC → Permission Engine (observability logging, strict mode flag, audit route coverage, mobile exception, legacy helper deprecation)

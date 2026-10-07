@@ -11,7 +11,21 @@ import { handleApiError } from '@/lib/api-error';
  *
  * Returns all active subscription plans with their features.
  * Uses the new Plan + PlanFeature model (unified with platform billing).
- * Public endpoint â€” no auth required (plan listing is public info).
+ *
+ * ACCESS: Authenticated session required. This route is protected by
+ * middleware auth — all `/api/*` paths require a session except those in
+ * `PUBLIC_API_PATHS` (apps/web/middleware.ts); `/api/billing/plans` is NOT
+ * in that allowlist, so unauthenticated requests are redirected (307) to
+ * /login before reaching this handler. The handler itself does not add an
+ * additional auth check; only rate limiting and the DB query apply here.
+ *
+ * The public landing page does NOT call this route: pricing is rendered
+ * server-side directly from Prisma in apps/web/app/page.tsx
+ * (`prisma.plan.findMany({ where: { isActive: true } })`), so public
+ * prices work without HTTP to this API.
+ *
+ * If this endpoint should ever become public, add it to `PUBLIC_API_PATHS`
+ * in apps/web/middleware.ts (Do-Not-Touch file — requires approval).
  */
 export async function GET(request: Request) {
     try {
