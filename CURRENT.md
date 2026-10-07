@@ -1,6 +1,74 @@
-> **Last Updated:** 7 Oktober 2026 (Session 70h: Security purge .env.production dari git history — AUDIT-P0-2 mitigated)
-> **Version:** v11.56.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS. TypeScript: 0 errors.
+> **Last Updated:** 7 Oktober 2026 (Session 70i: Drift repair migrasi PasswordPolicy + model lain — fix production 503 /api/settings/password-policy)
+> **Version:** v11.57.0
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang. TypeScript: 0 errors.
+
+## 🗄️ Session 70i — Schema Drift Repair: Migrasi PasswordPolicy & Model Lain — 7 Okt 2026
+
+> **Focus:** Memperbaiki drift antara `schema.prisma` dan `prisma/migrations/` — model `PasswordPolicy` (dan 3 model lain) ditambahkan ke schema TANPA file migrasi → production `/api/settings/password-policy` return 503 (Prisma "table does not exist"). `prisma migrate deploy` hanya menjalankan file migrasi, tidak membuat tabel dari drift schema.
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari root — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 70i Summary
+
+#### Problem (Production Issue #1)
+
+Route [`apps/web/app/api/settings/password-policy/route.ts`](apps/web/app/api/settings/password-policy/route.ts) memanggil `getDefaultPolicy(tenantId)` → `prisma.passwordPolicy` → **503 di production** karena tabel `PasswordPolicy` tidak ada di DB production. Model ditambahkan ke [`packages/db/prisma/schema.prisma`](packages/db/prisma/schema.prisma:2803) (baris 2803-2831) pada commit `917def6` (16 Sep, awalnya `678e472` sebelum history purge) **tanpa file migrasi** — pencarian `PasswordPolicy` di semua `packages/db/prisma/migrations/*.sql` = 0 match.
+
+#### Audit Drift Lengkap (bukan hanya PasswordPolicy)
+
+Metode: `npx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --shadow-database-url <shadow-local> --script` (shadow DB dibuat via `prisma db execute`). Output SQL = selisih persis migrasi-vs-schema. Hasil audit:
+
+| Kategori | Item drift | Model/Tabel |
+|----------|-----------|-------------|
+| **Tabel tanpa migrasi (CREATE TABLE hilang)** | 4 tabel | `PasswordPolicy`, `PasswordHistory`, `SoDException`, `WhatsAppMessageLog` |
+| Decimal precision tidak sinkron | ALTER COLUMN SET DATA TYPE DECIMAL(65,30) | `AlertRule.threshold`, `AlertTrigger.currentValue/threshold`, `KPI.target/warningThreshold/criticalThreshold`, `KPIEvaluation.value/target/changePercent/previousValue` |
+| Default tidak sinkron | SET DEFAULT 0 / DROP DEFAULT | `BankTransaction.amount`, `Payment.amount` (SET DEFAULT 0); `Plan.maxUsers` (DROP DEFAULT) |
+| Nullability tidak sinkron | DROP NOT NULL | `Project.spent`, `Task.actualHours` |
+| Kolom hilang di migrasi | ADD COLUMN | `PosRefund.restockItem` (BOOLEAN DEFAULT false), `PosRefund.restockedAt` (TIMESTAMP) |
+| FK hilang di migrasi | ADD CONSTRAINT | `KPI_tenantId`, `KPIEvaluation_kpiId`, `AlertRule_tenantId`, `AlertTrigger_ruleId`, `UserDashboard_ownerId/tenantId`, `AnalyticsChart_tenantId/datasetId/ownerId`, `InAppNotification_tenantId` |
+| FK stale (ada di migrasi, tidak di schema) | DROP CONSTRAINT | `FieldChecklistResult_tenantId_fkey`, `FieldJobAssignment_tenantId_fkey` |
+| Index stale | DROP INDEX | `Employee_departmentId_idx`, `Product_warehouseId_idx` |
+| Index hilang | CREATE INDEX | `JournalEntry_entryNumber`, `PosPayment_tenantId_status`, `PosRefund_tenantId_status`, `PosTableReservation_tenantId_reservationTime/status`, `UserSession_token` |
+| Rename index | ALTER INDEX RENAME | `loyalty_member_email_unique` → `LoyaltyMember_tenantId_email_key` |
+
+> **Catatan:** Audit awal mengira hanya `PasswordPolicy` — ternyata **lebih dari satu model** drift. Keempat tabel tanpa migrasi berasal dari penambahan schema yang tidak dibarengi migrasi (pola sama dengan PasswordPolicy). Gap lain (FK/index/default) = migrasi lama yang tidak lengkap mengikuti schema saat itu.
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`packages/db/prisma/migrations/20261007000000_drift_repair_missing_models_and_schema_gaps/migration.sql`](packages/db/prisma/migrations/20261007000000_drift_repair_missing_models_and_schema_gaps/migration.sql) | **BARU** — drift repair migration: 4 CREATE TABLE + indexes + FKs + semua gap di tabel di atas. **Sumber SQL = output `prisma migrate diff`** (bukan manual) — merepresentasikan selisih persis migrasi-vs-schema. |
+
+> **Do Not Touch dipatuhi:** `schema.prisma` TIDAK diubah satu karakter pun. Migrasi lama TIDAK diubah/dihapus — hanya menambah 1 file baru.
+
+#### Hasil Verifikasi
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| Schema valid | `npx prisma validate` | ✅ valid 🚀 (tidak berubah) |
+| Drift kosong setelah migrasi baru | `prisma migrate diff --from-migrations --to-schema-datamodel --script` (shadow DB fresh) | ✅ output = `-- This is an empty migration.` (0 drift tersisa) |
+| Deploy dari DB fresh (bukti chain sehat) | `prisma migrate deploy` ke DB lokal baru `qalcuity_verify` | ✅ 49/49 migrasi applied, termasuk `20261007000000_drift_repair...` — "All migrations have been successfully applied" |
+| Migrate status (DB fresh) | `npx prisma migrate status` | ✅ "Database schema is up to date!" |
+| TypeScript | `npx tsc --noEmit` (root) | ✅ exit 0, 0 errors |
+| Vitest | `cd apps/web && npx vitest run` | ✅ 2/2 suites pass (csv-parser 12/12 + audit 9/9 = 21/21 tests) |
+
+> **Catatan `migrate deploy` DB lokal `qalcuity`:** GAGAL di migrasi LAMA `20260927140000_add_analytics_studio_models` (`relation "SavedReport" already exists`, error 42P07) — **drift lokal**, bukan indikasi migrasi baru rusak: DB lokal pernah kena `prisma db push` (tabel sudah ada) sementara history migrasi tertinggal 9 migrasi. DB lokal **bukan production**; deploy penuh terbukti sehat di DB fresh (`qalcuity_verify`). *Follow-up opsional: `prisma migrate reset` lokal untuk sinkronkan state (jangan di production).*
+
+#### Implikasi Production (Issue #1)
+
+- **Kapan teratasi:** Deploy berikutnya via [`update.sh`](update.sh) → `cd packages/db && npx prisma migrate deploy` akan menjalankan `20261007000000_drift_repair...` → tabel `PasswordPolicy` (+ `PasswordHistory`, `SoDException`, `WhatsAppMessageLog`) dibuat di production → `/api/settings/password-policy` berhenti 503.
+- **Evidence production TIDAK punya tabel PasswordPolicy:** 503 "table does not exist" langsung membuktikan `CREATE TABLE` di production tidak akan bentrok untuk tabel ini.
+- **Risiko `migrate deploy` di production:**
+  1. **Tabel sudah ada (kemungkinan rendah untuk PasswordPolicy — 503 membuktikan tidak ada):** jika ternyata production punya tabel dari `db push` manual (khususnya tabel lain yang belum tentu terlihat dari 503 PasswordPolicy), `CREATE TABLE` gagal `42P07` dan deploy berhenti di migrasi itu. **Mitigasi:** sebelum jalankan `update.sh`, cek di production: `SELECT table_name FROM information_schema.tables WHERE table_name IN ('PasswordPolicy','PasswordHistory','SoDException','WhatsAppMessageLog');` — jika ada yang muncul, jangan pakai `IF NOT EXISTS` membabi buta; cocokkan strukturnya dulu (jika identik → `prisma migrate resolve --applied 20261007000000_...` setelah record manual; jika beda → sesuaikan manual). Jangan mengarang — verifikasi dulu.
+  2. **AddForeignKey ke tabel existing** (KPI/AlertRule/UserDashboard/AnalyticsChart/InAppNotification): jika production punya **orphan rows** (FK references tanpa parent row), `ADD CONSTRAINT` gagal `23503`. Likuiditas rendah untuk tabel baru; likuiditas menengah untuk UserDashboard/InAppNotification yang mungkin sudah berisi data. Mitigasi: jika gagal, identifikasi orphan rows, bersihkan/relink, ulangi deploy.
+  3. **`ALTER COLUMN SET DATA TYPE DECIMAL(65,30)`** dan **DROP NOT NULL / DROP DEFAULT**: operasi metadata PostgreSQL — aman, tidak menghapus data.
+  4. **Migrasi lama yang belum diapply di production** (jika production tertinggal): `migrate deploy` menjalankan semuanya berurutan sebelum migrasi ini — migrasi `20260927140000` dsb. akan dibuatkan tabelnya; pastikan production tidak punya tabel bentrok dari `db push` manual (cek langkah 1 juga untuk tabel SavedReport dll).
+- **Status issue #1:** ✅ Fixed di repo — menunggu deploy production (VPS sync + `update.sh`).
+
+#### Temuan Tambahan (di luar scope migrasi ini)
+
+1. **DB lokal `qalcuity` drift lokal** (9 migrasi pending + tabel dari `db push` lama) — dokumentasikan; reset lokal bila diperlukan.
+2. **Pola penambahan model tanpa migrasi berulang** (4 model di audit ini) — pertimbangkan checklist/CI check: `prisma migrate diff --exit-code` (drift = gagal build) untuk mencegah regresi serupa.
 
 ## 🔧 Session 70 — Sinkronisasi Plan Pricing untuk Pasar Indonesia — 7 Okt 2026
 
