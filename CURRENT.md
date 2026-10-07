@@ -1,6 +1,6 @@
-> **Last Updated:** 7 Oktober 2026 (Session 70: Sinkronisasi Plan Pricing Pasar Indonesia)
+> **Last Updated:** 7 Oktober 2026 (Session 70h: Security purge .env.production dari git history — AUDIT-P0-2 mitigated)
 > **Version:** v11.56.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing. TypeScript: 0 errors.
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS. TypeScript: 0 errors.
 
 ## 🔧 Session 70 — Sinkronisasi Plan Pricing untuk Pasar Indonesia — 7 Okt 2026
 
@@ -138,6 +138,51 @@ Script [`scripts/diagnose-deploy.sh`](scripts/diagnose-deploy.sh) (read-only) un
 **Verifikasi:** `npx tsc --noEmit` dari **root** — exit 0 (0 errors). Vitest `apps/web` (`npx vitest run`): **kedua suite PASS** — `csv-parser.test.ts` 12/12, `audit.test.ts` 9/9 (total 21 tests, 0 fail).
 
 **Commit:** `ed4346c` — fix 70f yang sudah APPROVED (4 file: route `/close` rewrite + `api-messages` + `validation-schemas` + entri CURRENT.md 70f ini). Dua commit lanjutan session ini: race condition fix + CURRENT.md 70g; test fix `audit.test.ts`.
+
+#### 70h — Security: purge `.env.production` dari git history (AUDIT-P0-2) — 7 Okt 2026
+
+**Konteks.** `apps/web/.env.production` pernah ter-commit ke git — **4 commit** (`39a0ebe`, `58b5e9b`, `fab8fe7`, `a800311`; penghapusan dari tracking di `9bddc52`) berisi **4 blob unik** dengan NEXTAUTH_SECRET, DATABASE_URL, SMTP credentials, Google OAuth client secret, dan CRON_SECRET. Repo sempat PUBLIC → semua secret dianggap **compromised**. `apps/web/.env` dan `packages/db/.env` **tidak pernah** ter-commit (git log kosong) — cukup purge path `apps/web/.env.production`. User sudah menyetujui operasi + mengubah repo GitHub ke Private + branch protection false.
+
+**Backup (sebelum purge — disimpan di parent directory `e:\PROJEKU\`, JANGAN dihapus sampai user konfirmasi):**
+
+- **Bundle:** `e:\PROJEKU\qalcuity-backup-prepurge-20261007.bundle` — 5.902.535 bytes; `git bundle verify` OK ("The bundle records a complete history", 6 refs: main/staging/origin-tracking/HEAD).
+- **Mirror:** `e:\PROJEKU\qalcuity-backup-mirror-20261007.git` — bare clone; 265 commit, semua ref identik dengan bundle (`bf80d03` main, `83b5c8ce` staging, `e11d9d6` origin/main).
+
+**Tool:** git-filter-repo **2.47.0** (pip, Python 3.14.7) — `--version` output `a40bce548d2c`; `git-filter-repo.exe` tidak di PATH default → dipanggil via PATH extension (`set "PATH=%PATH%;C:\Users\HP\AppData\Local\Python\pythoncore-3.14-64\Scripts"`).
+
+**Eksekusi:** `git filter-repo --invert-paths --path apps/web/.env.production --force` — **exit 0**; 265 commit diparse, history baru ditulis + repack/cleanup selesai 2.58s; remote `origin` dihapus otomatis oleh filter-repo (safety feature — EXPECTED); reflog expired + gc dijalankan otomatis. Backup mirror TIDAK disentuh.
+
+**Hasil verifikasi lokal (semua PASSED):**
+
+- `git log --all --oneline -- apps/web/.env.production` → **KOSONG**.
+- `git log --all --full-history --oneline -- "apps/web/.env.production"` → **KOSONG**.
+- `git rev-list --objects --all` difilter `env.production` → hanya blob `apps/web/.env.production.example` yang tersisa; objek `.env.production` (non-example) **hilang seluruhnya**.
+- `git show 39a0ebe:apps/web/.env.production` / `fab8fe7` / `a800311` / `58b5e9b` → **`fatal: invalid object name` (exit 128)** — ke-4 commit/blob tidak lagi ada di object store.
+- `git status` → working tree **clean** (isi file tidak berubah — hanya history yang di-rewrite).
+- `git show HEAD:apps/web/.env.production.example` → **ADA** (file example tidak terhapus).
+
+**SHA baru setelah rewrite** (3 commit local ahead ikut terbawa ke remote):
+
+| Sebelum | Sesudah | Commit |
+|---------|---------|--------|
+| `bf80d03` | `e178967d48137fcbc3ed82f3ae4c30ef792b921e` | 70g test fix `audit.test.ts` (HEAD main) |
+| `04bd5b7` | `6e366f463eec623cab777128836fc9b010f91b33` | 70g race condition `closePeriod()` |
+| `ed4346c` | `5cef044b3ab4d970e06f097029225fe3594f43b9` | 70f route `/close` fix |
+| `e11d9d6` | `6c03a2427a60cec290b577f8eab509df543f5382` | 70c-70e docs/fix |
+| `83b5c8ce` (staging) | `998387a861eb905bd8bde5bdcc4a9f3fca4ea396` | staging |
+
+**Push:** remote `origin` re-added → `git push --force origin main` OK (`+ e11d9d6...e178967 main -> main (forced update)`); `git push --force origin staging` OK (`+ 83b5c8c...998387a staging -> staging (forced update)`); tags kosong (skip `push --tags`). Auth via Git Credential Manager tanpa kendala. **Verifikasi akhir `git ls-remote origin`:** `refs/heads/main = e178967d48137fcbc3ed82f3ae4c30ef792b921e`, `refs/heads/staging = 998387a861eb905bd8bde5bdcc4a9f3fca4ea396` — **remote == local**; `git fetch` + `git log origin/main --oneline -3` → commit 70f-70g terkonfirmasi ada di remote.
+
+> ⚠️ **Catatan penting untuk user (langkah manual):**
+>
+> 1. **VPS akan diverge** — history remote berbeda total dari clone lama di VPS. Jalankan di VPS:
+>    ```bash
+>    cd /www/wwwroot/qalcuity && git fetch origin && git reset --hard origin/main
+>    # (file env di VPS untracked — AMAN dari reset)
+>    sudo bash update.sh
+>    ```
+> 2. **GitHub GC:** object lama mungkin masih dapat diakses sampai GitHub menjalankan GC internal — opsional kontak GitHub Support untuk purge agresif.
+> 3. **[AUDIT-P0-2] MITIGATED (code-side)** — `.env.production` bersih dari git history di semua ref. **Rotasi secrets [AUDIT-P0-1] tetap WAJIB** dilakukan user di VPS: NEXTAUTH_SECRET, JWT_SECRET, DATABASE_URL password, SMTP_PASS, SMTP_ENCRYPTION_KEY, GOOGLE_CLIENT_SECRET, CRON_SECRET → generate baru (`openssl rand -hex 32`), update file env di VPS, restart app. **Tidak bisa diotomasi dari sini.**
 
 ## 🔧 Session 69 — [FE-PE-09a] RBAC Migration Completion & Hardening — 6 Okt 2026
 
