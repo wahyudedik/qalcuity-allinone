@@ -366,9 +366,14 @@ export async function closePeriod(
             closedAt: new Date().toISOString(),
         };
 
-        // 5. Update period to CLOSED with summary
-        await prisma.accountingPeriod.update({
-            where: { id: periodId },
+        // 5. Update period to CLOSED with summary — ATOMIC guard (race condition fix).
+        // updateMany hanya meng-update baris yang masih { id, tenantId, status: 'OPEN' }.
+        // Jika dua request CLOSE bersamaan, hanya SATU yang mendapat count === 1;
+        // request lainnya mendapat count === 0 → periode sudah ditutup oleh request lain.
+        // (Read-then-check di baris awal tetap dipertahankan untuk early-exit UX,
+        //  tapi guard ATOMIK di sini yang menjamin tidak ada double-close.)
+        const updateResult = await prisma.accountingPeriod.updateMany({
+            where: { id: periodId, tenantId, status: 'OPEN' },
             data: {
                 status: 'CLOSED',
                 closedBy: userId,
@@ -377,6 +382,17 @@ export async function closePeriod(
                 closeSummary: closeSummary as unknown as Prisma.InputJsonValue,
             },
         });
+
+        if (updateResult.count === 0) {
+            // Period sudah ditutup oleh request lain ATAU bukan milik tenant ini.
+            // Kedua kondisi berarti close ini tidak boleh meng-overwrite data.
+            return {
+                success: false,
+                periodId,
+                message: 'Period sudah ditutup oleh request lain.',
+                error: 'ALREADY_CLOSED',
+            };
+        }
 
         return {
             success: true,
