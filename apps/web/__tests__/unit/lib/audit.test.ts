@@ -17,12 +17,18 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-// Mock Prisma and logger before importing audit module
-vi.mock('../../../../lib/db', () => ({
+// Mock Prisma and logger before importing audit module.
+// audit.ts meng-import prisma dari './db' (relatif) — path mock HARUS resolve
+// ke apps/web/lib/db.ts. Test file berada di apps/web/__tests__/unit/lib/,
+// sehingga relatif yang benar adalah '../../../lib/db' (3 level ke atas).
+// Path sebelumnya ('../../../../lib/db') salah resolve ke apps/lib/db
+// (yang tidak ada) sehingga mock tidak pernah intercept dan db.ts asli
+// dieksekusi → require("./env-validation") gagal di environment vitest.
+vi.mock('../../../lib/db', () => ({
     prisma: {},
 }));
 
-vi.mock('../../../../lib/logger', () => ({
+vi.mock('../../../lib/logger', () => ({
     logger: {
         error: vi.fn(),
         info: vi.fn(),
