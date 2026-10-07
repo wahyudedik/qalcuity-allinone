@@ -4,73 +4,39 @@ import { NextResponse } from 'next/server';
 import { MSG } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { requirePermissionForRoute, requirePermission } from '@/lib/session';
-import { logAudit, toAuditPayload } from '@/lib/audit';
+import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { generateYearlyPeriods } from '@/lib/period-closing';
+import { closePeriod, runPreCloseChecks } from '@/lib/period-closing';
 import { handleApiError } from '@/lib/api-error';
-import { createPeriodSchema, generatePeriodsSchema } from '@/lib/validation-schemas';
+import { sanitizeObject } from '@/lib/sanitize';
+import { closePeriodSchema, formatZodError } from '@/lib/validation-schemas';
 
 // ============================================
-// GET â€” List periods
+// POST — Close accounting period (Period Closing Wizard)
 // ============================================
+// Consumer: apps/web/app/dashboard/finance/periods/page.tsx
+//
+// Contract UI (TIDAK BOLEH berubah):
+// - Body { confirmText: 'PRE_CHECK' } → jalankan pre-close checks saja (read-only)
+//   Response: { success: true, canClose, checks } — UI membaca `data.checks`
+// - Body { confirmText: 'CLOSE', notes? } → tutup periode via closePeriod()
+//   Sukses: { success: true, message, data } — UI membaca `data.message`
+//   Gagal pre-check: { success: false, error, code, checks } — UI membaca
+//   `data.checks` untuk menampilkan checklist + `data.error` untuk toast
+//
+// Route ini SEBELUMNYA byte-for-byte duplikat dari periods/[id]/route.ts
+// (bug pre-existing, didokumentasikan di CURRENT.md Session 68) — POST-nya
+// tidak pernah menjalankan closePeriod/runPreCloseChecks, sehingga wizard
+// terlihat berhasil tapi periode tidak pernah benar-benar ditutup.
+// Diperbaiki: handler kini memanggil business logic dari lib/period-closing.ts.
 
-export async function GET(request: Request) {
+export async function POST(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
     try {
         const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:periods:${ip}`, 100, 60000);
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { success: false, error: MSG.TOO_MANY_REQUESTS },
-                { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-            );
-        }
-
-        const auth = await requirePermissionForRoute(request);
-        if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { tenantId } = auth;
-
-        const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
-        const year = searchParams.get('year');
-
-        const where: Record<string, unknown> = { tenantId };
-        if (status) where.status = status.toUpperCase();
-        if (year) {
-            const yearNum = parseInt(year);
-            where.startDate = { gte: new Date(yearNum, 0, 1), lte: new Date(yearNum, 11, 31, 23, 59, 59, 999) };
-        }
-
-        const periods = await prisma.accountingPeriod.findMany({
-            where,
-            orderBy: { startDate: 'desc' },
-        });
-
-        const data = periods.map((p) => ({
-            id: p.id,
-            name: p.name,
-            startDate: p.startDate.toISOString(),
-            endDate: p.endDate.toISOString(),
-            status: p.status,
-            closedBy: p.closedBy,
-            closedAt: p.closedAt?.toISOString() || null,
-            closeNotes: p.closeNotes,
-            createdAt: p.createdAt.toISOString(),
-        }));
-
-        return NextResponse.json({ success: true, data });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-// ============================================
-// POST â€” Create period or generate yearly periods
-// ============================================
-
-export async function POST(request: Request) {
-    try {
-        const ip = getClientIp(request);
-        const rateLimitResult = checkRateLimit(`api:periods:POST:${ip}`, 30, 60000);
+        const rateLimitResult = checkRateLimit(`api:periods:close:${ip}`, 30, 60000);
         if (!rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: MSG.TOO_MANY_REQUESTS },
@@ -86,91 +52,134 @@ export async function POST(request: Request) {
         await requirePermission('finance:approve');
 
         const body = await request.json();
-
-        // Check if this is a "generate yearly" request
-        if (body.year && !body.name) {
-            const genValidation = generatePeriodsSchema.safeParse(body);
-            if (!genValidation.success) {
-                return NextResponse.json(
-                    { success: false, error: 'Invalid year', code: 'VALIDATION_ERROR' },
-                    { status: 400 }
-                );
-            }
-
-            const periods = await generateYearlyPeriods(tenantId, genValidation.data.year);
-
-            if (periods.length > 0) {
-                void logAudit({
-                    userId, tenantId, action: 'CREATE', entity: 'AccountingPeriod',
-                    entityId: 'bulk',
-                    newValues: { count: periods.length, year: genValidation.data.year },
-                    request,
-                });
-            }
-
-            return NextResponse.json({
-                success: true,
-                data: { created: periods.length, message: `${periods.length} periods created for year ${genValidation.data.year}` },
-            }, { status: 201 });
-        }
-
-        // Manual period creation
-        const validation = createPeriodSchema.safeParse(body);
+        const sanitizedBody = sanitizeObject(body);
+        const validation = closePeriodSchema.safeParse(sanitizedBody);
         if (!validation.success) {
+            const formatted = formatZodError(validation.error);
             return NextResponse.json(
-                { success: false, error: validation.error.issues[0]?.message || 'Invalid data', code: 'VALIDATION_ERROR' },
+                { success: false, error: formatted.message, details: formatted.details, code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
 
-        const { name, startDate, endDate } = validation.data;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        const { confirmText, notes } = validation.data;
 
-        if (end <= start) {
-            return NextResponse.json(
-                { success: false, error: 'Tanggal akhir harus setelah tanggal mulai' },
-                { status: 400 }
-            );
-        }
-
-        // Check for overlapping periods
-        const overlapping = await prisma.accountingPeriod.findFirst({
-            where: {
-                tenantId,
-                OR: [
-                    { startDate: { lte: start }, endDate: { gte: start } },
-                    { startDate: { lte: end }, endDate: { gte: end } },
-                    { startDate: { gte: start }, endDate: { lte: end } },
-                ],
-            },
+        // Tenant isolation — period hanya diambil dengan tenantId dari session
+        const period = await prisma.accountingPeriod.findFirst({
+            where: { id: params.id, tenantId },
         });
-
-        if (overlapping) {
+        if (!period) {
             return NextResponse.json(
-                { success: false, error: `Periode tumpang tindih dengan "${overlapping.name}"` },
+                { success: false, error: MSG.PERIOD_NOT_FOUND, code: 'PERIOD_NOT_FOUND' },
+                { status: 404 }
+            );
+        }
+
+        if (period.status === 'CLOSED') {
+            return NextResponse.json(
+                { success: false, error: MSG.PERIOD_ALREADY_CLOSED, code: 'ALREADY_CLOSED' },
                 { status: 409 }
             );
         }
 
-        const period = await prisma.accountingPeriod.create({
-            data: {
+        // Mode PRE_CHECK — jalankan pre-close checks saja (read-only)
+        if (confirmText === 'PRE_CHECK') {
+            const preClose = await runPreCloseChecks({
                 tenantId,
-                name,
-                startDate: start,
-                endDate: end,
-                status: 'OPEN',
-            },
-        });
+                startDate: period.startDate,
+                endDate: period.endDate,
+            });
+            return NextResponse.json({
+                success: true,
+                canClose: preClose.canClose,
+                checks: preClose.checks,
+            });
+        }
 
+        // Mode CLOSE — tutup periode via business logic (lib/period-closing.ts).
+        // closePeriod() menjalankan pre-close checks internal + canUserClosePeriod
+        // + generate closeSummary + update status CLOSED + simpan closeSummary.
+        const result = await closePeriod(params.id, tenantId, userId, notes);
+
+        if (!result.success) {
+            // Pre-close checks gagal — jalankan ulang checks untuk mendapatkan
+            // array detail yang dibutuhkan UI (closePeriod hanya mengembalikan
+            // pesan gabungan, bukan array checks).
+            if (result.error === 'PRE_CLOSE_FAILED') {
+                const preClose = await runPreCloseChecks({
+                    tenantId,
+                    startDate: period.startDate,
+                    endDate: period.endDate,
+                });
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: MSG.PRE_CLOSE_CHECKS_FAILED,
+                        code: 'PRE_CLOSE_FAILED',
+                        checks: preClose.checks,
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (result.error === 'NOT_FOUND') {
+                return NextResponse.json(
+                    { success: false, error: MSG.PERIOD_NOT_FOUND, code: 'PERIOD_NOT_FOUND' },
+                    { status: 404 }
+                );
+            }
+
+            if (result.error === 'ALREADY_CLOSED') {
+                return NextResponse.json(
+                    { success: false, error: MSG.PERIOD_ALREADY_CLOSED, code: 'ALREADY_CLOSED' },
+                    { status: 409 }
+                );
+            }
+
+            if (result.error === 'FORBIDDEN') {
+                return NextResponse.json(
+                    { success: false, error: result.message, code: 'FORBIDDEN' },
+                    { status: 403 }
+                );
+            }
+
+            return NextResponse.json(
+                { success: false, error: result.message, code: 'PERIOD_CLOSE_FAILED' },
+                { status: 500 }
+            );
+        }
+
+        // Audit trail — closePeriod() tidak melakukan audit sendiri
         void logAudit({
-            userId, tenantId, action: 'CREATE', entity: 'AccountingPeriod',
+            userId,
+            tenantId,
+            action: 'UPDATE',
+            entity: 'AccountingPeriod',
             entityId: period.id,
-            newValues: toAuditPayload(period),
+            oldValues: {
+                status: period.status,
+                closedBy: period.closedBy,
+                closedAt: period.closedAt?.toISOString() || null,
+                closeNotes: period.closeNotes,
+            },
+            newValues: {
+                status: 'CLOSED',
+                closedBy: userId,
+                closeNotes: notes ?? null,
+                closeSummary: result.closeSummary ?? null,
+            },
             request,
         });
 
-        return NextResponse.json({ success: true, data: period }, { status: 201 });
+        // Response sukses — UI membaca `data.message` untuk toast
+        return NextResponse.json({
+            success: true,
+            message: result.message,
+            data: {
+                periodId: result.periodId,
+                closeSummary: result.closeSummary ?? null,
+            },
+        });
     } catch (error) {
         return handleApiError(error);
     }

@@ -100,6 +100,21 @@ Script [`scripts/diagnose-deploy.sh`](scripts/diagnose-deploy.sh) (read-only) un
 
 **Kenapa error tidak muncul di browser public (fresh, belum login):** semua kandidat berada di component tree dashboard yang hanya di-render **setelah login** — middleware auth redirect `/dashboard/*` ke `/login` untuk sesi kosong, sehingga component dengan `new Date()` SSR tersebut tidak pernah dieksekusi pada halaman public.
 
+#### 70f — Fix: route duplikat `periods/[id]/close` (period closing wizard) — 7 Okt 2026
+
+**Root cause (CONFIRMED).** [`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts) adalah byte-for-byte duplikat dari `periods/[id]/route.ts` (GET list + POST create/generate period) — handler POST-nya tidak pernah memanggil `closePeriod`/`runPreCloseChecks`, sehingga Period Closing Wizard di [`apps/web/app/dashboard/finance/periods/page.tsx`](apps/web/app/dashboard/finance/periods/page.tsx) yang POST `{confirmText:'PRE_CHECK'|'CLOSE'}` ke `/close` tidak pernah menjalankan closing — periode tidak pernah benar-benar ditutup (silent failure; bug pre-existing, didokumentasikan di Session 68 Temuan #5 & Gap #3).
+
+**Fix.** Route ditulis ulang sebagai POST-only handler yang memanggil business logic existing di [`apps/web/lib/period-closing.ts`](apps/web/lib/period-closing.ts) (Rule 2 — reuse; lib TIDAK diubah):
+
+1. **Auth + guard:** `requirePermissionForRoute` + `requirePermission('finance:approve')` (ADMIN+ via permission engine); rate limit 30/60s (`api:periods:close:${ip}`); Zod `closePeriodSchema` + `sanitizeObject`; tenant isolation — period diambil `where: {id, tenantId}` (tenantId dari session saja, tidak pernah dari body); 404 `PERIOD_NOT_FOUND`; 409 `PERIOD_ALREADY_CLOSED` (guard sebelum close).
+2. **`confirmText: 'PRE_CHECK'`** → `runPreCloseChecks({tenantId, startDate, endDate})` → `{success, canClose, checks}` — persis contract UI (wizard membaca `data.checks`).
+3. **`confirmText: 'CLOSE'`** → `closePeriod(periodId, tenantId, userId, notes)` → sukses `{success, message, data:{periodId, closeSummary}}`. Error mapping: `NOT_FOUND`→404, `ALREADY_CLOSED`→409, `PRE_CLOSE_FAILED`→400 + **re-run `runPreCloseChecks`** untuk melengkapi array `checks` yang dibutuhkan UI (`closePeriod` hanya mengembalikan pesan gabungan, bukan array checks), `FORBIDDEN`→403, else→500. Audit trail via `void logAudit` (UPDATE `AccountingPeriod`, old/new status + closeNotes + closeSummary) — `closePeriod` tidak melakukan audit sendiri.
+4. Handler GET duplikat (junk) dihapus dari file `/close`.
+
+**Perubahan (3 file):** (1) [`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts) — rewrite POST-only closing handler; (2) [`apps/web/lib/validation-schemas.ts`](apps/web/lib/validation-schemas.ts) — +`closePeriodSchema` (enum `confirmText` PRE_CHECK|CLOSE, `notes` optional max 500); (3) [`apps/web/lib/api-messages.ts`](apps/web/lib/api-messages.ts) — +`PERIOD_ALREADY_CLOSED`, `PRE_CLOSE_CHECKS_FAILED`. **Tidak diubah:** UI wizard (consumer contract), `lib/period-closing.ts`, `periods/[id]/route.ts` (lock/unlock PUT Session 68), `route-permissions.ts` (entry `/close` sudah ada — POST resolve ke `finance:create`). Tanpa string UI baru → tanpa key i18n tambahan. Do Not Touch dipertahankan: `auth.ts`, `session.ts`, `middleware.ts`, `schema.prisma`, `audit.ts` tidak disentuh.
+
+**Verifikasi:** `npx tsc --noEmit` dari `apps/web/` — exit 0 (0 errors). Vitest `apps/web`: csv-parser 12/12 pass; suite `audit.test.ts` gagal `Cannot find module './env-validation'` (require dari `lib/db.ts`) — **pre-existing**, tidak terkait perubahan ini (file yang diubah tidak menyentuh `db.ts`/`audit.ts`/`env-validation`). Tidak ada test unit khusus period closing di codebase (gap terdokumentasi). Review manual: flow PRE_CHECK→checks, CLOSE→closePeriod→audit→response; error path 404/409/400(+checks)/403/429; tenant isolation terverifikasi di query period.
+
 ## 🔧 Session 69 — [FE-PE-09a] RBAC Migration Completion & Hardening — 6 Okt 2026
 
 > **Focus:** Menyelesaikan sisa gap migrasi 4-Role RBAC → Permission Engine (observability logging, strict mode flag, audit route coverage, mobile exception, legacy helper deprecation)
@@ -155,7 +170,7 @@ Script [`scripts/diagnose-deploy.sh`](scripts/diagnose-deploy.sh) (read-only) un
 2. [`apps/web/lib/unlock-request.ts`](apps/web/lib/unlock-request.ts) belum ada — tidak ada alur request → approval → temporary unlock; tidak ada self-approval prevention; tidak ada auto re-lock.
 3. `Tenant.settings` Json column tersedia (pattern delegation.ts) — bisa dipakai untuk menyimpan policy + temporary unlock state **tanpa** menambah model ke schema.prisma (sesuai hard rule Do Not Touch).
 4. [`apps/web/app/dashboard/finance/periods/page.tsx`](apps/web/app/dashboard/finance/periods/page.tsx) memanggil PUT `/api/finance/periods/[id]` tapi handler-nya belum ada (hanya GET+POST) — "Buka Kembali" SuperAdmin akan 404/405.
-5. Pre-existing bug: [`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts) byte-for-byte duplikat dari `periods/[id]/route.ts` — wizard POST ke `/close` tidak menjalankan `closePeriod`/`runPreCloseChecks` (out of scope, didokumentasikan).
+5. Pre-existing bug: [`apps/web/app/api/finance/periods/[id]/close/route.ts`](apps/web/app/api/finance/periods/[id]/close/route.ts) byte-for-byte duplikat dari `periods/[id]/route.ts` — wizard POST ke `/close` tidak menjalankan `closePeriod`/`runPreCloseChecks` (out of scope session ini; **fixed di Session 70f** — route ditulis ulang sebagai POST-only closing handler).
 
 #### Perubahan
 
@@ -190,7 +205,7 @@ Script [`scripts/diagnose-deploy.sh`](scripts/diagnose-deploy.sh) (read-only) un
 
 1. **`AccountingPeriod` tanpa field level** — schema tidak punya kolom `level` (DAY/MONTH/QUARTER/YEAR). Level dihitung via window-overlap query (range tanggal periode vs window level). Jika butuh level persisten, perlu schema change (di luar hard rule session ini).
 2. **Auto-lock lazy, bukan cron** — `enforceAutoLock` dipanggil read-time (saat GET locks/periods, saat PUT reopen) — bukan scheduled task. Cukup untuk correctness; cron dapat ditambahkan via Unified Cron Scheduler (`docs/CRON-JOBS.md`) di session mendatang jika diperlukan.
-3. **Pre-existing `periods/[id]/close` duplication** — route `/close` byte-for-byte duplikat `periods/[id]/route.ts` (GET+POST), POST-nya tidak menjalankan `closePeriod`/`runPreCloseChecks` — wizard UI POST ke `/close` mengharapkan `data.checks` yang tidak pernah dihasilkan. Out of scope session ini; perlu cleanup tersendiri.
+3. **Pre-existing `periods/[id]/close` duplication** — route `/close` byte-for-byte duplikat `periods/[id]/route.ts` (GET+POST), POST-nya tidak menjalankan `closePeriod`/`runPreCloseChecks` — wizard UI POST ke `/close` mengharapkan `data.checks` yang tidak pernah dihasilkan. Out of scope session ini; perlu cleanup tersendiri. — **Fixed di Session 70f** (7 Okt 2026): route ditulis ulang sebagai POST-only handler yang memanggil `closePeriod`/`runPreCloseChecks`, contract UI `data.checks` terpenuhi.
 4. **ApprovalRequest cross-ref** — row `ApprovalRequest` hanya dibuat jika tenant punya `ApprovalLevel` dengan `entityType: 'UNLOCK_REQUEST'`; decision tetap lewat dedicated approve/reject endpoints; sync via guarded `updateMany` (status PENDING filter).
 
 #### Behavior Notes

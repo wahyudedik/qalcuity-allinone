@@ -128,6 +128,8 @@ export const MSG = {
     INVALID_YEAR: 'Invalid year',
     INVALID_PARAMETERS: 'Invalid parameters',
     CONFIRMATION_TEXT_MUST_BE_CLOSE: 'Confirmation text must be "CLOSE"',
+    PERIOD_ALREADY_CLOSED: 'Period is already closed',
+    PRE_CLOSE_CHECKS_FAILED: 'Pre-close checks failed. Fix the failing checks before closing the period.',
     BANK_TRANSACTION_NOT_FOUND: 'Bank transaction not found',
     BOOK_TRANSACTION_NOT_FOUND: 'Book transaction not found',
     BANK_TRANSACTION_ID_REQUIRED: 'bankTransactionId is required',

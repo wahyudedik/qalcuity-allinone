@@ -1776,6 +1776,19 @@ export const generatePeriodsSchema = z.object({
     year: z.number().int().min(2020).max(2099),
 });
 
+/**
+ * Schema untuk Period Closing Wizard (POST /api/finance/periods/[id]/close).
+ * Contract UI (apps/web/app/dashboard/finance/periods/page.tsx):
+ * - confirmText 'PRE_CHECK' → hanya menjalankan pre-close checks (read-only)
+ * - confirmText 'CLOSE' → menutup periode via closePeriod()
+ */
+export const closePeriodSchema = z.object({
+    confirmText: z.enum(['PRE_CHECK', 'CLOSE'], {
+        message: 'confirmText harus "PRE_CHECK" atau "CLOSE"',
+    }),
+    notes: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
+});
+
 // ============================================
 // Analytics Chart Schemas
 // ============================================
