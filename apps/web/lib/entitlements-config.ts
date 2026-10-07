@@ -165,10 +165,70 @@ export interface PlanDefinition {
     maxUsers: number;
     maxStorage: number | null;
     sortOrder: number;
+    /**
+     * True untuk plan dengan harga custom (enterprise).
+     * Schema Plan tidak punya kolom flag → disimpan sebagai priceMonthly 0
+     * dan di-derive sebagai isCustom di API response berdasarkan slug.
+     */
+    isCustom?: boolean;
     features: { featureKey: FeatureKey; enabled: boolean; limit: number | null }[];
 }
 
+/**
+ * Single source of truth untuk plan definitions (fallback layer).
+ * Struktur plan pasar Indonesia (Session 70):
+ *   free(0) → starter(299K) → growth(799K) → business(1.999K) → enterprise(custom)
+ *
+ * Catatan grandfather pricing: harga existing di DB TIDAK diubah oleh config ini.
+ * Entry `free` WAJIB ada — ensureEntitlement() mencari slug 'free' dan throw jika hilang.
+ */
 export const DEFAULT_PLANS: PlanDefinition[] = [
+    {
+        name: 'Free',
+        slug: 'free',
+        description: 'Cocok untuk bisnis kecil yang baru memulai',
+        priceMonthly: 0,
+        priceYearly: 0,
+        maxUsers: 3,
+        maxStorage: 500, // 500 MB
+        sortOrder: 0,
+        features: [
+            // Finance (basic)
+            { featureKey: FEATURE_KEYS.FINANCE_INVOICES, enabled: true, limit: 50 },
+            { featureKey: FEATURE_KEYS.FINANCE_PAYMENTS, enabled: true, limit: 50 },
+            { featureKey: FEATURE_KEYS.FINANCE_PURCHASE_ORDERS, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_JOURNAL_ENTRIES, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_REPORTS, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_RECONCILIATION, enabled: false, limit: null },
+            // CRM (basic)
+            { featureKey: FEATURE_KEYS.CRM_CONTACTS, enabled: true, limit: 100 },
+            { featureKey: FEATURE_KEYS.CRM_LEADS, enabled: true, limit: 20 },
+            { featureKey: FEATURE_KEYS.CRM_DEALS, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.CRM_PIPELINE, enabled: false, limit: null },
+            // Inventory (basic)
+            { featureKey: FEATURE_KEYS.INVENTORY_PRODUCTS, enabled: true, limit: 50 },
+            { featureKey: FEATURE_KEYS.INVENTORY_STOCK, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INVENTORY_SUPPLIERS, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.INVENTORY_CATEGORIES, enabled: true, limit: 10 },
+            // HR (not available)
+            { featureKey: FEATURE_KEYS.HR_EMPLOYEES, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.HR_ATTENDANCE, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.HR_LEAVES, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.HR_PAYROLL, enabled: false, limit: null },
+            // AI (not available)
+            { featureKey: FEATURE_KEYS.AI_CHAT, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.AI_DOCUMENT_EXTRACTION, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.AI_PREDICTIONS, enabled: false, limit: null },
+            // Integrations (not available)
+            { featureKey: FEATURE_KEYS.INTEGRATION_WHATSAPP, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.INTEGRATION_EMAIL, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.INTEGRATION_PAYMENT, enabled: false, limit: null },
+            // Platform
+            { featureKey: FEATURE_KEYS.PLATFORM_ADMIN, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.PLATFORM_BILLING, enabled: false, limit: null },
+            { featureKey: FEATURE_KEYS.PLATFORM_MONITORING, enabled: false, limit: null },
+        ],
+    },
     {
         name: 'Starter',
         slug: 'starter',
@@ -177,7 +237,7 @@ export const DEFAULT_PLANS: PlanDefinition[] = [
         priceYearly: 2990000, // ~2 bulan gratis
         maxUsers: 20,
         maxStorage: 5000, // 5 GB
-        sortOrder: 0,
+        sortOrder: 1,
         features: [
             // Finance (basic)
             { featureKey: FEATURE_KEYS.FINANCE_INVOICES, enabled: true, limit: 50 },
@@ -223,7 +283,7 @@ export const DEFAULT_PLANS: PlanDefinition[] = [
         priceYearly: 7990000, // ~2 bulan gratis
         maxUsers: 50,
         maxStorage: 20000, // 20 GB
-        sortOrder: 1,
+        sortOrder: 2,
         features: [
             // Finance (all)
             { featureKey: FEATURE_KEYS.FINANCE_INVOICES, enabled: true, limit: null },
@@ -269,7 +329,7 @@ export const DEFAULT_PLANS: PlanDefinition[] = [
         priceYearly: 19990000, // ~2 bulan gratis
         maxUsers: -1, // unlimited
         maxStorage: null, // unlimited
-        sortOrder: 2,
+        sortOrder: 3,
         features: [
             // Finance (all)
             { featureKey: FEATURE_KEYS.FINANCE_INVOICES, enabled: true, limit: null },
@@ -302,6 +362,48 @@ export const DEFAULT_PLANS: PlanDefinition[] = [
             { featureKey: FEATURE_KEYS.INTEGRATION_EMAIL, enabled: true, limit: null },
             { featureKey: FEATURE_KEYS.INTEGRATION_PAYMENT, enabled: true, limit: null },
             // Platform
+            { featureKey: FEATURE_KEYS.PLATFORM_ADMIN, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.PLATFORM_BILLING, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.PLATFORM_MONITORING, enabled: true, limit: null },
+        ],
+    },
+    {
+        name: 'Enterprise',
+        slug: 'enterprise',
+        description: 'Solusi custom untuk kebutuhan enterprise — Hubungi Kami',
+        // Harga custom: schema tidak punya kolom flag → priceMonthly 0 + isCustom derived
+        priceMonthly: 0,
+        priceYearly: 0,
+        maxUsers: -1, // unlimited
+        maxStorage: null, // unlimited
+        sortOrder: 4,
+        isCustom: true,
+        features: [
+            // All features enabled, unlimited
+            { featureKey: FEATURE_KEYS.FINANCE_INVOICES, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_PAYMENTS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_PURCHASE_ORDERS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_JOURNAL_ENTRIES, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_REPORTS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.FINANCE_RECONCILIATION, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.CRM_CONTACTS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.CRM_LEADS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.CRM_DEALS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.CRM_PIPELINE, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INVENTORY_PRODUCTS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INVENTORY_STOCK, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INVENTORY_SUPPLIERS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INVENTORY_CATEGORIES, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.HR_EMPLOYEES, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.HR_ATTENDANCE, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.HR_LEAVES, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.HR_PAYROLL, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.AI_CHAT, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.AI_DOCUMENT_EXTRACTION, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.AI_PREDICTIONS, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INTEGRATION_WHATSAPP, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INTEGRATION_EMAIL, enabled: true, limit: null },
+            { featureKey: FEATURE_KEYS.INTEGRATION_PAYMENT, enabled: true, limit: null },
             { featureKey: FEATURE_KEYS.PLATFORM_ADMIN, enabled: true, limit: null },
             { featureKey: FEATURE_KEYS.PLATFORM_BILLING, enabled: true, limit: null },
             { featureKey: FEATURE_KEYS.PLATFORM_MONITORING, enabled: true, limit: null },

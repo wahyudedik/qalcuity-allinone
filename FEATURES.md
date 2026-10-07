@@ -1045,7 +1045,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
 | **Entitlement Engine** | ✅ `implemented` | 2026-09-01 | Plan-based module access, feature limits, usage tracking |
-| **Entitlements Config** | ✅ `implemented` | 2026-09-01 | Default entitlements per plan (Starter, Growth, Business) |
+| **Entitlements Config** | ✅ `implemented` | 2026-10-07 | Default entitlements per plan — 5 plan: Free, Starter, Growth, Business, Enterprise-custom (Session 70) |
 | **Entitlement API** | ✅ `implemented` | 2026-09-01 | `/api/billing/entitlement` — check tenant entitlements |
 | **Feature Check API** | ✅ `implemented` | 2026-09-01 | `/api/billing/feature-check` — real-time feature access |
 | **Usage Tracking API** | ✅ `implemented` | 2026-09-01 | `/api/billing/usage` — usage metering per tenant |
@@ -1316,16 +1316,19 @@ Electron-based desktop application.
 
 | Tier | Target | Harga | Status | Notes |
 |------|--------|-------|--------|-------|
-| **Starter** | UMKM 1-5 karyawan | Rp 299rb/bulan | ✅ `implemented` | Billing page ada |
-| **Growth** | UKM 6-25 karyawan | Rp 799rb/bulan | ✅ `implemented` | Billing page ada |
-| **Business** | Mid-market 26-100 | Rp 1.999rb/bulan | ✅ `implemented` | Billing page ada |
-| **Enterprise** | 100+ karyawan | Custom | 📋 `planned` | Belum ada kode |
+| **Free** | Trial / coba-coba | Rp 0 | ✅ `implemented` | Session 70 — sinkron seed/config/landing; fallback `ensureEntitlement()` |
+| **Starter** | UMKM 1-5 karyawan | Rp 299rb/bulan | ✅ `implemented` | Grandfathered dari `pro` (harga tetap 299K) |
+| **Growth** | UKM 6-25 karyawan | Rp 799rb/bulan (baru) / Rp 999rb (grandfathered) | ✅ `implemented` | Badge "Populer" di landing & billing UI |
+| **Business** | Mid-market 26-100 | Rp 1.999rb/bulan | ✅ `implemented` | Plan baru Session 70 |
+| **Enterprise** | 100+ karyawan | Custom ("Hubungi Kami") | ✅ `implemented` | Session 70 — priceMonthly 0 + `isCustom` derived di API (schema tanpa flag column) |
+
+> **Session 70 (2026-10-07):** Sinkronisasi 3 parallel plan definitions → 5-plan tunggal. Landing page kini fetch dari DB (ISR 3600) + fallback `DEFAULT_PLANS`. Script migrasi grandfather pricing: `cd packages/db && npm run migrate-plans` (`DRY_RUN=true` untuk preview) — **wajib dijalankan setelah deploy** jika DB masih punya slug legacy `pro`/`enterprise`@999K.
 
 ### Billing & Subscription Management
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
-| **Plan Selection** | ✅ `implemented` | — | `/dashboard/settings/billing` — 3 paket |
+| **Plan Selection** | ✅ `implemented` | 2026-10-07 | `/dashboard/settings/billing` — 5 paket (Free/Starter/Growth/Business/Enterprise-custom) |
 | **Manual Transfer Payment** | ✅ `implemented` | — | Upload bukti transfer, 4 rekening bank |
 | **Midtrans Snap Payment** | ✅ `implemented` | 2026-08-30 | `/api/billing/payments/midtrans` — real payment gateway |
 | **Midtrans Webhook Handler** | ✅ `implemented` | 2026-08-30 | `/api/billing/payments/midtrans/callback` — auto-verify |

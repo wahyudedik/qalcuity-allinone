@@ -69,6 +69,15 @@ async function main() {
   // ============================================
   // PLANS (Entitlement Engine) — upsert berdasarkan slug
   // ============================================
+  // Struktur plan pasar Indonesia (Session 70):
+  //   free(0) → starter(299K) → growth(799K) → business(1.999K) → enterprise(custom/0)
+  // Sinkron dengan DEFAULT_PLANS di apps/web/lib/entitlements-config.ts.
+  //
+  // GRANDFATHER PRICING: jika slug sudah ada di DB, HANYA name/description/sortOrder
+  // yang di-update. priceMonthly/priceYearly/features TIDAK PERNAH diubah —
+  // harga existing (mis. pro@299K, enterprise@999K) dipertahankan.
+  // Untuk rename slug legacy (pro→starter, enterprise-lama→growth), jalankan
+  // script migrasi: cd packages/db && npm run migrate-plans
   const planData = [
     {
       name: "Free",
@@ -110,14 +119,53 @@ async function main() {
       ],
     },
     {
-      name: "Pro",
-      slug: "pro",
-      description: "Untuk bisnis yang berkembang dengan kebutuhan lengkap",
+      name: "Starter",
+      slug: "starter",
+      description: "Cocok untuk bisnis kecil yang baru mulai",
       priceMonthly: 299000,
       priceYearly: 2990000,
       maxUsers: 20,
       maxStorage: 5000,
       sortOrder: 1,
+      features: [
+        { featureKey: "finance.invoices", enabled: true, limit: 50 },
+        { featureKey: "finance.payments", enabled: true, limit: 50 },
+        { featureKey: "finance.purchase-orders", enabled: false, limit: null },
+        { featureKey: "finance.journal-entries", enabled: false, limit: null },
+        { featureKey: "finance.reports", enabled: false, limit: null },
+        { featureKey: "finance.reconciliation", enabled: false, limit: null },
+        { featureKey: "crm.contacts", enabled: true, limit: 100 },
+        { featureKey: "crm.leads", enabled: true, limit: 20 },
+        { featureKey: "crm.deals", enabled: false, limit: null },
+        { featureKey: "crm.pipeline", enabled: false, limit: null },
+        { featureKey: "inventory.products", enabled: true, limit: 50 },
+        { featureKey: "inventory.stock", enabled: true, limit: null },
+        { featureKey: "inventory.suppliers", enabled: false, limit: null },
+        { featureKey: "inventory.categories", enabled: true, limit: 10 },
+        { featureKey: "hr.employees", enabled: false, limit: null },
+        { featureKey: "hr.attendance", enabled: false, limit: null },
+        { featureKey: "hr.leaves", enabled: false, limit: null },
+        { featureKey: "hr.payroll", enabled: false, limit: null },
+        { featureKey: "ai.chat", enabled: false, limit: null },
+        { featureKey: "ai.document-extraction", enabled: false, limit: null },
+        { featureKey: "ai.predictions", enabled: false, limit: null },
+        { featureKey: "integration.whatsapp", enabled: false, limit: null },
+        { featureKey: "integration.email", enabled: false, limit: null },
+        { featureKey: "integration.payment", enabled: false, limit: null },
+        { featureKey: "platform.admin", enabled: false, limit: null },
+        { featureKey: "platform.billing", enabled: false, limit: null },
+        { featureKey: "platform.monitoring", enabled: false, limit: null },
+      ],
+    },
+    {
+      name: "Growth",
+      slug: "growth",
+      description: "Untuk bisnis yang berkembang dengan kebutuhan lengkap",
+      priceMonthly: 799000,
+      priceYearly: 7990000,
+      maxUsers: 50,
+      maxStorage: 20000,
+      sortOrder: 2,
       features: [
         { featureKey: "finance.invoices", enabled: true, limit: null },
         { featureKey: "finance.payments", enabled: true, limit: null },
@@ -149,14 +197,54 @@ async function main() {
       ],
     },
     {
-      name: "Enterprise",
-      slug: "enterprise",
-      description: "Untuk bisnis besar dengan kebutuhan advanced",
-      priceMonthly: 999000,
-      priceYearly: 9990000,
+      name: "Business",
+      slug: "business",
+      description: "Untuk bisnis skala besar dengan kebutuhan advanced",
+      priceMonthly: 1999000,
+      priceYearly: 19990000,
       maxUsers: -1,
       maxStorage: null,
-      sortOrder: 2,
+      sortOrder: 3,
+      features: [
+        { featureKey: "finance.invoices", enabled: true, limit: null },
+        { featureKey: "finance.payments", enabled: true, limit: null },
+        { featureKey: "finance.purchase-orders", enabled: true, limit: null },
+        { featureKey: "finance.journal-entries", enabled: true, limit: null },
+        { featureKey: "finance.reports", enabled: true, limit: null },
+        { featureKey: "finance.reconciliation", enabled: true, limit: null },
+        { featureKey: "crm.contacts", enabled: true, limit: null },
+        { featureKey: "crm.leads", enabled: true, limit: null },
+        { featureKey: "crm.deals", enabled: true, limit: null },
+        { featureKey: "crm.pipeline", enabled: true, limit: null },
+        { featureKey: "inventory.products", enabled: true, limit: null },
+        { featureKey: "inventory.stock", enabled: true, limit: null },
+        { featureKey: "inventory.suppliers", enabled: true, limit: null },
+        { featureKey: "inventory.categories", enabled: true, limit: null },
+        { featureKey: "hr.employees", enabled: true, limit: null },
+        { featureKey: "hr.attendance", enabled: true, limit: null },
+        { featureKey: "hr.leaves", enabled: true, limit: null },
+        { featureKey: "hr.payroll", enabled: true, limit: null },
+        { featureKey: "ai.chat", enabled: true, limit: null },
+        { featureKey: "ai.document-extraction", enabled: true, limit: null },
+        { featureKey: "ai.predictions", enabled: true, limit: null },
+        { featureKey: "integration.whatsapp", enabled: true, limit: null },
+        { featureKey: "integration.email", enabled: true, limit: null },
+        { featureKey: "integration.payment", enabled: true, limit: null },
+        { featureKey: "platform.admin", enabled: true, limit: null },
+        { featureKey: "platform.billing", enabled: true, limit: null },
+        { featureKey: "platform.monitoring", enabled: true, limit: null },
+      ],
+    },
+    {
+      name: "Enterprise",
+      slug: "enterprise",
+      description: "Solusi custom untuk kebutuhan enterprise — Hubungi Kami",
+      // Harga custom: priceMonthly 0 + isCustom derived di API (schema tanpa flag column)
+      priceMonthly: 0,
+      priceYearly: 0,
+      maxUsers: -1,
+      maxStorage: null,
+      sortOrder: 4,
       features: [
         { featureKey: "finance.invoices", enabled: true, limit: null },
         { featureKey: "finance.payments", enabled: true, limit: null },
@@ -216,7 +304,17 @@ async function main() {
       });
       console.log(`✅ Plan created: ${planDef.name}`);
     } else {
-      console.log(`✅ Plan already exists: ${planDef.name}`);
+      // Grandfather pricing: update HANYA metadata (name/description/sortOrder).
+      // priceMonthly/priceYearly/features TIDAK diubah agar harga existing tetap.
+      await prisma.plan.update({
+        where: { slug: planDef.slug },
+        data: {
+          name: planDef.name,
+          description: planDef.description,
+          sortOrder: planDef.sortOrder,
+        },
+      });
+      console.log(`✅ Plan already exists (metadata synced, prices preserved): ${planDef.name}`);
     }
   }
 
@@ -320,10 +418,14 @@ async function main() {
   }
 
   // Plan Tenant Limits
+  // Nama harus lowercase & exact-match dengan planName yang dikirim register route ('starter').
+  // checkPlanTenantLimit() melakukan findUnique({ where: { planName } }) — case-sensitive.
   const planLimits = [
-    { planName: 'Starter', maxTenants: 50 },
-    { planName: 'Professional', maxTenants: 100 },
-    { planName: 'Enterprise', maxTenants: 500 },
+    { planName: 'free', maxTenants: 10 },
+    { planName: 'starter', maxTenants: 50 },
+    { planName: 'growth', maxTenants: 100 },
+    { planName: 'business', maxTenants: 500 },
+    { planName: 'enterprise', maxTenants: 9999 },
   ];
   for (const limit of planLimits) {
     await prisma.planTenantLimit.upsert({

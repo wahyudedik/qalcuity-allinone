@@ -45,6 +45,8 @@ interface Plan {
     description: string | null;
     priceMonthly: number;
     priceYearly: number | null;
+    /** Derived di API: true untuk plan harga custom (enterprise) */
+    isCustom?: boolean;
     maxUsers: number;
     maxStorage: number | null;
     isActive: boolean;
@@ -627,16 +629,18 @@ export default function PlatformBillingPage() {
 
                                 <div className="mb-4">
                                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {plan.priceMonthly === 0
-                                            ? t('platform.billingPage.free')
-                                            : formatRupiah(plan.priceMonthly)}
-                                        {plan.priceMonthly > 0 && (
+                                        {plan.isCustom
+                                            ? t('platform.billingPage.contactSales')
+                                            : plan.priceMonthly === 0
+                                                ? t('platform.billingPage.free')
+                                                : formatRupiah(plan.priceMonthly)}
+                                        {!plan.isCustom && plan.priceMonthly > 0 && (
                                             <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
                                                 {t('platform.billingPage.perMonth')}
                                             </span>
                                         )}
                                     </div>
-                                    {plan.priceYearly && (
+                                    {plan.priceYearly && plan.priceMonthly > 0 && (
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                             {t('platform.billingPage.yearly')}: {formatRupiah(plan.priceYearly)} ({t('platform.billingPage.savePercent')}{" "}
                                             {Math.round(

@@ -23,6 +23,11 @@ import {
     Database,
     Sparkles,
 } from 'lucide-react';
+import { prisma } from '@/lib/db';
+import { DEFAULT_PLANS } from '@/lib/entitlements-config';
+
+/** ISR: refresh pricing dari DB tiap 1 jam — landing tidak query DB di setiap request */
+export const revalidate = 3600;
 
 /* ─── Data ─────────────────────────────────────────────────────────────────── */
 
@@ -134,68 +139,140 @@ const USP_ITEMS = [
     },
 ] as const;
 
-const PRICING_PLANS = [
-    {
-        name: 'Starter',
-        price: 'Rp 299K',
-        period: '/bulan',
-        description: 'Untuk bisnis kecil yang baru mulai',
-        maxUsers: 20,
-        maxStorage: '5 GB',
-        cta: 'Mulai Trial',
-        popular: false,
-        features: [
-            'Invoice & Pembayaran unlimited',
-            'Purchase Order & Jurnal',
-            'Kontak, Leads & Deals',
-            'Produk, Stok & Supplier',
-            'HR (Karyawan, Absensi, Cuti)',
-            'AI Chat (100/bulan) & Extraction',
-            'WhatsApp & Email integration',
-            '20 pengguna · 5 GB storage',
-        ],
-    },
-    {
-        name: 'Growth',
-        price: 'Rp 799K',
-        period: '/bulan',
-        description: 'Untuk bisnis yang berkembang',
-        maxUsers: 50,
-        maxStorage: '20 GB',
-        cta: 'Mulai Trial',
-        popular: true,
-        features: [
-            'Semua fitur Starter',
-            'Laporan & Rekonsiliasi',
-            'Payroll & Advanced HR',
-            'Pipeline & Analitik CRM',
-            'AI unlimited (chat, extraction)',
-            'Payment Gateway integration',
-            'Platform Admin & Monitoring',
-            '50 pengguna · 20 GB storage',
-        ],
-    },
-    {
-        name: 'Business',
-        price: 'Rp 1.999K',
-        period: '/bulan',
-        description: 'Untuk bisnis skala besar',
-        maxUsers: -1,
-        maxStorage: 'Unlimited',
-        cta: 'Hubungi Kami',
-        popular: false,
-        features: [
-            'Semua fitur Growth',
-            'Predictions & Anomaly Detection',
-            'Custom Workflow & Approvals',
-            'Advanced Analytics & Dashboard',
-            'Unlimited pengguna & storage',
-            'Dedicated support & SLA',
-            'Industry-specific configuration',
-            'Priority onboarding & training',
-        ],
-    },
-] as const;
+/* ─── Pricing (Session 70 — sinkron dengan DB via Plan model) ─────────────── */
+
+interface PricingPlanDisplay {
+    name: string;
+    slug: string;
+    description: string;
+    priceMonthly: number;
+    priceYearly: number | null;
+    maxUsers: number;
+    maxStorage: number | null;
+    isCustom: boolean;
+    popular: boolean;
+    features: string[];
+}
+
+/**
+ * Marketing highlights per plan slug — copywriting landing page, bukan data entitlement.
+ * Fallback ke 'starter' untuk slug legacy yang belum ada di map (mis. 'pro' lama).
+ */
+const PLAN_HIGHLIGHTS: Record<string, string[]> = {
+    free: [
+        'Invoice & Pembayaran (limit 50)',
+        'Kontak & Leads',
+        'Produk, Stok & Kategori',
+        '3 pengguna · 500 MB storage',
+        'Cocok untuk mencoba platform',
+        'Tanpa kartu kredit',
+        'Akses knowledge base',
+        'Support email',
+    ],
+    starter: [
+        'Invoice & Pembayaran (limit 50)',
+        'Kontak, Leads & Kategori',
+        'Produk & Stok',
+        '20 pengguna · 5 GB storage',
+        'Cocok untuk bisnis kecil',
+        'Import CSV/Excel',
+        'Support email',
+        'Knowledge base lengkap',
+    ],
+    growth: [
+        'Semua fitur Starter',
+        'Purchase Order & Jurnal',
+        'Laporan & Rekonsiliasi',
+        'Deals & Pipeline CRM',
+        'HR (Karyawan, Absensi, Cuti)',
+        'AI Chat & Extraction',
+        'WhatsApp & Email integration',
+        '50 pengguna · 20 GB storage',
+    ],
+    business: [
+        'Semua fitur Growth',
+        'Payroll & Advanced HR',
+        'AI unlimited + Predictions',
+        'Payment Gateway integration',
+        'Platform Admin & Monitoring',
+        'Unlimited pengguna & storage',
+        'Dedicated support & SLA',
+        'Priority onboarding',
+    ],
+    enterprise: [
+        'Semua fitur Business',
+        'Custom Workflow & Approvals',
+        'Advanced Analytics & Dashboard',
+        'Industry-specific configuration',
+        'Unlimited pengguna & storage',
+        'Dedicated support & SLA',
+        'Custom integrasi & API',
+        'Priority onboarding & training',
+    ],
+};
+
+/** Format harga full: "Rp 299.000" (id-ID) — konsisten dengan formatCurrency di dashboard */
+function formatRupiah(amount: number): string {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function formatStorage(maxStorage: number | null): string {
+    if (maxStorage === null) return 'Unlimited';
+    if (maxStorage >= 1000) return `${maxStorage / 1000} GB`;
+    return `${maxStorage} MB`;
+}
+
+/**
+ * Ambil plan pricing dari DB (single source of truth) dengan fallback DEFAULT_PLANS.
+ * - ISR revalidate 3600 — tidak query DB di setiap request
+ * - Fallback WAJIB: jika DB error / tidak ada plan aktif, landing tetap tampil
+ *   dengan data DEFAULT_PLANS (free/starter/growth/business/enterprise)
+ */
+async function getPricingPlans(): Promise<PricingPlanDisplay[]> {
+    const fallback: PricingPlanDisplay[] = DEFAULT_PLANS.map((p) => ({
+        name: p.name,
+        slug: p.slug,
+        description: p.description,
+        priceMonthly: p.priceMonthly,
+        priceYearly: p.priceYearly,
+        maxUsers: p.maxUsers,
+        maxStorage: p.maxStorage,
+        isCustom: p.isCustom ?? p.slug === 'enterprise',
+        popular: p.slug === 'growth',
+        features: PLAN_HIGHLIGHTS[p.slug] ?? PLAN_HIGHLIGHTS.starter ?? [],
+    }));
+
+    try {
+        const plans = await prisma.plan.findMany({
+            where: { isActive: true },
+            orderBy: { sortOrder: 'asc' },
+        });
+
+        if (plans.length === 0) return fallback;
+
+        return plans.map((plan) => ({
+            name: plan.name,
+            slug: plan.slug,
+            description: plan.description ?? '',
+            priceMonthly: Number(plan.priceMonthly),
+            priceYearly: plan.priceYearly !== null ? Number(plan.priceYearly) : null,
+            maxUsers: plan.maxUsers,
+            maxStorage: plan.maxStorage,
+            // Derived isCustom — schema Plan tidak punya flag column
+            isCustom: plan.slug === 'enterprise',
+            popular: plan.slug === 'growth',
+            features: PLAN_HIGHLIGHTS[plan.slug] ?? PLAN_HIGHLIGHTS.starter ?? [],
+        }));
+    } catch {
+        // DB tidak tersedia saat build/startup — gunakan fallback DEFAULT_PLANS
+        return fallback;
+    }
+}
 
 const FAQ_ITEMS = [
     {
@@ -237,7 +314,8 @@ const INTEGRATIONS = [
 
 /* ─── Page ─────────────────────────────────────────────────────────────────── */
 
-export default function HomePage() {
+export default async function HomePage() {
+    const pricingPlans = await getPricingPlans();
     return (
         <main className="min-h-screen bg-white">
             {/* ════════════════════════════════════════════════════════════════════════
@@ -460,7 +538,8 @@ export default function HomePage() {
             </section>
 
             {/* ════════════════════════════════════════════════════════════════════════
-          PRICING — synced with entitlements-config.ts
+          PRICING — fetched dari DB (Plan model) dengan fallback DEFAULT_PLANS
+          Session 70: free/starter/growth/business/enterprise — harga pasar Indonesia
       ════════════════════════════════════════════════════════════════════════ */}
             <section id="pricing" className="bg-gray-50 px-4 py-20">
                 <div className="container mx-auto">
@@ -468,10 +547,10 @@ export default function HomePage() {
                         <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">Harga Sederhana</h2>
                         <p className="mt-4 text-lg text-gray-500">Pilih plan sesuai kebutuhan bisnis Anda</p>
                     </div>
-                    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
-                        {PRICING_PLANS.map((plan) => (
+                    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                        {pricingPlans.map((plan) => (
                             <div
-                                key={plan.name}
+                                key={plan.slug}
                                 className={`relative rounded-xl border-2 p-6 transition ${plan.popular
                                     ? 'border-blue-600 shadow-lg'
                                     : 'border-gray-200 bg-white shadow-sm hover:shadow-md'
@@ -485,11 +564,19 @@ export default function HomePage() {
                                 <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
                                 <p className="mt-1 text-sm text-gray-500">{plan.description}</p>
                                 <div className="mt-4">
-                                    <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
-                                    <span className="text-sm text-gray-500">{plan.period}</span>
+                                    {plan.isCustom ? (
+                                        <span className="text-3xl font-bold text-gray-900">Hubungi Kami</span>
+                                    ) : plan.priceMonthly === 0 ? (
+                                        <span className="text-3xl font-bold text-gray-900">Gratis</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-3xl font-bold text-gray-900">{formatRupiah(plan.priceMonthly)}</span>
+                                            <span className="text-sm text-gray-500"> /bulan</span>
+                                        </>
+                                    )}
                                 </div>
                                 <p className="mt-1 text-xs text-gray-400">
-                                    {plan.maxUsers === -1 ? 'Unlimited' : `${plan.maxUsers} pengguna`} · {plan.maxStorage} storage
+                                    {plan.maxUsers === -1 ? 'Unlimited' : `${plan.maxUsers} pengguna`} · {formatStorage(plan.maxStorage)} storage
                                 </p>
                                 <ul className="mt-6 space-y-3">
                                     {plan.features.map((feature) => (
@@ -506,7 +593,7 @@ export default function HomePage() {
                                         : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
                                         }`}
                                 >
-                                    {plan.cta}
+                                    {plan.isCustom ? 'Hubungi Kami' : plan.priceMonthly === 0 ? 'Mulai Gratis' : 'Mulai Trial'}
                                 </Link>
                             </div>
                         ))}

@@ -1921,7 +1921,7 @@
 
 #### Subscription & Entitlement
 
-- [ ] **[PLT-SE-01]** Plan Management — Create/edit/archive plans
+- [ ] **[PLT-SE-01]** Plan Management — Create/edit/archive plans — 🟡 **Partial (Session 70):** CRUD plan admin ada (`/api/admin/plans` + platform billing page); struktur 5-plan Indonesia (free/starter/growth/business/enterprise-custom) tersinkron di seed + DEFAULT_PLANS + landing fetch; script migrasi grandfather pricing tersedia (`packages/db`: `npm run migrate-plans`, `DRY_RUN=true` untuk preview — **wajib dijalankan setelah deploy** jika DB masih punya slug legacy `pro`/`enterprise`@999K). **Archive plan belum ada.**
 - [x] **[PLT-SE-02]** Entitlement Engine — ✅ DONE (~75% implemented, Batch 7E: plan-based access control)
 - [ ] **[PLT-SE-03]** Subscription Lifecycle — ACTIVE → PAST_DUE → GRACE → SUSPENDED → ARCHIVED
 - [ ] **[PLT-SE-04]** Payment Review Workflow — Transfer → Review → Approve/Reject

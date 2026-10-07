@@ -171,6 +171,17 @@ export async function POST(request: Request) {
 
                 if (!plan && entitlement?.plan) {
                     // Bridge: create Plan from legacy SubscriptionPlan data if missing
+                    //
+                    // ⚠️ LEGACY PATH (Session 70 — Sinkronisasi Plan Pricing):
+                    // Jika tenant masih menunjuk ke slug lama ('pro', atau 'enterprise'
+                    // dengan harga lama 999K), bridge ini akan membuat/referensi plan
+                    // dengan slug legacy tersebut. Setelah script migrasi dijalankan
+                    // (packages/db: npm run migrate-plans), slug legacy sudah di-rename
+                    // ke starter/growth sehingga jalur ini tidak lagi terpicu.
+                    //
+                    // Bridge TIDAK dihapus demi backward compatibility untuk tenant
+                    // yang belum di-migrate. Jangan ubah logika bridge ini tanpa
+                    // approval — lihat docs/REMAINING-WORK.md (migrasi SubscriptionPlan).
                     plan = await prisma.plan.create({
                         data: {
                             name: entitlement.plan.name,

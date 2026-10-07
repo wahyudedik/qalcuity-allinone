@@ -42,6 +42,8 @@ interface Plan {
     description: string | null
     priceMonthly: number
     priceYearly: number | null
+    /** Derived di API: true untuk plan harga custom (enterprise) */
+    isCustom?: boolean
     maxUsers: number
     maxStorage: number | null
     isActive: boolean
@@ -497,10 +499,10 @@ export default function BillingSettingsPage() {
             {/* Section 3: Plan Selection — using Plan model (Plan + PlanFeature) */}
             <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.availablePlans')}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                     {plans.map((plan) => {
                         const isCurrentPlan = currentPlanSlug === plan.slug
-                        const isPopular = plan.slug === 'pro'
+                        const isPopular = plan.slug === 'growth'
 
                         return (
                             <div
@@ -526,8 +528,14 @@ export default function BillingSettingsPage() {
                                 <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                                 <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
                                 <div className="mt-3">
-                                    <span className="text-3xl font-bold text-gray-900">{formatCurrency(plan.priceMonthly)}</span>
-                                    <span className="text-gray-600">{t('settings.billing.perMonth')}</span>
+                                    {plan.isCustom ? (
+                                        <span className="text-3xl font-bold text-gray-900">{t('settings.billing.contactSales')}</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-3xl font-bold text-gray-900">{formatCurrency(plan.priceMonthly)}</span>
+                                            <span className="text-gray-600">{t('settings.billing.perMonth')}</span>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="mt-2 text-xs text-gray-500">
@@ -552,16 +560,20 @@ export default function BillingSettingsPage() {
                                 </ul>
 
                                 <button
-                                    className={`w-full mt-6 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isCurrentPlan
+                                    className={`w-full mt-6 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${isCurrentPlan || plan.isCustom
                                         ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                                         : isPopular
                                             ? 'bg-blue-600 text-white hover:bg-blue-700'
                                             : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                                         }`}
-                                    disabled={isCurrentPlan}
-                                    onClick={() => !isCurrentPlan && handleSelectPlan(plan)}
+                                    disabled={isCurrentPlan || plan.isCustom}
+                                    onClick={() => !isCurrentPlan && !plan.isCustom && handleSelectPlan(plan)}
                                 >
-                                    {isCurrentPlan ? t('settings.activePlan') : t('settings.selectPlan')}
+                                    {isCurrentPlan
+                                        ? t('settings.activePlan')
+                                        : plan.isCustom
+                                            ? t('settings.billing.contactSales')
+                                            : t('settings.selectPlan')}
                                 </button>
                             </div>
                         )

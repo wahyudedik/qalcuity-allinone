@@ -1,6 +1,68 @@
-> **Last Updated:** 6 Oktober 2026 (Session 69: FE-PE-09a RBAC Migration Completion & Hardening)
-> **Version:** v11.55.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a). TypeScript: 0 errors.
+> **Last Updated:** 7 Oktober 2026 (Session 70: Sinkronisasi Plan Pricing Pasar Indonesia)
+> **Version:** v11.56.0
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing. TypeScript: 0 errors.
+
+## 🔧 Session 70 — Sinkronisasi Plan Pricing untuk Pasar Indonesia — 7 Okt 2026
+
+> **Focus:** Menyinkronkan 3 parallel plan definitions yang tidak konsisten (landing hardcoded `PRICING_PLANS`, `DEFAULT_PLANS` di entitlements-config, DB seed `planData`) menjadi struktur 5-plan tunggal untuk pasar Indonesia, dengan grandfather pricing migration.
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari `apps/web/` — exit 0; type-check seed.ts + migrate-plans.ts dari `packages/db` — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Session 70 Summary
+
+#### Problem
+
+3 definisi plan paralel tidak konsisten: landing page hardcoded Starter/Growth/Business @ 299K/799K/1.999K; `DEFAULT_PLANS` (Starter/Growth/Business); DB seed planData (free/pro/enterprise @ 0/299K/999K). Platform billing membaca DB → menampilkan Free/Pro/Enterprise sementara landing menampilkan Starter/Growth/Business.
+
+#### Keputusan Struktur Plan (Pasar Indonesia)
+
+| Slug | Nama | Harga | Catatan |
+|------|------|-------|---------|
+| `free` | Free | Rp 0 | Wajib ada — fallback `ensureEntitlement()` |
+| `starter` | Starter | Rp 299.000 | Grandfathered dari `pro` (harga tetap) |
+| `growth` | Growth | Rp 799.000 (baru) / Rp 999.000 (grandfathered) | Badge "Populer" |
+| `business` | Business | Rp 1.999.000 | Plan baru |
+| `enterprise` | Enterprise | Custom ("Hubungi Kami") | priceMonthly 0 + isCustom derived |
+
+#### Grandfather Pricing Migration
+
+- `pro`(299K) → rename `starter` — **harga tetap 299K**
+- `enterprise` lama(999K) → rename `growth` — **harga tetap 999K, TIDAK diturunkan ke 799K**
+- `business`@1.999.000 → INSERT baru
+- `free`(0) + `enterprise`(custom/0) → ensure ada
+- Rename **tidak pernah** menyentuh `priceMonthly`/`priceYearly` row existing; tidak ada delete
+
+#### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`apps/web/lib/entitlements-config.ts`](apps/web/lib/entitlements-config.ts) | `PlanDefinition` +`isCustom?`; `DEFAULT_PLANS` → 5 plan (tambah `free` + `enterprise` custom; starter/growth/business dipertahankan +fitur; sortOrder 0-4) |
+| 2 | [`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts) | `planData` → 5 plan sinkron DEFAULT_PLANS; loop existing slug → update **hanya** name/description/sortOrder (harga dipertahankan); `PlanTenantLimit` → lowercase `free/starter/growth/business/enterprise` (exact-match register route) |
+| 3 | [`packages/db/scripts/migrate-plans.ts`](packages/db/scripts/migrate-plans.ts) (**BARU**) | Script migrasi grandfather pricing — idempotent, logged, `DRY_RUN=true` support; **BELUM dijalankan ke DB manapun**; registered di [`packages/db/package.json`](packages/db/package.json) (`npm run migrate-plans`) |
+| 4 | [`apps/web/app/api/billing/plans/route.ts`](apps/web/app/api/billing/plans/route.ts), [`apps/web/app/api/platform/plans/route.ts`](apps/web/app/api/platform/plans/route.ts) | Konversi `Number()` (Decimal→number, fix serialization string) + derived `isCustom` (slug === 'enterprise') |
+| 5 | [`apps/web/app/dashboard/settings/billing/page.tsx`](apps/web/app/dashboard/settings/billing/page.tsx) | `isPopular` 'pro'→'growth'; interface +`isCustom?`; plan custom → tampil "Hubungi Kami" + tombol select disabled; grid `xl:grid-cols-5` |
+| 6 | [`apps/web/app/platform/billing/page.tsx`](apps/web/app/platform/billing/page.tsx) | Interface +`isCustom?`; tampilan harga custom "Hubungi Kami"; guard yearly % `priceMonthly > 0` |
+| 7 | [`apps/web/app/page.tsx`](apps/web/app/page.tsx) | Landing (server component) → async fetch dari DB Plan model + `revalidate = 3600` (ISR) + fallback `DEFAULT_PLANS` (wajib); 5 plan urut free→enterprise; format "Rp 299.000 /bulan" (id-ID), Free "Gratis", Enterprise "Hubungi Kami"; badge "Paling Populer" pada Growth |
+| 8 | [`apps/web/app/api/billing/webhook/route.ts`](apps/web/app/api/billing/webhook/route.ts) | Komentar legacy path pada bridge (slug lama 'pro'/enterprise@999K) — **bridge TIDAK dihapus**, logic tidak berubah |
+| 9 | [`apps/web/messages/en.json`](apps/web/messages/en.json), [`apps/web/messages/id.json`](apps/web/messages/id.json) | +`settings.billing.contactSales` ("Contact Us"/"Hubungi Kami"); +`platform.billingPage.contactSales` |
+
+> ⛔ **Do Not Touch dipertahankan:** `schema.prisma`, `auth.ts`, `session.ts`, `middleware.ts`, `audit.ts` tidak disentuh. Enterprise custom di-derive di kode (schema tanpa flag column — sesuai constraint).
+
+#### Documented Decisions & Gaps
+
+1. **Enterprise custom tanpa schema change:** `priceMonthly` disimpan 0 + `isCustom` di-derive dari slug 'enterprise' di API response. Jika kelak butuh flag eksplisit, tambah kolom via migration terpisah (butuh approval — schema Do Not Touch).
+2. **Grandfather pricing:** Tenant existing mempertahankan harga row-nya (TenantEntitlement.planId ikut row saat rename). Harga baru hanya berlaku tenant baru.
+3. **Script migrasi belum dijalankan:** `npm run migrate-plans` **WAJIB dijalankan setelah deploy** code baru ke environment yang punya data plan legacy ('pro'/enterprise@999K). Preview dulu dengan `DRY_RUN=true`. Fresh DB cukup `prisma db seed`.
+4. **PlanTenantLimit lowercase:** `checkPlanTenantLimit()` exact-match case-sensitive; register route mengirim 'starter' → seed sekarang membuat row lowercase. Row lama ('Starter'/'Professional'/'Enterprise') dibiarkan (orphan, harmless).
+5. **Webhook bridge dipertahankan:** Tenant yang belum migrate masih menunjuk slug legacy — bridge membuat plan dari SubscriptionPlan jika slug tidak ada. Setelah migrasi, jalur bridge tidak lagi terpicu.
+6. **Landing ISR:** `revalidate = 3600` — harga di landing refresh tiap 1 jam dari DB; fallback DEFAULT_PLANS jika DB error saat build (landing tidak pernah blank).
+
+#### Behavior Notes
+
+- **API `/api/billing/plans` & `/api/platform/plans`** sekarang mengembalikan `priceMonthly` sebagai **number** (sebelumnya bisa berupa string Decimal "299000.0000") + field `isCustom`. Client UI lama yang pakai `Number()`/`formatCurrency` tetap kompatibel.
+- **Enterprise tampil "Hubungi Kami"** di landing, dashboard billing, dan platform billing (bukan "Rp 0").
+- **Seed re-run aman:** harga existing tidak berubah; hanya metadata yang di-sync.
+- **`ensureEntitlement()`** tidak lagi berisiko throw — entry `free` ada di `DEFAULT_PLANS`.
 
 ## 🔧 Session 69 — [FE-PE-09a] RBAC Migration Completion & Hardening — 6 Okt 2026
 
