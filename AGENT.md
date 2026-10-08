@@ -985,6 +985,7 @@ aaPanel Task Scheduler (*/5 * * * *)
 | `stock-alert` | Stock Alert | Interval 6 jam | 4x daily | [`apps/web/app/api/cron/stock-alert/route.ts`](apps/web/app/api/cron/stock-alert/route.ts) |
 | `recurring-invoice` | Recurring Invoice | Daily 07:00 | Daily 07:00 | [`apps/web/app/api/cron/recurring-invoice/route.ts`](apps/web/app/api/cron/recurring-invoice/route.ts) |
 | `anomaly-scan` | Anomaly Detection | Daily 02:00 | Daily 02:00 | [`apps/web/app/api/ai/anomalies/scan/route.ts`](apps/web/app/api/ai/anomalies/scan/route.ts) |
+| `sod-exception-expiry` | SoD Exception Expiry | Daily 01:00 | Daily 01:00 | [`apps/web/lib/sod-exception.ts`](apps/web/lib/sod-exception.ts) (`runSoDExceptionExpiry()`, scheduler-only, tanpa endpoint langsung) |
 
 ### Adding New Cron Jobs
 

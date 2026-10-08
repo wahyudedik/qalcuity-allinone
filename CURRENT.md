@@ -1,6 +1,36 @@
-> **Last Updated:** 8 Oktober 2026 (Session 70k: CI drift-check guard — deteksi schema drift otomatis sebelum drift berulang)
-> **Version:** v11.57.2
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang. TypeScript: 0 errors.
+> **Last Updated:** 8 Oktober 2026 (Session 70m: UCE SoD Enforcement — self-approval block + SoD rule check di approval routes + cron auto-expire exception)
+> **Version:** v11.58.0
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang; Session 70m: UCE SoD Enforcement — `enforceSoDApproval()` (self-approval block + SoD rule check exception-aware) di approval routes expenses/bills/unlock-requests + cron `sod-exception-expiry` + unit test 9/9. TypeScript: 0 errors.
+
+## 🛡️ Session 70m — UCE SoD Enforcement: Self-Approval + Rule Check di Approval Routes — 8 Okt 2026
+
+> **Focus:** Implementasi enforcement Segregation of Duties (lanjutan UCE-13) — model `SoDException` sudah ada; session ini menambah enforcement helper + integrasi ke approval routes + cron auto-expire exception.
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Unit test:** `__tests__/unit/lib/sod-enforcement.test.ts` 9/9 pass
+
+### Apa yang dibuat
+
+1. **[`apps/web/lib/sod-enforcement.ts`](apps/web/lib/sod-enforcement.ts)** — helper `enforceSoDApproval()` dengan dua lapis:
+   - Layer 1 **self-approval**: `createdByUserId === userId` → block 403 + audit `SOD_BLOCKED` (universal, berlaku tanpa rule tenant)
+   - Layer 2 **SoD rule**: [`checkSoDConflictsWithExceptions()`](apps/web/lib/sod-engine.ts) — severity `blocking` → block + audit; `warning` → allow; engine error → fail-open (konsisten desain engine)
+2. **Konvensi module/action kanonik:** module `finance`; actions `expense.approve`, `bill.approve`, `unlock_request.decide` — rule tenant harus memakai string ini persis agar match
+3. **Integrasi 3 approval routes** (hanya saat transisi status → `APPROVED`; DRAFT→PENDING_APPROVAL tidak kena):
+   - [`expenses/[id]` PUT](apps/web/app/api/finance/expenses/[id]/route.ts), [`bills/[id]` PUT](apps/web/app/api/finance/bills/[id]/route.ts) → 403 + `violations` jika diblokir
+   - [`unlock-requests/[id]/approve` POST](apps/web/app/api/finance/locks/unlock-requests/[id]/approve/route.ts) → 403 `SOD_VIOLATION`; self-approval unlock tetap di `decideUnlockRequest` (`UNLOCK_SELF_APPROVAL_FORBIDDEN`)
+4. **Cron `sod-exception-expiry`** (daily 01:00 WIB) — [`runSoDExceptionExpiry()`](apps/web/lib/sod-exception.ts) memanggil `expireSoDExceptions()` yang sebelumnya **tidak pernah dipanggil** (dead code) — didaftarkan di [dispatcher `/api/cron/run`](apps/web/app/api/cron/run/route.ts)
+5. **MSG constants:** `SOD_SELF_APPROVAL_BLOCKED`, `SOD_VIOLATION` di [`api-messages.ts`](apps/web/lib/api-messages.ts)
+6. **Unit test** [`__tests__/unit/lib/sod-enforcement.test.ts`](apps/web/__tests__/unit/lib/sod-enforcement.test.ts) — 9/9 pass (self-approval, blocking/warning, mixed, fail-open, constants)
+
+### Notes & Follow-up
+
+- ⚠️ **Self-approval blocked** mempengaruhi workflow admin yang biasa approve expense/bill buatan sendiri — ini SoD by design; override via SoDException (Director approval) jika perlu
+- Unlock **reject** route tidak diintegrasikan (hanya approve yang gating approval)
+- Management API SoD sudah ada sebelumnya: `/api/finance/sod-rules`, `/api/finance/sod-exceptions` (UCE-14/15) — tidak perlu API baru
+- **UI SoD tab tidak dibuat** — page [`settings/control-engine`](apps/web/app/dashboard/settings/control-engine/page.tsx) berbasis config key/value (ControlConfig), tidak cocok untuk CRUD data SoD rules/exceptions; UI dedicated = follow-up session
+- `sod-enforcement.ts` memakai **relative imports** (`./sod-engine`, dst.) — vitest di repo ini tidak punya alias config `@/`; jangan kembalikan ke alias tanpa menambah `vitest.config.ts`
+- Tidak ada migrasi/schema baru — model `SoDRule`/`SoDException` sudah ada (drift-repair Session 70i)
+
+---
 
 ## 🛡️ Session 70k — CI Drift-Check Guard: Deteksi Schema Drift Otomatis — 8 Okt 2026
 

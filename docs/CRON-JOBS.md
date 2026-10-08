@@ -61,6 +61,9 @@ Authorization: Bearer <CRON_SECRET>
 | `stock-alert` | Stock Alert | 4x daily (06, 12, 18, 22) | Every 6 hours | `{ type: 'interval', intervalHours: 6 }` |
 | `recurring-invoice` | Recurring Invoice | Daily 07:00 | Daily 00:00 | `{ type: 'daily', hour: 0, minute: 0 }` |
 | `anomaly-scan` | Anomaly Detection | Daily 02:00 | Daily 19:00 (prev day) | `{ type: 'daily', hour: 19, minute: 0 }` |
+| `sod-exception-expiry` | SoD Exception Expiry | Daily 01:00 | 18:00 (prev day) | `{ type: 'daily', hour: 1, minute: 0 }` |
+
+> **Catatan:** `hour`/`minute` pada config = waktu **lokal** `APP_TIMEZONE` (default `Asia/Jakarta`), sesuai [`getLocalHour()`](../apps/web/lib/cron-scheduler.ts) — bukan UTC. Baris lama di atas ditulis dengan asumsi UTC (historis).
 
 ### Setup di aaPanel Task Scheduler
 
@@ -145,6 +148,19 @@ GET /api/cron/run?status
 | **Function** | Scan all tenants → run anomaly detection on financial transactions |
 | **Schedule** | Daily 02:00 WIB |
 | **Handler** | `runAnomalyScanCron()` — importable by scheduler |
+
+### 5. SoD Exception Expiry (Scheduler-Only)
+
+> Task ini **tidak punya endpoint langsung** — hanya handler yang di-import dispatcher `/api/cron/run`.
+
+| Field | Detail |
+|-------|--------|
+| **Task ID** | `sod-exception-expiry` |
+| **File** | [`apps/web/lib/sod-exception.ts`](../apps/web/lib/sod-exception.ts) |
+| **Function** | `runSoDExceptionExpiry()` → `expireSoDExceptions()` — ubah status exception `APPROVED` yang `expiresAt`-nya sudah lewat menjadi `EXPIRED` (+ audit per exception) |
+| **Schedule** | Daily 01:00 WIB |
+| **Auth** | Via dispatcher — `verifyCronAuth()` CRON_SECRET |
+| **Added** | Session 70m (8 Okt 2026) — sebelumnya `expireSoDExceptions()` tidak pernah dipanggil (dead code) |
 
 ---
 

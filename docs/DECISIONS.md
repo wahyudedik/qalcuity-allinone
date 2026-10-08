@@ -992,6 +992,28 @@ Saat assignment:
 - Exception punya expiry date
 - Exception bisa di-review periodic
 
+### Enforcement Hooks — Session 70m (8 Okt 2026)
+
+Enforcement kini aktif di approval routes via helper [`apps/web/lib/sod-enforcement.ts`](../apps/web/lib/sod-enforcement.ts) — `enforceSoDApproval()`, dua lapis:
+
+1. **Self-approval** — `createdByUserId === userId` → block (403) + audit `SOD_BLOCKED`. Hard-coded universal (bukan rule tenant) karena prinsip maker-checker berlaku untuk semua industri.
+2. **SoD rule check** — [`checkSoDConflictsWithExceptions()`](../apps/web/lib/sod-engine.ts) (exception-aware). Severity `blocking` → block + audit; `warning` → allow; engine error → **fail-open** (konsisten desain engine).
+
+**Konvensi module/action (kanonik)** — rule tenant harus memakai string ini persis:
+
+| Module | Actions |
+|--------|---------|
+| `finance` | `expense.approve`, `bill.approve`, `unlock_request.decide` |
+
+**Titik integrasi** (hanya transisi → `APPROVED`; DRAFT→PENDING_APPROVAL tidak kena):
+
+- [`expenses/[id]` PUT](../apps/web/app/api/finance/expenses/[id]/route.ts), [`bills/[id]` PUT](../apps/web/app/api/finance/bills/[id]/route.ts)
+- [`unlock-requests/[id]/approve` POST](../apps/web/app/api/finance/locks/unlock-requests/[id]/approve/route.ts) — self-approval unlock tetap di `decideUnlockRequest`
+
+**Cron:** task `sod-exception-expiry` (daily 01:00 WIB) menjalankan `runSoDExceptionExpiry()` → `expireSoDExceptions()` — sebelumnya fungsi expiry tidak pernah dipanggil di mana pun (dead code).
+
+> ⚠️ `sod-enforcement.ts` memakai **relative imports** (bukan `@/lib/...`) agar unit test bisa mock via path relatif — vitest di repo ini tidak punya alias config. Jangan kembalikan ke alias tanpa menambah `vitest.config.ts`.
+
 ### Consequences
 
 - ✅ Mencegah konflik kepentingan dan fraud
