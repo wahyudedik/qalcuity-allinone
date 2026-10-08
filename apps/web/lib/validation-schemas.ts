@@ -2250,6 +2250,11 @@ export const requestSoDExceptionSchema = z.object({
     ruleId: z.string().min(1, 'Rule ID wajib diisi'),
     reason: z.string().min(10, 'Alasan minimal 10 karakter').max(1000, 'Alasan maksimal 1000 karakter'),
     durationDays: z.number().int().min(1).max(90).optional(),
+    /**
+     * Optional target user for admin on-behalf requests.
+     * Ignored for non-admin callers (always self-request).
+     */
+    userId: z.string().min(1, 'User ID tidak valid').optional(),
 });
 
 export const approveSoDExceptionSchema = z.object({

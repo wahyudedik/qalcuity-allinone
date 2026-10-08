@@ -27,20 +27,12 @@ import { logger } from './logger';
 // Canonical values used by enforcement hooks. Tenant-configurable SoD rules
 // (SoDRule.module / SoDRule.action) must use these exact strings to match.
 // See docs/DECISIONS.md — Session 70m.
+//
+// Defined in sod-constants.ts (client-safe, zero-import) so UI code can
+// import the same constants without pulling prisma into the client bundle.
+// Re-exported here so server code keeps a single import path.
 
-export const SOD_MODULE = {
-    /** Finance module — expenses, bills, payments, locks */
-    FINANCE: 'finance',
-} as const;
-
-export const SOD_ACTION = {
-    /** Expense approval (PUT status → APPROVED) */
-    EXPENSE_APPROVE: 'expense.approve',
-    /** Bill approval (PUT status → APPROVED) */
-    BILL_APPROVE: 'bill.approve',
-    /** Unlock request decision (approve/reject) */
-    UNLOCK_REQUEST_DECIDE: 'unlock_request.decide',
-} as const;
+export { SOD_MODULE, SOD_ACTION } from './sod-constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

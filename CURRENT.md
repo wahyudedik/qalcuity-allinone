@@ -1,6 +1,48 @@
-> **Last Updated:** 8 Oktober 2026 (Session 70m: UCE SoD Enforcement — self-approval block + SoD rule check di approval routes + cron auto-expire exception)
-> **Version:** v11.58.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang; Session 70m: UCE SoD Enforcement — `enforceSoDApproval()` (self-approval block + SoD rule check exception-aware) di approval routes expenses/bills/unlock-requests + cron `sod-exception-expiry` + unit test 9/9. TypeScript: 0 errors.
+> **Last Updated:** 8 Oktober 2026 (Session 70n: Halaman manajemen SoD dedicated — CRUD SoDRule + request/approve SoDException di /dashboard/settings/sod)
+> **Version:** v11.59.0
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang; Session 70m: UCE SoD Enforcement — `enforceSoDApproval()` (self-approval block + SoD rule check exception-aware) di approval routes expenses/bills/unlock-requests + cron `sod-exception-expiry` + unit test 9/9; Session 70n: Halaman manajemen SoD dedicated `/dashboard/settings/sod` (SoDRulesTab + SoDExceptionsTab, dual layout) + enrich exception API (ruleName/userName/approverName + admin on-behalf) + DELETE rule 409 guard + `sod-constants.ts` (client-safe) — smoke test runtime 26/26 PASS. TypeScript: 0 errors.
+
+## 🗂️ Session 70n — Halaman Manajemen SoD Dedicated: CRUD Rules + Exceptions — 8 Okt 2026
+
+> **Focus:** Halaman manajemen Segregation of Duties dedicated di `/dashboard/settings/sod` (2 tab: SoD Rules CRUD + SoD Exceptions request/approve) — data records, bukan config key/value; di luar control-engine (tab UI-nya tidak cocok dengan pola ControlConfig).
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Unit test:** 30/30 pass (sod-enforcement 9/9 + regresi — tidak ada yang rusak)
+> **Smoke test runtime:** `node .smoke-sod.mjs` (dev server :3000) — **26/26 PASS**
+> **Health Score:** ✅ COMPLETE
+
+### Apa yang dibuat
+
+1. **Halaman [`/dashboard/settings/sod`](apps/web/app/dashboard/settings/sod/page.tsx)** (BARU) — page shell dengan 2 tab + [`loading.tsx`](apps/web/app/dashboard/settings/sod/loading.tsx) + [`error.tsx`](apps/web/app/dashboard/settings/sod/error.tsx):
+   - **[`SoDRulesTab`](apps/web/app/dashboard/settings/sod/components/SoDRulesTab.tsx)** — list rule (dual layout: desktop table + mobile cards), filter module/enabled/search, modal create/edit (name, role1, role2, module, action, enabled), toggle enabled, delete confirm dengan handle 409
+   - **[`SoDExceptionsTab`](apps/web/app/dashboard/settings/sod/components/SoDExceptionsTab.tsx)** — list enriched (ruleName/userName/userEmail/approverName), status badge (PENDING/APPROVED/REJECTED/EXPIRED), request modal (rule + target user + reason + durationDays), approve/reject modal dengan comments, filter status
+2. **[`sod-constants.ts`](apps/web/lib/sod-constants.ts)** (BARU) — konstanta SoD client-safe (zero-import): `SOD_MODULE`, `SOD_ACTION`, status/severity lists untuk UI; [`sod-enforcement.ts`](apps/web/lib/sod-enforcement.ts) kini re-export dari sini (server code tetap 1 import path) — vitest 9/9 tetap pass
+3. **Backend enrich GET [`/api/finance/sod-exceptions`](apps/web/app/api/finance/sod-exceptions/route.ts)** — response tiap exception kini menyertakan `ruleName`, `userName`, `userEmail`, `approverName` (tenant-scoped via `where: { tenantId }`, tanpa join cross-tenant)
+4. **Backend POST `/api/finance/sod-exceptions`** — field opsional `userId` ([`requestSoDExceptionSchema`](apps/web/lib/validation-schemas.ts)) untuk admin request on-behalf target user (divalidasi same-tenant); non-admin selalu self-request
+5. **Backend guard DELETE [`/api/finance/sod-rules/[id]`](apps/web/app/api/finance/sod-rules/[id]/route.ts)** — 409 `SOD_RULE_HAS_ACTIVE_EXCEPTIONS` jika ada exception PENDING/APPROVED yang mereferensikan rule (audit trail + integrity enforcement — nonaktifkan rule sebagai alternatif); MSG constant baru di [`api-messages.ts`](apps/web/lib/api-messages.ts)
+6. **Nav + i18n** — entry sidebar `nav.sod` di [`sidebar.tsx`](apps/web/components/layout/sidebar.tsx) + 100+ keys `settings.sod.*` di [`id.json`](apps/web/messages/id.json)/[`en.json`](apps/web/messages/en.json)
+7. **Plan doc** [`plans/sod-management-ui.md`](plans/sod-management-ui.md)
+
+### Hasil Verifikasi
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| TypeScript | `npx tsc --noEmit` | ✅ 0 errors |
+| Unit test | vitest (sod-enforcement 9/9 + regresi) | ✅ 30/30 |
+| i18n JSON | parse id.json + en.json | ✅ valid |
+| Smoke test runtime | `node .smoke-sod.mjs` (dev :3000) | ✅ **26/26 PASS** — anon blocked 307, login admin (role=ADMIN), CRUD rule 201/200 (create → list → toggle), on-behalf exception 201 (`userId` = target member), enriched GET (ruleName/userName terisi, approverName null saat PENDING), approve 200 (`decision: "APPROVED"`, approverId = admin), DELETE guard 409 untuk exception PENDING **dan** APPROVED, happy-path delete rule tanpa exception 200, MEMBER RBAC 403 di POST rules & exceptions (RBAC_STRICT `permission_check_failed`), validation 400 (name kosong + role sama), page render 200 |
+| Local DB migration | `prisma migrate deploy` + `prisma migrate status` | ✅ `Database schema is up to date!` — lihat catatan drift repair |
+
+### Notes & Follow-up
+
+- 🔧 **Catatan local DB drift repair:** dev DB lokal ternyata belum pernah menerima migrasi (hanya `db push`) sehingga drift-repair migration `20261007000000_drift_repair_missing_models_and_schema_gaps` (Session 70i) gagal apply — DROP target tidak ada + CREATE target sudah ada secara lokal. Diperbaiki via siklus `prisma migrate resolve --rolled-back` + script adjust state lokal (buat index yang akan di-drop, drop index/FK yang akan di-create; semua existence-guarded) — **file migrasi & `schema.prisma` TIDAK diubah** (Do Not Touch dipatuhi; penyesuaian murni state DB lokal). Hasil: migration ter-apply, `migrate status` clean, tabel `SoDException`/`PasswordPolicy`/`PasswordHistory`/`WhatsAppMessageLog` tersedia (114 base tables)
+- ⚠️ **`prisma generate` EPERM** di Windows karena dev server mengunci `query_engine-windows.dll.node` — non-blocking (client sudah ter-generate dari sesi sebelumnya; schema tidak berubah)
+- **API PUT `/api/finance/sod-exceptions/[id]` menerima field `decision`** (`APPROVED`/`REJECTED`), bukan `status` — UI sudah konsisten; smoke test sempat salah ekspektasi lalu disesuaikan (bukan bug backend)
+- **Guard DELETE rule by design:** rule dengan exception PENDING/APPROVED tidak bisa dihapus (409) — nonaktifkan rule (`enabled: false`) sebagai gantinya; happy-path delete hanya untuk rule tanpa exception aktif
+- **Semua route SoD** di-protect `settings:edit` fallbackRole `ADMIN` di [`route-permissions.ts`](apps/web/lib/route-permissions.ts) — smoke test memverifikasi MEMBER 403 pada POST rules & exceptions
+- Unique constraint `(tenantId, name)` di SoDRule bekerja — create duplikat → 409 `DUPLICATE_DATA`; smoke test memakai nama rule unik per run (timestamp suffix) agar idempotent
+- Data sisa smoke test (rule + exception APPROVED ber-`durationDays` 7 di tenant dev) dibiarkan — nama unik, tidak mengganggu; expiry cron `sod-exception-expiry` (daily 01:00) akan men-mark EXPIRED
+
+---
 
 ## 🛡️ Session 70m — UCE SoD Enforcement: Self-Approval + Rule Check di Approval Routes — 8 Okt 2026
 

@@ -831,6 +831,7 @@ Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](
 | **SoD Exception Workflow** | ✅ `implemented` | 2026-09-26 | Override dengan Director approval + audit trail — [`sod-engine.ts`](apps/web/lib/sod-engine.ts) |
 | **SoD Configuration** | ✅ `implemented` | 2026-09-26 | Per-company configurable SoD rules — API: `/api/finance/sod-rules` |
 | **SoD Approval Enforcement** | ✅ `implemented` | 2026-10-08 | Self-approval block + rule check di approval routes — [`sod-enforcement.ts`](apps/web/lib/sod-enforcement.ts) + cron `sod-exception-expiry` [Session 70m] |
+| **SoD Management UI** | ✅ `implemented` | 2026-10-08 | Halaman dedicated `/dashboard/settings/sod` — CRUD rules + request/approve exceptions (dual layout mobile/desktop, RBAC admin, enriched fields) — [`sod/page.tsx`](apps/web/app/dashboard/settings/sod/page.tsx) [Session 70n] |
 
 ### 12.6 SLA & Escalation
 

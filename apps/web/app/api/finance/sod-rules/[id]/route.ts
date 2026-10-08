@@ -151,6 +151,27 @@ export async function DELETE(
             return NextResponse.json({ success: false, error: MSG.DATA_NOT_FOUND }, { status: 404 });
         }
 
+        // Guard (Session 70n): block delete while PENDING/APPROVED exceptions
+        // reference this rule — disable the rule instead to preserve audit trail.
+        const activeExceptions = await prisma.soDException.count({
+            where: {
+                ruleId: params.id,
+                tenantId,
+                status: { in: ['PENDING', 'APPROVED'] },
+            },
+        });
+
+        if (activeExceptions > 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: MSG.SOD_RULE_HAS_ACTIVE_EXCEPTIONS,
+                    data: { activeExceptions },
+                },
+                { status: 409 }
+            );
+        }
+
         await prisma.soDRule.delete({
             where: { id: params.id },
         });
