@@ -29,6 +29,7 @@ function getTasks(): CronTask[] {
     const { runRefreshAnalyticsViews } = require('@/lib/analytics-refresh-handler');
     const { cleanupExpiredSessions } = require('@/lib/session-tracker');
     const { runApprovalEscalation } = require('@/lib/approval-escalation');
+    const { runSoDExceptionExpiry } = require('@/lib/sod-exception');
 
     _tasks = [
         {
@@ -78,6 +79,13 @@ function getTasks(): CronTask[] {
             name: 'Approval Escalation',
             schedule: { type: 'interval', intervalHours: 1 }, // Every 1 hour
             handler: runApprovalEscalation,
+            enabled: true,
+        },
+        {
+            id: 'sod-exception-expiry',
+            name: 'SoD Exception Expiry',
+            schedule: { type: 'daily', hour: 1, minute: 0 }, // 01:00 WIB (local timezone)
+            handler: runSoDExceptionExpiry,
             enabled: true,
         },
     ];

@@ -11,6 +11,7 @@
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
+import type { CronTaskResult } from '@/lib/cron-scheduler';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -310,4 +311,33 @@ export async function getSoDExceptionById(params: {
     return prisma.soDException.findFirst({
         where: { id: exceptionId, tenantId },
     });
+}
+
+// ─── Cron Handler ────────────────────────────────────────────────────────────
+
+/**
+ * Cron handler: expire all SoD exceptions that have passed their expiry date.
+ * Registered in /api/cron/run as task `sod-exception-expiry` (daily 01:00 WIB).
+ */
+export async function runSoDExceptionExpiry(): Promise<CronTaskResult> {
+    try {
+        const expiredCount = await expireSoDExceptions();
+
+        return {
+            success: true,
+            message:
+                expiredCount > 0
+                    ? `Expired ${expiredCount} SoD exceptions`
+                    : 'No SoD exceptions to expire',
+            data: { expiredCount },
+        };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('[SoDException] Cron expiry failed', { error: message });
+
+        return {
+            success: false,
+            message: `SoD exception expiry failed: ${message}`,
+        };
+    }
 }

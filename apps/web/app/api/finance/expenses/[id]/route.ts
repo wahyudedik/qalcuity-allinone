@@ -9,6 +9,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { updateExpenseSchema, formatZodError } from '@/lib/validation-schemas';
 import { handleApiError } from '@/lib/api-error';
 import { softDelete } from '@/lib/soft-delete';
+import { enforceSoDApproval, SOD_MODULE, SOD_ACTION } from '@/lib/sod-enforcement';
 
 export async function GET(
     request: Request,
@@ -81,7 +82,7 @@ export async function PUT(
 
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-        const { userId, tenantId } = auth;
+        const { userId, tenantId, role } = auth;
         const body = await request.json();
 
         const sanitizedBody = sanitizeObject(body);
@@ -130,8 +131,28 @@ export async function PUT(
             updateData.expenseDate = validatedData.expenseDate ? new Date(validatedData.expenseDate) : new Date();
         }
 
-        // Track approval
+        // Track approval — SoD enforcement (self-approval + rule conflicts)
         if (validatedData.status === 'APPROVED' && existingExpense.status !== 'APPROVED') {
+            const sod = await enforceSoDApproval({
+                tenantId,
+                userId,
+                userRole: role,
+                module: SOD_MODULE.FINANCE,
+                action: SOD_ACTION.EXPENSE_APPROVE,
+                entityId: params.id,
+                createdByUserId: existingExpense.createdBy ?? undefined,
+                request,
+            });
+            if (!sod.allowed) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: sod.message || MSG.SOD_VIOLATION,
+                        violations: sod.violations,
+                    },
+                    { status: 403 }
+                );
+            }
             updateData.approvedBy = userId;
             updateData.approvedAt = new Date();
         }

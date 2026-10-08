@@ -431,6 +431,8 @@ export const MSG = {
     SOD_EXCEPTION_ALREADY_EXISTS: 'An active exception already exists for this rule',
     SOD_EXCEPTION_SELF_APPROVAL: 'Cannot approve your own exception request',
     SOD_EXCEPTION_EXPIRED: 'SoD exception has expired',
+    SOD_SELF_APPROVAL_BLOCKED: 'Self-approval is not allowed (Separation of Duties)',
+    SOD_VIOLATION: 'Separation of duties violation — approval blocked',
 } as const;
 
 export type ApiMessageKey = keyof typeof MSG;

@@ -10,6 +10,7 @@ import { handleApiError } from '@/lib/api-error';
 import { formatZodError, decideUnlockRequestSchema } from '@/lib/validation-schemas';
 import { decideUnlockRequest } from '@/lib/unlock-request';
 import type { UnlockErrorCode } from '@/lib/unlock-request';
+import { enforceSoDApproval, SOD_MODULE, SOD_ACTION } from '@/lib/sod-enforcement';
 
 // ─── Error mapping (konsisten dengan route unlock-request) ──────────────────
 
@@ -63,6 +64,28 @@ export async function POST(
         } catch {
             // Body kosong / bukan JSON — comments opsional, lanjut tanpa comments
             comments = undefined;
+        }
+
+        // SoD rule check (self-approval sudah ditangani decideUnlockRequest)
+        const sod = await enforceSoDApproval({
+            tenantId,
+            userId,
+            userRole: role,
+            module: SOD_MODULE.FINANCE,
+            action: SOD_ACTION.UNLOCK_REQUEST_DECIDE,
+            entityId: params.id,
+            request,
+        });
+        if (!sod.allowed) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: sod.message || MSG.SOD_VIOLATION,
+                    code: 'SOD_VIOLATION',
+                    violations: sod.violations,
+                },
+                { status: 403 }
+            );
         }
 
         const user = await prisma.user.findUnique({
