@@ -1,6 +1,77 @@
-> **Last Updated:** 7 Oktober 2026 (Session 70i: Drift repair migrasi PasswordPolicy + model lain — fix production 503 /api/settings/password-policy)
-> **Version:** v11.57.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang. TypeScript: 0 errors.
+> **Last Updated:** 8 Oktober 2026 (Session 70k: CI drift-check guard — deteksi schema drift otomatis sebelum drift berulang)
+> **Version:** v11.57.2
+> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang. TypeScript: 0 errors.
+
+## 🛡️ Session 70k — CI Drift-Check Guard: Deteksi Schema Drift Otomatis — 8 Okt 2026
+
+> **Focus:** Mencegah schema drift berulang (akar penyebab production issue #1 Session 70i) — guard CI otomatis yang mendeteksi selisih antara `prisma/migrations/*` dan `packages/db/prisma/schema.prisma` via `prisma migrate diff --exit-code`.
+> **TypeScript:** 0 errors (`npx tsc --noEmit` dari root — exit 0)
+> **Health Score:** ✅ COMPLETE
+
+### Konteks
+
+Session 70i: model `PasswordPolicy` (dan 3 model lain) ditambahkan ke `schema.prisma` **tanpa file migrasi** → `prisma migrate deploy` tidak pernah membuat tabelnya di production → 503. Drift sudah diperbaiki (migration `20261007000000_drift_repair_missing_models_and_schema_gaps`, commit `0d1653a`) dan terverifikasi di production (Session 70j: 503→307 auth redirect). CURRENT.md Session 70i merekomendasikan CI check `prisma migrate diff --exit-code` — **Session 70k mengimplementasikannya.**
+
+### Perubahan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | [`.github/workflows/prisma-drift-check.yml`](.github/workflows/prisma-drift-check.yml) | **BARU** — GitHub Actions workflow: trigger `push`/`pull_request` ke `main`/`develop` yang mengubah `packages/db/prisma/schema.prisma` atau `packages/db/prisma/migrations/**` (paths filter — perubahan kode biasa tidak memicu job ini). Setup mengikuti style `ci.yml`: Node 20 + pnpm 9 (cache, `--frozen-lockfile`) + service container `postgres:16` (`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB=qalcuity_shadow`). Steps: checkout → install → `prisma generate` → jalankan drift check script. Job **fail** (exit non-zero) jika drift terdeteksi. |
+| 2 | [`packages/db/scripts/check-drift.sh`](packages/db/scripts/check-drift.sh) | **BARU** — script drift check (CI + lokal): `npx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --shadow-database-url "$SHADOW_DATABASE_URL" --exit-code`. `SHADOW_DATABASE_URL` dari environment variable, fallback `postgresql://postgres:postgres@localhost:5432/qalcuity_shadow?schema=public` (CI service container; lokal DBngin trust auth juga menerima). Exit 0 = nol drift; exit non-zero = drift + pesan cara perbaiki: **buat migrasi baru** via `npx prisma migrate dev --name <name>`, ⛔ JANGAN edit migrasi lama, ⛔ JANGAN `db push` ke production. Cleanup: drop shadow database best-effort di akhir (trap EXIT). |
+| 3 | [`docs/DATABASE.md`](docs/DATABASE.md) | Update bagian 8 Migration Rules — subsection "Schema Drift Check (CI Guard)" dengan cara menjalankan lokal. |
+| 4 | [`AGENT.md`](AGENT.md) | Update bagian Local Development Setup → Common Commands — tambah perintah drift check. |
+
+> **Do Not Touch dipatuhi:** `schema.prisma` TIDAK diubah. Tidak ada migrasi baru (drift sudah nol). Tidak ada file `.env`/secrets yang disentuh. Tidak ada file migrasi lama yang diubah/dihapus.
+
+### Cara Menjalankan Lokal
+
+```bash
+cd packages/db
+bash scripts/check-drift.sh          # via Git Bash / WSL; butuh PostgreSQL berjalan (DBngin)
+# SHADOW_DATABASE_URL bisa di-override; default:
+#   postgresql://postgres:postgres@localhost:5432/qalcuity_shadow?schema=public
+```
+
+Jalankan **sebelum commit** setiap perubahan `schema.prisma` atau `migrations/**`. CI juga menjalankan guard yang sama otomatis saat path tersebut berubah.
+
+### Hasil Verifikasi
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| Drift check lokal (drift nol) | `bash scripts/check-drift.sh` (Git Bash, DBngin PostgreSQL 18.4 di localhost:5432, trust auth) | ✅ **exit 0** — `No difference detected` + cleanup shadow DB OK |
+| YAML workflow valid | `npx --yes yaml-lint .github/workflows/prisma-drift-check.yml .github/workflows/ci.yml` | ✅ YAML Lint successful |
+| TypeScript | `npx tsc --noEmit` (root) | ✅ **exit 0** — 0 errors |
+
+## 🔍 Session 70j — Verifikasi Production Read-Only via HTTP — 8 Okt 2026
+
+> **Focus:** Observasi HTTP publik `https://qalcuity.com` via curl (read-only, tanpa auth, tanpa mutation) untuk memastikan deploy Session 70i (drift-repair migration `20261007000000_drift_repair_missing_models_and_schema_gaps`) sudah terjadi di VPS.
+> **TypeScript:** tidak diubah (tidak ada perubahan kode — murni observasi)
+> **Health Score:** ✅ COMPLETE
+
+### Hasil Verifikasi (8 Okt 2026, 01:44–01:59 UTC)
+
+| # | Endpoint/Check | Status Code | Interpretasi |
+|---|---------------|-------------|--------------|
+| 1 | `GET /api/settings/password-policy` (Issue #1) | **307** → `/login?callbackUrl=...` | ✅ **Bukan 503** — auth redirect, deploy terkonfirmasi |
+| 2 | `GET /api/2fa/setup` (Issue #2) | **307** → login | ✅ Bukan 500 — OK |
+| 3 | `GET /api-docs` (Issue #5) | **404** | ⚠️ Path tidak ada di codebase — path benar: `/api/docs` (spec) + `/dashboard/api-docs` (Swagger UI), keduanya behind auth (307) |
+| 4 | CSP header homepage | ✅ Ada, tanpa `unsafe-eval` | OK |
+| 5 | CORS `access-control-allow-origin` | `https://qalcuity.com` (explicit, bukan `*`) di response API | OK |
+| 6 | Homepage | **200** | OK |
+| 7 | Static asset fingerprint | Hashed chunks (`webpack-324a964b`, `layout-5ae04025`, dll.) | Build produksi terbaru terlayani |
+| 8 | `GET /api/billing/plans` (Issue #4) | **307** → login | ✅ Bukan 500 — OK |
+
+### Kesimpulan
+
+**Deploy Session 70i SUDAH terjadi di VPS** — Issue #1 berubah dari 503 (Prisma "table does not exist") menjadi 307 auth-redirect, konsisten dengan `migrate deploy` yang menjalankan `20261007000000_drift_repair...`. Semua endpoint bermasalah tidak lagi return 5xx.
+
+### Temuan Baru (dicatat, tidak di-fix)
+
+1. **`/api-docs` 404** — checklist merujuk path yang tidak ada di codebase. Path aktual: `/api/docs` (OpenAPI JSON) dan `/dashboard/api-docs` (Swagger UI), keduanya behind auth.
+2. **API routes return 307 HTML redirect** (NextAuth middleware) untuk request tanpa auth — bukan 401 JSON. API clients (mobile) menerima redirect ke halaman login HTML. Perlu diskusi apakah API routes perlu JSON 401.
+3. **Verifikasi definitif tabel `PasswordPolicy`** (dan jumlah 5 plan billing) butuh request terauth — di luar scope read-only.
+
+> **Catatan:** Tidak ada mutation, login, atau perubahan file apa pun selama verifikasi ini. Entry ini adalah satu-satunya perubahan (dokumentasi).
 
 ## 🗄️ Session 70i — Schema Drift Repair: Migrasi PasswordPolicy & Model Lain — 7 Okt 2026
 
