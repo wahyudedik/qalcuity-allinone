@@ -208,10 +208,30 @@ pull_code() {
         git stash push -m "update-stash-$(date '+%Y%m%d_%H%M%S')" 2>/dev/null || true
     fi
 
-    # Fetch and pull
     git fetch origin 2>&1
     git checkout "$BRANCH" 2>&1
-    git pull origin "$BRANCH" 2>&1
+
+    # Reconcile with remote — remote is the source of truth for production deploys.
+    # After a remote force-push (e.g. history rewrite for secret purge) the local
+    # branch diverges and plain `git pull` fails with
+    # "Need to specify how to reconcile divergent branches".
+    # Merging would resurrect the pre-purge history (containing secrets), so:
+    #   - local behind remote  → fast-forward pull (normal case)
+    #   - diverged / local ahead → reset --hard to remote
+    #     (local changes were stashed above; stash is preserved)
+    local local_commit remote_commit
+    local_commit=$(git rev-parse HEAD 2>/dev/null || echo "")
+    remote_commit=$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo "")
+
+    if [ -n "$remote_commit" ] && [ "$local_commit" != "$remote_commit" ] && \
+       git merge-base --is-ancestor "$local_commit" "$remote_commit" 2>/dev/null; then
+        # Local is strictly behind remote — normal fast-forward pull
+        git pull origin "$BRANCH" 2>&1
+    elif [ -n "$remote_commit" ] && [ "$local_commit" != "$remote_commit" ]; then
+        # Diverged or local ahead — remote force-push / history rewrite
+        print_warning "Branches diverged (remote force-push) — resetting local to origin/$BRANCH"
+        git reset --hard "origin/$BRANCH" 2>&1
+    fi
 
     local new_commit
     new_commit=$(git rev-parse --short HEAD)
