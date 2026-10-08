@@ -1,0 +1,50 @@
+name: Prisma Drift Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'packages/db/prisma/schema.prisma'
+      - 'packages/db/prisma/migrations/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/db/prisma/schema.prisma'
+      - 'packages/db/prisma/migrations/**'
+
+jobs:
+  drift-check:
+    name: Prisma Schema Drift Check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: qalcuity_shadow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/qalcuity_shadow?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        working-directory: packages/db
+      - name: Run schema drift check
+        run: bash scripts/check-drift.sh
+        working-directory: packages/db

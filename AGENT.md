@@ -894,6 +894,9 @@ cd packages/db && npx prisma migrate dev
 # Generate Prisma Client
 cd packages/db && npx prisma generate
 
+# Check schema drift (migrations vs schema.prisma) — jalankan sebelum commit schema changes (Session 70k)
+cd packages/db && bash scripts/check-drift.sh
+
 # Seed database
 cd packages/db && npx prisma db seed
 

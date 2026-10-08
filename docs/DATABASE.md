@@ -634,6 +634,19 @@ cd packages/db && npx prisma migrate reset
 cd packages/db && npx prisma generate
 ```
 
+### Schema Drift Check (CI Guard — Session 70k)
+
+> 🛡️ CI menjalankan drift check otomatis ([`.github/workflows/prisma-drift-check.yml`](../.github/workflows/prisma-drift-check.yml)) setiap `schema.prisma` atau `migrations/**` berubah. Jalankan **lokal sebelum commit** schema changes:
+
+```bash
+cd packages/db && bash scripts/check-drift.sh   # Git Bash / WSL; butuh PostgreSQL berjalan (DBngin)
+```
+
+- Membandingkan hasil replay semua migrasi (shadow DB) dengan `schema.prisma` via `prisma migrate diff --exit-code`.
+- **Exit 0** = migrasi sudah sinkron dengan schema. **Exit non-zero** = drift → buat **migrasi baru** via `npx prisma migrate dev --name <name>`.
+- ⛔ JANGAN edit/hapus migrasi lama. ⛔ JANGAN `db push` ke production — production selalu `prisma migrate deploy`.
+- `SHADOW_DATABASE_URL` bisa di-override; default `postgresql://postgres:postgres@localhost:5432/qalcuity_shadow?schema=public`.
+
 ---
 
 **Last Updated:** 24 September 2026
