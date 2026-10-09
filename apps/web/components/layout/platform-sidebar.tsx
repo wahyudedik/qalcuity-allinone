@@ -11,6 +11,7 @@ import {
     Building2,
     CreditCard,
     Activity,
+    Bug,
     HeadphonesIcon,
     Shield,
     Settings,
@@ -50,6 +51,11 @@ function getPlatformMenuItems(t: (key: string) => string): MenuItem[] {
             label: t("platform.monitoring") || "Monitoring",
             href: "/platform/monitoring",
             icon: Activity,
+        },
+        {
+            label: t("platform.errorLogs") || "Error Logs",
+            href: "/platform/errors",
+            icon: Bug,
         },
         {
             label: t("platform.support") || "Support",

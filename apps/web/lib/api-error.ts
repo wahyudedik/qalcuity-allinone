@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { formatZodError } from './validation-schemas';
 import { MSG } from './api-messages';
 import { logger } from '@/lib/logger';
+import { logApiError, type ApiErrorContext } from './error-logger';
 
 /**
  * Standardized API error handler that distinguishes between error types:
@@ -13,8 +14,20 @@ import { logger } from '@/lib/logger';
  * - Prisma P2021 (table not found) → 503 Service Unavailable (migration pending)
  * - Prisma P2025 (record not found) → 404 Not Found
  * - Other errors → 500 Internal Server Error
+ *
+ * Semua branch 5xx di-persist ke error log (JSONL) via `logApiError` agar
+ * superadmin bisa tracing di halaman platform (lihat lib/error-logger.ts).
+ *
+ * `context` OPTIONAL — signature lama `handleApiError(error)` tetap valid.
+ * Rekomendasi pemakaian di route handler (traceability maksimal):
+ *   catch (e) {
+ *       return handleApiError(e, { route: '/api/finance/invoices', method: 'POST', tenantId, userId });
+ *   }
  */
-export function handleApiError(error: unknown): NextResponse {
+export function handleApiError(
+    error: unknown,
+    context?: ApiErrorContext & { errorCode?: string }
+): NextResponse {
     // Zod validation error
     if (error instanceof ZodError) {
         return NextResponse.json(
@@ -42,6 +55,7 @@ export function handleApiError(error: unknown): NextResponse {
             case 'P2021': {
                 const tableName = (error.meta?.table as string) || 'unknown';
                 logger.error(`[API Error] Prisma P2021: Table "${tableName}" does not exist. Run: cd packages/db && npx prisma migrate deploy`);
+                logApiError(error, { ...context, statusCode: 503, errorCode: 'SERVICE_UNAVAILABLE', meta: { table: tableName } });
                 return NextResponse.json(
                     { success: false, error: `Service temporarily unavailable. Please contact administrator. (Table: ${tableName})`, code: 'SERVICE_UNAVAILABLE' },
                     { status: 503 }
@@ -53,6 +67,7 @@ export function handleApiError(error: unknown): NextResponse {
                     { status: 404 }
                 );
             default:
+                logApiError(error, { ...context, statusCode: 500, errorCode: 'DATABASE_ERROR' });
                 return NextResponse.json(
                     { success: false, error: `Database error: ${error.code}` },
                     { status: 500 }
@@ -63,6 +78,7 @@ export function handleApiError(error: unknown): NextResponse {
     // Prisma unknown request errors
     if (error instanceof Prisma.PrismaClientUnknownRequestError) {
         logger.error('[API Error] PrismaClientUnknownRequestError', error);
+        logApiError(error, { ...context, statusCode: 500, errorCode: 'DATABASE_ERROR' });
         return NextResponse.json(
             { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
             { status: 500 }
@@ -72,6 +88,7 @@ export function handleApiError(error: unknown): NextResponse {
     // Prisma initialization errors (DB connection failure)
     if (error instanceof Prisma.PrismaClientInitializationError) {
         logger.error('[API Error] PrismaClientInitializationError', error);
+        logApiError(error, { ...context, statusCode: 503, errorCode: 'SERVICE_UNAVAILABLE' });
         return NextResponse.json(
             { success: false, error: 'Service temporarily unavailable. Database connection failed.', code: 'SERVICE_UNAVAILABLE' },
             { status: 503 }
@@ -81,6 +98,7 @@ export function handleApiError(error: unknown): NextResponse {
     // Prisma Rust panic errors (internal engine failure)
     if (error instanceof Prisma.PrismaClientRustPanicError) {
         logger.error('[API Error] PrismaClientRustPanicError', error);
+        logApiError(error, { ...context, statusCode: 500, errorCode: 'DATABASE_ERROR' });
         return NextResponse.json(
             { success: false, error: MSG.DATABASE_ERROR, code: 'DATABASE_ERROR' },
             { status: 500 }
@@ -116,13 +134,15 @@ export function handleApiError(error: unknown): NextResponse {
         }
 
         logger.error('[API Error] Unhandled Error', error);
+        logApiError(error, { ...context, statusCode: 500, errorCode: 'INTERNAL_SERVER_ERROR' });
         return NextResponse.json(
             { success: false, error: MSG.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
             { status: 500 }
         );
     }
 
-    // Unknown error
+    // Unknown error (non-Error throw — string, object, undefined, dll)
+    logApiError(error, { ...context, statusCode: 500, errorCode: 'INTERNAL_SERVER_ERROR' });
     return NextResponse.json(
         { success: false, error: MSG.INTERNAL_SERVER_ERROR, code: 'INTERNAL_SERVER_ERROR' },
         { status: 500 }

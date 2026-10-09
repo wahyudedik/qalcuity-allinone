@@ -1414,6 +1414,7 @@ Electron-based desktop application.
 
 | Feature | Status | Last Verified | Notes |
 |---------|--------|---------------|-------|
+| **Error Logging & Tracing** | 🚀 `production_ready` | 2026-10-09 | JSONL store (`error-logger.ts` + `error-log-reader.ts`), capture API/process/client (`POST /api/client-errors`), query `GET /api/platform/errors` (+`/stats`, `/[id]` SUPERADMIN-only), UI `/platform/errors`, cron retention `error-log-cleanup` daily 03:00 (default 30 hari) — [`docs/ERROR-LOGGING.md`](docs/ERROR-LOGGING.md) |
 | **Error Grouping** | 📋 `planned` | — | Same error × N = 1 group, stack trace aggregation |
 | **Error Severity Levels** | 📋 `planned` | — | CRITICAL, HIGH, MEDIUM, LOW |
 | **Tenant Isolation (Errors)** | 📋 `planned` | — | Errors filtered per tenant, no cross-tenant leak |

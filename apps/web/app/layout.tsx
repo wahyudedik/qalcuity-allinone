@@ -5,6 +5,7 @@ import "./globals.css";
 import { SessionProvider } from "@/components/auth/session-provider";
 import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/toast";
+import ErrorReporter from "@/components/ErrorReporter";
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,7 @@ export default function RootLayout({
                 }}
             />
             <body suppressHydrationWarning>
+                <ErrorReporter />
                 <SessionProvider>
                     <I18nProvider>
                         <ToastProvider>{children}</ToastProvider>

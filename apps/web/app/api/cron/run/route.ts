@@ -30,6 +30,7 @@ function getTasks(): CronTask[] {
     const { cleanupExpiredSessions } = require('@/lib/session-tracker');
     const { runApprovalEscalation } = require('@/lib/approval-escalation');
     const { runSoDExceptionExpiry } = require('@/lib/sod-exception');
+    const { runErrorLogCleanup } = require('@/lib/error-log-cleanup-handler');
 
     _tasks = [
         {
@@ -86,6 +87,13 @@ function getTasks(): CronTask[] {
             name: 'SoD Exception Expiry',
             schedule: { type: 'daily', hour: 1, minute: 0 }, // 01:00 WIB (local timezone)
             handler: runSoDExceptionExpiry,
+            enabled: true,
+        },
+        {
+            id: 'error-log-cleanup',
+            name: 'Error Log Cleanup',
+            schedule: { type: 'daily', hour: 3, minute: 0 }, // 03:00 WIB (local timezone)
+            handler: runErrorLogCleanup,
             enabled: true,
         },
     ];

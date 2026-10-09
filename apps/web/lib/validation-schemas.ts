@@ -2337,3 +2337,21 @@ export const reopenPeriodSchema = z.object({
     status: z.literal('OPEN', { message: 'Status harus "OPEN" untuk membuka kembali periode' }),
     closeNotes: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
 });
+
+/**
+ * Client Error Report — body untuk POST /api/client-errors (ingest error
+ * frontend dari browser via ErrorReporter, lihat lib/error-logger.ts).
+ * Sengaja ringkas & ketat: endpoint publik ter-rate-limit, jadi semua field
+ * di-bounds agar tidak menjadi vector log-flooding.
+ */
+export const clientErrorReportSchema = z.object({
+    message: z.string().min(1).max(500),
+    stack: z.string().max(4000).optional(),
+    /** URL halaman tempat error terjadi. */
+    route: z.string().max(300).optional(),
+    source: z.enum(['frontend']).default('frontend'),
+    /** Opsional — jika user sudah login dan client melampirkannya. */
+    userId: z.string().max(100).optional(),
+    /** Metadata tambahan (component name, browser info, dll) — di-sanitize server-side. */
+    meta: z.record(z.string(), z.unknown()).optional(),
+});

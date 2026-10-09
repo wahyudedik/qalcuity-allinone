@@ -49,6 +49,9 @@ coverage/
 # Uploaded files
 apps/web/public/uploads/
 
+# Error log files (JSONL)
+.logs/
+
 # Misc
 *.tsbuildinfo
 test3-cookies.txt

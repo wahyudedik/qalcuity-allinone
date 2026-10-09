@@ -62,6 +62,7 @@ Authorization: Bearer <CRON_SECRET>
 | `recurring-invoice` | Recurring Invoice | Daily 07:00 | Daily 00:00 | `{ type: 'daily', hour: 0, minute: 0 }` |
 | `anomaly-scan` | Anomaly Detection | Daily 02:00 | Daily 19:00 (prev day) | `{ type: 'daily', hour: 19, minute: 0 }` |
 | `sod-exception-expiry` | SoD Exception Expiry | Daily 01:00 | 18:00 (prev day) | `{ type: 'daily', hour: 1, minute: 0 }` |
+| `error-log-cleanup` | Error Log Cleanup | Daily 03:00 | 20:00 (prev day) | `{ type: 'daily', hour: 3, minute: 0 }` |
 
 > **Catatan:** `hour`/`minute` pada config = waktu **lokal** `APP_TIMEZONE` (default `Asia/Jakarta`), sesuai [`getLocalHour()`](../apps/web/lib/cron-scheduler.ts) — bukan UTC. Baris lama di atas ditulis dengan asumsi UTC (historis).
 
@@ -161,6 +162,28 @@ GET /api/cron/run?status
 | **Schedule** | Daily 01:00 WIB |
 | **Auth** | Via dispatcher — `verifyCronAuth()` CRON_SECRET |
 | **Added** | Session 70m (8 Okt 2026) — sebelumnya `expireSoDExceptions()` tidak pernah dipanggil (dead code) |
+
+### 6. Error Log Cleanup (Session 70o)
+
+> Hapus file error log JSONL yang lewat retention (`ERROR_LOG_RETENTION_DAYS`, default 30 hari, clamp 1–365). Dokumentasi lengkap sistem error logging: [`docs/ERROR-LOGGING.md`](ERROR-LOGGING.md).
+
+| Field | Detail |
+|-------|--------|
+| **Task ID** | `error-log-cleanup` |
+| **Handler File** | [`apps/web/lib/error-log-cleanup-handler.ts`](../apps/web/lib/error-log-cleanup-handler.ts) |
+| **Function** | `runErrorLogCleanup()` → `cleanupErrorLogs()` ([`error-log-reader.ts`](../apps/web/lib/error-log-reader.ts)) — delete `errors-YYYY-MM-DD.jsonl` (Asia/Jakarta) yang tanggalnya < hari ini − retention; per-file try/catch, never-throw |
+| **Schedule** | Daily 03:00 WIB — `{ type: 'daily', hour: 3, minute: 0 }` (jam lokal APP_TIMEZONE) |
+| **Direct Endpoint** | `GET /api/cron/error-log-cleanup` ([route](../apps/web/app/api/cron/error-log-cleanup/route.ts) — hanya export GET, handler di `lib/` mengikuti pola payment-reminder) |
+| **Auth** | `verifyCronAuth()` CRON_SECRET (+ session cookie karena middleware — lihat catatan di bawah) |
+| **RBAC** | `system:admin` fallbackRole `SUPERADMIN` — [`route-permissions.ts`](../apps/web/lib/route-permissions.ts) |
+| **Response** | `cronSuccess({ deletedCount, keptFiles, freedBytes, deletedFiles[] })` |
+| **Logs** | `logger.info('[ErrorLogCleanup] Deleted N expired log file(s), kept M (X bytes freed)')` |
+| **Smoke Test** | Session 70o — fixture `errors-2026-08-01.jsonl` (40 hari) terhapus, `errors-2026-10-09.jsonl` (hari ini) dipertahankan — 11/11 PASS |
+| **Added** | Session 70o (9 Okt 2026) |
+
+> ⚠️ **Catatan manual rerun:** dispatcher `/api/cron/run` menerapkan dedup daily (`shouldRun`) — task yang sudah jalan hari ini akan di-skip dengan status `"skipped"`. Untuk menjalankan ulang di hari yang sama, panggil direct endpoint `GET /api/cron/error-log-cleanup` (langsung eksekusi tanpa dedup).
+
+> ⚠️ **Catatan cron caller (semua cron endpoint):** middleware `withAuth` mewajibkan **session cookie** untuk semua `/api/*` non-public (307 redirect tanpa cookie) DAN handler mewajibkan `Authorization: Bearer $CRON_SECRET` (401 tanpa). Caller cron harus mengirim **kedua header** (Cookie + Bearer) sekaligus, atau path ditambahkan ke `PUBLIC_API_PATHS` di middleware (Do-Not-Touch — butuh approval terpisah).
 
 ---
 

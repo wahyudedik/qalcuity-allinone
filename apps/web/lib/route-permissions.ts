@@ -332,6 +332,12 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── Platform Admin ───────────────────────────────────────────────────────
     '/api/platform/billing': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    // Error Log (platform observability) — read-only, SUPERADMIN only.
+    // Catatan: POST ingest frontend errors berada di /api/client-errors
+    // (path netral, TIDAK didaftarkan di sini — rate-limited per-IP saja).
+    '/api/platform/errors': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/errors/stats': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
+    '/api/platform/errors/[id]': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
     '/api/platform/monitoring': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
     '/api/platform/plans': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
     '/api/platform/security/events': { permission: 'platform:view', fallbackRole: 'SUPERADMIN' },
@@ -354,6 +360,7 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/mobile/hr/employees/[id]': { permission: 'hr:view', fallbackRole: 'ADMIN' },
 
     // ─── Cron Endpoints (CRON_SECRET auth, blocked for regular users) ─────────
+    '/api/cron/error-log-cleanup': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/payment-reminder': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/recurring-invoice': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/cron/refresh-analytics': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
