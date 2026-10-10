@@ -103,7 +103,7 @@ Foundation yang menjadi tulang punggung seluruh modul.
 | **RBAC (4 Roles)** | 🚀 `production_ready` | 2026-09-13 | SUPERADMIN (platform admin only, hidden from tenant views since Session 20), ADMIN, MEMBER, VIEWER — 3 layers |
 | **Audit Trail** | 🚀 `production_ready` | 2026-08-30 | 77 audit calls across 10 mutation endpoints |
 | **Settings (6 Pages)** | 🚀 `production_ready` | 2026-08-30 | Company, Profile, Security, Team, Notifications, Billing |
-| **Demo Data** | 🚀 `production_ready` | 2026-08-30 | Comprehensive seed data for all modules |
+| **Demo Data** | 🚀 `production_ready` | 2026-10-10 | Dataset lengkap pemula ERP (Session 71): Finance 132 jurnal seimbang + 6 periode akuntansi, CRM 25 aktivitas, HR 1350 absensi + 90 payroll, Inventory 60 stok invarian — modul shared `seed-data/`, idempotent, verify script |
 | **Dark Mode** | 🚀 `production_ready` | 2026-08-30 | Tailwind dark theme support |
 | **Global Search** | 🚀 `production_ready` | 2026-08-30 | Ctrl+K shortcut, cross-module search |
 | **i18n (ID/EN)** | 🚀 `production_ready` | 2026-09-15 | Full i18n migration complete (Sessions 38-44: 350+ keys added, 300+ hardcoded strings replaced, all dashboard pages/sidebar/header/shared components localized, backend api-messages.ts 310+ constants, 4755+ total keys) |

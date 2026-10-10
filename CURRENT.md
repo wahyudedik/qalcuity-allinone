@@ -1,6 +1,126 @@
-> **Last Updated:** 9 Oktober 2026 (Session 70o: Sistem Error Logging & Tracing platform superadmin — JSONL store + capture API/process/client + /platform/errors UI + cron retention)
-> **Version:** v11.60.0
+> **Last Updated:** 10 Oktober 2026 (Session 71c: Demo Data Enhancement — Subtask D: verifikasi final end-to-end + rewrite DEMO-DATA.md + commit/push)
+> **Version:** v11.63.0
 > **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang; Session 70m: UCE SoD Enforcement — `enforceSoDApproval()` (self-approval block + SoD rule check exception-aware) di approval routes expenses/bills/unlock-requests + cron `sod-exception-expiry` + unit test 9/9; Session 70n: Halaman manajemen SoD dedicated `/dashboard/settings/sod` (SoDRulesTab + SoDExceptionsTab, dual layout) + enrich exception API (ruleName/userName/approverName + admin on-behalf) + DELETE rule 409 guard + `sod-constants.ts` (client-safe) — smoke test runtime 26/26 PASS; Session 70o: Sistem Error Logging & Tracing platform superadmin — JSONL store (`error-logger.ts` writer + `error-log-reader.ts` query/cleanup), capture API (`logApiError`/`logProcessError`) + `POST /api/client-errors` (frontend), `GET /api/platform/errors` (+`/stats`, `/[id]`) SUPERADMIN-only, UI `/platform/errors` (stats + filter + detail modal), cron `error-log-cleanup` daily 03:00 (retention `ERROR_LOG_RETENTION_DAYS` default 30, clamp 1–365) — unit test 92/92, smoke cron 11/11, E2E capture 10/10 PASS. TypeScript: 0 errors.
+
+## 🗂️ Session 71c — Demo Data Enhancement: Subtask D (Verifikasi Final + Dokumentasi + Commit/Push) — 10 Okt 2026
+
+> **Focus:** Tahap penutup task "data demo belum lengkap & kurang pas untuk pemula ERP" — verifikasi final end-to-end dari reset DB hingga smoke test API via dev server, rewrite total [`DEMO-DATA.md`](DEMO-DATA.md), konsolidasi dokumentasi, commit & push.
+> **Hasil:** ✅ **SEMUA LOLOS** — reset+seed FULL 2× (idempoten), kedua verify script lolos penuh, tsc 0 error (2 workspace), vitest **190/190 pass**, smoke test API **5/5 endpoint 200 OK**.
+> **Health Score:** ✅ COMPLETE — task Demo Data Enhancement (Subtask A–D) SELESAI
+
+### Hasil Verifikasi Final (aktual, dijalankan 10 Okt 2026)
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| Reset DB | `npx prisma migrate reset --force` (packages/db) | ✅ exit 0 — 50 migrasi diterapkan; seed otomatis CORE ONLY (spawn tanpa env — expected) |
+| Seed run #1 | `set "SEED_DEMO=true" && npx prisma db seed` | ✅ exit 0 — **Mode FULL**; Finance P0: journalEntries 132, journalItems 353, bills 7, expenses 12, periods 6; CRM 9/23/9/14/14/25; Inventory 2/23/60/2; HR 7/15/90/1350/16 |
+| Verify finance | `npx tsx scripts/verify-finance-seed.ts` | ✅ **SEMUA LOLOS** — 132 JE (0 tak seimbang, 353 items), 7 bulan sebaran, entryNumber unik format `JE-QD-*`, Bill 7, Expense 12, 5 TaxRate, 6 Period (4 CLOSED + closeSummary) |
+| Verify ops | `npx tsx scripts/verify-ops-seed.ts` | ✅ **SEMUA 37 CHECK LOLOS** — invariant stok 22 SKU, 15/15 employee ter-link, 90 payroll konsisten, 1350 attendance 0 weekend, leave override 46 hari |
+| Idempotency | seed run #2 (perintah identik) + verify ulang | ✅ exit 0 — Finance P0 **semua created=0**, `journalEntriesSkipped: 132`; counts identik; kedua verify script **tetap LOLOS** |
+| TypeScript | `npx tsc --noEmit` (apps/web + packages/db) | ✅ **0 errors** keduanya |
+| Unit test | `npx vitest run` (apps/web) | ✅ **190/190 pass, 9 files** — termasuk 98 seed test (finance 32, hr 27, inventory 23, crm 16) + regresi (sod 9, error-logger 19, error-log-reader 43, csv 12, audit 9) |
+| Smoke test | login NextAuth → GET API via dev server :3000 | ✅ **5/5 endpoint 200 OK dengan data** — `/api/finance/invoices` (20), `/api/finance/journal-entries` (20), `/api/hr/employees` (15), `/api/crm/contacts` (10), `/api/inventory/products` (10); session: `admin@qalcuity.com` ADMIN tenant `cmv2frvpv…rdy` |
+
+### Dokumentasi yang di-update
+
+1. **[`DEMO-DATA.md`](DEMO-DATA.md)** — **REWRITE TOTAL** (dari basi per 28 Agu 2026): (1) dua jalur demo data — CLI `SEED_DEMO=true` vs `POST /api/demo/load` (Settings "Muat Data Demo" + onboarding `?demo=true`) yang menghasilkan dataset IDENTIK via modul shared `seed-data/{finance,crm,hr,inventory}.ts`; (2) tabel jumlah record per model (core + demo); (3) skenario bisnis distribusi/retail Indonesia riwayat 6–7 bulan; (4) cara menjalankan + gotcha cmd.exe (`set "SEED_DEMO=true"` wajib kutip); (5) kebutuhan `migrate reset` untuk DB kotor (modul add-only); (6) verify scripts + unit test; (7) kredensial user demo + catatan SUPERADMIN hanya jalur CLI; (8) PRNG deterministik & idempotency; checklist untuk fitur baru.
+2. **[`CURRENT.md`](CURRENT.md)** — entri Session 71c ini (konsolidasi hasil verifikasi final task A–D) + header v11.63.0.
+3. **[`FEATURES.md`](FEATURES.md)** — baris **Demo Data** diperbarui: status `production_ready`, catatan dataset lengkap Session 71.
+4. **[`plans/demo-data-enhancement.md`](plans/demo-data-enhancement.md)** — plan audit Subtask A (di-commit bersama).
+
+### Temuan/Insiden selama verifikasi final
+
+- ⚠️ **EPERM saat `prisma migrate reset` generate:** rename `query_engine-windows.dll.node.tmp*` → `…dll.node` gagal (file dipakai dev server :3000). **Tidak berdampak** — Prisma Client sudah ter-generate sebelumnya & kompatibel; seed/verify/smoke test berjalan normal. Dev server TIDAK di-kill/restart sesuai instruksi.
+- ℹ️ **Seed otomatis setelah reset = CORE ONLY:** `prisma migrate reset` me-spawn seed command tanpa env var SEED_DEMO → mode CORE ONLY (expected). Jalur FULL: jalankan `npx prisma db seed` terpisah dengan `set "SEED_DEMO=true"`. Konsekuensi: run #1 seed FULL menemukan core data sudah ada (`Plan already exists … prices preserved`) — idempotent, dataset akhir identik.
+- ⚠️ **Next.js dev warning casing module** (`is-error.js` E:\ vs e:\) di terminal dev server — pre-existing, spesifik Windows filesystem case-insensitive, tidak mempengaruhi hasil smoke test (semua 200 OK). Tidak diubah.
+- ✅ **Tidak ada bug baru ditemukan** pada verifikasi final — semua perbaikan Subtask B/C (TenantSubscription legacy upsert, PO status RECEIVED, currentPlanSlug business, plug 3100) terkonfirmasi bekerja pada DB bersih.
+- **Smoke test script** dijalankan via file Node sementara di `%TEMP%` (di luar repo) — tidak ada junk yang masuk working tree; dev server :3000 (Terminal 2) utuh sepanjang session.
+
+---
+
+## 🗂️ Session 71b — Demo Data Enhancement: Subtask C (CRM + HR + Inventory Seed Modules) — 10 Okt 2026
+
+> **Focus:** Subtask C dari [`plans/demo-data-enhancement.md`](plans/demo-data-enhancement.md) — modul seed shared CRM + HR + Inventory (pola Finance Subtask B). Dataset IDENTIK di kedua loader ([`seed.ts`](packages/db/prisma/seed.ts) + [`demo.ts`](apps/web/lib/seed-data/demo.ts)), deterministik `mulberry32`, idempotent, tanpa `Math.random()`.
+> **TypeScript:** `npx tsc --noEmit` — 0 errors (apps/web + packages/db)
+> **Unit test:** 66/66 pass (3 file: crm 16 + inventory 23 + hr 27)
+> **Seed:** clean-DB run #1 exit 0; run ke-2 idempotent (Finance P0: 0 created, journalEntriesSkipped 132)
+> **Verify DB (read-only):** [`verify-ops-seed.ts`](packages/db/scripts/verify-ops-seed.ts) — **SEMUA 37 CHECK LOLOS**; [`verify-finance-seed.ts`](packages/db/scripts/verify-finance-seed.ts) — **TETAP LOLOS** (Subtask B intact)
+> **Health Score:** ✅ COMPLETE
+
+### Apa yang dibuat
+
+1. **[`apps/web/lib/seed-data/crm.ts`](apps/web/lib/seed-data/crm.ts)** (BARU, 498 baris) — 9 Category, 9 Supplier, 23 Contact (CUSTOMER/SUPPLIER/BOTH), 14 Lead, 14 Deal, **25 Activity** (CALL 6 / EMAIL 6 / MEETING 5 / NOTE 5 / TASK 3) terhubung CONTACT/LEAD/DEAL, tanggal menyebar ±60 hari dari anchor, `createdBy` admin
+2. **[`apps/web/lib/seed-data/inventory.ts`](apps/web/lib/seed-data/inventory.ts)** (BARU, 489 baris) — 2 Warehouse (GUDANG-PUSAT default + GUDANG-CABANG), 23 Product (SKU unik per-tenant, 1 service SVC-001), **60 StockMovement** deterministik — **INVARIAN: opening + ΣIN + ΣADJ(signed) − ΣOUT = `Product.stock`** untuk semua 22 SKU bergerak, **2 StockOpname** (1 COMPLETED totalDifference −2 + 1 DRAFT) + 5 item
+3. **[`apps/web/lib/seed-data/hr.ts`](apps/web/lib/seed-data/hr.ts)** (BARU, 523 baris) — 7 Department, 15 Employee (semua ter-`departmentId`; Direksi kosong by design — diwakili user admin), **90 PayrollRecord** (6 periode 2026-05..10 × 15; 60 PAID + paidAt, 30 PENDING), **1.350 Attendance** (90 hari kerja weekdays-only, anchor 2026-10-10=Sabtu → terakhir 2026-10-09, threshold PRESENT/LATE/WFH/ABSENT/LEAVE), **16 LeaveRequest** (3 SICK/APPROVED + ANNUAL/PENDING + UNPAID/REJECTED — cuti APPROVED weekday → attendance LEAVE override)
+4. **Wire kedua loader** — urutan CRM → Inventory → HR → dokumen → `seedFinanceData()` TERAKHIR (jurnal payroll dibaca dari PayrollRecord DB); duplikasi lama dihapus
+5. **Unit test** [`crm-seed.test.ts`](apps/web/__tests__/unit/lib/crm-seed.test.ts) (16) + [`inventory-seed.test.ts`](apps/web/__tests__/unit/lib/inventory-seed.test.ts) (23, termasuk INVARIAN stok) + [`hr-seed.test.ts`](apps/web/__tests__/unit/lib/hr-seed.test.ts) (27)
+6. **Verify script** [`packages/db/scripts/verify-ops-seed.ts`](packages/db/scripts/verify-ops-seed.ts) (BARU, read-only, pola verify-finance-seed) — 37 check: count per model, distribusi Activity, linkage departmentId/entityId, mix payroll status + formula netSalary, attendance weekdays-only, leave override LEAVE, **invariant stok per SKU**, opname item consistency; exit non-zero saat gagal
+
+### Hasil Verifikasi (aktual, dijalankan 10 Okt 2026)
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| TypeScript | `npx tsc --noEmit` (apps/web + packages/db) | ✅ **0 errors** keduanya |
+| Unit test | `npx vitest run apps/web/__tests__/unit/lib/{crm,inventory,hr}-seed.test.ts` | ✅ **66/66 pass** |
+| Seed full (clean DB) | `npx prisma migrate reset --force` lalu `set "SEED_DEMO=true" && npx prisma db seed` | ✅ exit 0 — CRM 9/23/9/14/14/25; Inventory 2/23/60/2; HR 7/15/90/**1350**/16; Finance P0 journalEntries 132 |
+| Idempotency | seed run ke-2 (perintah identik) | ✅ exit 0 — Finance P0 semua **0 created** (`journalEntriesSkipped: 132`), counts identik, verify ulang tetap LOLOS (tanpa duplikat) |
+| Verify ops DB | `npx tsx scripts/verify-ops-seed.ts` | ✅ **SEMUA 37 CHECK LOLOS** — Activity 25 terhubung semua, 15/15 employee ter-link department, 90 payroll (PAID:60/PENDING:30) formula konsisten, 15×90 attendance 0 weekend, 16 leave + 46 hari override LEAVE, **invariant stok 22 SKU konsisten**, opname item physical−system=difference |
+| Verify finance DB | `npx tsx scripts/verify-finance-seed.ts` | ✅ **SEMUA LOLOS** — 132 JournalEntry (0 tak seimbang), Bill 7, Expense 12, 6 Period, sumber payroll:6 (dari 90 PayrollRecord) |
+
+### Notes & Follow-up (untuk Subtask D)
+
+- 🐛 **BUG FOUND & FIXED (pre-existing, luar scope Subtask C):** `seed.ts` blok legacy TenantSubscription salah lookup — `prisma.plan.findFirst` (model **Plan** baru) tapi `TenantSubscription.planId` FK → model legacy **`SubscriptionPlan`** → P2003 di jalur CREATE pada DB bersih (ter-mask di DB kotor oleh jalur `update:{}` upsert). Fix: `prisma.subscriptionPlan.upsert({ where: { slug: 'growth' } })` (idempotent) — blok legacy ini kandidat penghapusan TODO #37
+- ⚠️ **Encoding DB lokal WIN1252:** karakter non-ASCII (mis. `↔`) di string yang di-INSERT ke tabel text → error `22P05`; semua teks seed wajib ASCII-safe
+- ⚠️ **Modul add-only:** `seedCrmData`/`seedHrData`/`seedInventoryData` idempotent via findFirst/upsert tapi TIDAK menghapus baris lama — DB dev berisi data seed versi lama harus `npx prisma migrate reset --force` agar angka bersih (verify script gagal 7 check di DB kotor = stale data, bukan bug modul)
+- **Direksi tanpa karyawan by design** — divisi diwakili user ADMIN/SUPERADMIN; unit test meng-assert 6 dari 7 departemen terpakai
+- **Jurnal payroll:** 6 journal entry (PAID periode 2026-05..08) dibaca `seedFinanceData` dari PayrollRecord — urutan loader HR sebelum Finance KRITIS
+- **Multi-tenant aman:** semua unique key per-tenant (`@@unique([sku,tenantId])`, `([code,tenantId])`, `([employeeId,period,tenantId])`, `([employeeId,date,tenantId])`, `([name,tenantId])`), verify query filter tenant slug
+- **Tidak menyentuh** `schema.prisma`/`migrasi` (Do Not Touch); dev server :3000 (Terminal 2) tidak diganggu sepanjang session
+
+---
+
+## 🗂️ Session 71 — Demo Data Enhancement: Finance P0 (TaxRate + CoA + Journal + Bill/Expense + Period) — 10 Okt 2026
+
+> **Focus:** Subtask B dari [`plans/demo-data-enhancement.md`](plans/demo-data-enhancement.md) — modul seed Finance P0: TaxRate 5 kode (kedua loader), CoA 47 akun, JournalEntry ±150 (riwayat 6 bulan, SEMUA seimbang), Bill 7 + Expense 12, payment pelengkap (partial + overdue), AccountingPeriod 6 (4 CLOSED + 2 OPEN). **Scope Finance ONLY** — CRM/HR/Inventory = Subtask C.
+> **TypeScript:** `npx tsc --noEmit` — 0 errors
+> **Unit test:** 32/32 pass ([`finance-seed.test.ts`](apps/web/__tests__/unit/lib/finance-seed.test.ts))
+> **Seed:** `set "SEED_DEMO=true" && npx prisma db seed` — exit 0; run ke-2 idempotent (129 skipped, 0 duplikat)
+> **Verify DB (read-only):** [`verify-finance-seed.ts`](packages/db/scripts/verify-finance-seed.ts) — **SEMUA LOLOS**
+> **Health Score:** ✅ COMPLETE
+
+### Apa yang dibuat
+
+1. **[`apps/web/lib/seed-data/finance.ts`](apps/web/lib/seed-data/finance.ts)** (BARU, ~1.637 baris) — modul bersama loader seed.ts & demo.ts:
+   - Helper murni: [`mulberry32`](apps/web/lib/seed-data/finance.ts) (PRNG deterministik, **tanpa Math.random**), `round2`, `generateTenantPrefix` (≤3 karakter, "qalcuity-demo"→`QD`), `generateEntryNumber` → `JE-{prefix}-{YYYYMM}-{seq:04d}` (**global unique**), `toUtcDate`/`addDays`/`monthKey`/`periodeName`, `deriveInvoiceDate`, `isJasaDescription`, `paymentCashAccountCode`, `EXPENSE_CATEGORY_ACCOUNT` (7 kategori)
+   - Dataset statis: **5 TaxRate** (PPN-KELUARAN 11%, PPN-MASUKAN 11%, PPH23 2%, PPH21, PPH42 3%), **47 CoAAccount** (44 seed.ts + 3 child 5200), **7 Bill** (3 PAID / 4 APPROVED), **12 Expense**, **6 AccountingPeriod** (Mei–Agustus CLOSED + closeSummary, September–Oktober OPEN), 3 partial payment, **28 historical invoice specs** (INV-2026-021..048) + payments (anchor 2026-10-10)
+   - [`buildFinanceJournalPlans()`](apps/web/lib/seed-data/finance.ts) — builder **pure**, semua plan di-`assertJournalBalanced` (plug akun 3100), skip DRAFT invoice & FAILED payment (PENDING → journal DRAFT), sourceType `manual|invoice|payment|payroll`, closing entry per bulan CLOSED
+   - [`seedFinanceData()`](apps/web/lib/seed-data/finance.ts) — **idempotent**: unique key per-tenant (TaxRate code, CoA code, Bill number, Expense number, Period startDate, Invoice/Payment number) + double dedup journal (`(tenantId, sourceType, sourceId, date)` + entryNumber); createdAt di-backdate agar tren bulanan akurat kapan pun dijalankan; tolak entry >0.005 selisih atau akun tak dikenal
+2. **Wire [`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts)** — blok "Finance P0" setelah Bank Transactions (`tenantPrefix: "QD"`, `anchorDate: "2026-10-10"`); **fix** `currentPlanSlug: 'pro'` → `'business'` (sinkron 5-plan Session 70)
+3. **Wire [`apps/web/lib/seed-data/demo.ts`](apps/web/lib/seed-data/demo.ts)** — `resetDemoRng()` + `ensureTaxRates()` di awal (rate PPN diambil dari DB, bukan konstanta), `seedFinanceData()` sebelum return sukses (counts digabung); **fix bug enum PO `status: "CONFIRMED"` → `"RECEIVED"`**; seluruh `Math.random` diganti `mulberry32(42)` seeded
+4. **Unit test** [`apps/web/__tests__/unit/lib/finance-seed.test.ts`](apps/web/__tests__/unit/lib/finance-seed.test.ts) — **32 test**: PRNG deterministik/range, format entryNumber, helper tanggal, opening balance seimbang, 28 invoice spec unik & deterministik, `assertJournalBalanced` (lempar pada tak seimbang/negatif), semua plan dari `sampleSources()` seimbang, skip DRAFT/FAILED, ≥80 plan dari subset historis, simulasi unik-nya entryNumber, `computePeriodSummaries`
+5. **Verify script** [`packages/db/scripts/verify-finance-seed.ts`](packages/db/scripts/verify-finance-seed.ts) (read-only) — check count 100–200, **nol entry tak seimbang** (header DAN totalDebit/totalCredit vs jumlah item), sebaran ≥6 bulan, keunikan + format entryNumber, Bill=7, Expense=12, 5 TaxRate, 6 Period (CLOSED ber-closeSummary)
+
+### Hasil Verifikasi (aktual, dijalankan 10 Okt 2026)
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| TypeScript | `npx tsc --noEmit` (apps/web) | ✅ **0 errors** |
+| Unit test | `npx vitest run apps/web/__tests__/unit/lib/finance-seed.test.ts` (repo root) | ✅ **32/32 pass** |
+| Seed full | `set "SEED_DEMO=true" && npx prisma db seed` (packages/db) | ✅ exit 0 — `Finance P0: {…, journalEntries: 129, journalItems: 343, accountingPeriods: 6}` |
+| Idempotency | seed run ke-2 (perintah identik) | ✅ semua created=0, **`journalEntriesSkipped: 129`** — tidak ada duplikat |
+| Verify DB | `npx tsx scripts/verify-finance-seed.ts` (packages/db) | ✅ **SEMUA LOLOS** — 129 JournalEntry (117 POSTED / 12 DRAFT), **0 tak seimbang** (header + cross-check 343 items), **7 bulan** 2026-05..2026-11, entryNumber unik `JE-QD-*`, sumber manual:41/invoice:44/payment:41/payroll:3, Bill 7 (APPROVED:4, PAID:3), Expense 12 (APPROVED:10, PENDING:2), 5 TaxRate Finance, 6 Period (4 CLOSED + closeSummary, 2 OPEN), Juli 2026 net 108.649.500 |
+
+### Notes & Follow-up
+
+- 🐛 **BUG FOUND & FIXED (plan scope):** [`demo.ts`](apps/web/lib/seed-data/demo.ts) PO `status: "CONFIRMED"` **tidak ada di schema** (DRAFT/SENT/RECEIVED/CANCELLED) → diubah `"RECEIVED"`; sebelumnya pasti melempar P2004 Prisma saat runtime demo
+- 🐛 **BUG FOUND & FIXED (luar scope, kritis):** `seed.ts` `currentPlanSlug: 'pro'` tidak ada dalam 5-plan (free/starter/growth/business/enterprise-custom) → `'business'`
+- 🐛 **BUG FOUND & FIXED (tertangkap unit test):** `OPENING_BALANCE_LINES` plug akun 3100 = 410M membuat debit≠credit 100M → dikoreksi **310.000.000**; garansi keseimbangan: builder assert → insert refuse >0.005 → test → verify script
+- ⚠️ **cmd.exe env gotcha:** `set SEED_DEMO=true && npx …` mem-bake nilai `'true '` (trailing space) → loader baca falsy & jalankan CORE ONLY; wajib kutip: `set "SEED_DEMO=true" && npx prisma db seed`
+- **Multi-tenant aman:** `entryNumber` global unique tapi berprefiks per-tenant (`QD`), semua unique key idempotency ber-`tenantId`, query verify punya filter tenant
+- **Pola untuk Subtask C (CRM/HR/Inventory) & D:** modul bersama per domain (`crm.ts`/`hr.ts`/`inventory.ts` di `seed-data/`), PRNG `mulberry32` per-modul, pure builder + unit test terpisah, idempotency key per-tenant, wiring ke **kedua** loader, verify script read-only per domain
+- **Tidak menyentuh** `schema.prisma`/`migrasi` (Do Not Touch); dev server :3000 (Terminal 2) tidak diganggu sepanjang session
+
+---
 
 ## 🗂️ Session 70o — Sistem Error Logging & Tracing Platform Superadmin — 9 Okt 2026
 

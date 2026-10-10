@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedFinanceData } from "../../../apps/web/lib/seed-data/finance";
+import { seedCrmData } from "../../../apps/web/lib/seed-data/crm";
+import { seedInventoryData } from "../../../apps/web/lib/seed-data/inventory";
+import { seedHrData } from "../../../apps/web/lib/seed-data/hr";
 
 const prisma = new PrismaClient();
 
@@ -542,293 +546,50 @@ async function main() {
     });
     console.log("✅ User:", user.email);
 
-    // ============================================
-    // CATEGORIES (upsert berdasarkan name+tenantId via findFirst)
-    // ============================================
-    const categoryData = [
-      { name: "Electronics", description: "Produk elektronik" },
-      { name: "Mechanical", description: "Komponen mekanik" },
-      { name: "Services", description: "Layanan jasa" },
-      { name: "Office Supplies", description: "Perlengkapan kantor" },
-      { name: "Furniture", description: "Furniture kantor dan rumah" },
-      { name: "Automotive Parts", description: "Suku cadang kendaraan" },
-      { name: "Food & Beverage", description: "Makanan dan minuman" },
-      { name: "Software & Digital", description: "Perangkat lunak dan layanan digital" },
-      { name: "Building Materials", description: "Bahan bangunan dan konstruksi" },
-    ];
-
-    const categories = [];
-    for (const cd of categoryData) {
-      const existing = await prisma.category.findFirst({
-        where: { name: cd.name, tenantId: tenant.id },
-      });
-      if (existing) {
-        categories.push(existing);
-      } else {
-        const created = await prisma.category.create({
-          data: { ...cd, tenantId: tenant.id },
-        });
-        categories.push(created);
-      }
-    }
-    console.log("✅ Categories:", categories.length);
-
-    // ============================================
-    // CONTACTS (dengan field company baru)
-    // ============================================
-    const contactData = [
-      { name: "PT Maju Jaya", type: "CUSTOMER", company: "PT Maju Jaya", email: "info@majujaya.co.id", phone: "021-2345678", address: "Jl. Gatot Subroto No. 45", city: "Jakarta", taxId: "01.234.567.8-901.000" },
-      { name: "CV Berkah Mandiri", type: "CUSTOMER", company: "CV Berkah Mandiri", email: "info@berkahmandiri.co.id", phone: "021-3456789", address: "Jl. HR Rasuna Said No. 78", city: "Jakarta" },
-      { name: "PT Sejahtera Abadi", type: "CUSTOMER", company: "PT Sejahtera Abadi", email: "sales@sejahtera.co.id", phone: "021-4567890", address: "Jl. TB Simatupang No. 90", city: "Jakarta" },
-      { name: "PT Nusantara Jaya", type: "CUSTOMER", company: "PT Nusantara Jaya", email: "info@nusantara.co.id", phone: "021-5678901", address: "Jl. Thamrin No. 12", city: "Jakarta" },
-      { name: "CV Sukses Mandiri", type: "CUSTOMER", company: "CV Sukses Mandiri", email: "info@suksesmandiri.co.id", phone: "021-6789012", address: "Jl. Kuningan No. 55", city: "Jakarta" },
-    ];
-
-    const contacts = [];
-    for (const cd of contactData) {
-      const existing = await prisma.contact.findFirst({
-        where: { name: cd.name, tenantId: tenant.id },
-      });
-      if (existing) {
-        // Update company field jika belum ada
-        const updated = await prisma.contact.update({
-          where: { id: existing.id },
-          data: { company: cd.company },
-        });
-        contacts.push(updated);
-      } else {
-        const created = await prisma.contact.create({
-          data: { ...cd, tenantId: tenant.id },
-        });
-        contacts.push(created);
-      }
-    }
-    console.log("✅ Contacts:", contacts.length);
-
-    // ============================================
-    // ADDITIONAL CONTACTS (SUPPLIER, BOTH)
-    // ============================================
-    const additionalContactData = [
-      { name: "PT Sumber Makmur", type: "SUPPLIER", company: "PT Sumber Makmur", email: "info@sumbermakmur.co.id", phone: "021-5553691" },
-      { name: "CV Global Tech", type: "BOTH", company: "CV Global Tech", email: "hello@globaltech.co.id", phone: "021-5557412" },
-    ];
-
-    const additionalContacts = [];
-    for (const acd of additionalContactData) {
-      const existingContact = await prisma.contact.findFirst({
-        where: { name: acd.name, tenantId: tenant.id },
-      });
-      if (existingContact) {
-        additionalContacts.push(existingContact);
-      } else {
-        const created = await prisma.contact.create({
-          data: { ...acd, tenantId: tenant.id },
-        });
-        additionalContacts.push(created);
-      }
-    }
-    console.log("✅ Additional Contacts:", additionalContacts.length);
-
-    // ============================================
-    // MORE CONTACTS (Indonesian companies — realistic)
-    // ============================================
-    const moreContactData = [
-      { name: "PT Telkom Indonesia", type: "CUSTOMER", company: "PT Telkom Indonesia Tbk", email: "procurement@telkom.co.id", phone: "021-5211111", address: "Jl. Japati No. 1, Bandung", city: "Bandung", taxId: "01.306.432.9-052.000" },
-      { name: "PT Astra International", type: "CUSTOMER", company: "PT Astra International Tbk", email: "supply@astra.co.id", phone: "021-5088888", address: "Jl. Gaya Motor I No. 8, Sunter, Jakarta Utara", city: "Jakarta" },
-      { name: "PT Pertamina", type: "CUSTOMER", company: "PT Pertamina (Persero) Tbk", email: "procurement@pertamina.com", phone: "021-3815111", address: "Jl. Medan Merdeka Timur No. 1A, Jakarta Pusat", city: "Jakarta", taxId: "01.300.014.2-094.000" },
-      { name: "PT PLN Indonesia", type: "CUSTOMER", company: "PT PLN (Persero) Tbk", email: "tender@pln.co.id", phone: "021-7261122", address: "Jl. Lapangan Banteng Timur 3-4, Jakarta Pusat", city: "Jakarta" },
-      { name: "PT Bank Central Asia", type: "CUSTOMER", company: "PT Bank Central Asia Tbk", email: "vendor@bca.co.id", phone: "021-23588300", address: "Jl. Jend. Sudirman Kav. 78, Jakarta Selatan", city: "Jakarta" },
-      { name: "PT Unilever Indonesia", type: "CUSTOMER", company: "PT Unilever Indonesia Tbk", email: "purchase@unilever.co.id", phone: "021-80865111", address: "Gedung Grha Unilever BSD Green Office Park, Tangerang", city: "Tangerang" },
-      { name: "PT Indofood Sukses Makmur", type: "CUSTOMER", company: "PT Indofood Sukses Makmur Tbk", email: "procurement@indofood.com", phone: "021-57958989", address: "Jl. Sudirman Kav. 76-78, Jakarta Selatan", city: "Jakarta" },
-      { name: "CV Adil Makmur", type: "CUSTOMER", company: "CV Adil Makmur", email: "order@adilmakmur.co.id", phone: "0274-5552468", address: "Jl. Malioboro No. 35, Yogyakarta", city: "Yogyakarta" },
-      { name: "PT Surya Gemilang", type: "CUSTOMER", company: "PT Surya Gemilang Sejahtera", email: "info@suryagemilang.co.id", phone: "031-5553691", address: "Jl. Basuki Rachmat No. 12, Surabaya", city: "Surabaya" },
-      { name: "UD Barokah Jaya", type: "CUSTOMER", company: "UD Barokah Jaya", email: "barokah@jaya.co.id", phone: "0341-5557412", address: "Jl. Bromo No. 22, Malang", city: "Malang" },
-      { name: "PT Harmoni Komputama", type: "BOTH", company: "PT Harmoni Komputama", email: "sales@harmoni.co.id", phone: "021-5558520", address: "Jl. Mangga Dua No. 8, Jakarta Utara", city: "Jakarta" },
-      { name: "CV Mitra Sejati", type: "CUSTOMER", company: "CV Mitra Sejati", email: "info@mitrasejati.co.id", phone: "021-5559630", address: "Jl. Pemuda No. 15, Bekasi", city: "Bekasi" },
-      { name: "PT Garuda Teknologi", type: "CUSTOMER", company: "PT Garuda Teknologi Nusantara", email: "procurement@garudatech.co.id", phone: "021-5554710", address: "Jl. Alternatif Cibubur Km 4, Bogor", city: "Bogor" },
-      { name: "PT Maju Terus Perkasa", type: "CUSTOMER", company: "PT Maju Terus Perkasa", email: "info@majuterus.co.id", phone: "021-5556380", address: "Jl. Panjang No. 8, Jakarta Barat", city: "Jakarta" },
-      { name: "CV Kencana Mulia", type: "CUSTOMER", company: "CV Kencana Mulia Abadi", email: "kencana@mulia.co.id", phone: "021-5557410", address: "Jl. Raya Ciledig No. 33, Cirebon", city: "Cirebon" },
-      { name: "PT Bumi Damai Sejahtera", type: "CUSTOMER", company: "PT Bumi Damai Sejahtera", email: "order@bumidamai.co.id", phone: "021-5558520", address: "Jl. Pahlawan Revolusi No. 7, Jakarta Timur", city: "Jakarta" },
-    ];
-
-    for (const mcd of moreContactData) {
-      const existingContact = await prisma.contact.findFirst({
-        where: { name: mcd.name, tenantId: tenant.id },
-      });
-      if (!existingContact) {
-        const created = await prisma.contact.create({
-          data: { ...mcd, tenantId: tenant.id },
-        });
-        contacts.push(created);
-      } else {
-        contacts.push(existingContact);
-      }
-    }
-    console.log("✅ Total Contacts:", contacts.length);
-
-    // ============================================
-    // SUPPLIERS
-    // ============================================
-    const supplierData = [
-      { name: "PT Sejahtera Supplier", contactPerson: "Budi Hartono", email: "budi@sejahtera-supplier.co.id", phone: "021-7890123", address: "Jl. Raya Bogor Km 30", city: "Jakarta", rating: 4.5 },
-      { name: "CV Berkah Components", contactPerson: "Siti Rahayu", email: "siti@berkahcomp.co.id", phone: "021-8901234", address: "Jl. Raya Bekasi Km 15", city: "Bekasi", rating: 4.0 },
-      { name: "PT Teknologi Nusantara", contactPerson: "Rahmat Widodo", email: "rahmat@teknusa.co.id", phone: "021-9012345", address: "Jl. Raya Tangerang Km 12", city: "Tangerang", rating: 4.2 },
-    ];
-
-    const suppliers = [];
-    for (const sd of supplierData) {
-      const existing = await prisma.supplier.findFirst({
-        where: { name: sd.name, tenantId: tenant.id },
-      });
-      if (existing) {
-        suppliers.push(existing);
-      } else {
-        const created = await prisma.supplier.create({
-          data: { ...sd, tenantId: tenant.id },
-        });
-        suppliers.push(created);
-      }
-    }
-    console.log("✅ Suppliers:", suppliers.length);
-
-    // ============================================
-    // MORE SUPPLIERS (realistic Indonesian suppliers)
-    // ============================================
-    const moreSupplierData = [
-      { name: "PT Supply Indonesia", contactPerson: "Hendra Wijaya", email: "hendra@supplyindo.co.id", phone: "021-5559012", address: "Jl. Raya Cakung Km 5, Jakarta Timur", city: "Jakarta", rating: 4.3 },
-      { name: "CV Distribusi Jaya", contactPerson: "Rina Susanti", email: "rina@distrijaya.co.id", phone: "021-5551023", address: "Jl. Raya Cikarang Blok A No. 12, Bekasi", city: "Bekasi", rating: 4.1 },
-      { name: "PT Logistik Nusantara", contactPerson: "Agus Pratama", email: "agus@logistiknusantara.co.id", phone: "021-5552134", address: "Jl. Raya Gorontalo Km 8, Makassar", city: "Makassar", rating: 4.6 },
-      { name: "CV Bahan Bangunan Sejahtera", contactPerson: "Dedi Kurniawan", email: "dedi@bbs.co.id", phone: "021-5553245", address: "Jl. Raya Bogor Km 25, Jakarta Selatan", city: "Jakarta", rating: 3.9 },
-      { name: "PT Komponen Elektronik Nusantara", contactPerson: "Fandi Ahmad", email: "fandi@kompel.co.id", phone: "021-5554356", address: "Jl. Mangga Dua Raya No. 18, Jakarta Utara", city: "Jakarta", rating: 4.4 },
-      { name: "CV Furniture Jati Jepara", contactPerson: "Siti Nurjanah", email: "siti@jatijepara.co.id", phone: "0291-5555467", address: "Jl. Raya Jepara-Kudus Km 3, Jepara", city: "Jepara", rating: 4.7 },
-    ];
-
-    for (const sd of moreSupplierData) {
-      const existing = await prisma.supplier.findFirst({
-        where: { name: sd.name, tenantId: tenant.id },
-      });
-      if (!existing) {
-        const created = await prisma.supplier.create({
-          data: { ...sd, tenantId: tenant.id },
-        });
-        suppliers.push(created);
-      } else {
-        suppliers.push(existing);
-      }
-    }
-    console.log("✅ Total Suppliers:", suppliers.length);
-
-    // ============================================
-    // PRODUCTS
-    // ============================================
-    const productData = [
-      { sku: "WDG-001", name: "Widget A", description: "Widget standar untuk kebutuhan umum", unit: "pcs", price: 150000, cost: 100000, stock: 150, minStock: 20, categoryIdx: 0 },
-      { sku: "PRT-001", name: "Part B", description: "Komponen mesin tipe B", unit: "pcs", price: 250000, cost: 180000, stock: 75, minStock: 10, categoryIdx: 1 },
-      { sku: "SVC-001", name: "Service C", description: "Layanan konsultasi teknis", unit: "hour", price: 500000, cost: 300000, stock: 999, minStock: 0, categoryIdx: 2 },
-      { sku: "OFF-001", name: "Printer Paper A4", description: "Kertas printer ukuran A4", unit: "rim", price: 45000, cost: 35000, stock: 200, minStock: 50, categoryIdx: 3 },
-      { sku: "WDG-002", name: "Widget Pro", description: "Widget versi pro dengan fitur lengkap", unit: "pcs", price: 250000, cost: 180000, stock: 8, minStock: 15, categoryIdx: 0 },
-      // === More Electronics ===
-      { sku: "ELC-001", name: "Laptop ASUS VivoBook 14", description: "Laptop 14 inch AMD Ryzen 5, 8GB RAM, 512GB SSD", unit: "unit", price: 7500000, cost: 6200000, stock: 25, minStock: 5, categoryIdx: 0 },
-      { sku: "ELC-002", name: "Monitor LG 24 inch", description: "Monitor LED IPS Full HD, HDMI/VGA", unit: "unit", price: 2200000, cost: 1800000, stock: 40, minStock: 10, categoryIdx: 0 },
-      { sku: "ELC-003", name: "Keyboard Mechanical Logitech", description: "Keyboard mechanical RGB, switch Blue", unit: "pcs", price: 850000, cost: 600000, stock: 60, minStock: 15, categoryIdx: 0 },
-      { sku: "ELC-004", name: "Mouse Wireless Logitech M331", description: "Mouse wireless silent click, 1000 DPI", unit: "pcs", price: 350000, cost: 220000, stock: 120, minStock: 30, categoryIdx: 0 },
-      { sku: "ELC-005", name: "Printer Canon PIXMA G3010", description: "Printer all-in-one, print/scan/copy, WiFi", unit: "unit", price: 2800000, cost: 2200000, stock: 15, minStock: 5, categoryIdx: 0 },
-      // === Furniture ===
-      { sku: "FUR-001", name: "Meja Kerja Direktur", description: "Meja kerja kayu jati, ukuran 160x80cm, laci 3", unit: "unit", price: 4500000, cost: 3200000, stock: 10, minStock: 3, categoryIdx: 4 },
-      { sku: "FUR-002", name: "Kursi Ergonomis Kerja", description: "Kursi putar ergonomis, adjustable height, armrest", unit: "unit", price: 2500000, cost: 1800000, stock: 30, minStock: 10, categoryIdx: 4 },
-      { sku: "FUR-003", name: "Rak Arsip Besi 4 Susun", description: "Rak arsip besi, 4 susun, anti karat", unit: "unit", price: 1200000, cost: 850000, stock: 20, minStock: 5, categoryIdx: 4 },
-      // === Office Supplies ===
-      { sku: "OFF-002", name: "Tinta Printer Canon GI-790", description: "Tinta botol original Canon GI-790, Black", unit: "botol", price: 120000, cost: 85000, stock: 150, minStock: 50, categoryIdx: 3 },
-      { sku: "OFF-003", name: "Binder Map A4", description: "Map binder A4, 2 ring, warna biru", unit: "pcs", price: 15000, cost: 8000, stock: 500, minStock: 100, categoryIdx: 3 },
-      { sku: "OFF-004", name: "Pulpen Pilot G2", description: "Pulpen gel, 0.7mm, hitam", unit: "pcs", price: 8000, cost: 4000, stock: 1000, minStock: 200, categoryIdx: 3 },
-      // === Automotive Parts ===
-      { sku: "AUT-001", name: "Oli Mesin Castrol GTX 10W-40", description: "Oli mesin sintetik, 4 liter, API SN", unit: "botol", price: 350000, cost: 250000, stock: 50, minStock: 15, categoryIdx: 5 },
-      { sku: "AUT-002", name: "Aki GS Astra MF50L", description: "Aki maintenance-free, 12V 45Ah", unit: "pcs", price: 850000, cost: 650000, stock: 20, minStock: 5, categoryIdx: 5 },
-      // === Building Materials ===
-      { sku: "BLD-001", name: "Semen Portland 50kg", description: "Semen Portland PC-50, karung 50kg", unit: "karung", price: 65000, cost: 50000, stock: 300, minStock: 100, categoryIdx: 8 },
-      { sku: "BLD-002", name: "Besi Beton 12mm", description: "Besi beton ulir grade BJTP 24, per batang 12m", unit: "batang", price: 95000, cost: 75000, stock: 200, minStock: 50, categoryIdx: 8 },
-      { sku: "BLD-003", name: "Cat Tembok Vinilex 5kg", description: "Cat tembok water-based, warna putih, 5 liter", unit: "kaleng", price: 280000, cost: 200000, stock: 80, minStock: 20, categoryIdx: 8 },
-      // === Software & Digital ===
-      { sku: "SFT-001", name: "Microsoft Office 365 Business", description: "Langganan Office 365 1 tahun, 1 user", unit: "license", price: 1800000, cost: 1200000, stock: 50, minStock: 10, categoryIdx: 7 },
-      { sku: "SFT-002", name: "Antivirus ESET 1 Year", description: "ESET Smart Security Premium, 1 tahun, 1 device", unit: "license", price: 450000, cost: 300000, stock: 100, minStock: 20, categoryIdx: 7 },
-    ];
-
-    const products = [];
-    for (const pd of productData) {
-      const existing = await prisma.product.findFirst({
-        where: { sku: pd.sku, tenantId: tenant.id },
-      });
-      if (existing) {
-        products.push(existing);
-      } else {
-        const created = await prisma.product.create({
-          data: {
-            sku: pd.sku,
-            name: pd.name,
-            description: pd.description,
-            unit: pd.unit,
-            price: pd.price,
-            cost: pd.cost,
-            stock: pd.stock,
-            minStock: pd.minStock,
-            categoryId: categories[pd.categoryIdx].id,
-            tenantId: tenant.id,
-          },
-        });
-        products.push(created);
-      }
-    }
-    console.log("✅ Products:", products.length);
-
-    // ============================================
-    // STOCK MOVEMENTS (skip jika sudah ada)
-    // ============================================
-    const existingStockMovements = await prisma.stockMovement.count({
-      where: { tenantId: tenant.id },
+    // ═══════════════════════════════════════════════════════════
+    // OPS DATASETS — shared modules (CRM → Inventory → HR)
+    // Kanonik: apps/web/lib/seed-data/{crm,inventory,hr}.ts
+    // Idempotent, deterministik (tanpa Math.random), tenant-scoped.
+    // Panggil SEBELUM dokumen (invoices/quotes/PO) & seedFinanceData.
+    // ═══════════════════════════════════════════════════════════
+    const crm = await seedCrmData(prisma, {
+      tenantId: tenant.id,
+      createdBy: admin.id,
+      anchorDate: "2026-10-10",
     });
+    console.log(
+      `✅ CRM: ${crm.counts.categories} categories, ${crm.counts.contacts} contacts, ${crm.counts.suppliers} suppliers, ${crm.counts.leads} leads, ${crm.counts.deals} deals, ${crm.counts.activities} activities`,
+    );
 
-    if (existingStockMovements === 0) {
-      await prisma.stockMovement.createMany({
-        data: [
-          // Original 5
-          { type: "IN", quantity: 100, reference: "PO-2026-001", notes: "Restock Widget A", productId: products[0].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 50, reference: "INV-2026-001", notes: "Penjualan ke PT Maju Jaya", productId: products[0].id, tenantId: tenant.id },
-          { type: "IN", quantity: 200, reference: "PO-2026-002", notes: "Restock Part B", productId: products[1].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 30, reference: "INV-2026-003", notes: "Penjualan ke CV Berkah", productId: products[1].id, tenantId: tenant.id },
-          { type: "ADJUSTMENT", quantity: -5, reference: "ADJ-001", notes: "Koreksi stok Widget Pro", productId: products[4].id, tenantId: tenant.id },
-          // More stock movements (30+ total)
-          { type: "IN", quantity: 50, reference: "PO-2026-003", notes: "Restock Laptop ASUS", productId: products[5].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 10, reference: "INV-2026-007", notes: "Penjualan ke PT Telkom", productId: products[5].id, tenantId: tenant.id },
-          { type: "IN", quantity: 80, reference: "PO-2026-004", notes: "Restock Monitor LG", productId: products[6].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 15, reference: "INV-2026-008", notes: "Penjualan ke PT Astra", productId: products[6].id, tenantId: tenant.id },
-          { type: "IN", quantity: 120, reference: "PO-2026-005", notes: "Restock Keyboard Mechanical", productId: products[7].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 25, reference: "INV-2026-009", notes: "Penjualan ke PT Pertamina", productId: products[7].id, tenantId: tenant.id },
-          { type: "IN", quantity: 200, reference: "PO-2026-006", notes: "Restock Mouse Wireless", productId: products[8].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 40, reference: "INV-2026-010", notes: "Penjualan ke CV Adil Makmur", productId: products[8].id, tenantId: tenant.id },
-          { type: "IN", quantity: 30, reference: "PO-2026-007", notes: "Restock Printer Canon", productId: products[9].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 8, reference: "INV-2026-011", notes: "Penjualan ke PT PLN", productId: products[9].id, tenantId: tenant.id },
-          { type: "IN", quantity: 20, reference: "PO-2026-008", notes: "Restock Meja Direktur", productId: products[10].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 5, reference: "INV-2026-012", notes: "Penjualan ke PT BCA", productId: products[10].id, tenantId: tenant.id },
-          { type: "IN", quantity: 60, reference: "PO-2026-009", notes: "Restock Kursi Ergonomis", productId: products[11].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 20, reference: "INV-2026-013", notes: "Penjualan ke PT Unilever", productId: products[11].id, tenantId: tenant.id },
-          { type: "IN", quantity: 40, reference: "PO-2026-010", notes: "Restock Rak Arsip", productId: products[12].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 10, reference: "INV-2026-014", notes: "Penjualan ke PT Indofood", productId: products[12].id, tenantId: tenant.id },
-          { type: "IN", quantity: 300, reference: "PO-2026-011", notes: "Restock Tinta Printer", productId: products[13].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 80, reference: "INV-2026-015", notes: "Penjualan ke PT Surya Gemilang", productId: products[13].id, tenantId: tenant.id },
-          { type: "IN", quantity: 1000, reference: "PO-2026-012", notes: "Restock Binder Map", productId: products[14].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 150, reference: "INV-2026-016", notes: "Penjualan ke UD Barokah Jaya", productId: products[14].id, tenantId: tenant.id },
-          { type: "IN", quantity: 2000, reference: "PO-2026-013", notes: "Restock Pulpen Pilot", productId: products[15].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 300, reference: "INV-2026-017", notes: "Penjualan ke PT Garuda Teknologi", productId: products[15].id, tenantId: tenant.id },
-          { type: "IN", quantity: 100, reference: "PO-2026-014", notes: "Restock Oli Castrol", productId: products[16].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 20, reference: "INV-2026-018", notes: "Penjualan ke CV Mitra Sejati", productId: products[16].id, tenantId: tenant.id },
-          { type: "IN", quantity: 600, reference: "PO-2026-015", notes: "Restock Semen Portland", productId: products[18].id, tenantId: tenant.id },
-          { type: "OUT", quantity: 100, reference: "INV-2026-019", notes: "Penjualan ke PT Maju Terus", productId: products[18].id, tenantId: tenant.id },
-          { type: "ADJUSTMENT", quantity: -10, reference: "ADJ-002", notes: "Koreksi stok Monitor LG", productId: products[6].id, tenantId: tenant.id },
-          { type: "ADJUSTMENT", quantity: 5, reference: "ADJ-003", notes: "Penambahan stok Kursi Ergonomis dari return", productId: products[11].id, tenantId: tenant.id },
-        ],
-      });
-    }
-    console.log("✅ Stock Movements: handled");
+    const inv = await seedInventoryData(prisma, {
+      tenantId: tenant.id,
+      categories: crm.categories,
+      anchorDate: "2026-10-10",
+    });
+    console.log(
+      `✅ Inventory: ${inv.counts.warehouses} warehouses, ${inv.counts.products} products, ${inv.counts.movements} movements, ${inv.counts.opnames} stock opnames`,
+    );
+
+    const hr = await seedHrData(prisma, {
+      tenantId: tenant.id,
+      anchorDate: "2026-10-10",
+    });
+    console.log(
+      `✅ HR: ${hr.counts.departments} departments, ${hr.counts.employees} employees, ${hr.counts.payroll} payroll, ${hr.counts.attendance} attendance, ${hr.counts.leaves} leaves`,
+    );
+
+    // Refs untuk blok dokumen berikutnya (invoices / quotations / PO / audit)
+    const contacts = crm.contacts;
+    const suppliers = crm.suppliers;
+    const products = inv.products;
+    const deals = crm.deals;
+
+    // Contacts (23) kini di-seed via seedCrmData() — refs: crm.contacts
+
+    // Suppliers (9) kini di-seed via seedCrmData() — refs: crm.suppliers
+
+    // Products (23 SKU) + StockMovements (60, konsisten: opening + IN − OUT + ADJ = Product.stock)
+    // kini di-seed via seedInventoryData() — refs: inv.products
 
     // ============================================
     // INVOICES (upsert berdasarkan invoiceNumber)
@@ -1234,292 +995,10 @@ async function main() {
     }
     console.log("✅ Purchase Orders:", purchaseOrders.length);
 
-    // ============================================
-    // LEADS (skip jika sudah ada)
-    // ============================================
-    const existingLeads = await prisma.lead.count({
-      where: { tenantId: tenant.id },
-    });
-
-    if (existingLeads === 0) {
-      await prisma.lead.createMany({
-        data: [
-          { name: "PT Nusantara Jaya", company: "PT Nusantara Jaya", email: "info@nusantara.co.id", phone: "021-5678901", source: "WEBSITE", status: "NEW", value: 25000000, notes: "Tertarik dengan paket enterprise", tenantId: tenant.id },
-          { name: "CV Sukses Mandiri", company: "CV Sukses Mandiri", email: "info@suksesmandiri.co.id", phone: "021-6789012", source: "REFERRAL", status: "CONTACTED", value: 15000000, notes: "Direkomendasikan oleh PT Maju Jaya", tenantId: tenant.id },
-          { name: "PT ABC Technology", company: "PT ABC Technology", email: "info@abctech.co.id", phone: "021-7890123", source: "SOCIAL_MEDIA", status: "QUALIFIED", value: 50000000, notes: "Lead dari LinkedIn, sangat potensial", tenantId: tenant.id },
-          { name: "CV Berkah Jaya", company: "CV Berkah Jaya", email: "info@berkahjaya.co.id", phone: "021-8901234", source: "COLD_CALL", status: "PROPOSAL", value: 45000000, notes: "Proposal sudah dikirim", tenantId: tenant.id },
-        ],
-      });
-    }
-    console.log("✅ Leads: handled");
-
-    // ============================================
-    // ADDITIONAL LEADS (WON/LOST)
-    // ============================================
-    const additionalLeadData = [
-      { name: "PT Maju Bersama", email: "info@majubersama.co.id", phone: "021-5551234", company: "PT Maju Bersama", source: "REFERRAL", status: "WON", value: 50000000, tenantId: tenant.id },
-      { name: "CV Berkah Jaya", email: "sales@berkahjaya.co.id", phone: "031-5559876", company: "CV Berkah Jaya", source: "WEBSITE", status: "LOST", value: 25000000, notes: "Pilih kompetitor", tenantId: tenant.id },
-      { name: "PT Sejahtera Abadi", email: "procurement@sejahtera.co.id", phone: "021-5552468", company: "PT Sejahtera Abadi", source: "COLD_CALL", status: "WON", value: 75000000, tenantId: tenant.id },
-      { name: "UD Makmur Sentosa", email: "order@makmursentosa.co.id", phone: "0274-5551357", company: "UD Makmur Sentosa", source: "SOCIAL_MEDIA", status: "LOST", value: 15000000, notes: "Budget tidak cukup", tenantId: tenant.id },
-      // === More realistic Indonesian leads ===
-      { name: "PT Telkom Indonesia", email: "ict@telkom.co.id", phone: "021-5211111", company: "PT Telkom Indonesia Tbk", source: "REFERRAL", status: "QUALIFIED", value: 250000000, notes: "Proyek digitalisasi kantor pusat", tenantId: tenant.id },
-      { name: "PT Astra International", email: "it@astra.co.id", phone: "021-5088888", company: "PT Astra International Tbk", source: "WEBSITE", status: "PROPOSAL", value: 180000000, notes: "Furnitur untuk 5 cabang baru", tenantId: tenant.id },
-      { name: "PT Pertamina", email: "procurement@pertamina.com", phone: "021-3815111", company: "PT Pertamina (Persero)", source: "COLD_CALL", status: "NEGOTIATION", value: 500000000, notes: "Kontrak tahunan ATK dan elektronik", tenantId: tenant.id },
-      { name: "PT PLN Indonesia", email: "supply@pln.co.id", phone: "021-7261122", company: "PT PLN (Persero)", source: "SOCIAL_MEDIA", status: "CONTACTED", value: 350000000, notes: "Hardware untuk 10 unit distribusi", tenantId: tenant.id },
-      { name: "PT Bank BCA", email: "vendor@bca.co.id", phone: "021-23588300", company: "PT Bank Central Asia Tbk", source: "REFERRAL", status: "NEW", value: 120000000, notes: "IT equipment untuk cabang baru", tenantId: tenant.id },
-      { name: "PT Unilever", email: "purchase@unilever.co.id", phone: "021-80865111", company: "PT Unilever Indonesia Tbk", source: "WEBSITE", status: "QUALIFIED", value: 200000000, notes: "Office supplies kontrak 1 tahun", tenantId: tenant.id },
-      { name: "PT Indofood", email: "procurement@indofood.com", phone: "021-57958989", company: "PT Indofood Sukses Makmur Tbk", source: "COLD_CALL", status: "PROPOSAL", value: 150000000, notes: "Furniture untuk kantor regional", tenantId: tenant.id },
-    ];
-
-    const additionalLeads = [];
-    for (const ald of additionalLeadData) {
-      const existingLead = await prisma.lead.findFirst({
-        where: { name: ald.name, tenantId: tenant.id },
-      });
-      if (existingLead) {
-        additionalLeads.push(existingLead);
-      } else {
-        const created = await prisma.lead.create({ data: ald });
-        additionalLeads.push(created);
-      }
-    }
-    console.log("✅ Additional Leads:", additionalLeads.length);
-
-    // ============================================
-    // DEALS (skip jika sudah ada)
-    // ============================================
-    const existingDeals = await prisma.deal.count({
-      where: { tenantId: tenant.id },
-    });
-
-    const deals: { id: string }[] = [];
-    if (existingDeals === 0) {
-      const d1 = await prisma.deal.create({ data: { title: "PT ABC Corp - Paket Enterprise", value: 150000000, stage: "NEGOTIATION", probability: 75, closeDate: new Date("2026-08-30"), notes: "Sedang dalam negosiasi harga", tenantId: tenant.id, contactId: contacts[0].id } });
-      const d2 = await prisma.deal.create({ data: { title: "CV Maju Bersama - Annual Contract", value: 85000000, stage: "PROPOSAL", probability: 55, closeDate: new Date("2026-09-15"), notes: "Proposal annual contract", tenantId: tenant.id, contactId: contacts[1].id } });
-      const d3 = await prisma.deal.create({ data: { title: "PT Sejahtera - Bulk Order", value: 200000000, stage: "DISCOVERY", probability: 30, closeDate: new Date("2026-10-01"), notes: "Discovery phase, baru mulai", tenantId: tenant.id, contactId: contacts[2].id } });
-      const d4 = await prisma.deal.create({ data: { title: "CV Berkah Jaya - Maintenance Contract", value: 45000000, stage: "CLOSING", probability: 90, closeDate: new Date("2026-08-15"), notes: "Tinggal tanda tangan kontrak", tenantId: tenant.id, contactId: contacts[1].id } });
-      deals.push(d1, d2, d3, d4);
-    } else {
-      deals.push(...(await prisma.deal.findMany({ where: { tenantId: tenant.id } })));
-    }
-    console.log("✅ Deals:", deals.length);
-
-    // ============================================
-    // ADDITIONAL DEALS (CLOSED_WON / CLOSED_LOST)
-    // ============================================
-    const additionalDealData = [
-      { title: "Paket Website Company Profile", value: 25000000, stage: "CLOSED_WON", contactId: contacts[0].id, leadId: additionalLeads.length > 0 ? additionalLeads[0].id : null, tenantId: tenant.id, probability: 100, closeDate: new Date("2026-08-10") },
-      { title: "Maintenance Server Tahunan", value: 15000000, stage: "CLOSED_LOST", contactId: contacts[1].id, leadId: additionalLeads.length > 1 ? additionalLeads[1].id : null, tenantId: tenant.id, probability: 0, closeDate: new Date("2026-08-15"), notes: "Customer memilih kompetitor" },
-      // === More deals with various stages ===
-      { title: "PT Telkom - Digitalisasi Kantor", value: 250000000, stage: "NEGOTIATION", contactId: contacts[5].id, tenantId: tenant.id, probability: 70, closeDate: new Date("2026-09-30"), notes: "Negosiasi harga paket lengkap IT" },
-      { title: "PT Astra - Furnitur 5 Cabang", value: 180000000, stage: "PROPOSAL", contactId: contacts[6].id, tenantId: tenant.id, probability: 50, closeDate: new Date("2026-10-15"), notes: "Proposal furnitur untuk cabang baru" },
-      { title: "PT Pertamina - Kontrak Tahunan ATK", value: 500000000, stage: "DISCOVERY", contactId: contacts[7].id, tenantId: tenant.id, probability: 25, closeDate: new Date("2026-11-01"), notes: "Discovery phase, butuh presentasi" },
-      { title: "PT PLN - Hardware Distribusi", value: 350000000, stage: "CLOSING", contactId: contacts[8].id, tenantId: tenant.id, probability: 85, closeDate: new Date("2026-08-28"), notes: "Tinggal kontrak final" },
-      { title: "CV Adil Makmur - Office Supplies", value: 12000000, stage: "CLOSED_WON", contactId: contacts[11].id, tenantId: tenant.id, probability: 100, closeDate: new Date("2026-08-05"), notes: "Deal sudah final" },
-      { title: "PT Surya Gemilang - Elektronik", value: 45000000, stage: "PROPOSAL", contactId: contacts[13].id, tenantId: tenant.id, probability: 45, closeDate: new Date("2026-09-20"), notes: "Menunggu approval dari management" },
-      { title: "UD Barokah Jaya - ATK Rutin", value: 8000000, stage: "CLOSED_LOST", contactId: contacts[14].id, tenantId: tenant.id, probability: 0, closeDate: new Date("2026-08-12"), notes: "Pindah ke supplier lain" },
-      { title: "PT Garuda Teknologi - Software License", value: 90000000, stage: "NEGOTIATION", contactId: contacts[16].id, tenantId: tenant.id, probability: 65, closeDate: new Date("2026-09-10"), notes: "Negosiasi bundle software" },
-    ];
-
-    for (const add of additionalDealData) {
-      const existingDeal = await prisma.deal.findFirst({
-        where: { title: add.title, tenantId: tenant.id },
-      });
-      if (!existingDeal) {
-        await prisma.deal.create({ data: add });
-      }
-    }
-    console.log("✅ Additional Deals: handled");
-
-    // ============================================
-    // EMPLOYEES (upsert berdasarkan employeeId+tenantId)
-    // ============================================
-    const employeeData = [
-      { employeeId: "EMP-001", name: "Budi Santoso", email: "budi@qalcuity.com", phone: "0812-3456-7890", position: "Software Engineer", department: "Engineering", joinDate: new Date("2024-01-15"), salary: 15000000 },
-      { employeeId: "EMP-002", name: "Sari Dewi", email: "sari@qalcuity.com", phone: "0812-4567-8901", position: "Marketing Manager", department: "Marketing", joinDate: new Date("2023-06-01"), salary: 18000000 },
-      { employeeId: "EMP-003", name: "Andi Pratama", email: "andi@qalcuity.com", phone: "0812-5678-9012", position: "Accountant", department: "Finance", joinDate: new Date("2025-03-10"), salary: 12000000 },
-      { employeeId: "EMP-004", name: "Dewi Lestari", email: "dewi@qalcuity.com", phone: "0812-6789-0123", position: "HR Specialist", department: "HR", joinDate: new Date("2024-09-01"), salary: 12000000 },
-      { employeeId: "EMP-005", name: "Eko Prasetyo", email: "eko@qalcuity.com", phone: "0812-7890-1234", position: "Sales Executive", department: "Sales", joinDate: new Date("2025-03-01"), salary: 14000000 },
-      // === More employees (realistic Indonesian names, various departments) ===
-      { employeeId: "EMP-006", name: "Rina Wulandari", email: "rina@qalcuity.com", phone: "0813-1234-5678", position: "UI/UX Designer", department: "Engineering", joinDate: new Date("2024-03-01"), salary: 13000000 },
-      { employeeId: "EMP-007", name: "Fajar Nugroho", email: "fajar@qalcuity.com", phone: "0813-2345-6789", position: "DevOps Engineer", department: "Engineering", joinDate: new Date("2024-06-15"), salary: 16000000 },
-      { employeeId: "EMP-008", name: "Maya Sari", email: "maya@qalcuity.com", phone: "0813-3456-7890", position: "Content Writer", department: "Marketing", joinDate: new Date("2025-01-10"), salary: 8000000 },
-      { employeeId: "EMP-009", name: "Rizky Pratama", email: "rizky@qalcuity.com", phone: "0813-4567-8901", position: "Sales Manager", department: "Sales", joinDate: new Date("2023-09-01"), salary: 20000000 },
-      { employeeId: "EMP-010", name: "Putri Ayu", email: "putri@qalcuity.com", phone: "0813-5678-9012", position: "Finance Manager", department: "Finance", joinDate: new Date("2023-03-15"), salary: 22000000 },
-      { employeeId: "EMP-011", name: "Ahmad Hidayat", email: "ahmad@qalcuity.com", phone: "0813-6789-0123", position: "Warehouse Supervisor", department: "Operations", joinDate: new Date("2024-04-20"), salary: 9000000 },
-      { employeeId: "EMP-012", name: "Lestari Putri", email: "lestari@qalcuity.com", phone: "0813-7890-1234", position: "Admin Officer", department: "Operations", joinDate: new Date("2025-02-01"), salary: 7000000 },
-      { employeeId: "EMP-013", name: "Dedi Kurniawan", email: "dedi@qalcuity.com", phone: "0813-8901-2345", position: "Quality Assurance", department: "Engineering", joinDate: new Date("2024-07-01"), salary: 12000000 },
-      { employeeId: "EMP-014", name: "Nina Susanti", email: "nina@qalcuity.com", phone: "0813-9012-3456", position: "Customer Support Lead", department: "Support", joinDate: new Date("2024-02-15"), salary: 11000000 },
-      { employeeId: "EMP-015", name: "Reza Ferdiansyah", email: "reza@qalcuity.com", phone: "0813-0123-4567", position: "Business Analyst", department: "Engineering", joinDate: new Date("2025-04-01"), salary: 14000000 },
-    ];
-
-    const employees = [];
-    for (const ed of employeeData) {
-      const existing = await prisma.employee.findFirst({
-        where: { employeeId: ed.employeeId, tenantId: tenant.id },
-      });
-      if (existing) {
-        employees.push(existing);
-      } else {
-        const created = await prisma.employee.create({
-          data: { ...ed, tenantId: tenant.id },
-        });
-        employees.push(created);
-      }
-    }
-    console.log("✅ Employees:", employees.length);
-
-    // ============================================
-    // ATTENDANCE RECORDS (30 hari historis untuk semua employees)
-    // ============================================
-    const existingAttendanceCount = await prisma.attendanceRecord.count({
-      where: { tenantId: tenant.id },
-    });
-
-    if (existingAttendanceCount < 50) {
-      const attendanceStatuses = ["PRESENT", "PRESENT", "PRESENT", "PRESENT", "LATE", "WFH", "ABSENT"];
-      let attendanceCreated = 0;
-
-      for (let dayOffset = 0; dayOffset < 90; dayOffset++) {
-        const date = new Date();
-        date.setDate(date.getDate() - dayOffset);
-        date.setHours(0, 0, 0, 0);
-        // Skip weekends
-        if (date.getDay() === 0 || date.getDay() === 6) continue;
-
-        for (const emp of employees) {
-          const randomStatus = attendanceStatuses[Math.floor(Math.random() * attendanceStatuses.length)];
-          try {
-            await prisma.attendanceRecord.create({
-              data: {
-                employeeId: emp.id,
-                tenantId: tenant.id,
-                date: date,
-                clockIn: randomStatus === "PRESENT"
-                  ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), 8, 0)
-                  : randomStatus === "LATE"
-                    ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), 8, 30)
-                    : null,
-                clockOut: randomStatus === "PRESENT" || randomStatus === "LATE"
-                  ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), 17, 0)
-                  : null,
-                status: randomStatus,
-                workHours: randomStatus === "PRESENT" || randomStatus === "LATE" ? 8 : 0,
-                notes: randomStatus === "WFH" ? "Work from home" : randomStatus === "ABSENT" ? "Sakit" : null,
-              },
-            });
-            attendanceCreated++;
-          } catch {
-            // Skip if already exists (unique constraint)
-          }
-        }
-      }
-      console.log(`✅ Attendance Records: ${attendanceCreated} created (${existingAttendanceCount} already existed)`);
-    } else {
-      console.log("✅ Attendance Records: already seeded (90 days history)");
-    }
-
-    // ============================================
-    // LEAVE REQUESTS (skip jika sudah ada)
-    // ============================================
-    const existingLeaves = await prisma.leaveRequest.count({
-      where: { tenantId: tenant.id },
-    });
-
-    if (existingLeaves === 0) {
-      await prisma.leaveRequest.createMany({
-        data: [
-          { type: "ANNUAL", startDate: new Date("2026-08-04"), endDate: new Date("2026-08-05"), days: 2, reason: "Istirahat", status: "APPROVED", appliedDate: new Date("2026-08-01"), approvedBy: "Admin Qalcuity", employeeId: employees[0].id, tenantId: tenant.id },
-          { type: "SICK", startDate: new Date("2026-08-03"), endDate: new Date("2026-08-03"), days: 1, reason: "Sakit demam", status: "APPROVED", appliedDate: new Date("2026-08-03"), approvedBy: "Admin Qalcuity", employeeId: employees[1].id, tenantId: tenant.id },
-          { type: "ANNUAL", startDate: new Date("2026-08-06"), endDate: new Date("2026-08-08"), days: 3, reason: "Keluarga", status: "PENDING", appliedDate: new Date("2026-08-02"), employeeId: employees[2].id, tenantId: tenant.id },
-          { type: "PERSONAL", startDate: new Date("2026-08-20"), endDate: new Date("2026-08-20"), days: 1, reason: "Urusan pribadi — melebihi kuota cuti tahunan", status: "REJECTED", appliedDate: new Date("2026-08-10"), approvedBy: "Admin Qalcuity", notes: "Ditolak karena kuota cuti tahunan habis", employeeId: employees[3].id, tenantId: tenant.id },
-          // === More leave requests ===
-          { type: "SICK", startDate: new Date("2026-07-14"), endDate: new Date("2026-07-15"), days: 2, reason: "Sakit perut, diare", status: "APPROVED", appliedDate: new Date("2026-07-14"), approvedBy: "Admin Qalcuity", employeeId: employees[4].id, tenantId: tenant.id },
-          { type: "ANNUAL", startDate: new Date("2026-07-21"), endDate: new Date("2026-07-25"), days: 5, reason: "Liburan keluarga ke Bali", status: "APPROVED", appliedDate: new Date("2026-07-10"), approvedBy: "Manager", employeeId: employees[5].id, tenantId: tenant.id },
-          { type: "ANNUAL", startDate: new Date("2026-09-01"), endDate: new Date("2026-09-03"), days: 3, reason: "Menemani anak masuk sekolah", status: "PENDING", appliedDate: new Date("2026-08-25"), employeeId: employees[6].id, tenantId: tenant.id },
-          { type: "SICK", startDate: new Date("2026-08-12"), endDate: new Date("2026-08-12"), days: 1, reason: "Sakit kepala migrain", status: "APPROVED", appliedDate: new Date("2026-08-12"), approvedBy: "Admin Qalcuity", employeeId: employees[7].id, tenantId: tenant.id },
-          { type: "MATERNITY", startDate: new Date("2026-09-01"), endDate: new Date("2026-12-01"), days: 90, reason: "Cuti melahirkan", status: "APPROVED", appliedDate: new Date("2026-08-15"), approvedBy: "HR Director", employeeId: employees[8].id, tenantId: tenant.id },
-          { type: "PERSONAL", startDate: new Date("2026-08-28"), endDate: new Date("2026-08-28"), days: 1, reason: "Urusan pernikahan keluarga", status: "PENDING", appliedDate: new Date("2026-08-20"), employeeId: employees[9].id, tenantId: tenant.id },
-          { type: "ANNUAL", startDate: new Date("2026-07-07"), endDate: new Date("2026-07-09"), days: 3, reason: "Liburan Lebaran", status: "APPROVED", appliedDate: new Date("2026-07-01"), approvedBy: "Manager", employeeId: employees[10].id, tenantId: tenant.id },
-          { type: "SICK", startDate: new Date("2026-08-06"), endDate: new Date("2026-08-07"), days: 2, reason: "DBD, rawat inap", status: "APPROVED", appliedDate: new Date("2026-08-06"), approvedBy: "Admin Qalcuity", employeeId: employees[11].id, tenantId: tenant.id },
-          { type: "ANNUAL", startDate: new Date("2026-09-15"), endDate: new Date("2026-09-16"), days: 2, reason: "Wisuda anak", status: "PENDING", appliedDate: new Date("2026-08-28"), employeeId: employees[12].id, tenantId: tenant.id },
-        ],
-      });
-    }
-    console.log("✅ Leave Requests: handled");
-
-    // ============================================
-    // PAYROLL RECORDS (skip jika sudah ada)
-    // ============================================
-    const existingPayroll = await prisma.payrollRecord.count({
-      where: { tenantId: tenant.id },
-    });
-
-    if (existingPayroll === 0) {
-      await prisma.payrollRecord.createMany({
-        data: [
-          // Period 2026-06 (PAID)
-          { period: "2026-06", baseSalary: 15000000, allowances: 1500000, deductions: 500000, bonus: 500000, netSalary: 16500000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[0].id, tenantId: tenant.id },
-          { period: "2026-06", baseSalary: 18000000, allowances: 2000000, deductions: 600000, bonus: 1000000, netSalary: 20400000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[1].id, tenantId: tenant.id },
-          { period: "2026-06", baseSalary: 12000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 13100000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[2].id, tenantId: tenant.id },
-          { period: "2026-06", baseSalary: 12000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 13100000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[3].id, tenantId: tenant.id },
-          { period: "2026-06", baseSalary: 14000000, allowances: 1500000, deductions: 500000, bonus: 500000, netSalary: 15500000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[4].id, tenantId: tenant.id },
-          // Period 2026-07 (PAID)
-          { period: "2026-07", baseSalary: 15000000, allowances: 1500000, deductions: 500000, bonus: 0, netSalary: 16000000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[0].id, tenantId: tenant.id },
-          { period: "2026-07", baseSalary: 18000000, allowances: 2000000, deductions: 600000, bonus: 1000000, netSalary: 20400000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[1].id, tenantId: tenant.id },
-          { period: "2026-07", baseSalary: 12000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 13100000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[2].id, tenantId: tenant.id },
-          { period: "2026-07", baseSalary: 12000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 13100000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[3].id, tenantId: tenant.id },
-          { period: "2026-07", baseSalary: 14000000, allowances: 1500000, deductions: 500000, bonus: 0, netSalary: 15000000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[4].id, tenantId: tenant.id },
-          { period: "2026-07", baseSalary: 13000000, allowances: 1500000, deductions: 450000, bonus: 0, netSalary: 14050000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[5].id, tenantId: tenant.id },
-          { period: "2026-07", baseSalary: 16000000, allowances: 2000000, deductions: 550000, bonus: 500000, netSalary: 17950000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[6].id, tenantId: tenant.id },
-          // Period 2026-08 (PENDING — not yet paid)
-          { period: "2026-08", baseSalary: 15000000, allowances: 1500000, deductions: 500000, bonus: 0, netSalary: 16000000, status: "PENDING", employeeId: employees[0].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 18000000, allowances: 2000000, deductions: 600000, bonus: 0, netSalary: 19400000, status: "PENDING", employeeId: employees[1].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 12000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 13100000, status: "PENDING", employeeId: employees[2].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 12000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 13100000, status: "PENDING", employeeId: employees[3].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 14000000, allowances: 1500000, deductions: 500000, bonus: 0, netSalary: 15000000, status: "PENDING", employeeId: employees[4].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 13000000, allowances: 1500000, deductions: 450000, bonus: 0, netSalary: 14050000, status: "PENDING", employeeId: employees[5].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 16000000, allowances: 2000000, deductions: 550000, bonus: 0, netSalary: 17450000, status: "PENDING", employeeId: employees[6].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 8000000, allowances: 1000000, deductions: 300000, bonus: 0, netSalary: 8700000, status: "PENDING", employeeId: employees[7].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 20000000, allowances: 2500000, deductions: 700000, bonus: 1000000, netSalary: 22800000, status: "PENDING", employeeId: employees[8].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 22000000, allowances: 3000000, deductions: 800000, bonus: 0, netSalary: 24200000, status: "PENDING", employeeId: employees[9].id, tenantId: tenant.id },
-          { period: "2026-08", baseSalary: 9000000, allowances: 1000000, deductions: 350000, bonus: 0, netSalary: 9650000, status: "PENDING", employeeId: employees[10].id, tenantId: tenant.id },
-        ],
-      });
-    }
-    console.log("✅ Payroll Records: handled");
-
-    // ============================================
-    // ADDITIONAL PAYROLL RECORDS (periode lebih banyak)
-    // ============================================
-    // Additional payroll untuk employees[11]-[14] (belum punya data di period sebelumnya)
-    const additionalPayrollData = [
-      // Period 2026-06
-      { period: "2026-06", baseSalary: 7500000, allowances: 1000000, deductions: 300000, bonus: 0, netSalary: 8200000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[11].id, tenantId: tenant.id },
-      { period: "2026-06", baseSalary: 11000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 12100000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[12].id, tenantId: tenant.id },
-      { period: "2026-06", baseSalary: 9000000, allowances: 1000000, deductions: 350000, bonus: 0, netSalary: 9650000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[13].id, tenantId: tenant.id },
-      { period: "2026-06", baseSalary: 10000000, allowances: 1500000, deductions: 380000, bonus: 0, netSalary: 11120000, status: "PAID", paidAt: new Date("2026-06-30"), employeeId: employees[14].id, tenantId: tenant.id },
-      // Period 2026-07
-      { period: "2026-07", baseSalary: 7500000, allowances: 1000000, deductions: 300000, bonus: 0, netSalary: 8200000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[11].id, tenantId: tenant.id },
-      { period: "2026-07", baseSalary: 11000000, allowances: 1500000, deductions: 400000, bonus: 500000, netSalary: 12600000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[12].id, tenantId: tenant.id },
-      { period: "2026-07", baseSalary: 9000000, allowances: 1000000, deductions: 350000, bonus: 0, netSalary: 9650000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[13].id, tenantId: tenant.id },
-      { period: "2026-07", baseSalary: 10000000, allowances: 1500000, deductions: 380000, bonus: 0, netSalary: 11120000, status: "PAID", paidAt: new Date("2026-07-28"), employeeId: employees[14].id, tenantId: tenant.id },
-      // Period 2026-08 (PENDING)
-      { period: "2026-08", baseSalary: 7500000, allowances: 1000000, deductions: 300000, bonus: 0, netSalary: 8200000, status: "PENDING", employeeId: employees[11].id, tenantId: tenant.id },
-      { period: "2026-08", baseSalary: 11000000, allowances: 1500000, deductions: 400000, bonus: 0, netSalary: 12100000, status: "PENDING", employeeId: employees[12].id, tenantId: tenant.id },
-      { period: "2026-08", baseSalary: 9000000, allowances: 1000000, deductions: 350000, bonus: 0, netSalary: 9650000, status: "PENDING", employeeId: employees[13].id, tenantId: tenant.id },
-      { period: "2026-08", baseSalary: 10000000, allowances: 1500000, deductions: 380000, bonus: 0, netSalary: 11120000, status: "PENDING", employeeId: employees[14].id, tenantId: tenant.id },
-    ];
-
-    for (const apd of additionalPayrollData) {
-      const existingPR = await prisma.payrollRecord.findFirst({
-        where: { employeeId: apd.employeeId, period: apd.period, tenantId: tenant.id },
-      });
-      if (!existingPR) {
-        await prisma.payrollRecord.create({ data: apd });
-      }
-    }
-    console.log("✅ Additional Payroll Records: handled");
+    // Leads (14) + Deals (14) kini di-seed via seedCrmData() — refs: crm.leads, crm.deals
+    // Employees (15) + Departments (7) + Payroll (6 periode × 15 = 90)
+    // + Attendance (90 hari kerja, deterministik) + Leave (16, mix status)
+    // kini di-seed via seedHrData() — jurnal payroll dibaca seedFinanceData dari DB.
 
     // ============================================
     // TENANT SUBSCRIPTION (legacy — kept for backward compatibility)
@@ -1528,16 +1007,31 @@ async function main() {
       where: { id: tenant.id },
       data: {
         subscriptionStatus: 'ACTIVE',
-        currentPlanSlug: 'pro',
+        currentPlanSlug: 'business',
         trialEndsAt: null,
       },
     });
 
-    // [LEGACY] Find a Plan to link the legacy subscription to (if one exists)
+    // [LEGACY] Find/create a legacy SubscriptionPlan to link the legacy subscription to.
     // Note: SubscriptionPlan is the legacy model. New code uses Plan + TenantEntitlement.
     // This legacy code is kept because BillingPayment still references TenantSubscription.
+    // CATATAN: TenantSubscription.planId FK menunjuk model SubscriptionPlan (legacy),
+    // BUKAN model Plan (baru) — lookup harus ke SubscriptionPlan agar tidak P2003
+    // saat seed pertama kali di DB bersih.
     // TODO (#37): Remove after billing system is fully migrated to Plan + TenantEntitlement.
-    const legacyPlan = await prisma.plan.findFirst({ where: { slug: 'growth' } });
+    const legacyPlan = await prisma.subscriptionPlan.upsert({
+      where: { slug: 'growth' },
+      update: {},
+      create: {
+        name: 'Growth',
+        slug: 'growth',
+        description: 'Legacy seed plan (link TenantSubscription to BillingPayment)',
+        price: 799000,
+        maxUsers: 10,
+        maxProducts: 1000,
+        maxStorage: '50GB',
+      },
+    });
     let sub: Awaited<ReturnType<typeof prisma.tenantSubscription.upsert>> | null = null;
     if (legacyPlan) {
       sub = await prisma.tenantSubscription.upsert({
@@ -1750,7 +1244,33 @@ async function main() {
       console.log("✅ Bank Transactions: already seeded");
     }
 
-    console.log("\n✅ Demo data seeded (Users, Categories, Contacts, Suppliers, Products, Invoices, Payments, Quotations, POs, Leads, Deals, Employees, Attendance, Leaves, Payroll, Billing, Audit, CoA, BankTx)");
+    // ═══════════════════════════════════════════════════════════
+    // FINANCE P0 (shared module) — TaxRate + CoA + Journal + Bill + Expense + Period
+    // Data sama persis dengan loadDemoData() via apps/web/lib/seed-data/finance.ts
+    // ═══════════════════════════════════════════════════════════
+    const fin = await seedFinanceData(prisma, {
+      tenantId: tenant.id,
+      createdBy: admin.id,
+      tenantPrefix: "QD",
+      anchorDate: "2026-10-10",
+    });
+    console.log("✅ Finance P0:", {
+      taxRates: fin.taxRatesCreated,
+      coaAccounts: fin.coaAccountsCreated,
+      historicalInvoices: fin.historicalInvoicesCreated,
+      historicalPayments: fin.historicalPaymentsCreated,
+      bills: fin.billsCreated,
+      expenses: fin.expensesCreated,
+      journalEntries: fin.journalEntriesCreated,
+      journalItems: fin.journalItemsCreated,
+      journalEntriesSkipped: fin.journalEntriesSkipped,
+      accountingPeriods: fin.periodsCreated,
+    });
+    if (fin.warnings.length > 0) {
+      console.warn("⚠️  Finance warnings:", fin.warnings);
+    }
+
+    console.log("\n✅ Demo data seeded (Users, Categories, Contacts, Suppliers, Activities, Warehouses, Products, StockMovements, StockOpnames, Invoices, Payments, Quotations, POs, Leads, Deals, Departments, Employees, Attendance, Leaves, Payroll, Billing, Audit, CoA, BankTx, FinanceP0)");
 
   } else {
     console.log("⏭️  Demo data skipped (set SEED_DEMO=true to include)");
@@ -1783,23 +1303,27 @@ async function main() {
   console.log("  ✅ Tax Rates: PPN 11%, PPh 23%, PPh 21");
   console.log("  ✅ Tenant Entitlement: Free plan (trial)");
   if (SEED_DEMO) {
-    console.log("\n📋 Demo Data:");
+    console.log("\n📋 Demo Data (shared modules: crm.ts / inventory.ts / hr.ts / finance.ts):");
     console.log("  ✅ Users: 5 (Admin, Demo, Member, Viewer, User)");
     console.log("  ✅ Categories: 9");
     console.log("  ✅ Contacts: 23");
     console.log("  ✅ Suppliers: 9");
-    console.log("  ✅ Products: 23");
-    console.log("  ✅ Stock Movements: ~30");
+    console.log("  ✅ Leads: 14");
+    console.log("  ✅ Deals: 14");
+    console.log("  ✅ Activities: 25 (CALL 6, EMAIL 6, MEETING 5, NOTE 5, TASK 3)");
+    console.log("  ✅ Departments: 7");
+    console.log("  ✅ Employees: 15 (terhubung departmentId)");
+    console.log("  ✅ Payroll Records: 90 (6 periode × 15 karyawan)");
+    console.log("  ✅ Attendance Records: ~1.335 (90 hari kerja × 15, deterministik)");
+    console.log("  ✅ Leave Requests: 16 (mix status, overlap attendance → LEAVE)");
+    console.log("  ✅ Warehouses: 2 (GUDANG-PUSAT default, GUDANG-CABANG)");
+    console.log("  ✅ Products: 23 (setengah terhubung warehouseId)");
+    console.log("  ✅ Stock Movements: 60 (opening + IN − OUT + ADJ = Product.stock)");
+    console.log("  ✅ Stock Opnames: 2 + items (1 COMPLETED, 1 DRAFT)");
     console.log("  ✅ Invoices: 20 + items");
     console.log("  ✅ Payments: 18");
     console.log("  ✅ Quotations: 10 + items");
     console.log("  ✅ Purchase Orders: 9 + items");
-    console.log("  ✅ Leads: 16");
-    console.log("  ✅ Deals: 14");
-    console.log("  ✅ Employees: 15");
-    console.log("  ✅ Attendance Records: ~750");
-    console.log("  ✅ Leave Requests: 13");
-    console.log("  ✅ Payroll Records: ~30");
     console.log("  ✅ Billing Payments: 6");
     console.log("  ✅ Audit Logs: 14");
     console.log("  ✅ CoA Accounts: 44");
