@@ -436,4 +436,48 @@ export const MSG = {
     SOD_VIOLATION: 'Separation of duties violation — approval blocked',
 } as const;
 
+/**
+ * Pesan API khusus modul Community (RT/RW MVP Fase 1).
+ * Referensi: plans/community-mvp-implementation.md §3.5.
+ */
+export const MSG_COMMUNITY = {
+    // Generic
+    PERMISSION_DENIED: 'Missing required community permission',
+
+    // Members
+    MEMBER_NOT_FOUND: 'Community member not found',
+    MEMBER_HAS_OPEN_BILLS: 'Member still has open (UNPAID/PARTIAL) bills — settle or void them first',
+    MEMBER_CODE_EXISTS: 'Member code already exists in this tenant',
+    NIK_ENCRYPT_FAILED: 'Failed to encrypt NIK — check SMTP_ENCRYPTION_KEY configuration',
+
+    // Dues types
+    DUES_TYPE_NOT_FOUND: 'Dues type not found',
+    DUES_TYPE_CODE_EXISTS: 'Dues type code already exists in this tenant',
+    DUES_TYPE_HAS_BILLS: 'Dues type has generated bills — deactivate it instead of deleting',
+
+    // Bills
+    BILL_NOT_FOUND: 'Dues bill not found',
+    BILL_ALREADY_VOID: 'Bill is already VOID',
+    BILL_HAS_PAYMENTS: 'Bill already has payments and cannot be VOIDed',
+    BILL_ALREADY_PAID: 'Bill is already fully paid',
+    PAYMENT_EXCEEDS_DUE: 'Payment amount exceeds the remaining bill amount',
+    GENERATED_OK: 'Bills generated',
+
+    // Cash transactions
+    CASH_TX_NOT_FOUND: 'Cash transaction not found',
+    CASH_TX_NOT_PENDING: 'Transaction is no longer PENDING — already decided or deleted',
+    CASH_TX_EDIT_NOT_ALLOWED: 'Only the creator or KETUA can edit a PENDING transaction',
+    CASH_TX_DELETE_NOT_ALLOWED: 'Only PENDING transactions can be deleted',
+    SELF_APPROVAL_FORBIDDEN: 'Separation of duties: you cannot approve a transaction you created',
+    APPROVE_PERMISSION_DENIED: 'Missing community:approve permission',
+    ALREADY_DECIDED: 'Transaction has already been decided',
+
+    // Announcements
+    ANNOUNCEMENT_NOT_FOUND: 'Announcement not found',
+
+    // Reports / portal
+    REPORT_PERIOD_INVALID: 'Invalid report period format (YYYY-MM)',
+    PORTAL_MEMBER_NOT_FOUND: 'Your resident data is not registered yet — contact the treasurer',
+} as const;
+
 export type ApiMessageKey = keyof typeof MSG;

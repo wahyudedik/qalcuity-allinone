@@ -41,6 +41,12 @@ export const FEATURE_FLAGS: Record<string, FeatureFlag> = {
         description: 'Employees, attendance, leaves, payroll',
         defaultValue: true,
     },
+    COMMUNITY_MODULE: {
+        key: 'COMMUNITY_MODULE',
+        name: 'Community Module (RT/RW)',
+        description: 'Iuran warga, kas RT, dan portal warga untuk lingkungan RT/RW',
+        defaultValue: true,
+    },
 
     // AI Features
     AI_CHAT: {

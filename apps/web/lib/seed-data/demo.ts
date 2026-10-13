@@ -27,6 +27,7 @@ import { ensureTaxRates, seedFinanceData, mulberry32 } from "./finance";
 import { seedCrmData } from "./crm";
 import { seedInventoryData } from "./inventory";
 import { seedHrData } from "./hr";
+import { seedCommunityData } from "./community";
 
 const prisma = new PrismaClient();
 
@@ -382,6 +383,19 @@ export async function loadDemoData(tenantId: string): Promise<DemoDataResult> {
         if (fin.warnings.length > 0) {
             console.warn("[Demo Seed] Finance warnings:", fin.warnings);
         }
+
+        // ─── COMMUNITY MVP (Fase 1: RT/RW) — tenant TERPISAH rt02-melati ──
+        // Seed community membuat & mengelola tenant-nya sendiri (isolated dari
+        // tenantId yang dipassing loadDemoData) — konteks bisnis RT/RW berbeda.
+        const community = await seedCommunityData(prisma);
+        counts.communityRoles = community.created.roles;
+        counts.communityUsers = community.created.users;
+        counts.communityMembers = community.created.members;
+        counts.communityDuesTypes = community.created.duesTypes;
+        counts.communityBills = community.created.bills;
+        counts.communityPayments = community.created.payments;
+        counts.communityCashTransactions = community.created.cashTransactions;
+        counts.communityAnnouncements = community.created.announcements;
 
         return {
             success: true,

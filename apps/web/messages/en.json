@@ -128,6 +128,33 @@
         "unlockRequests": {
             "title": "Unlock Requests Error",
             "description": "An error occurred while loading unlock requests. Please try again."
+        },
+        "community": {
+            "title": "Community Error",
+            "description": "An error occurred while loading community data. Please try again.",
+            "permissionDenied": "You do not have permission to access community data.",
+            "memberNotFound": "Resident record not found.",
+            "memberHasOpenBills": "This resident still has outstanding bills.",
+            "memberCodeExists": "Resident code is already in use.",
+            "nikEncryptFailed": "Failed to encrypt NIK. Data was not saved.",
+            "duesTypeNotFound": "Dues type not found.",
+            "duesTypeCodeExists": "Dues type code is already in use.",
+            "duesTypeHasBills": "Dues type still has related bills.",
+            "billNotFound": "Bill not found.",
+            "billAlreadyVoid": "Bill has already been voided.",
+            "billHasPayments": "Bill has payment history.",
+            "billAlreadyPaid": "Bill is already fully paid.",
+            "paymentExceedsDue": "Payment amount exceeds the remaining bill.",
+            "cashTxNotFound": "Cash transaction not found.",
+            "cashTxNotPending": "Only PENDING transactions can be decided.",
+            "cashTxEditNotAllowed": "Decided transactions cannot be edited.",
+            "cashTxDeleteNotAllowed": "Decided transactions cannot be deleted.",
+            "selfApprovalForbidden": "You cannot approve a transaction you created yourself (Separation of Duty).",
+            "approvePermissionDenied": "You do not have permission to approve or reject cash transactions.",
+            "alreadyDecided": "This cash transaction has already been decided.",
+            "announcementNotFound": "Announcement not found.",
+            "reportPeriodInvalid": "Invalid period format. Use the YYYY-MM format.",
+            "portalMemberNotFound": "Your resident record is not registered. Please contact your RT treasurer."
         }
     },
     "nav": {
@@ -212,7 +239,421 @@
         "anomalyDetection": "Anomaly Detection",
         "financialReports": "Financial Reports",
         "controlEngine": "Control Engine",
-        "sod": "SoD Settings"
+        "sod": "SoD Settings",
+        "community": "Community"
+    },
+    "community": {
+        "title": "Community",
+        "description": "Manage community dues, neighborhood treasury, and RT/RW announcements.",
+        "underDevelopmentTitle": "Under Development",
+        "underDevelopment": "The Community module is under Phase 1 development. Full features will be available soon.",
+        "layout": {
+            "tabs": {
+                "overview": "Overview",
+                "members": "Residents",
+                "duesTypes": "Dues Types",
+                "bills": "Bills",
+                "cash": "Cash",
+                "announcements": "Announcements",
+                "reports": "Reports",
+                "portal": "Resident Portal"
+            }
+        },
+        "common": {
+            "search": "Search...",
+            "filterAll": "All",
+            "period": "Period",
+            "actions": "Actions",
+            "save": "Save",
+            "cancel": "Cancel",
+            "close": "Close",
+            "exportCsv": "Export CSV",
+            "loading": "Loading...",
+            "noData": "No data",
+            "notFound": "Data not found",
+            "viewDetail": "View Detail",
+            "confirmDeleteTitle": "Delete Data?",
+            "confirmDeleteDesc": "Deleted data cannot be recovered.",
+            "requiredField": "Required"
+        },
+        "overview": {
+            "title": "Community Overview",
+            "memberActive": "Active Residents",
+            "memberInactive": "Inactive Residents",
+            "memberTotal": "Total Residents",
+            "billsThisPeriod": "Bills This Period",
+            "billsTotal": "Total Bills",
+            "billsPaid": "Paid",
+            "billsPartial": "Partially Paid",
+            "billsUnpaid": "Unpaid",
+            "amountDue": "Amount Billed",
+            "amountPaid": "Collected",
+            "cashThisMonth": "Cash This Month",
+            "income": "Income",
+            "expense": "Expense",
+            "balance": "Cash Balance",
+            "pendingApprovals": "Pending Approvals",
+            "pendingApprovalsDesc": "Cash transactions awaiting the Chairperson's decision",
+            "recentCash": "Recent Cash Transactions",
+            "empty": "No data for the current period yet."
+        },
+        "members": {
+            "title": "Residents",
+            "add": "Add Resident",
+            "edit": "Edit Resident",
+            "searchPlaceholder": "Search name, code, address, phone...",
+            "table": {
+                "code": "Code",
+                "fullName": "Full Name",
+                "phone": "Phone",
+                "email": "Email",
+                "address": "Address",
+                "rtRw": "RT/RW",
+                "houseStatus": "House Status",
+                "status": "Status",
+                "joinedAt": "Joined",
+                "actions": "Actions"
+            },
+            "form": {
+                "code": "Resident Code",
+                "codePlaceholder": "e.g. W-001",
+                "fullName": "Full Name",
+                "nik": "NIK",
+                "nomorKk": "Family Card No.",
+                "gender": "Gender",
+                "birthPlace": "Place of Birth",
+                "birthDate": "Date of Birth",
+                "address": "Address",
+                "rtRw": "RT/RW",
+                "houseStatus": "House Status",
+                "phone": "Phone",
+                "email": "Email",
+                "status": "Status",
+                "joinedAt": "Join Date",
+                "notes": "Notes",
+                "linkUser": "Link Portal Account",
+                "linkUserPlaceholder": "Select resident account (optional)",
+                "nikHint": "NIK is stored encrypted. Leave blank to keep the stored NIK."
+            },
+            "gender": {
+                "male": "Male",
+                "female": "Female"
+            },
+            "houseStatus": {
+                "owner": "Own",
+                "rent": "Rent"
+            },
+            "status": {
+                "active": "Active",
+                "inactive": "Inactive",
+                "moved": "Moved"
+            },
+            "nikStored": "NIK stored",
+            "nikMissing": "NIK not set",
+            "empty": "No resident records yet.",
+            "emptyDesc": "Add your first resident to start recording dues.",
+            "validation": {
+                "codeRequired": "Resident code is required.",
+                "nameRequired": "Full name is required."
+            },
+            "toast": {
+                "created": "Resident record created.",
+                "updated": "Resident record updated.",
+                "deleted": "Resident record deleted."
+            },
+            "confirmDelete": {
+                "title": "Delete Resident?",
+                "desc": "Residents with active bills cannot be deleted."
+            }
+        },
+        "duesTypes": {
+            "title": "Dues Types",
+            "add": "Add Dues Type",
+            "edit": "Edit Dues Type",
+            "searchPlaceholder": "Search dues code or name...",
+            "table": {
+                "code": "Code",
+                "name": "Name",
+                "amount": "Amount",
+                "frequency": "Frequency",
+                "description": "Description",
+                "active": "Active",
+                "actions": "Actions"
+            },
+            "form": {
+                "code": "Code",
+                "codePlaceholder": "e.g. IUR-01",
+                "name": "Dues Name",
+                "amount": "Amount (IDR)",
+                "frequency": "Frequency",
+                "description": "Description",
+                "active": "Active"
+            },
+            "frequency": {
+                "monthly": "Monthly",
+                "quarterly": "Quarterly",
+                "yearly": "Yearly",
+                "once": "One-time"
+            },
+            "empty": "No dues types yet.",
+            "emptyDesc": "Add dues types such as monthly dues, security, or cleanliness.",
+            "validation": {
+                "codeRequired": "Dues code is required.",
+                "nameRequired": "Dues name is required.",
+                "amountInvalid": "Amount must be greater than 0."
+            },
+            "toast": {
+                "created": "Dues type created.",
+                "updated": "Dues type updated.",
+                "deleted": "Dues type deleted."
+            },
+            "confirmDelete": {
+                "title": "Delete Dues Type?",
+                "desc": "Dues types with existing bills cannot be deleted."
+            }
+        },
+        "bills": {
+            "title": "Dues Bills",
+            "generate": "Mass Generate",
+            "recordPayment": "Record Payment",
+            "void": "Void",
+            "detail": "Bill Detail",
+            "searchPlaceholder": "Search bill number or resident...",
+            "filterStatus": "Status",
+            "filterPeriod": "Period",
+            "table": {
+                "billNumber": "Bill No.",
+                "member": "Resident",
+                "duesType": "Dues Type",
+                "period": "Period",
+                "amountDue": "Billed",
+                "amountPaid": "Paid",
+                "outstanding": "Outstanding",
+                "status": "Status",
+                "dueDate": "Due Date",
+                "paidAt": "Paid At",
+                "actions": "Actions"
+            },
+            "status": {
+                "unpaid": "Unpaid",
+                "partial": "Partial",
+                "paid": "Paid",
+                "void": "Voided"
+            },
+            "generateForm": {
+                "title": "Mass Generate Bills",
+                "period": "Period (YYYY-MM)",
+                "duesType": "Dues Type",
+                "duesTypeAll": "All active dues types",
+                "dueDate": "Due Date",
+                "notes": "Notes",
+                "submit": "Generate Bills",
+                "success": "Bills generated successfully.",
+                "noneGenerated": "No new bills need to be generated."
+            },
+            "paymentForm": {
+                "title": "Record Payment",
+                "amount": "Amount (IDR)",
+                "method": "Method",
+                "methodCash": "Cash",
+                "methodTransfer": "Bank Transfer",
+                "methodQris": "QRIS",
+                "paidAt": "Payment Date",
+                "receipt": "Receipt",
+                "receiptUpload": "Upload Receipt (jpg/png/pdf, max 2MB)",
+                "notes": "Notes",
+                "submit": "Save Payment",
+                "success": "Payment recorded successfully."
+            },
+            "voidConfirm": {
+                "title": "Void Bill?",
+                "desc": "Voided bills are excluded from dues reports."
+            },
+            "empty": "No bills for this period yet.",
+            "emptyDesc": "Use the Mass Generate button to create resident dues bills.",
+            "toast": {
+                "voided": "Bill voided successfully."
+            },
+            "notFound": "Bill not found."
+        },
+        "cash": {
+            "title": "Neighborhood Cash",
+            "add": "Record Transaction",
+            "edit": "Edit Transaction",
+            "approve": "Approve",
+            "reject": "Reject",
+            "searchPlaceholder": "Search transaction number or description...",
+            "filterStatus": "Status",
+            "filterType": "Type",
+            "table": {
+                "txNumber": "Tx No.",
+                "txDate": "Date",
+                "type": "Type",
+                "category": "Category",
+                "amount": "Amount",
+                "description": "Description",
+                "status": "Status",
+                "createdBy": "Recorded By",
+                "actions": "Actions"
+            },
+            "type": {
+                "income": "Income",
+                "expense": "Expense"
+            },
+            "status": {
+                "pending": "Pending",
+                "approved": "Approved",
+                "rejected": "Rejected"
+            },
+            "form": {
+                "type": "Type",
+                "category": "Category",
+                "categoryPlaceholder": "e.g. Security, Cleanliness, Donation",
+                "amount": "Amount (IDR)",
+                "description": "Description",
+                "txDate": "Transaction Date",
+                "attachment": "Attachment",
+                "submit": "Save Transaction",
+                "readOnly": "Decided transactions cannot be edited."
+            },
+            "approveConfirm": {
+                "title": "Approve Transaction?",
+                "desc": "The transaction will be counted in the cash balance."
+            },
+            "rejectForm": {
+                "title": "Reject Transaction",
+                "reason": "Rejection Reason",
+                "submit": "Reject Transaction",
+                "success": "Cash transaction rejected."
+            },
+            "sodWarning": "You cannot approve a transaction you created yourself (Separation of Duty).",
+            "pendingBadge": "Pending Approval",
+            "empty": "No cash transactions yet.",
+            "emptyDesc": "Record neighborhood cash income or expenses here.",
+            "toast": {
+                "created": "Cash transaction recorded (pending approval).",
+                "updated": "Cash transaction updated.",
+                "approved": "Cash transaction approved.",
+                "deleted": "Cash transaction deleted."
+            }
+        },
+        "announcements": {
+            "title": "Announcements",
+            "add": "New Announcement",
+            "edit": "Edit Announcement",
+            "searchPlaceholder": "Search announcement title...",
+            "filterCategory": "Category",
+            "filterPriority": "Priority",
+            "filterActive": "Active Status",
+            "table": {
+                "title": "Title",
+                "category": "Category",
+                "priority": "Priority",
+                "publishedAt": "Published",
+                "expiresAt": "Expires",
+                "isActive": "Active",
+                "actions": "Actions"
+            },
+            "category": {
+                "general": "General",
+                "meeting": "Meeting",
+                "payment": "Dues",
+                "event": "Event",
+                "emergency": "Emergency"
+            },
+            "priority": {
+                "low": "Low",
+                "normal": "Normal",
+                "high": "High",
+                "urgent": "Urgent"
+            },
+            "form": {
+                "title": "Title",
+                "content": "Content",
+                "category": "Category",
+                "priority": "Priority",
+                "publishedAt": "Publish Date",
+                "expiresAt": "Expiry Date",
+                "isActive": "Visible to Residents"
+            },
+            "empty": "No announcements yet.",
+            "emptyDesc": "Create announcements for meetings, dues, or neighborhood events.",
+            "toast": {
+                "created": "Announcement created.",
+                "updated": "Announcement updated.",
+                "deleted": "Announcement deleted."
+            },
+            "confirmDelete": {
+                "title": "Delete Announcement?",
+                "desc": "The announcement will no longer appear in the resident portal."
+            }
+        },
+        "reports": {
+            "title": "Monthly Report",
+            "periodLabel": "Period (YYYY-MM)",
+            "generate": "Show Report",
+            "exportCsv": "Export CSV",
+            "dues": {
+                "title": "Dues Recap",
+                "billed": "Amount Billed",
+                "collected": "Collected",
+                "outstanding": "Outstanding",
+                "collectionRate": "Collection Rate",
+                "byType": "Breakdown by Dues Type"
+            },
+            "cash": {
+                "title": "Cash This Month",
+                "openingBalance": "Opening Balance",
+                "income": "Income",
+                "expense": "Expense",
+                "closingBalance": "Closing Balance",
+                "byCategory": "Breakdown by Category"
+            },
+            "topArrears": {
+                "title": "Top Arrears Residents",
+                "member": "Resident",
+                "outstanding": "Arrears",
+                "empty": "No arrears."
+            },
+            "empty": "Select a period to view the report.",
+            "invalidPeriod": "Invalid period format."
+        },
+        "portal": {
+            "title": "Resident Portal",
+            "welcome": "Welcome",
+            "memberCode": "Resident Code",
+            "notRegistered": "Your resident record is not registered",
+            "notRegisteredDesc": "Contact your RT treasurer to link your account with a resident record.",
+            "myBills": {
+                "title": "My Bills",
+                "billNumber": "Bill No.",
+                "duesType": "Dues Type",
+                "period": "Period",
+                "amountDue": "Billed",
+                "amountPaid": "Paid",
+                "outstanding": "Outstanding",
+                "status": "Status",
+                "dueDate": "Due Date",
+                "empty": "No bills for you yet."
+            },
+            "billsStatus": {
+                "unpaid": "Unpaid",
+                "partial": "Partial",
+                "paid": "Paid"
+            },
+            "cash": {
+                "title": "Neighborhood Cash (This Month)",
+                "income": "Income",
+                "expense": "Expense",
+                "balance": "Balance",
+                "recent": "Recent Transactions"
+            },
+            "announcements": {
+                "title": "Latest Announcements",
+                "empty": "No active announcements yet."
+            },
+            "readInfo": "This page is read-only and only shows your own data."
+        }
     },
     "dashboard": {
         "welcome": "Welcome back! Here's a summary of your business today.",

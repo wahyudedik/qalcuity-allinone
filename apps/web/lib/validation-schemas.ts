@@ -2355,3 +2355,218 @@ export const clientErrorReportSchema = z.object({
     /** Metadata tambahan (component name, browser info, dll) — di-sanitize server-side. */
     meta: z.record(z.string(), z.unknown()).optional(),
 });
+
+// ─── Community (RT/RW MVP Fase 1) ─────────────────────────────────────────────
+// Referensi: plans/community-mvp-implementation.md §3.3 (tabel endpoint).
+// Catatan: NIK/Nomor KK hanya ditulis (di-enkripsi di route) — TIDAK pernah
+// dibaca kembali ke response (write-only), sehingga tidak ada field decrypt.
+
+/** Period format "YYYY-MM". */
+const communityPeriodSchema = z
+    .string()
+    .trim()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Periode harus format YYYY-MM');
+
+export const createCommunityMemberSchema = z.object({
+    code: z
+        .string()
+        .trim()
+        .min(1, 'Kode warga wajib diisi')
+        .max(50, 'Kode warga maksimal 50 karakter'),
+    fullName: z
+        .string()
+        .trim()
+        .min(2, 'Nama warga minimal 2 karakter')
+        .max(200, 'Nama warga maksimal 200 karakter'),
+    /** Plain NIK 16 digit — di-enkripsi di route, tidak pernah disimpan plain. */
+    nik: z
+        .string()
+        .trim()
+        .regex(/^\d{16}$/, 'NIK harus 16 digit angka')
+        .optional(),
+    nomorKk: z
+        .string()
+        .trim()
+        .regex(/^\d{16}$/, 'Nomor KK harus 16 digit angka')
+        .optional(),
+    gender: z.enum(['L', 'P'], { message: 'Gender harus "L" atau "P"' }).optional(),
+    birthDate: z.coerce.date().optional(),
+    birthPlace: z.string().trim().max(200).optional(),
+    address: z.string().trim().max(500).optional(),
+    rtRw: z.string().trim().max(20).optional(),
+    houseStatus: z
+        .enum(['OWNER', 'RENT'], { message: 'Status rumah harus "OWNER" atau "RENT"' })
+        .optional(),
+    phone: z.string().trim().max(30).optional(),
+    email: z
+        .string()
+        .trim()
+        .email('Format email tidak valid')
+        .max(200)
+        .optional()
+        .or(z.literal('').transform(() => undefined)),
+    status: z
+        .enum(['ACTIVE', 'INACTIVE', 'MOVED'], {
+            message: 'Status harus ACTIVE, INACTIVE, atau MOVED',
+        })
+        .optional(),
+    joinedAt: z.coerce.date().optional(),
+    notes: z.string().trim().max(1000).optional(),
+    /** Link akun portal warga (opsional). */
+    userId: z.string().trim().max(100).optional(),
+});
+
+export const updateCommunityMemberSchema = createCommunityMemberSchema.partial().refine(
+    (data) => Object.keys(data).length > 0,
+    { message: 'Minimal satu field harus diupdate' }
+);
+
+/**
+ * Base object TANPA refine — dipakai create (refine tanggal) dan update
+ * (partial + refine minimal-satu-field). Zod v4 melarang .partial() pada
+ * object schema yang sudah mengandung .refine() (runtime error), sehingga
+ * refine wajib diterapkan SETELAH .partial() atau pada turunan terpisah.
+ */
+const communityDuesTypeObject = z.object({
+    code: z
+        .string()
+        .trim()
+        .min(1, 'Kode jenis iuran wajib diisi')
+        .max(50, 'Kode jenis iuran maksimal 50 karakter'),
+    name: z
+        .string()
+        .trim()
+        .min(2, 'Nama jenis iuran minimal 2 karakter')
+        .max(200, 'Nama jenis iuran maksimal 200 karakter'),
+    description: z.string().trim().max(1000).optional(),
+    amount: z.coerce
+        .number({ message: 'Nominal harus angka' })
+        .positive('Nominal harus lebih dari 0')
+        .max(1_000_000_000_000, 'Nominal terlalu besar'),
+    frequency: z
+        .enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'ONE_TIME'], {
+            message: 'Frekuensi harus MONTHLY, QUARTERLY, YEARLY, atau ONE_TIME',
+        })
+        .optional(),
+    isActive: z.boolean().optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+});
+
+export const createCommunityDuesTypeSchema = communityDuesTypeObject.refine(
+    (data) => !data.startDate || !data.endDate || data.startDate <= data.endDate,
+    {
+        message: 'Tanggal mulai harus sebelum tanggal berakhir',
+        path: ['endDate'],
+    }
+);
+
+export const updateCommunityDuesTypeSchema = communityDuesTypeObject
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });
+
+export const generateCommunityBillsSchema = z.object({
+    period: communityPeriodSchema,
+});
+
+export const updateCommunityBillSchema = z
+    .object({
+        dueDate: z.coerce.date().optional(),
+        notes: z.string().trim().max(1000).optional(),
+        /** Hanya VOID yang diizinkan dari sisi client; aturan "belum ada pembayaran" dicek di route. */
+        status: z.literal('VOID', { message: 'Status hanya bisa diubah menjadi VOID' }).optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });
+
+export const payCommunityBillSchema = z.object({
+    amount: z.coerce
+        .number({ message: 'Nominal pembayaran harus angka' })
+        .positive('Nominal pembayaran harus lebih dari 0'),
+    method: z
+        .enum(['CASH', 'TRANSFER', 'QRIS'], { message: 'Metode harus CASH, TRANSFER, atau QRIS' })
+        .optional(),
+    paidAt: z.coerce.date().optional(),
+    /** URL file kwitansi hasil upload (opsional, dari /api/community/upload-receipt). */
+    receiptUrl: z.string().trim().max(500).optional(),
+    notes: z.string().trim().max(1000).optional(),
+});
+
+export const createCommunityCashTransactionSchema = z.object({
+    type: z.enum(['INCOME', 'EXPENSE'], { message: 'Tipe harus INCOME atau EXPENSE' }),
+    category: z.string().trim().max(100).optional(),
+    duesTypeId: z.string().trim().max(100).optional(),
+    amount: z.coerce
+        .number({ message: 'Nominal harus angka' })
+        .positive('Nominal harus lebih dari 0')
+        .max(1_000_000_000_000, 'Nominal terlalu besar'),
+    description: z
+        .string()
+        .trim()
+        .min(3, 'Deskripsi minimal 3 karakter')
+        .max(500, 'Deskripsi maksimal 500 karakter'),
+    txDate: z.coerce.date(),
+    attachmentUrl: z.string().trim().max(500).optional(),
+});
+
+export const updateCommunityCashTransactionSchema = createCommunityCashTransactionSchema
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });
+
+export const approveCommunityCashTransactionSchema = z.object({
+    notes: z.string().trim().max(1000).optional(),
+});
+
+export const rejectCommunityCashTransactionSchema = z.object({
+    reason: z
+        .string()
+        .trim()
+        .min(3, 'Alasan penolakan minimal 3 karakter')
+        .max(1000, 'Alasan penolakan maksimal 1000 karakter'),
+});
+
+/** Base object TANPA refine — lihat catatan di communityDuesTypeObject. */
+const communityAnnouncementObject = z.object({
+    title: z
+        .string()
+        .trim()
+        .min(3, 'Judul minimal 3 karakter')
+        .max(200, 'Judul maksimal 200 karakter'),
+    content: z
+        .string()
+        .trim()
+        .min(3, 'Isi pengumuman minimal 3 karakter')
+        .max(5000, 'Isi pengumuman maksimal 5000 karakter'),
+    category: z
+        .enum(['GENERAL', 'MEETING', 'PAYMENT', 'EVENT', 'EMERGENCY'], {
+            message: 'Kategori tidak valid',
+        })
+        .optional(),
+    priority: z
+        .enum(['LOW', 'NORMAL', 'HIGH', 'URGENT'], {
+            message: 'Prioritas tidak valid',
+        })
+        .optional(),
+    publishedAt: z.coerce.date().optional(),
+    expiresAt: z.coerce.date().optional(),
+    isActive: z.boolean().optional(),
+});
+
+export const createCommunityAnnouncementSchema = communityAnnouncementObject.refine(
+    (data) => !data.publishedAt || !data.expiresAt || data.publishedAt <= data.expiresAt,
+    {
+        message: 'Tanggal terbit harus sebelum tanggal kedaluwarsa',
+        path: ['expiresAt'],
+    }
+);
+
+export const updateCommunityAnnouncementSchema = communityAnnouncementObject
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });

@@ -172,6 +172,14 @@ model Tenant {
   slaTrackers       SLATracker[]
   lockRecords       LockRecord[]
   transactionStates TransactionState[]
+
+  // Community module (Fase 1: RT/RW)
+  communityMembers          CommunityMember[]
+  communityDuesTypes        CommunityDuesType[]
+  communityDuesBills        CommunityDuesBill[]
+  communityDuesPayments     CommunityDuesPayment[]
+  communityCashTransactions CommunityCashTransaction[]
+  communityAnnouncements    CommunityAnnouncement[]
 }
 
 model User {
@@ -2981,4 +2989,206 @@ model WhatsAppMessageLog {
   @@index([tenantId])
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, sentAt])
+}
+
+// ─── Community Module (Fase 1: RT/RW) ─────────────────────────────────────────
+// Referensi: plans/community-mvp-implementation.md §2.3
+// Cashbook-first iuran warga + kas RT. Dedicated models — bukan reuse Invoice/Expense.
+
+model CommunityMember {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  // Identitas & keanggotaan
+  code           String    // Kode warga unik per tenant, e.g. "W-001" (business key)
+  fullName       String
+  nikEncrypted   String?   // NIK dienkripsi AES-256-GCM (encrypt()) — JANGAN simpan plain
+  nomorKkEncrypted String? // Nomor KK dienkripsi
+  gender         String?   // L, P
+  birthDate      DateTime?
+  birthPlace     String?
+
+  // Domisili
+  address        String?   // Alamat / blok-rumah, e.g. "Blok C No. 12"
+  rtRw           String?   // Informatif, e.g. "001/002" — Fase 1 satu RT = satu tenant
+  houseStatus    String    @default("OWNER") // OWNER, RENT
+
+  // Kontak
+  phone          String?
+  email          String?
+
+  // Status keanggotaan
+  status         String    @default("ACTIVE") // ACTIVE, INACTIVE, MOVED
+  joinedAt       DateTime?
+  notes          String?
+
+  // Portal warga (opsional — link ke akun login)
+  userId         String?   // User id untuk portal warga (tanpa FK — pola createdBy)
+  userName       String?   // Snapshot nama user portal (opsional)
+
+  // Meta
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  deletedBy      String?
+
+  bills       CommunityDuesBill[]
+  payments    CommunityDuesPayment[]
+
+  // Unik: 1 kode warga per tenant. Saat warga pindah → status MOVED + buat record
+  // baru (code baru) — tagihan lama tetap menempel ke record lama (riwayat utuh).
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@index([tenantId])
+}
+
+model CommunityDuesType {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  code        String   // e.g. "IURAN-BULANAN" (business key)
+  name        String   // e.g. "Iuran Bulanan"
+  description String?
+  amount      Decimal  @db.Decimal(19, 4) // Nominal default per periode
+  frequency   String   @default("MONTHLY") // MONTHLY, QUARTERLY, YEARLY, ONE_TIME
+  isActive    Boolean  @default(true)
+  startDate   DateTime? // Berlaku mulai (opsional, batasi generate)
+  endDate     DateTime? // Berakhir (opsional)
+
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bills            CommunityDuesBill[]
+  cashTransactions CommunityCashTransaction[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, isActive])
+  @@index([tenantId])
+}
+
+model CommunityDuesBill {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  billNumber  String   // Auto: "TAG/<periode>/<kodeWarga>-<kodeIuran>", e.g. "TAG/2026-10/W-001-IURAN-BULANAN"
+  memberId    String
+  member      CommunityMember @relation(fields: [memberId], references: [id])
+  duesTypeId  String
+  duesType    CommunityDuesType @relation(fields: [duesTypeId], references: [id])
+  period      String   // "YYYY-MM" — periode tagihan (bulan iuran)
+
+  amountDue   Decimal  @db.Decimal(19, 4) // Nominal tagihan (default dari duesType.amount)
+  amountPaid  Decimal  @default(0) @db.Decimal(19, 4) // Akumulasi pembayaran
+  status      String   @default("UNPAID") // UNPAID, PARTIAL, PAID, VOID
+  dueDate     DateTime?
+  paidAt      DateTime? // Waktu pelunasan (set saat amountPaid >= amountDue)
+  notes       String?
+
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  payments    CommunityDuesPayment[]
+
+  // KEPUTUSAN (a): tagihan unik per [warga, jenis iuran, periode, tenant].
+  // "Generate Bulan Ini" aman dijalankan berulang tanpa duplikat (upsert skip).
+  @@unique([tenantId, memberId, duesTypeId, period])
+  @@unique([tenantId, billNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, period])
+  @@index([tenantId, memberId])
+  @@index([tenantId])
+}
+
+model CommunityDuesPayment {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  paymentNumber String   // Auto: "BYR/<YYYYMMDD>-<seq>", unik per tenant
+  billId        String
+  bill          CommunityDuesBill @relation(fields: [billId], references: [id])
+  memberId      String
+  member        CommunityMember @relation(fields: [memberId], references: [id])
+
+  amount        Decimal  @db.Decimal(19, 4)
+  paidAt        DateTime @default(now())
+  method        String   @default("CASH") // CASH, TRANSFER, QRIS
+  receiptUrl    String?  // Bukti bayar: "/uploads/community/<tenantId>/..." (getUploadSubDir)
+  notes         String?
+
+  createdBy     String?  // User id bendahara yang mencatat
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, paymentNumber])
+  @@index([tenantId, paidAt])
+  @@index([tenantId, billId])
+  @@index([tenantId])
+}
+
+model CommunityCashTransaction {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  txNumber    String   // Auto: "KAS/<YYYYMMDD>-<seq>", unik per tenant
+  type        String   // INCOME, EXPENSE
+  category    String?  // Label bebas: "Iuran", "Kebersihan", "Keamanan", "Perbaikan", "Sosial", "Rapat"
+  duesTypeId  String?  // Opsional: sumber iuran (INCOME dari iuran)
+  duesType    CommunityDuesType? @relation(fields: [duesTypeId], references: [id])
+  amount      Decimal  @db.Decimal(19, 4) // Selalu positif; arah ditentukan `type`
+  description String
+  txDate      DateTime
+  attachmentUrl String? // Foto nota/kwitansi (opsional)
+
+  // KEPUTUSAN (c): approval state machine inline — BUKAN integrasi ApprovalRequest.
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  approvedBy    String?
+  approvedAt    DateTime?
+  rejectedBy    String?
+  rejectedAt    DateTime?
+  rejectReason  String?
+
+  createdBy   String?   // Bendahara pencatat — kunci cek SoD (tidak boleh approve sendiri)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  @@unique([tenantId, txNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, txDate])
+  @@index([tenantId, type])
+  @@index([tenantId])
+}
+
+model CommunityAnnouncement {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  title       String
+  content     String   // Plain text / markdown ringan
+  category    String   @default("GENERAL") // GENERAL, MEETING, PAYMENT, EVENT, EMERGENCY
+  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  @@index([tenantId, isActive])
+  @@index([tenantId])
 }

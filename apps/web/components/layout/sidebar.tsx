@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getInitials } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { usePermission } from "@/lib/use-permission";
+import { isFeatureEnabled } from "@qalcuity/config";
 import {
     LayoutDashboard,
     Receipt,
@@ -13,6 +15,7 @@ import {
     CreditCard,
     Package,
     UsersRound,
+    Users,
     TrendingUp,
     ScrollText,
     Settings,
@@ -42,6 +45,8 @@ interface MenuItem {
     icon: LucideIcon;
     children?: { label: string; href: string }[];
     adminOnly?: boolean;
+    featureFlag?: string;
+    permissions?: string[];
 }
 
 // ─── Daftar Menu Navigasi ─────────────────────────────────────────────────────
@@ -111,6 +116,14 @@ function getMenuItems(t: (key: string) => string): MenuItem[] {
                 { label: t("nav.leaves"), href: "/dashboard/hr/leaves" },
                 { label: t("nav.payroll"), href: "/dashboard/hr/payroll" },
             ],
+        },
+        // 4b. Komunitas (RT/RW) — gated by feature flag + community permissions
+        {
+            label: t("nav.community"),
+            href: "/dashboard/community",
+            icon: Users,
+            featureFlag: "COMMUNITY_MODULE",
+            permissions: ["community:view", "community:manage"],
         },
         // 5. Inventory — ADMIN, MEMBER, VIEWER (read-only)
         {
@@ -265,6 +278,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const isAdmin = userRole === "ADMIN" || isSuperAdmin;
     const isMember = userRole === "MEMBER";
     const isViewer = userRole === "VIEWER";
+    const { hasPermission } = usePermission();
 
     // ─── Hydration fix: track mount state to avoid SSR/client DOM mismatch ──
     // Server dan render pertama client selalu punya session = null → semua
@@ -301,6 +315,17 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
     // ─── Helper: Cek apakah menu item harus ditampilkan ─────────────────────────
     const isMenuVisible = (item: MenuItem) => {
+        // Feature flag check — hanya tampilkan menu jika flag aktif
+        if (item.featureFlag && !isFeatureEnabled(item.featureFlag)) {
+            return false;
+        }
+        // Permission check — tampilkan menu jika user punya salah satu permission
+        if (item.permissions && item.permissions.length > 0) {
+            const hasAny = item.permissions.some((p) => hasPermission(p));
+            if (!hasAny) {
+                return false;
+            }
+        }
         // Settings, Billing, dan Audit Trail hanya untuk ADMIN+
         if (item.adminOnly && !isAdmin) {
             return false;

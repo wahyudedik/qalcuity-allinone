@@ -55,6 +55,7 @@ export { educationIndustryPack } from './packs/education';
 export { agricultureIndustryPack } from './packs/agriculture';
 export { logisticsIndustryPack } from './packs/logistics';
 export { hospitalityIndustryPack } from './packs/hospitality';
+export { communityIndustryPack } from './packs/community';
 export { INDUSTRY_PACKS, AVAILABLE_PACK_IDS } from './packs';
 
 // ─── Convenience Functions ───────────────────────────────────────────────────

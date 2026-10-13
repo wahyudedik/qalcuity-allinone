@@ -4,6 +4,7 @@ import { seedFinanceData } from "../../../apps/web/lib/seed-data/finance";
 import { seedCrmData } from "../../../apps/web/lib/seed-data/crm";
 import { seedInventoryData } from "../../../apps/web/lib/seed-data/inventory";
 import { seedHrData } from "../../../apps/web/lib/seed-data/hr";
+import { seedCommunityData } from "../../../apps/web/lib/seed-data/community";
 
 const prisma = new PrismaClient();
 
@@ -1270,7 +1271,26 @@ async function main() {
       console.warn("⚠️  Finance warnings:", fin.warnings);
     }
 
-    console.log("\n✅ Demo data seeded (Users, Categories, Contacts, Suppliers, Activities, Warehouses, Products, StockMovements, StockOpnames, Invoices, Payments, Quotations, POs, Leads, Deals, Departments, Employees, Attendance, Leaves, Payroll, Billing, Audit, CoA, BankTx, FinanceP0)");
+    // ═══════════════════════════════════════════════════════════
+    // COMMUNITY MVP (Fase 1: RT/RW) — tenant TERPISAH rt02-melati
+    // Custom roles KRITIS: ADMIN tidak otomatis dapat permission community.
+    // NIK/NKK warga dienkripsi via encrypt() (SMTP_ENCRYPTION_KEY).
+    // ═══════════════════════════════════════════════════════════
+    const community = await seedCommunityData(prisma, {
+      anchorDate: "2026-10-10",
+    });
+    console.log("✅ Community (tenant rt02-melati):", {
+      roles: community.created.roles,
+      users: community.created.users,
+      members: community.created.members,
+      duesTypes: community.created.duesTypes,
+      bills: community.created.bills,
+      payments: community.created.payments,
+      cashTransactions: community.created.cashTransactions,
+      announcements: community.created.announcements,
+    });
+
+    console.log("\n✅ Demo data seeded (Users, Categories, Contacts, Suppliers, Activities, Warehouses, Products, StockMovements, StockOpnames, Invoices, Payments, Quotations, POs, Leads, Deals, Departments, Employees, Attendance, Leaves, Payroll, Billing, Audit, CoA, BankTx, FinanceP0, Community)");
 
   } else {
     console.log("⏭️  Demo data skipped (set SEED_DEMO=true to include)");
@@ -1328,6 +1348,14 @@ async function main() {
     console.log("  ✅ Audit Logs: 14");
     console.log("  ✅ CoA Accounts: 44");
     console.log("  ✅ Bank Transactions: 8");
+    console.log("\n📋 Community (tenant terpisah: rt02-melati — akun @rt02-melati.test / community123):");
+    console.log("  ✅ Custom Roles: 4 (KETUA, BENDAHARA, SEKRETARIS, WARGA)");
+    console.log("  ✅ Users: 4 (system role MEMBER + roleId custom role)");
+    console.log("  ✅ Members: 30 (27 ACTIVE, 2 INACTIVE, 1 MOVED; NIK terenkripsi)");
+    console.log("  ✅ Dues Types: 3 (IURAN-BULANAN, IURAN-KEBERSIHAN, KAS-SOSIAL)");
+    console.log("  ✅ Dues Bills: periode 2026-08/09/10 (mix PAID/PARTIAL/UNPAID + VOID)");
+    console.log("  ✅ Dues Payments + Cash Transactions (SoD: bendahara catat, ketua approve)");
+    console.log("  ✅ Announcements: 2");
   }
 }
 

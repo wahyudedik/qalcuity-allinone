@@ -306,4 +306,65 @@ describe('PermissionEngine', () => {
             expect(PermissionEngine.hasFullModuleAccess(['finance:view'], 'nonexistent')).toBe(false);
         });
     });
+
+    // ─── Community (RT/RW) module permissions ───────────────────────
+
+    describe('community module permissions (Subtask G)', () => {
+        it('should have exactly 5 actions for community module', () => {
+            expect(MODULE_PERMISSIONS['community']).toEqual([
+                'view',
+                'manage',
+                'finance',
+                'approve',
+                'portal',
+            ]);
+            expect(MODULE_PERMISSIONS['community']).toHaveLength(5);
+        });
+
+        it('should have all community permission keys present in ALL_PERMISSIONS', () => {
+            const communityKeys = [
+                'community:view',
+                'community:manage',
+                'community:finance',
+                'community:approve',
+                'community:portal',
+            ];
+            for (const key of communityKeys) {
+                expect(ALL_PERMISSIONS).toContain(key);
+            }
+        });
+
+        it('should expand community:* wildcard to all 5 permissions', () => {
+            const resolved = PermissionEngine.resolvePermissions(['community:*']);
+            expect(resolved).toEqual(
+                expect.arrayContaining([
+                    'community:view',
+                    'community:manage',
+                    'community:finance',
+                    'community:approve',
+                    'community:portal',
+                ])
+            );
+            expect(resolved).toHaveLength(5);
+        });
+
+        it('should resolve SUPERADMIN wildcard to include community permissions', () => {
+            const resolved = PermissionEngine.resolvePermissions(SYSTEM_ROLE_PERMISSIONS.SUPERADMIN);
+            expect(resolved).toContain('community:view');
+            expect(resolved).toContain('community:manage');
+            expect(resolved).toContain('community:finance');
+            expect(resolved).toContain('community:approve');
+            expect(resolved).toContain('community:portal');
+        });
+
+        it('should match community:* wildcard via matchPermission', () => {
+            expect(PermissionEngine.matchPermission('community:view', 'community:*')).toBe(true);
+            expect(PermissionEngine.matchPermission('community:portal', 'community:*')).toBe(true);
+        });
+
+        it('should report community module access correctly', () => {
+            expect(PermissionEngine.hasFullModuleAccess(['community:*'], 'community')).toBe(true);
+            expect(PermissionEngine.hasFullModuleAccess(['community:view'], 'community')).toBe(false);
+        });
+    });
 });

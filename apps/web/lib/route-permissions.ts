@@ -376,6 +376,31 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
 
     // ─── API Documentation ────────────────────────────────────────────────────
     '/api/docs': { permission: 'system:view', fallbackRole: 'MEMBER' },
+
+    // ─── Community Module (Fase 1: RT/RW) ──────────────────────────────────────
+    // Catatan: permission sengaja diakhiri manage/finance/portal (BUKAN view) agar
+    // resolvePermissionByMethod TIDAK meng-upgrade per-method — GET & POST sama-sama
+    // menuntut permission yang sama (matriks: Sekretaris CRUD member, Bendahara keuangan).
+    // Route [id]/approve & [id]/reject melakukan explicit in-route hasPermission check
+    // karena longest-prefix match jatuh ke base /cash-transactions (community:finance).
+    '/api/community/overview': { permission: 'community:view', fallbackRole: 'MEMBER' },
+    '/api/community/reports/monthly': { permission: 'community:view', fallbackRole: 'MEMBER' },
+    '/api/community/members': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/members/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/dues-types': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/dues-types/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/bills': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/bills/generate': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/bills/[id]': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/bills/[id]/pay': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/cash-transactions': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/cash-transactions/[id]': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/cash-transactions/[id]/approve': { permission: 'community:approve', fallbackRole: 'ADMIN' },
+    '/api/community/cash-transactions/[id]/reject': { permission: 'community:approve', fallbackRole: 'ADMIN' },
+    '/api/community/announcements': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/announcements/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/upload-receipt': { permission: 'community:finance', fallbackRole: 'ADMIN' },
+    '/api/community/portal': { permission: 'community:portal', fallbackRole: 'VIEWER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────

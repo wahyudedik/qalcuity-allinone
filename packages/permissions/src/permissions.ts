@@ -103,6 +103,13 @@ export const PERMISSIONS = {
     // ── AI Features ──────────────────────────────────────────────────────────
     AI_VIEW: 'ai:view',
 
+    // ── Community (RT/RW) ────────────────────────────────────────────────────
+    COMMUNITY_VIEW: 'community:view',
+    COMMUNITY_MANAGE: 'community:manage',
+    COMMUNITY_FINANCE: 'community:finance',
+    COMMUNITY_APPROVE: 'community:approve',
+    COMMUNITY_PORTAL: 'community:portal',
+
     // ── Platform Admin (SUPERADMIN only) ─────────────────────────────────────
     PLATFORM_VIEW: 'platform:view',
 } as const;
@@ -135,6 +142,7 @@ export const MODULE_PERMISSIONS: Record<string, string[]> = {
     system: ['view', 'admin'],
     ai: ['view'],
     platform: ['view'],
+    community: ['view', 'manage', 'finance', 'approve', 'portal'],
 };
 
 // ─── Permission Categories (for UI) ───────────────────────────────────────────

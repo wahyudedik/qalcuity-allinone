@@ -1,6 +1,52 @@
-> **Last Updated:** 10 Oktober 2026 (Session 71c: Demo Data Enhancement — Subtask D: verifikasi final end-to-end + rewrite DEMO-DATA.md + commit/push)
-> **Version:** v11.63.0
-> **Status:** ✅ STABLE — Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang; Session 70m: UCE SoD Enforcement — `enforceSoDApproval()` (self-approval block + SoD rule check exception-aware) di approval routes expenses/bills/unlock-requests + cron `sod-exception-expiry` + unit test 9/9; Session 70n: Halaman manajemen SoD dedicated `/dashboard/settings/sod` (SoDRulesTab + SoDExceptionsTab, dual layout) + enrich exception API (ruleName/userName/approverName + admin on-behalf) + DELETE rule 409 guard + `sod-constants.ts` (client-safe) — smoke test runtime 26/26 PASS; Session 70o: Sistem Error Logging & Tracing platform superadmin — JSONL store (`error-logger.ts` writer + `error-log-reader.ts` query/cleanup), capture API (`logApiError`/`logProcessError`) + `POST /api/client-errors` (frontend), `GET /api/platform/errors` (+`/stats`, `/[id]`) SUPERADMIN-only, UI `/platform/errors` (stats + filter + detail modal), cron `error-log-cleanup` daily 03:00 (retention `ERROR_LOG_RETENTION_DAYS` default 30, clamp 1–365) — unit test 92/92, smoke cron 11/11, E2E capture 10/10 PASS. TypeScript: 0 errors.
+> **Last Updated:** 13 Oktober 2026 (Session 72: Community & Public Administration MVP — Subtask J FINAL: verifikasi E2E + dokumentasi COMMUNITY-MODULE.md + commit/push)
+> **Version:** v11.64.0
+> **Status:** ✅ STABLE — Session 72: Community & Public Administration MVP (RT/RW) — 6 model Prisma + 32 API endpoints + 9 halaman UI + portal warga + 5 permission keys + custom roles (KETUA/BENDAHARA/SEKRETARIS/WARGA) + SoD approve + seed rt02-melati + docs COMMUNITY-MODULE.md; Session 66: password policy konfigurabel; Session 66b: Work Inbox; Session 66c: fix 405 self-delete akun; Session 67: POS offline mode completion (P0-6); Session 68: Lock Policy + Unlock as Exception (UCE-25/26); Session 69: RBAC migration hardening (FE-PE-09a); Session 70: Sinkronisasi plan pricing 5-plan (free/starter/growth/business/enterprise-custom) + script migrasi grandfather pricing; Session 70h: [AUDIT-P0-2] Security purge .env.production dari git history (git-filter-repo 2.47.0 + force push main/staging, SHA rewrite) — rotasi secrets [AUDIT-P0-1] WAJIB di VPS; Session 70i: [PROD-ISSUE-1] Drift repair migrasi — 4 tabel tanpa migrasi (PasswordPolicy/PasswordHistory/SoDException/WhatsAppMessageLog) + gap index/FK/kolom → `migrate deploy` production akan membuat tabel yang hilang; Session 70j: Verifikasi production read-only (curl) — password-policy 503→307, deploy drift-repair terkonfirmasi di VPS; Session 70k: CI drift-check guard — GitHub Actions workflow + script `check-drift.sh` (`prisma migrate diff --exit-code`) mencegah schema drift berulang; Session 70m: UCE SoD Enforcement — `enforceSoDApproval()` (self-approval block + SoD rule check exception-aware) di approval routes expenses/bills/unlock-requests + cron `sod-exception-expiry` + unit test 9/9; Session 70n: Halaman manajemen SoD dedicated `/dashboard/settings/sod` (SoDRulesTab + SoDExceptionsTab, dual layout) + enrich exception API (ruleName/userName/approverName + admin on-behalf) + DELETE rule 409 guard + `sod-constants.ts` (client-safe) — smoke test runtime 26/26 PASS; Session 70o: Sistem Error Logging & Tracing platform superadmin — JSONL store (`error-logger.ts` writer + `error-log-reader.ts` query/cleanup), capture API (`logApiError`/`logProcessError`) + `POST /api/client-errors` (frontend), `GET /api/platform/errors` (+`/stats`, `/[id]`) SUPERADMIN-only, UI `/platform/errors` (stats + filter + detail modal), cron `error-log-cleanup` daily 03:00 (retention `ERROR_LOG_RETENTION_DAYS` default 30, clamp 1–365) — unit test 92/92, smoke cron 11/11, E2E capture 10/10 PASS. TypeScript: 0 errors.
+
+## 🗂️ Session 72 — Community & Public Administration MVP (RT/RW): Subtask J FINAL (Verifikasi E2E + Dokumentasi + Commit/Push) — 13 Okt 2026
+
+> **Focus:** Penutupan task "Community & Public Administration MVP (RT/RW)" ([`plans/community-mvp-implementation.md`](plans/community-mvp-implementation.md)) — Subtask F–J: verifikasi E2E final dari TypeScript hingga smoke matrix 8 assertion via dev server aux :3001, dokumentasi lengkap [`docs/COMMUNITY-MODULE.md`](docs/COMMUNITY-MODULE.md), commit & push.
+> **Hasil:** ✅ **SEMUA LOLOS** — tsc 0 error, vitest **190/190 pass**, verify-community-seed **LOLOS** (138 payments, 10 cash tx), verify-finance/ops **LOLOS**, migrate status **up-to-date** (50 migrasi), smoke matrix **8/8 PASS** (RBAC_STRICT admin 403, SoD self-approve 403, portal own-only).
+> **Health Score:** ✅ COMPLETE — Community MVP (Subtask F–J) SELESAI
+
+### Hasil Verifikasi Final (aktual, dijalankan 13 Okt 2026)
+
+| Check | Command | Hasil |
+|-------|---------|-------|
+| TypeScript | `npx tsc --noEmit` (apps/web) | ✅ **0 errors** |
+| Unit test | `npx vitest run` (apps/web) | ✅ **190/190 pass, 9 files** |
+| Verify community | `npx tsx scripts/verify-community-seed.ts` (packages/db) | ✅ **SEMUA LOLOS** — dues types 3, bills 210, **payments 138**, **cash tx 10 (INCOME 4 / EXPENSE 6)**, announcements; invarian Σ payments === amountPaid per bill |
+| Verify finance | `npx tsx scripts/verify-finance-seed.ts` (packages/db) | ✅ **SEMUA LOLOS** — 132 JE seimbang, Bill 7, Expense 12, 6 Period |
+| Verify ops | `npx tsx scripts/verify-ops-seed.ts` (packages/db) | ✅ **SEMUA 37 CHECK LOLOS** |
+| Migrate status | `npx prisma migrate status` (packages/db) | ✅ **Up to date** — 50 migrasi, 0 pending (`community_mvp_phase1` applied) |
+| Smoke matrix | `powershell -File scripts/smoke-community-login.ps1` (aux :3001) | ✅ **8/8 PASS** — [2] ketua members 200; [3] admin 403 RBAC_STRICT; [4] bendahara kas 201 PENDING (KAS/20261013-001); [5] self-approve 403; [6] ketua approve 200 APPROVED; [7] warga portal bills 200 own-only (7 rows); [8] dashboard 200 |
+
+### Apa yang di-commit
+
+1. **Permission engine** — 5 key `community:view/manage/finance/approve/portal` ([`packages/permissions/src/permissions.ts`](packages/permissions/src/permissions.ts)) + `MODULE_PERMISSIONS.community`
+2. **Feature flag** `COMMUNITY_MODULE` ([`packages/config/src/features.ts`](packages/config/src/features.ts)) + industry pack [`community.ts`](packages/industry-config/src/packs/community.ts)
+3. **6 model Prisma** + migrasi [`20261010172449_community_mvp_phase1`](packages/db/prisma/migrations/20261010172449_community_mvp_phase1) — CommunityMember / CommunityDuesType / CommunityDuesBill / CommunityDuesPayment / CommunityCashTransaction / CommunityAnnouncement
+4. **Seed demo** [`seed-data/community.ts`](apps/web/lib/seed-data/community.ts) — tenant rt02-melati, PRNG mulberry32(772026), anchor 2026-10-10, idempoten; verify [`verify-community-seed.ts`](packages/db/scripts/verify-community-seed.ts)
+5. **32 API endpoints** [`apps/web/app/api/community/`](apps/web/app/api/community) — auth + RBAC (`hasPermission`) + tenant isolation + Zod + audit; SoD approve/reject (self-approve block, bendahara ≠ approver)
+6. **9 halaman internal + 3 portal** [`apps/web/app/dashboard/community/`](apps/web/app/dashboard/community) — dual layout (mobile cards + desktop tables), i18n id/en, permission-conditional UI; sidebar menu Community
+7. **Smoke & debug scripts** — [`smoke-community-login.ps1`](scripts/smoke-community-login.ps1) (8 assertion), [`debug-community-500.ps1`](scripts/debug-community-500.ps1), [`cleanup-community-artifacts.ts`](packages/db/scripts/cleanup-community-artifacts.ts), [`debug-bill-consistency.ts`](packages/db/scripts/debug-bill-consistency.ts)
+8. **Zod v4 fix** — [`validation-schemas.ts`](apps/web/lib/validation-schemas.ts): split base object tanpa `.refine()` → `.partial()` aman (community schemas)
+
+### Dokumentasi yang di-update
+
+1. **[`docs/COMMUNITY-MODULE.md`](docs/COMMUNITY-MODULE.md)** — **BARU** — referensi lengkap: scope, 6 model + relasi, 32 endpoint + permission mapping, permission model + custom roles + catatan ADMIN tidak otomatis dapat community permission, SoD, enkripsi NIK/NKK AES-256-GCM, seed rt02-melati, panduan smoke test, DB hygiene, lessons learned (Zod v4 partial+refine, Prisma `--no-engine`, smoke artifact), roadmap Fase 2/3
+2. **[`CURRENT.md`](CURRENT.md)** — entri Session 72 ini + header v11.64.0
+3. **[`FEATURES.md`](FEATURES.md)** — baris **Community & Public Administration (RT/RW)** `production_ready` + Industry Pack §14.10
+
+### Notes & Follow-up
+
+- ⚠️ **Smoke test menciptakan artefak DB** — step [4] POST kas → 1 cash tx per run → verify count-exak gagal; **cleanup wajib** ([`cleanup-community-artifacts.ts`](packages/db/scripts/cleanup-community-artifacts.ts)) sebelum verify. Sesi ini: 23 orphan payment + smoke cash tx dibersihkan (artefak run eksperimental lama + smoke matrix) → baseline terestorasi (138 payments).
+- ℹ️ **Orphan payments = artefak lokal, bukan bug** — API pay atomik `$transaction` + seed deterministik terverifikasi via code review; nominal ganjil (24500/47500/52500) = run API pay manual eksperimental sebelumnya.
+- 🔐 **RBAC_STRICT terverifikasi** — `admin@qalcuity.com` (role sistem ADMIN) **403** di community routes tanpa permission explicit — by design least-privilege ([`docs/COMMUNITY-MODULE.md`](docs/COMMUNITY-MODULE.md) §5).
+- 🔐 **NIK/NKK terenkripsi AES-256-GCM** — kolom `nikEnc`/`nkkEnc`, format `iv:tag:ciphertext`, `safeDecrypt` server-only, portal masked.
+- 📌 **Fase 2 backlog** — Multi-RT/RW, Surat Pengantar PDF+QR, Kegiatan, Aset, offline bendahara, mobile RN, auto-debit ([`plans/community-gov-product-analysis.md`](plans/community-gov-product-analysis.md)).
+- Dev server :3000 (Terminal 2) **tidak diganggu** sepanjang session; smoke matrix via aux :3001 (Terminal 4).
+
+---
 
 ## 🗂️ Session 71c — Demo Data Enhancement: Subtask D (Verifikasi Final + Dokumentasi + Commit/Push) — 10 Okt 2026
 

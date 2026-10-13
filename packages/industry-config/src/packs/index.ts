@@ -15,6 +15,7 @@ export { educationIndustryPack } from './education';
 export { agricultureIndustryPack } from './agriculture';
 export { logisticsIndustryPack } from './logistics';
 export { hospitalityIndustryPack } from './hospitality';
+export { communityIndustryPack } from './community';
 
 import { restaurantIndustryPack } from './restaurant';
 import { retailIndustryPack } from './retail';
@@ -26,6 +27,7 @@ import { educationIndustryPack } from './education';
 import { agricultureIndustryPack } from './agriculture';
 import { logisticsIndustryPack } from './logistics';
 import { hospitalityIndustryPack } from './hospitality';
+import { communityIndustryPack } from './community';
 import type { IndustryPack } from '../types';
 
 /**
@@ -43,6 +45,7 @@ export const INDUSTRY_PACKS: Record<string, IndustryPack> = {
     agriculture: agricultureIndustryPack,
     logistics: logisticsIndustryPack,
     hospitality: hospitalityIndustryPack,
+    community: communityIndustryPack,
 };
 
 /**

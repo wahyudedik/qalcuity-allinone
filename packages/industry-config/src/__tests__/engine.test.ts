@@ -306,6 +306,34 @@ describe('IndustryConfigEngine', () => {
             expect(pack!.id).toBe('restaurant');
         });
 
+        it('should return community pack with valid structure (Subtask G)', () => {
+            const pack = engine.getIndustryPack('community');
+            expect(pack).toBeDefined();
+            expect(pack!.id).toBe('community');
+            expect(pack!.name).toBe('Komunitas / RT-RW');
+
+            // Modules
+            expect(pack!.modules.community).toEqual({ enabled: true, label: 'Komunitas' });
+            expect(pack!.modules.finance).toBeDefined();
+            expect(pack!.modules.reports).toBeDefined();
+
+            // Custom fields — CustomField uses `name` (not `key`)
+            const memberFields = pack!.customFields.CommunityMember;
+            expect(Array.isArray(memberFields)).toBe(true);
+            expect(memberFields.map((f) => f.name)).toEqual(['blokRumah', 'statusKepengurusan']);
+            const statusField = memberFields.find((f) => f.name === 'statusKepengurusan');
+            expect(statusField!.type).toBe('select');
+            expect(statusField!.options).toEqual(['Sesuai domisili', 'Belum pindah', 'Kos']);
+
+            // Workflows — Record<string, PackWorkflow>, not array
+            expect(typeof pack!.workflows).toBe('object');
+            expect(Array.isArray(pack!.workflows)).toBe(false);
+
+            // Dashboard widgets — 3 widgets, all medium size
+            expect(pack!.dashboardWidgets).toHaveLength(3);
+            expect(pack!.dashboardWidgets.every((w) => w.size === 'medium')).toBe(true);
+        });
+
         it('should return undefined for unknown packId', () => {
             const pack = engine.getIndustryPack('nonexistent');
             expect(pack).toBeUndefined();
@@ -319,6 +347,11 @@ describe('IndustryConfigEngine', () => {
             const packs = engine.getAvailablePacks();
             expect(Array.isArray(packs)).toBe(true);
             expect(packs.length).toBeGreaterThan(0);
+        });
+
+        it('should include community pack in available packs (Subtask G)', () => {
+            const packs = engine.getAvailablePacks();
+            expect(packs.some((p) => p.id === 'community')).toBe(true);
         });
     });
 

@@ -128,6 +128,33 @@
         "unlockRequests": {
             "title": "Kesalahan Permintaan Unlock",
             "description": "Terjadi kesalahan saat memuat permintaan unlock. Silakan coba lagi."
+        },
+        "community": {
+            "title": "Kesalahan Komunitas",
+            "description": "Terjadi kesalahan saat memuat data komunitas. Silakan coba lagi.",
+            "permissionDenied": "Anda tidak memiliki izin untuk mengakses data komunitas.",
+            "memberNotFound": "Data warga tidak ditemukan.",
+            "memberHasOpenBills": "Warga masih memiliki tagihan yang belum lunas.",
+            "memberCodeExists": "Kode warga sudah digunakan.",
+            "nikEncryptFailed": "Gagal mengenkripsi NIK. Data tidak disimpan.",
+            "duesTypeNotFound": "Jenis iuran tidak ditemukan.",
+            "duesTypeCodeExists": "Kode jenis iuran sudah digunakan.",
+            "duesTypeHasBills": "Jenis iuran masih memiliki tagihan terkait.",
+            "billNotFound": "Tagihan tidak ditemukan.",
+            "billAlreadyVoid": "Tagihan sudah dibatalkan.",
+            "billHasPayments": "Tagihan memiliki riwayat pembayaran.",
+            "billAlreadyPaid": "Tagihan sudah lunas.",
+            "paymentExceedsDue": "Jumlah pembayaran melebihi sisa tagihan.",
+            "cashTxNotFound": "Transaksi kas tidak ditemukan.",
+            "cashTxNotPending": "Hanya transaksi berstatus Menunggu yang dapat diputuskan.",
+            "cashTxEditNotAllowed": "Transaksi yang sudah diputuskan tidak dapat diubah.",
+            "cashTxDeleteNotAllowed": "Transaksi yang sudah diputuskan tidak dapat dihapus.",
+            "selfApprovalForbidden": "Anda tidak dapat menyetujui transaksi yang Anda buat sendiri (Separation of Duty).",
+            "approvePermissionDenied": "Anda tidak memiliki izin untuk menyetujui atau menolak transaksi kas.",
+            "alreadyDecided": "Transaksi kas sudah diputuskan sebelumnya.",
+            "announcementNotFound": "Pengumuman tidak ditemukan.",
+            "reportPeriodInvalid": "Format periode tidak valid. Gunakan format YYYY-MM.",
+            "portalMemberNotFound": "Data warga Anda belum terdaftar. Hubungi bendahara RT Anda."
         }
     },
     "nav": {
@@ -212,7 +239,421 @@
         "anomalyDetection": "Deteksi Anomali",
         "financialReports": "Laporan Keuangan",
         "controlEngine": "Control Engine",
-        "sod": "Pengaturan SoD"
+        "sod": "Pengaturan SoD",
+        "community": "Komunitas"
+    },
+    "community": {
+        "title": "Komunitas",
+        "description": "Kelola iuran warga, kas lingkungan, dan pengumuman RT/RW Anda.",
+        "underDevelopmentTitle": "Sedang Dikembangkan",
+        "underDevelopment": "Modul Komunitas sedang dalam pengembangan Phase 1. Fitur lengkap akan tersedia segera.",
+        "layout": {
+            "tabs": {
+                "overview": "Ringkasan",
+                "members": "Data Warga",
+                "duesTypes": "Jenis Iuran",
+                "bills": "Tagihan",
+                "cash": "Kas",
+                "announcements": "Pengumuman",
+                "reports": "Laporan",
+                "portal": "Portal Warga"
+            }
+        },
+        "common": {
+            "search": "Cari...",
+            "filterAll": "Semua",
+            "period": "Periode",
+            "actions": "Aksi",
+            "save": "Simpan",
+            "cancel": "Batal",
+            "close": "Tutup",
+            "exportCsv": "Export CSV",
+            "loading": "Memuat...",
+            "noData": "Tidak ada data",
+            "notFound": "Data tidak ditemukan",
+            "viewDetail": "Lihat Detail",
+            "confirmDeleteTitle": "Hapus Data?",
+            "confirmDeleteDesc": "Data yang dihapus tidak dapat dikembalikan.",
+            "requiredField": "Wajib diisi"
+        },
+        "overview": {
+            "title": "Ringkasan Komunitas",
+            "memberActive": "Warga Aktif",
+            "memberInactive": "Warga Tidak Aktif",
+            "memberTotal": "Total Warga",
+            "billsThisPeriod": "Tagihan Periode Ini",
+            "billsTotal": "Total Tagihan",
+            "billsPaid": "Lunas",
+            "billsPartial": "Bayar Sebagian",
+            "billsUnpaid": "Belum Dibayar",
+            "amountDue": "Total Ditagih",
+            "amountPaid": "Terkumpul",
+            "cashThisMonth": "Kas Bulan Ini",
+            "income": "Pemasukan",
+            "expense": "Pengeluaran",
+            "balance": "Saldo Kas",
+            "pendingApprovals": "Menunggu Persetujuan",
+            "pendingApprovalsDesc": "Transaksi kas menunggu keputusan Ketua",
+            "recentCash": "Transaksi Kas Terbaru",
+            "empty": "Belum ada data pada periode berjalan."
+        },
+        "members": {
+            "title": "Data Warga",
+            "add": "Tambah Warga",
+            "edit": "Edit Warga",
+            "searchPlaceholder": "Cari nama, kode, alamat, telepon...",
+            "table": {
+                "code": "Kode",
+                "fullName": "Nama Lengkap",
+                "phone": "Telepon",
+                "email": "Email",
+                "address": "Alamat",
+                "rtRw": "RT/RW",
+                "houseStatus": "Status Hunian",
+                "status": "Status",
+                "joinedAt": "Bergabung",
+                "actions": "Aksi"
+            },
+            "form": {
+                "code": "Kode Warga",
+                "codePlaceholder": "cth. W-001",
+                "fullName": "Nama Lengkap",
+                "nik": "NIK",
+                "nomorKk": "Nomor KK",
+                "gender": "Jenis Kelamin",
+                "birthPlace": "Tempat Lahir",
+                "birthDate": "Tanggal Lahir",
+                "address": "Alamat",
+                "rtRw": "RT/RW",
+                "houseStatus": "Status Hunian",
+                "phone": "Telepon",
+                "email": "Email",
+                "status": "Status",
+                "joinedAt": "Tanggal Bergabung",
+                "notes": "Catatan",
+                "linkUser": "Tautkan Akun Portal",
+                "linkUserPlaceholder": "Pilih akun warga (opsional)",
+                "nikHint": "NIK disimpan terenkripsi. Kosongkan untuk mempertahankan NIK tersimpan."
+            },
+            "gender": {
+                "male": "Laki-laki",
+                "female": "Perempuan"
+            },
+            "houseStatus": {
+                "owner": "Milik Sendiri",
+                "rent": "Kontrak/Sewa"
+            },
+            "status": {
+                "active": "Aktif",
+                "inactive": "Tidak Aktif",
+                "moved": "Pindah"
+            },
+            "nikStored": "NIK tersimpan",
+            "nikMissing": "NIK belum diisi",
+            "empty": "Belum ada data warga.",
+            "emptyDesc": "Tambahkan warga pertama untuk mulai mencatat iuran.",
+            "validation": {
+                "codeRequired": "Kode warga wajib diisi.",
+                "nameRequired": "Nama lengkap wajib diisi."
+            },
+            "toast": {
+                "created": "Data warga berhasil ditambahkan.",
+                "updated": "Data warga berhasil diperbarui.",
+                "deleted": "Data warga berhasil dihapus."
+            },
+            "confirmDelete": {
+                "title": "Hapus Data Warga?",
+                "desc": "Warga yang masih memiliki tagihan aktif tidak dapat dihapus."
+            }
+        },
+        "duesTypes": {
+            "title": "Jenis Iuran",
+            "add": "Tambah Jenis Iuran",
+            "edit": "Edit Jenis Iuran",
+            "searchPlaceholder": "Cari kode atau nama iuran...",
+            "table": {
+                "code": "Kode",
+                "name": "Nama Iuran",
+                "amount": "Nominal",
+                "frequency": "Frekuensi",
+                "description": "Deskripsi",
+                "active": "Aktif",
+                "actions": "Aksi"
+            },
+            "form": {
+                "code": "Kode",
+                "codePlaceholder": "cth. IUR-01",
+                "name": "Nama Iuran",
+                "amount": "Nominal (Rp)",
+                "frequency": "Frekuensi",
+                "description": "Deskripsi",
+                "active": "Aktif"
+            },
+            "frequency": {
+                "monthly": "Bulanan",
+                "quarterly": "3 Bulan",
+                "yearly": "Tahunan",
+                "once": "Sekali Bayar"
+            },
+            "empty": "Belum ada jenis iuran.",
+            "emptyDesc": "Tambahkan jenis iuran seperti iuran bulanan, keamanan, atau kebersihan.",
+            "validation": {
+                "codeRequired": "Kode iuran wajib diisi.",
+                "nameRequired": "Nama iuran wajib diisi.",
+                "amountInvalid": "Nominal harus lebih dari 0."
+            },
+            "toast": {
+                "created": "Jenis iuran berhasil ditambahkan.",
+                "updated": "Jenis iuran berhasil diperbarui.",
+                "deleted": "Jenis iuran berhasil dihapus."
+            },
+            "confirmDelete": {
+                "title": "Hapus Jenis Iuran?",
+                "desc": "Jenis iuran yang sudah memiliki tagihan tidak dapat dihapus."
+            }
+        },
+        "bills": {
+            "title": "Tagihan Iuran",
+            "generate": "Generate Massal",
+            "recordPayment": "Catat Pembayaran",
+            "void": "Batalkan",
+            "detail": "Detail Tagihan",
+            "searchPlaceholder": "Cari nomor tagihan atau warga...",
+            "filterStatus": "Status",
+            "filterPeriod": "Periode",
+            "table": {
+                "billNumber": "No. Tagihan",
+                "member": "Warga",
+                "duesType": "Jenis Iuran",
+                "period": "Periode",
+                "amountDue": "Tagihan",
+                "amountPaid": "Dibayar",
+                "outstanding": "Sisa",
+                "status": "Status",
+                "dueDate": "Jatuh Tempo",
+                "paidAt": "Dibayar Pada",
+                "actions": "Aksi"
+            },
+            "status": {
+                "unpaid": "Belum Bayar",
+                "partial": "Sebagian",
+                "paid": "Lunas",
+                "void": "Dibatalkan"
+            },
+            "generateForm": {
+                "title": "Generate Tagihan Massal",
+                "period": "Periode (YYYY-MM)",
+                "duesType": "Jenis Iuran",
+                "duesTypeAll": "Semua jenis iuran aktif",
+                "dueDate": "Jatuh Tempo",
+                "notes": "Catatan",
+                "submit": "Generate Tagihan",
+                "success": "Tagihan berhasil digenerate.",
+                "noneGenerated": "Tidak ada tagihan baru yang perlu digenerate."
+            },
+            "paymentForm": {
+                "title": "Catat Pembayaran",
+                "amount": "Jumlah Bayar (Rp)",
+                "method": "Metode",
+                "methodCash": "Tunai",
+                "methodTransfer": "Transfer",
+                "methodQris": "QRIS",
+                "paidAt": "Tanggal Bayar",
+                "receipt": "Bukti Transfer",
+                "receiptUpload": "Unggah Bukti (jpg/png/pdf, maks 2MB)",
+                "notes": "Catatan",
+                "submit": "Simpan Pembayaran",
+                "success": "Pembayaran berhasil dicatat."
+            },
+            "voidConfirm": {
+                "title": "Batalkan Tagihan?",
+                "desc": "Tagihan yang dibatalkan tidak dihitung dalam laporan iuran."
+            },
+            "empty": "Belum ada tagihan pada periode ini.",
+            "emptyDesc": "Gunakan tombol Generate Massal untuk membuat tagihan iuran warga.",
+            "toast": {
+                "voided": "Tagihan berhasil dibatalkan."
+            },
+            "notFound": "Tagihan tidak ditemukan."
+        },
+        "cash": {
+            "title": "Kas Lingkungan",
+            "add": "Catat Transaksi",
+            "edit": "Edit Transaksi",
+            "approve": "Setujui",
+            "reject": "Tolak",
+            "searchPlaceholder": "Cari nomor transaksi atau keterangan...",
+            "filterStatus": "Status",
+            "filterType": "Jenis",
+            "table": {
+                "txNumber": "No. Transaksi",
+                "txDate": "Tanggal",
+                "type": "Jenis",
+                "category": "Kategori",
+                "amount": "Jumlah",
+                "description": "Keterangan",
+                "status": "Status",
+                "createdBy": "Dicatat Oleh",
+                "actions": "Aksi"
+            },
+            "type": {
+                "income": "Masuk",
+                "expense": "Keluar"
+            },
+            "status": {
+                "pending": "Menunggu",
+                "approved": "Disetujui",
+                "rejected": "Ditolak"
+            },
+            "form": {
+                "type": "Jenis",
+                "category": "Kategori",
+                "categoryPlaceholder": "cth. Keamanan, Kebersihan, Sumbangan",
+                "amount": "Jumlah (Rp)",
+                "description": "Keterangan",
+                "txDate": "Tanggal Transaksi",
+                "attachment": "Lampiran",
+                "submit": "Simpan Transaksi",
+                "readOnly": "Transaksi yang sudah diputuskan tidak dapat diubah."
+            },
+            "approveConfirm": {
+                "title": "Setujui Transaksi?",
+                "desc": "Transaksi akan dihitung dalam saldo kas."
+            },
+            "rejectForm": {
+                "title": "Tolak Transaksi",
+                "reason": "Alasan Penolakan",
+                "submit": "Tolak Transaksi",
+                "success": "Transaksi kas ditolak."
+            },
+            "sodWarning": "Anda tidak dapat menyetujui transaksi yang Anda buat sendiri (Separation of Duty).",
+            "pendingBadge": "Menunggu Persetujuan",
+            "empty": "Belum ada transaksi kas.",
+            "emptyDesc": "Catat pemasukan atau pengeluaran kas lingkungan di sini.",
+            "toast": {
+                "created": "Transaksi kas dicatat (menunggu persetujuan).",
+                "updated": "Transaksi kas diperbarui.",
+                "approved": "Transaksi kas disetujui.",
+                "deleted": "Transaksi kas dihapus."
+            }
+        },
+        "announcements": {
+            "title": "Pengumuman",
+            "add": "Buat Pengumuman",
+            "edit": "Edit Pengumuman",
+            "searchPlaceholder": "Cari judul pengumuman...",
+            "filterCategory": "Kategori",
+            "filterPriority": "Prioritas",
+            "filterActive": "Status Aktif",
+            "table": {
+                "title": "Judul",
+                "category": "Kategori",
+                "priority": "Prioritas",
+                "publishedAt": "Diterbitkan",
+                "expiresAt": "Berakhir",
+                "isActive": "Aktif",
+                "actions": "Aksi"
+            },
+            "category": {
+                "general": "Umum",
+                "meeting": "Rapat",
+                "payment": "Iuran",
+                "event": "Acara",
+                "emergency": "Darurat"
+            },
+            "priority": {
+                "low": "Rendah",
+                "normal": "Normal",
+                "high": "Tinggi",
+                "urgent": "Mendesak"
+            },
+            "form": {
+                "title": "Judul",
+                "content": "Isi Pengumuman",
+                "category": "Kategori",
+                "priority": "Prioritas",
+                "publishedAt": "Tanggal Terbit",
+                "expiresAt": "Tanggal Berakhir",
+                "isActive": "Tampilkan ke Warga"
+            },
+            "empty": "Belum ada pengumuman.",
+            "emptyDesc": "Buat pengumuman untuk informasi rapat, iuran, atau acara lingkungan.",
+            "toast": {
+                "created": "Pengumuman berhasil dibuat.",
+                "updated": "Pengumuman berhasil diperbarui.",
+                "deleted": "Pengumuman berhasil dihapus."
+            },
+            "confirmDelete": {
+                "title": "Hapus Pengumuman?",
+                "desc": "Pengumuman tidak akan tampil lagi di portal warga."
+            }
+        },
+        "reports": {
+            "title": "Laporan Bulanan",
+            "periodLabel": "Periode (YYYY-MM)",
+            "generate": "Tampilkan Laporan",
+            "exportCsv": "Export CSV",
+            "dues": {
+                "title": "Rekap Iuran",
+                "billed": "Total Ditagih",
+                "collected": "Terkumpul",
+                "outstanding": "Sisa Tagihan",
+                "collectionRate": "Tingkat Pengumpulan",
+                "byType": "Rincian per Jenis Iuran"
+            },
+            "cash": {
+                "title": "Kas Bulan Ini",
+                "openingBalance": "Saldo Awal",
+                "income": "Pemasukan",
+                "expense": "Pengeluaran",
+                "closingBalance": "Saldo Akhir",
+                "byCategory": "Rincian per Kategori"
+            },
+            "topArrears": {
+                "title": "Warga Tunggakan Teratas",
+                "member": "Warga",
+                "outstanding": "Tunggakan",
+                "empty": "Tidak ada tunggakan."
+            },
+            "empty": "Pilih periode untuk menampilkan laporan.",
+            "invalidPeriod": "Format periode tidak valid."
+        },
+        "portal": {
+            "title": "Portal Warga",
+            "welcome": "Selamat datang",
+            "memberCode": "Kode Warga",
+            "notRegistered": "Data warga Anda belum terdaftar",
+            "notRegisteredDesc": "Hubungi bendahara RT Anda untuk menghubungkan akun dengan data warga.",
+            "myBills": {
+                "title": "Tagihan Saya",
+                "billNumber": "No. Tagihan",
+                "duesType": "Jenis Iuran",
+                "period": "Periode",
+                "amountDue": "Tagihan",
+                "amountPaid": "Dibayar",
+                "outstanding": "Sisa",
+                "status": "Status",
+                "dueDate": "Jatuh Tempo",
+                "empty": "Belum ada tagihan untuk Anda."
+            },
+            "billsStatus": {
+                "unpaid": "Belum Bayar",
+                "partial": "Sebagian",
+                "paid": "Lunas"
+            },
+            "cash": {
+                "title": "Kas Lingkungan (Bulan Ini)",
+                "income": "Pemasukan",
+                "expense": "Pengeluaran",
+                "balance": "Saldo",
+                "recent": "Transaksi Terbaru"
+            },
+            "announcements": {
+                "title": "Pengumuman Terbaru",
+                "empty": "Belum ada pengumuman aktif."
+            },
+            "readInfo": "Halaman ini bersifat baca-saja dan hanya menampilkan data Anda sendiri."
+        }
     },
     "dashboard": {
         "welcome": "Selamat datang kembali! Berikut ringkasan bisnis Anda hari ini.",
