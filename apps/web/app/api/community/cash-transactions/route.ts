@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { Prisma } from '@prisma/client';
-import { MSG, MSG_COMMUNITY } from '@/lib/api-messages';
+import { MSG, MSG_COMMUNITY, MSG_COMMUNITY_EVENTS } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -131,6 +131,20 @@ export async function POST(request: Request) {
         const txDateValue = txDate ? new Date(txDate) : new Date();
         const userId = auth.userId;
 
+        // eventId (Fase 2) — opsi link ke kegiatan; di-parse DI LUAR Zod agar
+        // schema Fase 1 tidak diubah (key tambahan diabaikan schema non-strict).
+        const rawEventId: unknown = (body as Record<string, unknown>).eventId;
+        const eventId = typeof rawEventId === 'string' && rawEventId.trim() ? rawEventId.trim() : null;
+        if (eventId) {
+            const event = await prisma.communityEvent.findFirst({
+                where: { id: eventId, tenantId: auth.tenantId, deletedAt: null },
+                select: { id: true },
+            });
+            if (!event) {
+                return NextResponse.json({ error: MSG_COMMUNITY_EVENTS.EVENT_NOT_FOUND }, { status: 404 });
+            }
+        }
+
         // KAS number collision-safe: $transaction + P2002 retry loop (rollback → fetch max baru → retry).
         let lastUniqueError: unknown = null;
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -144,6 +158,7 @@ export async function POST(request: Request) {
                             type,
                             category: category || null,
                             duesTypeId: duesTypeId || null,
+                            eventId,
                             amount,
                             description,
                             txDate: txDateValue,
@@ -160,7 +175,7 @@ export async function POST(request: Request) {
                     action: 'CREATE',
                     entity: 'CommunityCashTransaction',
                     entityId: created.id,
-                    newValues: toAuditPayload({ txNumber: created.txNumber, type, amount: Number(amount), description }),
+                    newValues: toAuditPayload({ txNumber: created.txNumber, type, amount: Number(amount), description, eventId }),
                 });
 
                 return NextResponse.json({ success: true, data: serializeCashTx(created), message: 'Cash transaction recorded (pending approval)' }, { status: 201 });

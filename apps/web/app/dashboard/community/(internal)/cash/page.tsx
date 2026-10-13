@@ -19,8 +19,15 @@ interface CashRow {
     amount: number
     description: string
     status: string
+    eventId: string | null
     createdBy: string | null
     rejectReason: string | null
+}
+
+interface EventOption {
+    id: string
+    eventNumber: string
+    title: string
 }
 
 const EMPTY_FORM = {
@@ -29,6 +36,7 @@ const EMPTY_FORM = {
     amount: '',
     description: '',
     txDate: '',
+    eventId: '',
 }
 
 type FormState = typeof EMPTY_FORM
@@ -65,6 +73,8 @@ export default function CommunityCashPage() {
     const [rejectReason, setRejectReason] = useState('')
     const [rejecting, setRejecting] = useState(false)
 
+    const [eventOptions, setEventOptions] = useState<EventOption[]>([])
+
     const fetchRows = useCallback(async () => {
         setLoading(true)
         try {
@@ -94,10 +104,23 @@ export default function CommunityCashPage() {
         setPage(1)
     }, [period, typeFilter, statusFilter])
 
+    // Fetch daftar kegiatan untuk select "Kegiatan terkait" (opsional).
+    const fetchEventOptions = useCallback(async () => {
+        try {
+            const res = await fetch('/api/community/events?limit=100')
+            if (!res.ok) return
+            const json = await res.json().catch(() => ({}))
+            if (Array.isArray(json.data)) setEventOptions(json.data)
+        } catch {
+            // ignore — select tetap kosong
+        }
+    }, [])
+
     const openCreate = () => {
         setEditing(null)
         setForm({ ...EMPTY_FORM, txDate: new Date().toISOString().slice(0, 10) })
         setModalOpen(true)
+        void fetchEventOptions()
     }
 
     const openEdit = (row: CashRow) => {
@@ -108,8 +131,10 @@ export default function CommunityCashPage() {
             amount: String(row.amount),
             description: row.description,
             txDate: row.txDate ? new Date(row.txDate).toISOString().slice(0, 10) : '',
+            eventId: row.eventId ?? '',
         })
         setModalOpen(true)
+        void fetchEventOptions()
     }
 
     const setField = (key: keyof FormState, value: string) => {
@@ -135,6 +160,8 @@ export default function CommunityCashPage() {
             }
             if (form.category.trim()) payload.category = form.category.trim()
             if (form.txDate) payload.txDate = form.txDate
+            // POST: null aman (absent = null di backend). PUT: null = unlink eventId.
+            payload.eventId = form.eventId || null
 
             const res = await fetch(
                 editing ? `/api/community/cash-transactions/${editing.id}` : '/api/community/cash-transactions',
@@ -572,6 +599,17 @@ export default function CommunityCashPage() {
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('community.cash.form.txDate')} *</label>
                                 <input type="date" value={form.txDate} onChange={(e) => setField('txDate', e.target.value)} className={inputClass} />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('community.cash.form.event')}</label>
+                                <select value={form.eventId} onChange={(e) => setField('eventId', e.target.value)} className={inputClass}>
+                                    <option value="">{t('community.cash.form.eventNone')}</option>
+                                    {eventOptions.map((ev) => (
+                                        <option key={ev.id} value={ev.id}>
+                                            {ev.eventNumber} — {ev.title}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             {!editing && (
                                 <p className="rounded-lg bg-yellow-50 p-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">

@@ -22,6 +22,8 @@ const num = (v: unknown): number => (v === null || v === undefined ? 0 : Number(
  *   billsThisPeriod: { total, paid, partial, unpaid, amountDue, amountPaid },
  *   cashThisMonth:   { income, expense, balance },
  *   pendingApprovals,
+ *   lettersThisMonth,   // surat terbit bulan berjalan (Fase 2)
+ *   upcomingEvents,     // kegiatan berstatus PLANNED (Fase 2)
  * }
  *
  * Angka kas HANYA dari transaksi APPROVED (belum dihapus). `pendingApprovals`
@@ -50,42 +52,63 @@ export async function GET(request: Request) {
         const period = currentPeriod();
         const { start, end } = periodBounds(period);
 
-        const [memberActive, memberInactive, memberTotal, billStatusGroups, cashByType, pendingApprovals] =
-            await Promise.all([
-                prisma.communityMember.count({
-                    where: { tenantId, status: 'ACTIVE', deletedAt: null },
-                }),
-                prisma.communityMember.count({
-                    where: { tenantId, status: 'INACTIVE', deletedAt: null },
-                }),
-                prisma.communityMember.count({
-                    where: { tenantId, deletedAt: null },
-                }),
-                prisma.communityDuesBill.groupBy({
-                    by: ['status'],
-                    where: {
-                        tenantId,
-                        period,
-                        deletedAt: null,
-                        status: { not: 'VOID' },
-                    },
-                    _count: { _all: true },
-                    _sum: { amountDue: true, amountPaid: true },
-                }),
-                prisma.communityCashTransaction.groupBy({
-                    by: ['type'],
-                    where: {
-                        tenantId,
-                        status: 'APPROVED',
-                        deletedAt: null,
-                        txDate: { gte: start, lte: end },
-                    },
-                    _sum: { amount: true },
-                }),
-                prisma.communityCashTransaction.count({
-                    where: { tenantId, status: 'PENDING', deletedAt: null },
-                }),
-            ]);
+        const [
+            memberActive,
+            memberInactive,
+            memberTotal,
+            billStatusGroups,
+            cashByType,
+            pendingApprovals,
+            lettersThisMonth,
+            upcomingEvents,
+        ] = await Promise.all([
+            prisma.communityMember.count({
+                where: { tenantId, status: 'ACTIVE', deletedAt: null },
+            }),
+            prisma.communityMember.count({
+                where: { tenantId, status: 'INACTIVE', deletedAt: null },
+            }),
+            prisma.communityMember.count({
+                where: { tenantId, deletedAt: null },
+            }),
+            prisma.communityDuesBill.groupBy({
+                by: ['status'],
+                where: {
+                    tenantId,
+                    period,
+                    deletedAt: null,
+                    status: { not: 'VOID' },
+                },
+                _count: { _all: true },
+                _sum: { amountDue: true, amountPaid: true },
+            }),
+            prisma.communityCashTransaction.groupBy({
+                by: ['type'],
+                where: {
+                    tenantId,
+                    status: 'APPROVED',
+                    deletedAt: null,
+                    txDate: { gte: start, lte: end },
+                },
+                _sum: { amount: true },
+            }),
+            prisma.communityCashTransaction.count({
+                where: { tenantId, status: 'PENDING', deletedAt: null },
+            }),
+            // Fase 2: surat yang terbit (ISSUED) selama bulan berjalan (periode APP_TIMEZONE).
+            prisma.communityLetter.count({
+                where: {
+                    tenantId,
+                    status: 'ISSUED',
+                    deletedAt: null,
+                    issuedAt: { gte: start, lte: end },
+                },
+            }),
+            // Fase 2: kegiatan mendatang yang masih berstatus PLANNED.
+            prisma.communityEvent.count({
+                where: { tenantId, status: 'PLANNED', deletedAt: null },
+            }),
+        ]);
 
         const countByStatus = (status: string): number =>
             num(billStatusGroups.find((g) => g.status === status)?._count?._all);
@@ -115,6 +138,8 @@ export async function GET(request: Request) {
                     balance: income - expense,
                 },
                 pendingApprovals,
+                lettersThisMonth,
+                upcomingEvents,
             },
         });
     } catch (error) {

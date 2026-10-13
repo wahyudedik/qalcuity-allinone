@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { MSG, MSG_COMMUNITY } from '@/lib/api-messages';
+import { MSG, MSG_COMMUNITY, MSG_COMMUNITY_EVENTS } from '@/lib/api-messages';
 import { prisma } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
 import { requirePermissionForRoute } from '@/lib/session';
@@ -104,6 +104,23 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         if (description !== undefined) updateData.description = description;
         if (txDate !== undefined) updateData.txDate = new Date(txDate);
         if (attachmentUrl !== undefined) updateData.attachmentUrl = attachmentUrl || null;
+
+        // eventId (Fase 2) — opsi link ke kegiatan; di-parse DI LUAR Zod agar
+        // schema Fase 1 tidak diubah. Key absen = tidak diubah; null/kosong = unlink.
+        const rawEventId: unknown = (body as Record<string, unknown>).eventId;
+        if (rawEventId !== undefined) {
+            const eventId = typeof rawEventId === 'string' && rawEventId.trim() ? rawEventId.trim() : null;
+            if (eventId) {
+                const event = await prisma.communityEvent.findFirst({
+                    where: { id: eventId, tenantId: auth.tenantId, deletedAt: null },
+                    select: { id: true },
+                });
+                if (!event) {
+                    return NextResponse.json({ error: MSG_COMMUNITY_EVENTS.EVENT_NOT_FOUND }, { status: 404 });
+                }
+            }
+            updateData.eventId = eventId;
+        }
 
         const updated = await prisma.communityCashTransaction.update({
             where: { id: existing.id },

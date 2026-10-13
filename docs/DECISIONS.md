@@ -1,6 +1,6 @@
 # 📋 Qalcuity — Architectural Decisions
 
-> **Last Updated:** 30 Agustus 2026
+> **Last Updated:** 13 Oktober 2026
 > **Current Version:** v1.0.0-beta.1
 
 ---
@@ -30,6 +30,7 @@
 - [ADR-021: Exception Center & Emergency Access](#adr-021-exception-center--emergency-access)
 - [ADR-022: Period Closing Wizard](#adr-022-period-closing-wizard)
 - [ADR-023: Control Dashboard Tiers](#adr-023-control-dashboard-tiers)
+- [ADR-024: QR Verify = Public Page under /verify/*](#adr-024-qr-verify--public-page-under-verify)
 
 ---
 
@@ -1403,5 +1404,53 @@ Implement 3-tier dashboard:
 
 ---
 
-**Last Updated:** August 30, 2026
+## ADR-024: QR Verify = Public Page under /verify/*
+
+**Status:** Accepted
+**Date:** 2026-10-13
+
+### Decision
+
+Verifikasi QR surat pengantar komunitas menggunakan **halaman publik di route group root** `/verify/community-letter/[token]` (Next.js server component), **bukan** API JSON di bawah `/api/*` dan **bukan** halaman dashboard yang butuh login.
+
+### Context
+
+Surat pengantar (domisili, SKTM, dll.) dicetak dalam bentuk PDF fisik dengan QR code. Siapa pun yang menerima surat tersebut (petugas RT, aparat, pihak ketiga) harus bisa memverifikasi keaslian surat dengan scan QR — **tanpa akun Qalcuity**.
+
+### Rationale
+
+| Aspek | Public Page `/verify/*` | API `/api/verify` + SPA | Dashboard + Login |
+|-------|------------------------|------------------------|-------------------|
+| **Akses penerima surat** | ✅ Langsung buka URL | ⚠️ Butuh client JS tambahan | ❌ Wajib login |
+| **SEO/share preview** | ✅ Server-rendered HTML | ❌ JSON mentah | ❌ Auth wall |
+| **Attack surface** | Kecil — read-only, 1 query by unique token | Sedang — API surface bertambah | Besar — session handling |
+| **PII exposure** | Minimal — tanpa NIK, hanya snapshot surat | Kontrol via response shape | Full member data |
+
+### Mechanics
+
+- **Capability URL** — token 32-char hex (128-bit entropy) di-`@unique` **global** (bukan per-tenant): token sudah cukup sebagai kredensial; query `findUnique({ where: { verifyToken } })` **tanpa tenant filter** by design.
+- **Server component** `dynamic = 'force-dynamic'` — data selalu fresh (ISSUE/REVOKE langsung tercermin).
+- **Regex gate** `/^[a-f0-9]{32}$/i` sebelum query — cegah query aneh.
+- **Data yang ditampilkan:** nomor surat, jenis, nama pemohon, keperluan, tujuan, tanggal terbit, penandatangan (`signedByName` snapshot). **NIK tidak pernah ditampilkan.**
+- **Status badge:** ISSUED → "SAH & VALID"; REVOKED → "TIDAK BERLAKU" + alasan; DRAF → "BELUM RESMI".
+
+### Alternatives Considered
+
+| Alternative | Pros | Cons | Decision |
+|-------------|------|------|----------|
+| **API JSON `/api/community/verify/[token]`** | Terpisah dari pages | Penerima surat lihat JSON mentah; butuh SPA terpisah | ❌ Rejected |
+| **Dashboard route + login** | Konsisten dengan module lain | Penerima surat bukan user Qalcuity — tidak bisa login | ❌ Rejected |
+| **Signed URL time-limited** | Token kedaluwarsa otomatis | Surat fisik hidup bertahun-tahun — URL harus valid selama surat berlaku | ❌ Rejected (revocation via status REVOKED) |
+
+### Consequences
+
+- ✅ Scan QR → langsung tampil halaman verifikasi yang ramah (HTML server-rendered).
+- ✅ Revoke efektif permanen — surat lama yang sudah dicetak otomatis "TIDAK BERLAKU".
+- ✅ Tidak ada session/cookie di halaman publik — mengurangi attack surface.
+- ⚠️ Token global unik = tanpa tenant filter di query — diterima sebagai trade-off capability-URL (entropy 128-bit).
+- ⚠️ Halaman hardcoded Bahasa Indonesia (penerima surat umumnya warga lokal) — i18n menyusul jika ada kebutuhan.
+
+---
+
+**Last Updated:** October 13, 2026
 **Maintainer:** Qalcuity Architecture Team

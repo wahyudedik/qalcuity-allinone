@@ -256,7 +256,9 @@
                 "cash": "Cash",
                 "announcements": "Announcements",
                 "reports": "Reports",
-                "portal": "Resident Portal"
+                "portal": "Resident Portal",
+                "letters": "Letters",
+                "events": "Events"
             }
         },
         "common": {
@@ -295,7 +297,9 @@
             "pendingApprovals": "Pending Approvals",
             "pendingApprovalsDesc": "Cash transactions awaiting the Chairperson's decision",
             "recentCash": "Recent Cash Transactions",
-            "empty": "No data for the current period yet."
+            "empty": "No data for the current period yet.",
+            "lettersThisMonth": "Letters This Month",
+            "upcomingEvents": "Upcoming Events"
         },
         "members": {
             "title": "Residents",
@@ -514,7 +518,9 @@
                 "txDate": "Transaction Date",
                 "attachment": "Attachment",
                 "submit": "Save Transaction",
-                "readOnly": "Decided transactions cannot be edited."
+                "readOnly": "Decided transactions cannot be edited.",
+                "event": "Event (optional)",
+                "eventNone": "— Not linked to an event —"
             },
             "approveConfirm": {
                 "title": "Approve Transaction?",
@@ -652,7 +658,206 @@
                 "title": "Latest Announcements",
                 "empty": "No active announcements yet."
             },
-            "readInfo": "This page is read-only and only shows your own data."
+            "readInfo": "This page is read-only and only shows your own data.",
+            "myLetters": {
+                "title": "My Letters",
+                "quickDesc": "Introduction letters issued for you",
+                "empty": "No letters yet",
+                "emptyDesc": "Letters issued for you will appear here.",
+                "verify": "Verify"
+            },
+            "myEvents": {
+                "title": "Community Events",
+                "quickDesc": "Community event schedule",
+                "empty": "No events yet",
+                "emptyDesc": "Upcoming events will appear here."
+            }
+        },
+        "letters": {
+            "title": "Introduction Letters",
+            "subtitle": "Introduction & domicile letters for residents",
+            "new": "New Letter",
+            "back": "Back to Letters",
+            "downloadPdf": "Download PDF",
+            "filterStatus": "Status Filter",
+            "filterType": "Type Filter",
+            "searchLabel": "Search",
+            "searchPlaceholder": "Search number, member, purpose...",
+            "empty": "No letters yet",
+            "emptyDesc": "Create the first introduction letter for a resident.",
+            "draftNumber": "Draft Number",
+            "edit": "Edit",
+            "delete": "Delete",
+            "revoke": "Revoke",
+            "copyVerify": "Copy Verify Link",
+            "issue": "Issue",
+            "editTitle": "Edit Letter",
+            "newTitle": "Create New Letter",
+            "deleteConfirmDesc": "Deleted draft letters cannot be recovered.",
+            "accessDenied": {
+                "title": "Access Denied",
+                "desc": "You do not have permission to manage letters."
+            },
+            "table": {
+                "letterNumber": "Letter Number",
+                "letterType": "Type",
+                "member": "Member",
+                "memberCode": "Member Code",
+                "purpose": "Purpose",
+                "destination": "Destination",
+                "status": "Status",
+                "issuedAt": "Issued",
+                "revokedAt": "Revoked"
+            },
+            "status": {
+                "draft": "Draft",
+                "issued": "Issued",
+                "revoked": "Revoked"
+            },
+            "type": {
+                "pengantar": "Introduction",
+                "domisili": "Domicile",
+                "sktm": "SKTM",
+                "lainnya": "Others"
+            },
+            "form": {
+                "member": "Member",
+                "memberPlaceholder": "Select member...",
+                "letterType": "Letter Type",
+                "purpose": "Purpose",
+                "destination": "Destination",
+                "notes": "Notes"
+            },
+            "toast": {
+                "created": "Letter created successfully",
+                "updated": "Letter updated successfully",
+                "deleted": "Letter deleted successfully",
+                "issued": "Letter issued successfully",
+                "revoked": "Letter revoked successfully",
+                "linkCopied": "Verify link copied",
+                "copyFailed": "Failed to copy link"
+            },
+            "revokeForm": {
+                "title": "Revoke Letter",
+                "reason": "Revocation Reason",
+                "reasonInvalid": "Reason must be 3-500 characters",
+                "submit": "Revoke Letter"
+            },
+            "issueConfirm": {
+                "title": "Issue Letter?",
+                "desc": "The letter will be digitally signed and an official number issued. This action cannot be undone."
+            },
+            "detail": {
+                "letterInfo": "Letter Information",
+                "purpose": "Purpose",
+                "createdAt": "Created",
+                "updatedAt": "Updated",
+                "memberInfo": "Applicant Information",
+                "gender": "Gender",
+                "male": "Male",
+                "female": "Female",
+                "birthDate": "Date of Birth",
+                "nikStatus": "NIK Status",
+                "nikStored": "Stored (encrypted)",
+                "nikMissing": "Not available",
+                "phone": "Phone",
+                "address": "Address",
+                "history": "History",
+                "issuedAt": "Issued At",
+                "revokedAt": "Revoked At",
+                "revokeReason": "Revocation Reason",
+                "verification": "Public Verification",
+                "verifyDesc": "Share this link to verify the letter authenticity without login.",
+                "verifyDraft": "Verify link becomes available after the letter is issued.",
+                "verifyRevoked": "This letter has been revoked — the verify link shows invalid status."
+            }
+        },
+        "events": {
+            "title": "Events",
+            "subtitle": "Resident event schedule & budget",
+            "new": "New Event",
+            "editTitle": "Edit Event",
+            "newTitle": "Create New Event",
+            "empty": "No events yet",
+            "emptyDesc": "Create the first event for residents.",
+            "deleteConfirmDesc": "Events with cash transactions cannot be deleted.",
+            "searchPlaceholder": "Search number, title, location...",
+            "accessDenied": {
+                "title": "Access Denied",
+                "desc": "You do not have permission to manage events."
+            },
+            "table": {
+                "eventNumber": "Number",
+                "title": "Title",
+                "category": "Category",
+                "startsAt": "Starts",
+                "endsAt": "Ends",
+                "location": "Location",
+                "budget": "Budget",
+                "status": "Status"
+            },
+            "status": {
+                "planned": "Planned",
+                "ongoing": "Ongoing",
+                "done": "Done",
+                "cancelled": "Cancelled"
+            },
+            "category": {
+                "rapat": "Meeting",
+                "kerjaBakti": "Community Work",
+                "perayaan": "Celebration",
+                "sosial": "Social",
+                "lainnya": "Others"
+            },
+            "form": {
+                "title": "Title",
+                "description": "Description",
+                "category": "Category",
+                "startsAt": "Start Time",
+                "endsAt": "End Time",
+                "location": "Location",
+                "maxCapacity": "Max Capacity",
+                "budgetAmount": "Budget",
+                "publishedAt": "Published At",
+                "titleRequired": "Title must be at least 3 characters",
+                "startsAtRequired": "Start time is required",
+                "invalidDate": "End time must be after start time"
+            },
+            "toast": {
+                "created": "Event created successfully",
+                "updated": "Event updated successfully",
+                "deleted": "Event deleted successfully"
+            },
+            "detail": {
+                "eventInfo": "Event Information",
+                "publishedAt": "Published",
+                "unpublished": "Not published",
+                "budgetTitle": "Budget & Realization",
+                "income": "Income",
+                "expense": "Expense",
+                "budgetUsage": "Budget Usage",
+                "cashRealization": "Cash Realization",
+                "noCash": "No cash transactions for this event yet."
+            }
+        },
+        "verify": {
+            "title": "Letter Verification",
+            "subtitle": "Introduction letter authenticity verification page",
+            "valid": "VALID & AUTHENTIC",
+            "invalid": "INVALID",
+            "draft": "DRAFT — NOT OFFICIAL",
+            "notFoundTitle": "Letter not found",
+            "notFoundDesc": "The verification link is invalid or the letter is no longer registered. Please ensure the link you opened is complete and correct.",
+            "nomor": "Letter Number",
+            "jenis": "Letter Type",
+            "pemohon": "Applicant Name",
+            "keperluan": "Purpose",
+            "tujuan": "Destination",
+            "tanggalTerbit": "Issue Date",
+            "penandatangan": "Signed By",
+            "tanggalDicabut": "Revocation Date",
+            "alasanDicabut": "Revocation Reason",
+            "footer": "This page is automatically verified by Qalcuity. NIK is never displayed to protect privacy."
         }
     },
     "dashboard": {
@@ -1656,7 +1861,7 @@
             },
             "generalLedger": {
                 "title": "General Ledger",
-                "description": "Detailed listing of all journal entry items by account",
+                "description": "Description",
                 "selectAccount": "Select Account",
                 "allAccounts": "All Accounts",
                 "dateFrom": "From Date",
@@ -1668,7 +1873,6 @@
                 "void": "Void",
                 "date": "Date",
                 "entryNumber": "Entry #",
-                "description": "Description",
                 "debit": "Debit",
                 "credit": "Credit",
                 "runningBalance": "Running Balance",
@@ -1703,7 +1907,6 @@
                 "days": "days",
                 "amount": "Amount",
                 "balance": "Balance",
-                "total": "Total",
                 "paid": "Paid",
                 "bucket": "Bucket",
                 "exportCsv": "Export CSV",
@@ -6435,62 +6638,75 @@
         }
     },
     "operations": {
-        "gantt": {
-            "title": "Gantt Chart",
-            "subtitle": "Visual timeline of project tasks",
-            "today": "Today",
-            "noDates": "No dates assigned yet",
-            "progress": "Progress",
-            "dependencies": "Dependencies",
-            "noDependencies": "No dependencies",
-            "addDependency": "Add Dependency",
-            "removeDependency": "Remove Dependency",
-            "circularDetected": "Circular dependency detected",
-            "taskBar": "Task bar"
+        "budget": {
+            "totalBudget": "Total Budget",
+            "spent": "Spent",
+            "overBudget": "Over Budget",
+            "remaining": "Remaining",
+            "overBudgetBy": "Over budget by {amount}",
+            "usagePercentage": "Usage Percentage",
+            "categoryBreakdown": "Breakdown by Category",
+            "item": "item",
+            "budgetDetails": "Budget Details",
+            "planned": "Planned",
+            "actual": "Actual",
+            "labor": "Labor",
+            "material": "Material",
+            "equipment": "Equipment",
+            "travel": "Travel",
+            "software": "Software",
+            "other": "Other"
         },
-        "resources": {
-            "title": "Resource Allocation",
-            "subtitle": "Manage project employee allocation",
-            "addAllocation": "Add Allocation",
-            "employee": "Employee",
-            "role": "Role",
-            "allocation": "Allocation",
-            "period": "Period",
-            "hourlyRate": "Hourly Rate",
-            "manager": "Manager",
-            "member": "Member",
-            "consultant": "Consultant",
-            "utilization": "Utilization",
+        "gantt": {
+            "task": "Task",
+            "tasks": "tasks",
+            "completed": "completed",
+            "progress": "Progress",
+            "noTasks": "No tasks to display yet",
+            "noTasksDescription": "Create tasks first to view the Gantt chart",
+            "hasDependency": "Has dependency"
+        },
+        "timeline": {
+            "projectTimeline": "Project Timeline",
+            "totalDays": "{count} total days",
+            "startDate": "Start",
+            "endDate": "End",
+            "progress": "Progress",
+            "dayOf": "Day {current} of {total}",
+            "daysAgo": "{count} days ago",
+            "today": "Today",
+            "tomorrow": "Tomorrow",
+            "daysLeft": "{count} days left",
+            "milestoneTasks": "Milestone Tasks",
+            "noTimeline": "No timeline yet",
+            "noTimelineDescription": "Set project start/end dates to view the timeline",
+            "currentDay": "Today"
+        },
+        "heatmap": {
+            "employees": "Employees",
+            "totalAllocation": "Total Allocation",
             "overCapacity": "Over-capacity",
+            "utilization": "Utilization",
+            "average": "Average",
+            "legend": "Legend",
+            "noAllocations": "No resource allocations yet",
+            "noAllocationsDescription": "Add employee allocations to view the heatmap",
+            "none": "None",
             "available": "Available",
             "moderate": "Moderate",
             "high": "High",
-            "noData": "No resource allocations yet",
-            "noDataDescription": "Start allocating employees to this project to track resource utilization."
+            "overCapacityLevel": "Over-capacity"
         },
-        "budget": {
-            "title": "Budget",
-            "subtitle": "Budget vs actual tracking",
-            "totalBudget": "Total Budget",
-            "used": "Used",
-            "remaining": "Remaining",
-            "overBudget": "Over Budget",
-            "usagePercentage": "Usage Percentage",
-            "byCategory": "By Category",
-            "detailItems": "Detail Items",
-            "planned": "Planned",
-            "actual": "Actual",
-            "noData": "No budget items yet",
-            "addItem": "Add Item"
-        },
-        "timeline": {
-            "title": "Project Timeline",
-            "elapsed": "Time Elapsed",
-            "actualProgress": "Actual Progress",
-            "milestones": "Milestones",
-            "noMilestones": "No milestones yet",
-            "daysRemaining": "days remaining",
-            "daysOverdue": "days overdue"
+        "dependency": {
+            "circularDependencyError": "Cannot create a dependency that points to this task (circular dependency)",
+            "setDependency": "Set Dependency",
+            "noDependency": "No dependency",
+            "saving": "Saving...",
+            "save": "Save",
+            "removeDependency": "Remove Dependency",
+            "waitingFor": "Waiting for",
+            "changeDependency": "Change dependency",
+            "addDependency": "Add Dependency"
         }
     },
     "field": {
@@ -6738,80 +6954,8 @@
     "birthdayNotAvailable": "Birthday data not available",
     "birthdayFieldMissing": "dateOfBirth field not available in employee data",
     "loadError": "Failed to load HR data",
-    "operations": {
-        "budget": {
-            "totalBudget": "Total Budget",
-            "spent": "Spent",
-            "overBudget": "Over Budget",
-            "remaining": "Remaining",
-            "overBudgetBy": "Over budget by {amount}",
-            "usagePercentage": "Usage Percentage",
-            "categoryBreakdown": "Breakdown by Category",
-            "item": "item",
-            "budgetDetails": "Budget Details",
-            "planned": "Planned",
-            "actual": "Actual",
-            "labor": "Labor",
-            "material": "Material",
-            "equipment": "Equipment",
-            "travel": "Travel",
-            "software": "Software",
-            "other": "Other"
-        },
-        "gantt": {
-            "task": "Task",
-            "tasks": "tasks",
-            "completed": "completed",
-            "progress": "Progress",
-            "noTasks": "No tasks to display yet",
-            "noTasksDescription": "Create tasks first to view the Gantt chart",
-            "hasDependency": "Has dependency"
-        },
-        "timeline": {
-            "projectTimeline": "Project Timeline",
-            "totalDays": "{count} total days",
-            "startDate": "Start",
-            "endDate": "End",
-            "progress": "Progress",
-            "dayOf": "Day {current} of {total}",
-            "daysAgo": "{count} days ago",
-            "today": "Today",
-            "tomorrow": "Tomorrow",
-            "daysLeft": "{count} days left",
-            "milestoneTasks": "Milestone Tasks",
-            "noTimeline": "No timeline yet",
-            "noTimelineDescription": "Set project start/end dates to view the timeline",
-            "currentDay": "Today"
-        },
-        "heatmap": {
-            "employees": "Employees",
-            "totalAllocation": "Total Allocation",
-            "overCapacity": "Over-capacity",
-            "utilization": "Utilization",
-            "average": "Average",
-            "legend": "Legend",
-            "noAllocations": "No resource allocations yet",
-            "noAllocationsDescription": "Add employee allocations to view the heatmap",
-            "none": "None",
-            "available": "Available",
-            "moderate": "Moderate",
-            "high": "High",
-            "overCapacityLevel": "Over-capacity"
-        },
-        "dependency": {
-            "circularDependencyError": "Cannot create a dependency that points to this task (circular dependency)",
-            "setDependency": "Set Dependency",
-            "noDependency": "No dependency",
-            "saving": "Saving...",
-            "save": "Save",
-            "removeDependency": "Remove Dependency",
-            "waitingFor": "Waiting for",
-            "changeDependency": "Change dependency",
-            "addDependency": "Add Dependency"
-        }
-    },
     "inbox": {
-        "title": "Work Inbox",
+        "title": "Title",
         "description": "Your activity center — tasks, approvals, and items that need your attention.",
         "myTasks": "My Tasks",
         "pendingApprovals": "Pending Approvals",
@@ -6842,7 +6986,6 @@
         "quickActions": "Quick Actions",
         "taskName": "Task Name",
         "project": "Project",
-        "title": "Title",
         "details": "Details",
         "typeTask": "Task",
         "typeInvoice": "Invoice",

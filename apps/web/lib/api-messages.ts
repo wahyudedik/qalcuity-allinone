@@ -480,4 +480,34 @@ export const MSG_COMMUNITY = {
     PORTAL_MEMBER_NOT_FOUND: 'Your resident data is not registered yet — contact the treasurer',
 } as const;
 
+/**
+ * Pesan API Community Fase 2 — Surat (letters).
+ * Referensi: plans/community-phase2-implementation.md §5.3.
+ */
+export const MSG_COMMUNITY_LETTERS = {
+    LETTER_CREATED: 'Draft letter created',
+    LETTER_UPDATED: 'Draft letter updated',
+    LETTER_DELETED: 'Draft letter deleted',
+    LETTER_ISSUED: 'Letter issued successfully',
+    LETTER_REVOKED: 'Letter revoked',
+    LETTER_NOT_FOUND: 'Letter not found',
+    LETTER_NOT_DRAFT: 'Only DRAFT letters can be edited or deleted',
+    LETTER_ALREADY_ISSUED: 'Letter has already been issued',
+    LETTER_REVOKED_NO_PDF: 'Revoked letter cannot be downloaded',
+    LETTER_INVALID_TRANSITION: 'Invalid letter status transition',
+} as const;
+
+/**
+ * Pesan API Community Fase 2 — Kegiatan (events).
+ * Referensi: plans/community-phase2-implementation.md §5.3.
+ */
+export const MSG_COMMUNITY_EVENTS = {
+    EVENT_CREATED: 'Event created',
+    EVENT_UPDATED: 'Event updated',
+    EVENT_DELETED: 'Event deleted',
+    EVENT_NOT_FOUND: 'Event not found',
+    EVENT_HAS_TRANSACTIONS: 'Event still has linked cash transactions',
+    EVENT_INVALID_DATE: 'End time must be after start time',
+} as const;
+
 export type ApiMessageKey = keyof typeof MSG;

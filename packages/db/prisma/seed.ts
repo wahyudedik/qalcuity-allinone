@@ -1288,6 +1288,8 @@ async function main() {
       payments: community.created.payments,
       cashTransactions: community.created.cashTransactions,
       announcements: community.created.announcements,
+      letters: community.created.letters,
+      events: community.created.events,
     });
 
     console.log("\n✅ Demo data seeded (Users, Categories, Contacts, Suppliers, Activities, Warehouses, Products, StockMovements, StockOpnames, Invoices, Payments, Quotations, POs, Leads, Deals, Departments, Employees, Attendance, Leaves, Payroll, Billing, Audit, CoA, BankTx, FinanceP0, Community)");

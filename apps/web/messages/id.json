@@ -256,7 +256,9 @@
                 "cash": "Kas",
                 "announcements": "Pengumuman",
                 "reports": "Laporan",
-                "portal": "Portal Warga"
+                "portal": "Portal Warga",
+                "letters": "Surat",
+                "events": "Kegiatan"
             }
         },
         "common": {
@@ -295,7 +297,9 @@
             "pendingApprovals": "Menunggu Persetujuan",
             "pendingApprovalsDesc": "Transaksi kas menunggu keputusan Ketua",
             "recentCash": "Transaksi Kas Terbaru",
-            "empty": "Belum ada data pada periode berjalan."
+            "empty": "Belum ada data pada periode berjalan.",
+            "lettersThisMonth": "Surat Bulan Ini",
+            "upcomingEvents": "Kegiatan Mendatang"
         },
         "members": {
             "title": "Data Warga",
@@ -514,7 +518,9 @@
                 "txDate": "Tanggal Transaksi",
                 "attachment": "Lampiran",
                 "submit": "Simpan Transaksi",
-                "readOnly": "Transaksi yang sudah diputuskan tidak dapat diubah."
+                "readOnly": "Transaksi yang sudah diputuskan tidak dapat diubah.",
+                "event": "Kegiatan (opsional)",
+                "eventNone": "— Tidak terkait kegiatan —"
             },
             "approveConfirm": {
                 "title": "Setujui Transaksi?",
@@ -652,7 +658,206 @@
                 "title": "Pengumuman Terbaru",
                 "empty": "Belum ada pengumuman aktif."
             },
-            "readInfo": "Halaman ini bersifat baca-saja dan hanya menampilkan data Anda sendiri."
+            "readInfo": "Halaman ini bersifat baca-saja dan hanya menampilkan data Anda sendiri.",
+            "myLetters": {
+                "title": "Surat Saya",
+                "quickDesc": "Surat pengantar yang diterbitkan untuk Anda",
+                "empty": "Belum ada surat",
+                "emptyDesc": "Surat yang diterbitkan untuk Anda akan muncul di sini.",
+                "verify": "Verifikasi"
+            },
+            "myEvents": {
+                "title": "Kegiatan Warga",
+                "quickDesc": "Jadwal kegiatan lingkungan",
+                "empty": "Belum ada kegiatan",
+                "emptyDesc": "Kegiatan yang akan datang akan muncul di sini."
+            }
+        },
+        "letters": {
+            "title": "Surat Pengantar",
+            "subtitle": "Surat pengantar & domisili untuk warga",
+            "new": "Buat Surat",
+            "back": "Kembali ke Daftar Surat",
+            "downloadPdf": "Unduh PDF",
+            "filterStatus": "Filter Status",
+            "filterType": "Filter Jenis",
+            "searchLabel": "Cari",
+            "searchPlaceholder": "Cari nomor, anggota, keperluan...",
+            "empty": "Belum ada surat",
+            "emptyDesc": "Buat surat pengantar pertama untuk warga.",
+            "draftNumber": "Nomor Draft",
+            "edit": "Edit",
+            "delete": "Hapus",
+            "revoke": "Cabut",
+            "copyVerify": "Salin Link Verifikasi",
+            "issue": "Terbitkan",
+            "editTitle": "Edit Surat",
+            "newTitle": "Buat Surat Baru",
+            "deleteConfirmDesc": "Surat draft yang dihapus tidak dapat dipulihkan.",
+            "accessDenied": {
+                "title": "Akses Ditolak",
+                "desc": "Anda tidak memiliki izin untuk mengelola surat."
+            },
+            "table": {
+                "letterNumber": "Nomor Surat",
+                "letterType": "Jenis",
+                "member": "Anggota",
+                "memberCode": "Kode Anggota",
+                "purpose": "Keperluan",
+                "destination": "Tujuan",
+                "status": "Status",
+                "issuedAt": "Terbit",
+                "revokedAt": "Dicabut"
+            },
+            "status": {
+                "draft": "Draft",
+                "issued": "Terbit",
+                "revoked": "Dicabut"
+            },
+            "type": {
+                "pengantar": "Pengantar",
+                "domisili": "Domisili",
+                "sktm": "SKTM",
+                "lainnya": "Lainnya"
+            },
+            "form": {
+                "member": "Anggota",
+                "memberPlaceholder": "Pilih anggota...",
+                "letterType": "Jenis Surat",
+                "purpose": "Keperluan",
+                "destination": "Tujuan",
+                "notes": "Catatan"
+            },
+            "toast": {
+                "created": "Surat berhasil dibuat",
+                "updated": "Surat berhasil diperbarui",
+                "deleted": "Surat berhasil dihapus",
+                "issued": "Surat berhasil diterbitkan",
+                "revoked": "Surat berhasil dicabut",
+                "linkCopied": "Link verifikasi disalin",
+                "copyFailed": "Gagal menyalin link"
+            },
+            "revokeForm": {
+                "title": "Cabut Surat",
+                "reason": "Alasan Penarikan",
+                "reasonInvalid": "Alasan harus 3-500 karakter",
+                "submit": "Cabut Surat"
+            },
+            "issueConfirm": {
+                "title": "Terbitkan Surat?",
+                "desc": "Surat akan ditandatangani secara digital dan nomor resmi diterbitkan. Tindakan ini tidak dapat dibatalkan."
+            },
+            "detail": {
+                "letterInfo": "Informasi Surat",
+                "purpose": "Keperluan",
+                "createdAt": "Dibuat",
+                "updatedAt": "Diperbarui",
+                "memberInfo": "Informasi Pemohon",
+                "gender": "Jenis Kelamin",
+                "male": "Laki-laki",
+                "female": "Perempuan",
+                "birthDate": "Tanggal Lahir",
+                "nikStatus": "Status NIK",
+                "nikStored": "Tersimpan (terenkripsi)",
+                "nikMissing": "Tidak tersedia",
+                "phone": "Telepon",
+                "address": "Alamat",
+                "history": "Riwayat",
+                "issuedAt": "Diterbitkan",
+                "revokedAt": "Dicabut",
+                "revokeReason": "Alasan Penarikan",
+                "verification": "Verifikasi Publik",
+                "verifyDesc": "Bagikan link ini untuk memverifikasi keaslian surat tanpa login.",
+                "verifyDraft": "Link verifikasi tersedia setelah surat diterbitkan.",
+                "verifyRevoked": "Surat ini telah dicabut — link verifikasi menunjukkan status tidak berlaku."
+            }
+        },
+        "events": {
+            "title": "Kegiatan",
+            "subtitle": "Jadwal & anggaran kegiatan warga",
+            "new": "Buat Kegiatan",
+            "editTitle": "Edit Kegiatan",
+            "newTitle": "Buat Kegiatan Baru",
+            "empty": "Belum ada kegiatan",
+            "emptyDesc": "Buat kegiatan pertama untuk warga.",
+            "deleteConfirmDesc": "Kegiatan yang sudah memiliki transaksi kas tidak dapat dihapus.",
+            "searchPlaceholder": "Cari nomor, judul, lokasi...",
+            "accessDenied": {
+                "title": "Akses Ditolak",
+                "desc": "Anda tidak memiliki izin untuk mengelola kegiatan."
+            },
+            "table": {
+                "eventNumber": "Nomor",
+                "title": "Judul",
+                "category": "Kategori",
+                "startsAt": "Mulai",
+                "endsAt": "Selesai",
+                "location": "Lokasi",
+                "budget": "Anggaran",
+                "status": "Status"
+            },
+            "status": {
+                "planned": "Terjadwal",
+                "ongoing": "Berlangsung",
+                "done": "Selesai",
+                "cancelled": "Dibatalkan"
+            },
+            "category": {
+                "rapat": "Rapat",
+                "kerjaBakti": "Kerja Bakti",
+                "perayaan": "Perayaan",
+                "sosial": "Sosial",
+                "lainnya": "Lainnya"
+            },
+            "form": {
+                "title": "Judul",
+                "description": "Deskripsi",
+                "category": "Kategori",
+                "startsAt": "Waktu Mulai",
+                "endsAt": "Waktu Selesai",
+                "location": "Lokasi",
+                "maxCapacity": "Kuota Maksimal",
+                "budgetAmount": "Anggaran",
+                "publishedAt": "Dipublikasikan",
+                "titleRequired": "Judul minimal 3 karakter",
+                "startsAtRequired": "Waktu mulai wajib diisi",
+                "invalidDate": "Waktu selesai harus setelah waktu mulai"
+            },
+            "toast": {
+                "created": "Kegiatan berhasil dibuat",
+                "updated": "Kegiatan berhasil diperbarui",
+                "deleted": "Kegiatan berhasil dihapus"
+            },
+            "detail": {
+                "eventInfo": "Informasi Kegiatan",
+                "publishedAt": "Dipublikasikan",
+                "unpublished": "Belum dipublikasikan",
+                "budgetTitle": "Anggaran & Realisasi",
+                "income": "Pemasukan",
+                "expense": "Pengeluaran",
+                "budgetUsage": "Penggunaan Anggaran",
+                "cashRealization": "Realisasi Kas",
+                "noCash": "Belum ada transaksi kas untuk kegiatan ini."
+            }
+        },
+        "verify": {
+            "title": "Verifikasi Surat Pengantar",
+            "subtitle": "Halaman verifikasi keaslian surat pengantar",
+            "valid": "SAH & VALID",
+            "invalid": "TIDAK BERLAKU",
+            "draft": "DRAF — BELUM RESMI",
+            "notFoundTitle": "Surat tidak ditemukan",
+            "notFoundDesc": "Link verifikasi tidak valid atau surat sudah tidak terdaftar. Pastikan link yang Anda buka lengkap dan benar.",
+            "nomor": "Nomor Surat",
+            "jenis": "Jenis Surat",
+            "pemohon": "Nama Pemohon",
+            "keperluan": "Keperluan",
+            "tujuan": "Tujuan",
+            "tanggalTerbit": "Tanggal Terbit",
+            "penandatangan": "Penandatangan",
+            "tanggalDicabut": "Tanggal Dibatalkan",
+            "alasanDicabut": "Alasan Pembatalan",
+            "footer": "Halaman ini diverifikasi otomatis oleh Qalcuity. NIK tidak ditampilkan untuk melindungi privasi."
         }
     },
     "dashboard": {
@@ -1656,7 +1861,7 @@
             },
             "generalLedger": {
                 "title": "Buku Besar",
-                "description": "Daftar detail semua item jurnal entri berdasarkan akun",
+                "description": "Deskripsi",
                 "selectAccount": "Pilih Akun",
                 "allAccounts": "Semua Akun",
                 "dateFrom": "Dari Tanggal",
@@ -1668,7 +1873,6 @@
                 "void": "Batal",
                 "date": "Tanggal",
                 "entryNumber": "No. Entri",
-                "description": "Deskripsi",
                 "debit": "Debit",
                 "credit": "Kredit",
                 "runningBalance": "Saldo Berjalan",
@@ -1703,7 +1907,6 @@
                 "days": "hari",
                 "amount": "Jumlah",
                 "balance": "Saldo",
-                "total": "Total",
                 "paid": "Dibayar",
                 "bucket": "Bucket",
                 "exportCsv": "Ekspor CSV",
@@ -6435,62 +6638,75 @@
         }
     },
     "operations": {
-        "gantt": {
-            "title": "Gantt Chart",
-            "subtitle": "Timeline visual project tasks",
-            "today": "Hari Ini",
-            "noDates": "Belum ada tanggal yang ditetapkan",
-            "progress": "Progres",
-            "dependencies": "Dependency",
-            "noDependencies": "Tidak ada dependency",
-            "addDependency": "Tambah Dependency",
-            "removeDependency": "Hapus Dependency",
-            "circularDetected": "Dependency melingkar terdeteksi",
-            "taskBar": "Bar task"
-        },
-        "resources": {
-            "title": "Alokasi Resource",
-            "subtitle": "Manajemen alokasi karyawan project",
-            "addAllocation": "Tambah Alokasi",
-            "employee": "Karyawan",
-            "role": "Peran",
-            "allocation": "Alokasi",
-            "period": "Periode",
-            "hourlyRate": "Rate per Jam",
-            "manager": "Manajer",
-            "member": "Anggota",
-            "consultant": "Konsultan",
-            "utilization": "Pemanfaatan",
-            "overCapacity": "Over-capacity",
-            "available": "Tersedia",
-            "moderate": "Moderat",
-            "high": "Tinggi",
-            "noData": "Belum ada alokasi resource",
-            "noDataDescription": "Mulai alokasikan karyawan ke project ini untuk melacak pemanfaatan resource."
-        },
         "budget": {
-            "title": "Anggaran",
-            "subtitle": "Pelacakan anggaran vs actual",
             "totalBudget": "Total Anggaran",
-            "used": "Terpakai",
-            "remaining": "Sisa",
+            "spent": "Terpakai",
             "overBudget": "Melebihi Anggaran",
+            "remaining": "Sisa",
+            "overBudgetBy": "Melebihi anggaran {amount}",
             "usagePercentage": "Persentase Penggunaan",
-            "byCategory": "Berdasarkan Kategori",
-            "detailItems": "Detail Item",
+            "categoryBreakdown": "Breakdown per Kategori",
+            "item": "item",
+            "budgetDetails": "Detail Anggaran",
             "planned": "Rencana",
             "actual": "Aktual",
-            "noData": "Belum ada item anggaran",
-            "addItem": "Tambah Item"
+            "labor": "Tenaga Kerja",
+            "material": "Material",
+            "equipment": "Peralatan",
+            "travel": "Perjalanan",
+            "software": "Perangkat Lunak",
+            "other": "Lainnya"
+        },
+        "gantt": {
+            "task": "Tugas",
+            "tasks": "tugas",
+            "completed": "selesai",
+            "progress": "Progres",
+            "noTasks": "Belum ada tugas untuk ditampilkan",
+            "noTasksDescription": "Buat tugas terlebih dahulu untuk melihat Gantt chart",
+            "hasDependency": "Memiliki dependency"
         },
         "timeline": {
-            "title": "Timeline Proyek",
-            "elapsed": "Waktu Berlalu",
-            "actualProgress": "Progres Aktual",
-            "milestones": "Milestone",
-            "noMilestones": "Belum ada milestone",
-            "daysRemaining": "hari tersisa",
-            "daysOverdue": "hari terlambat"
+            "projectTimeline": "Timeline Proyek",
+            "totalDays": "{count} hari total",
+            "startDate": "Mulai",
+            "endDate": "Selesai",
+            "progress": "Progres",
+            "dayOf": "Hari ke-{current} dari {total}",
+            "daysAgo": "{count} hari lalu",
+            "today": "Hari ini",
+            "tomorrow": "Besok",
+            "daysLeft": "{count} hari lagi",
+            "milestoneTasks": "Tugas Milestone",
+            "noTimeline": "Belum ada timeline",
+            "noTimelineDescription": "Atur tanggal mulai/selesai proyek untuk melihat timeline",
+            "currentDay": "Hari ini"
+        },
+        "heatmap": {
+            "employees": "Karyawan",
+            "totalAllocation": "Total Alokasi",
+            "overCapacity": "Kapasitas Berlebih",
+            "utilization": "Utilisasi",
+            "average": "Rata-rata",
+            "legend": "Legenda",
+            "noAllocations": "Belum ada alokasi sumber daya",
+            "noAllocationsDescription": "Tambahkan alokasi karyawan untuk melihat heatmap",
+            "none": "Tidak ada",
+            "available": "Tersedia",
+            "moderate": "Sedang",
+            "high": "Tinggi",
+            "overCapacityLevel": "Kapasitas Berlebih"
+        },
+        "dependency": {
+            "circularDependencyError": "Tidak dapat membuat dependency yang mengarah ke tugas ini (circular dependency)",
+            "setDependency": "Atur Dependency",
+            "noDependency": "Tidak ada dependency",
+            "saving": "Menyimpan...",
+            "save": "Simpan",
+            "removeDependency": "Hapus Dependency",
+            "waitingFor": "Menunggu",
+            "changeDependency": "Ubah dependency",
+            "addDependency": "Tambah Dependency"
         }
     },
     "field": {
@@ -6738,80 +6954,8 @@
     "birthdayNotAvailable": "Data ulang tahun belum tersedia",
     "birthdayFieldMissing": "Field dateOfBirth belum ada di data karyawan",
     "loadError": "Gagal memuat data HR",
-    "operations": {
-        "budget": {
-            "totalBudget": "Total Anggaran",
-            "spent": "Terpakai",
-            "overBudget": "Melebihi Anggaran",
-            "remaining": "Sisa",
-            "overBudgetBy": "Melebihi anggaran {amount}",
-            "usagePercentage": "Persentase Penggunaan",
-            "categoryBreakdown": "Breakdown per Kategori",
-            "item": "item",
-            "budgetDetails": "Detail Anggaran",
-            "planned": "Rencana",
-            "actual": "Aktual",
-            "labor": "Tenaga Kerja",
-            "material": "Material",
-            "equipment": "Peralatan",
-            "travel": "Perjalanan",
-            "software": "Perangkat Lunak",
-            "other": "Lainnya"
-        },
-        "gantt": {
-            "task": "Tugas",
-            "tasks": "tugas",
-            "completed": "selesai",
-            "progress": "Progres",
-            "noTasks": "Belum ada tugas untuk ditampilkan",
-            "noTasksDescription": "Buat tugas terlebih dahulu untuk melihat Gantt chart",
-            "hasDependency": "Memiliki dependency"
-        },
-        "timeline": {
-            "projectTimeline": "Timeline Proyek",
-            "totalDays": "{count} hari total",
-            "startDate": "Mulai",
-            "endDate": "Selesai",
-            "progress": "Progres",
-            "dayOf": "Hari ke-{current} dari {total}",
-            "daysAgo": "{count} hari lalu",
-            "today": "Hari ini",
-            "tomorrow": "Besok",
-            "daysLeft": "{count} hari lagi",
-            "milestoneTasks": "Tugas Milestone",
-            "noTimeline": "Belum ada timeline",
-            "noTimelineDescription": "Atur tanggal mulai/selesai proyek untuk melihat timeline",
-            "currentDay": "Hari ini"
-        },
-        "heatmap": {
-            "employees": "Karyawan",
-            "totalAllocation": "Total Alokasi",
-            "overCapacity": "Kapasitas Berlebih",
-            "utilization": "Utilisasi",
-            "average": "Rata-rata",
-            "legend": "Legenda",
-            "noAllocations": "Belum ada alokasi sumber daya",
-            "noAllocationsDescription": "Tambahkan alokasi karyawan untuk melihat heatmap",
-            "none": "Tidak ada",
-            "available": "Tersedia",
-            "moderate": "Sedang",
-            "high": "Tinggi",
-            "overCapacityLevel": "Kapasitas Berlebih"
-        },
-        "dependency": {
-            "circularDependencyError": "Tidak dapat membuat dependency yang mengarah ke tugas ini (circular dependency)",
-            "setDependency": "Atur Dependency",
-            "noDependency": "Tidak ada dependency",
-            "saving": "Menyimpan...",
-            "save": "Simpan",
-            "removeDependency": "Hapus Dependency",
-            "waitingFor": "Menunggu",
-            "changeDependency": "Ubah dependency",
-            "addDependency": "Tambah Dependency"
-        }
-    },
     "inbox": {
-        "title": "Work Inbox",
+        "title": "Judul",
         "description": "Pusat aktivitas Anda — tugas, persetujuan, dan item yang perlu diperhatikan.",
         "myTasks": "Tugas Saya",
         "pendingApprovals": "Menunggu Persetujuan",
@@ -6842,7 +6986,6 @@
         "quickActions": "Aksi Cepat",
         "taskName": "Nama Tugas",
         "project": "Proyek",
-        "title": "Judul",
         "details": "Detail",
         "typeTask": "Tugas",
         "typeInvoice": "Faktur",

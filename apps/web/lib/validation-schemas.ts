@@ -2570,3 +2570,111 @@ export const updateCommunityAnnouncementSchema = communityAnnouncementObject
     .refine((data) => Object.keys(data).length > 0, {
         message: 'Minimal satu field harus diupdate',
     });
+
+// ─── Community Phase 2 (Surat & Kegiatan) ─────────────────────────────────────
+// Referensi: plans/community-phase2-implementation.md §9.
+// Pola aman anti gotcha Zod v4 (lihat catatan communityDuesTypeObject):
+// base object TANPA refine → create = base.refine(...), update = base.partial().refine(...).
+// Nomor (SRT/…, KGT/…), verifyToken, bodySnapshot, issuedAt/revokedAt DI-ASSIGN
+// di route (server-side) — TIDAK pernah dari client.
+
+/** Surat: tanpa cross-field refine → create schema boleh langsung object. */
+const communityLetterBase = z.object({
+    letterType: z
+        .enum(['PENGANTAR', 'DOMISILI', 'SKTM', 'KETERANGAN_LAIN'], {
+            message: 'Jenis surat tidak valid',
+        })
+        .optional(), // opsional di update; wajib saat create → refine terpisah
+    memberId: z.string().trim().min(1, 'Warga pemohon wajib dipilih').optional(),
+    purpose: z
+        .string()
+        .trim()
+        .min(3, 'Keperluan surat minimal 3 karakter')
+        .max(500, 'Keperluan surat maksimal 500 karakter')
+        .optional(),
+    destination: z.string().trim().max(200, 'Instansi tujuan maksimal 200 karakter').optional(),
+    notes: z.string().trim().max(1000, 'Catatan maksimal 1000 karakter').optional(),
+});
+
+export const createCommunityLetterSchema = communityLetterBase.refine(
+    (data) =>
+        data.letterType !== undefined && data.memberId !== undefined && data.purpose !== undefined,
+    {
+        message: 'Jenis surat, warga pemohon, dan keperluan wajib diisi',
+        path: ['purpose'],
+    }
+);
+
+export const updateCommunityLetterSchema = communityLetterBase
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });
+
+/** Revoke surat terbit → alasan wajib (ISSUED → REVOKED). */
+export const revokeCommunityLetterSchema = z.object({
+    reason: z
+        .string()
+        .trim()
+        .min(3, 'Alasan pembatalan minimal 3 karakter')
+        .max(500, 'Alasan pembatalan maksimal 500 karakter'),
+});
+
+/** Kegiatan: ADA cross-field refine (endsAt >= startsAt) → split base. */
+const communityEventBase = z.object({
+    title: z
+        .string()
+        .trim()
+        .min(3, 'Judul kegiatan minimal 3 karakter')
+        .max(200, 'Judul kegiatan maksimal 200 karakter')
+        .optional(),
+    description: z.string().trim().max(2000, 'Deskripsi maksimal 2000 karakter').optional(),
+    category: z
+        .enum(['RAPAT', 'KERJA_BAKTI', 'PERAYAAN', 'SOSIAL', 'LAINNYA'], {
+            message: 'Kategori kegiatan tidak valid',
+        })
+        .optional(),
+    startsAt: z.coerce.date().optional(),
+    endsAt: z.coerce.date().optional(),
+    location: z.string().trim().max(200, 'Lokasi maksimal 200 karakter').optional(),
+    maxCapacity: z
+        .number({ message: 'Kapasitas maksimal harus angka' })
+        .int()
+        .positive()
+        .max(10000, 'Kapasitas maksimal 10000 peserta')
+        .optional(),
+    /** Diterima number → konversi Decimal di route (pola expenses). */
+    budgetAmount: z
+        .number({ message: 'Anggaran harus angka' })
+        .nonnegative('Anggaran tidak boleh negatif')
+        .max(1_000_000_000, 'Anggaran terlalu besar')
+        .optional(),
+    announcementId: z.string().trim().max(100).optional(),
+    publishedAt: z.coerce.date().optional(),
+    status: z
+        .enum(['PLANNED', 'ONGOING', 'DONE', 'CANCELLED'], {
+            message: 'Status kegiatan tidak valid',
+        })
+        .optional(),
+});
+
+export const createCommunityEventSchema = communityEventBase.refine(
+    (data) => data.title !== undefined && data.startsAt !== undefined,
+    {
+        message: 'Judul dan waktu mulai kegiatan wajib diisi',
+        path: ['startsAt'],
+    }
+).refine(
+    (data) => !data.endsAt || (data.startsAt != null && data.endsAt >= data.startsAt),
+    { message: 'EVENT_INVALID_DATE', path: ['endsAt'] }
+);
+
+export const updateCommunityEventSchema = communityEventBase
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    })
+    .refine(
+        (d) => !d.startsAt || !d.endsAt || d.endsAt >= d.startsAt,
+        { message: 'EVENT_INVALID_DATE', path: ['endsAt'] }
+    );

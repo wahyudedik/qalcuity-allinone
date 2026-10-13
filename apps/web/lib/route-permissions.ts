@@ -401,6 +401,26 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/community/announcements/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
     '/api/community/upload-receipt': { permission: 'community:finance', fallbackRole: 'ADMIN' },
     '/api/community/portal': { permission: 'community:portal', fallbackRole: 'VIEWER' },
+
+    // ─── Community Module (Fase 2: Surat & Kegiatan) ───────────────────────────
+    // Surat (letters): semua method menuntut community:manage. Gate issue/revoke
+    // (community:approve) dilakukan explicit in-route hasPermission — pola Fase 1
+    // untuk route [id]/approve (longest-prefix jatuh ke base entry).
+    '/api/community/letters': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/letters/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/letters/[id]/issue': { permission: 'community:approve', fallbackRole: 'ADMIN' },
+    '/api/community/letters/[id]/revoke': { permission: 'community:approve', fallbackRole: 'ADMIN' },
+    '/api/community/letters/[id]/pdf': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    // Kegiatan (events): GET = community:view (BENDAHARA boleh melihat agenda),
+    // POST/PUT/DELETE = community:manage. Split per-method via key method-qualified
+    // "GET <path>" (lihat getPermissionForRoute) + field `method` sebagai filter.
+    '/api/community/events': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    'GET /api/community/events': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    '/api/community/events/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    'GET /api/community/events/[id]': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    // Portal warga Fase 2 — di bawah prefix /api/community/portal (community:portal).
+    '/api/community/portal/letters': { permission: 'community:portal', fallbackRole: 'VIEWER' },
+    '/api/community/portal/events': { permission: 'community:portal', fallbackRole: 'VIEWER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────
@@ -514,28 +534,40 @@ export function getPermissionForRoute(
     pathname: string,
     method: string
 ): { permission: string; fallbackRole: string } | null {
-    // Exact match
-    if (ROUTE_PERMISSIONS[pathname]) {
-        const config = ROUTE_PERMISSIONS[pathname];
-        const resolvedPermission = resolvePermissionByMethod(config.permission, method);
+    const httpMethod = method.toUpperCase();
+
+    // Exact match — entry method-qualified ("GET /api/...") menang atas entry
+    // generic untuk path yang sama (dipakai mis. /api/community/events:
+    // GET community:view vs POST/PUT/DELETE community:manage).
+    // Field `method` (opsional) berfungsi sebagai filter: entry dilewati bila
+    // method-nya tidak cocok dengan request.
+    const exact = ROUTE_PERMISSIONS[`${httpMethod} ${pathname}`] ?? ROUTE_PERMISSIONS[pathname];
+    if (exact && (!exact.method || exact.method === httpMethod)) {
         return {
-            permission: resolvedPermission,
-            fallbackRole: config.fallbackRole || 'ADMIN',
+            permission: resolvePermissionByMethod(exact.permission, httpMethod),
+            fallbackRole: exact.fallbackRole || 'ADMIN',
         };
     }
 
     // Prefix match (e.g., /api/finance/invoices/123 → /api/finance/invoices)
-    // Sort by longest prefix first to avoid partial matches
-    const sortedPrefixes = Object.keys(ROUTE_PERMISSIONS).sort(
-        (a, b) => b.length - a.length
-    );
+    // Sort by longest prefix first to avoid partial matches.
+    // Key method-qualified ("GET /api/...") dinormalisasi ke base path-nya.
+    const sortedPrefixes = Array.from(
+        new Set(
+            Object.keys(ROUTE_PERMISSIONS).map((key) => {
+                const spaceIdx = key.indexOf(' ');
+                return spaceIdx > 0 ? key.slice(spaceIdx + 1) : key;
+            })
+        )
+    ).sort((a, b) => b.length - a.length);
 
     for (const prefix of sortedPrefixes) {
         if (pathname.startsWith(prefix + '/') || pathname.startsWith(prefix + '?')) {
-            const config = ROUTE_PERMISSIONS[prefix];
-            const resolvedPermission = resolvePermissionByMethod(config.permission, method);
+            const config =
+                ROUTE_PERMISSIONS[`${httpMethod} ${prefix}`] ?? ROUTE_PERMISSIONS[prefix];
+            if (!config || (config.method && config.method !== httpMethod)) continue;
             return {
-                permission: resolvedPermission,
+                permission: resolvePermissionByMethod(config.permission, httpMethod),
                 fallbackRole: config.fallbackRole || 'ADMIN',
             };
         }

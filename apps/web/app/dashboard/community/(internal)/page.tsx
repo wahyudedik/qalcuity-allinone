@@ -7,6 +7,8 @@ import {
     ArrowDownRight,
     ArrowUpRight,
     Banknote,
+    CalendarDays,
+    FileText,
     Receipt,
     Users,
     Users2,
@@ -34,6 +36,8 @@ interface OverviewData {
         balance: number
     }
     pendingApprovals: number
+    lettersThisMonth: number
+    upcomingEvents: number
 }
 
 interface CashRow {
@@ -134,6 +138,22 @@ export default function CommunityOverviewPage() {
                 <StatCard icon={Users} label={t('community.overview.memberActive')} value={overview?.memberActive ?? 0} accent="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
                 <StatCard icon={Users2} label={t('community.overview.memberInactive')} value={overview?.memberInactive ?? 0} accent="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" />
                 <StatCard icon={Users} label={t('community.overview.memberTotal')} value={overview?.memberTotal ?? 0} />
+            </div>
+
+            {/* Kartu surat + kegiatan */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <StatCard
+                    icon={FileText}
+                    label={t('community.overview.lettersThisMonth')}
+                    value={overview?.lettersThisMonth ?? 0}
+                    accent="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+                />
+                <StatCard
+                    icon={CalendarDays}
+                    label={t('community.overview.upcomingEvents')}
+                    value={overview?.upcomingEvents ?? 0}
+                    accent="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"
+                />
             </div>
 
             {/* Kartu tagihan */}

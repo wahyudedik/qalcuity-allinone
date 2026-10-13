@@ -24,6 +24,14 @@
  *    PENDING / REJECTED; SoD: bendahara mencatat, ketua approve).
  *  - 2 CommunityAnnouncement.
  *
+ * Fase 2 (Surat & Kegiatan — plans/community-phase2-implementation.md §8.1):
+ *  - 5 CommunityLetter (3 ISSUED dgn verifyToken 32-hex + bodySnapshot,
+ *    1 DRAFT letterNumber null, 1 REVOKED + alasan).
+ *  - 3 CommunityEvent (KGT/2026-001 DONE, KGT/2026-002 PLANNED,
+ *    KGT/2026-003 CANCELLED tanpa publishedAt).
+ *  - 2 CommunityCashTransaction TAMBAHAN (EXPENSE APPROVED, ter-link
+ *    eventId -> KGT/2026-001) — kontrak angka: cash 10 -> 12, EXPENSE 6 -> 8.
+ *
  * PRINSIP HARD:
  *  - Idempotent: re-run tidak pernah menduplikasi (upsert / findUnique by
  *    kunci bisnis @@unique per-tenant; created = 0 pada run ke-2).
@@ -37,7 +45,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 import { addDays, mulberry32, toUtcDate } from './finance';
-import { encrypt } from '../encryption';
+import { encrypt, safeDecrypt } from '../encryption';
 
 // ============================================================
 // 1. Konstanta & dataset statis
@@ -243,6 +251,174 @@ const COMMUNITY_ANNOUNCEMENTS = [
     },
 ];
 
+// ─── Fase 2: Surat pengantar (5) ─────────────────────────────────────────────
+// Nomor: SRT/<PNG|DOM|SKT|KTR>/<YYYY>-<seq3> — DI-ASSIGN saat ISSUE (DRAFT null).
+// verifyToken & bodySnapshot hanya untuk ISSUED/REVOKED (pola §3.3/§3.6 spec).
+
+export interface CommunityLetterSpec {
+    /** Nomor terbit (null untuk DRAFT). */
+    letterNumber: string | null;
+    letterType: string; // PENGANTAR, DOMISILI, SKTM, KETERANGAN_LAIN
+    memberCode: string; // Pemohon (kode warga seed)
+    purpose: string;
+    destination?: string;
+    status: string; // DRAFT, ISSUED, REVOKED
+    /** Tanggal penerbitan (ISSUED/REVOKED) — YYYY-MM-DD. */
+    issuedAtDate?: string;
+    /** Tanggal pembatalan (REVOKED) — YYYY-MM-DD. */
+    revokedAtDate?: string;
+    revokeReason?: string;
+    /** Tanggal record dibuat — YYYY-MM-DD. */
+    createdAtDate: string;
+}
+
+export const COMMUNITY_LETTERS: CommunityLetterSpec[] = [
+    {
+        letterNumber: 'SRT/PNG/2026-001',
+        letterType: 'PENGANTAR',
+        memberCode: 'W-003',
+        purpose: 'Pengurusan paspor',
+        destination: 'Imigrasi Kelas I Cibinong',
+        status: 'ISSUED',
+        issuedAtDate: '2026-09-15',
+        createdAtDate: '2026-09-14',
+    },
+    {
+        letterNumber: 'SRT/DOM/2026-001',
+        letterType: 'DOMISILI',
+        memberCode: 'W-007',
+        purpose: 'Pengurusan SKCK',
+        destination: 'Polsek Cibinong',
+        status: 'ISSUED',
+        issuedAtDate: '2026-09-28',
+        createdAtDate: '2026-09-27',
+    },
+    {
+        letterNumber: 'SRT/SKT/2026-001',
+        letterType: 'SKTM',
+        memberCode: 'W-012',
+        purpose: 'Pengurusan bantuan sosial',
+        destination: 'Kantor Kelurahan Sukamaju',
+        status: 'ISSUED',
+        issuedAtDate: '2026-10-05',
+        createdAtDate: '2026-10-04',
+    },
+    {
+        letterNumber: null,
+        letterType: 'PENGANTAR',
+        memberCode: 'W-015',
+        purpose: 'Pengurusan nikah',
+        status: 'DRAFT',
+        createdAtDate: '2026-10-10',
+    },
+    {
+        letterNumber: 'SRT/PNG/2026-002',
+        letterType: 'PENGANTAR',
+        memberCode: 'W-019',
+        purpose: 'Pengurusan beasiswa',
+        destination: 'Kantor Yayasan Pendidikan',
+        status: 'REVOKED',
+        issuedAtDate: '2026-10-01',
+        revokedAtDate: '2026-10-08',
+        revokeReason: 'Dicabut - keperluan batal',
+        createdAtDate: '2026-09-30',
+    },
+];
+
+// ─── Fase 2: Kegiatan (3) ────────────────────────────────────────────────────
+// Nomor: KGT/<YYYY>-<seq3> — di-assign saat CREATE (event selalu punya nomor).
+// Jam deterministik dalam UTC (WIB = UTC+7): rapat 19:30 WIB = 12:30Z.
+
+export interface CommunityEventSpec {
+    eventNumber: string;
+    title: string;
+    description?: string;
+    category?: string; // RAPAT, KERJA_BAKTI, PERAYAAN, SOSIAL, LAINNYA
+    startsAt: Date;
+    endsAt?: Date;
+    location?: string;
+    budgetAmount?: number;
+    status: string; // PLANNED, ONGOING, DONE, CANCELLED
+    publishedAt?: Date | null;
+    /** Link opsional ke pengumuman berdasarkan title (idempotent resolve). */
+    linkAnnouncementTitle?: string;
+}
+
+export const COMMUNITY_EVENTS: CommunityEventSpec[] = [
+    {
+        eventNumber: 'KGT/2026-001',
+        title: 'Kerja Bakti Bersih Saluran Air',
+        description:
+            'Kerja bakti bersih-bersih saluran air & drainase lingkungan RT 02 Melati. ' +
+            'Perkakas disediakan pengurus; mohon bawa cangkul/sabit masing-masing.',
+        category: 'KERJA_BAKTI',
+        startsAt: new Date(Date.UTC(2026, 8, 20, 1, 0)), // 20 Sep 08:00 WIB
+        endsAt: new Date(Date.UTC(2026, 8, 20, 4, 0)), // 20 Sep 11:00 WIB
+        location: 'Lingkungan Blok A s/d Blok C',
+        budgetAmount: 750000,
+        status: 'DONE',
+        publishedAt: new Date(Date.UTC(2026, 8, 10)), // tayang 10 Sep (lampau)
+    },
+    {
+        eventNumber: 'KGT/2026-002',
+        title: 'Rapat Bulanan RT',
+        description:
+            'Agenda: (1) Laporan kas Oktober, (2) Persiapan kegiatan 17-an, ' +
+            '(3) Usulan perbaikan drainase Blok C.',
+        category: 'RAPAT',
+        startsAt: new Date(Date.UTC(2026, 9, 17, 12, 30)), // 17 Okt 19:30 WIB
+        location: 'Balai Warga RT 02 Melati',
+        status: 'PLANNED',
+        publishedAt: new Date(Date.UTC(2026, 9, 10)), // tayang 10 Okt (anchor)
+        linkAnnouncementTitle: 'Rapat Bulanan RT - Sabtu, 17 Okt 2026',
+    },
+    {
+        eventNumber: 'KGT/2026-003',
+        title: 'Posyandu Balita',
+        description: 'Posyandu balita rutin — ditunda, menunggu koordinasi kader kesehatan.',
+        category: 'SOSIAL',
+        startsAt: new Date(Date.UTC(2026, 10, 5, 1, 0)), // 5 Nov 08:00 WIB
+        location: 'Balai Warga RT 02 Melati',
+        status: 'CANCELLED',
+        publishedAt: null, // draft internal — tidak tayang di portal
+    },
+];
+
+// ─── Fase 2: Kas transaksi terkait kegiatan (2 — EXPENSE APPROVED) ───────────
+// Realisasi anggaran KGT/2026-001 (kerja bakti): 300.000 + 180.000 = 480.000.
+// SoD tetap: bendahara mencatat, ketua approve. Kontrak: EXPENSE 6 -> 8.
+
+export interface CommunityEventCashTxSpec {
+    eventNumber: string;
+    type: string; // INCOME, EXPENSE
+    category: string;
+    amount: number;
+    description: string;
+    txDate: string; // YYYY-MM-DD
+    status: string; // APPROVED (deterministik — semua angka realisasi APPROVED)
+}
+
+export const COMMUNITY_EVENT_CASH_TXS: CommunityEventCashTxSpec[] = [
+    {
+        eventNumber: 'KGT/2026-001',
+        type: 'EXPENSE',
+        category: 'Kegiatan',
+        amount: 300000,
+        description: 'Konsumsi kerja bakti bersih saluran air',
+        txDate: '2026-09-20',
+        status: 'APPROVED',
+    },
+    {
+        eventNumber: 'KGT/2026-001',
+        type: 'EXPENSE',
+        category: 'Kegiatan',
+        amount: 180000,
+        description: 'Pembelian perkakas kerja bakti (sekop & karung)',
+        txDate: '2026-09-19',
+        status: 'APPROVED',
+    },
+];
+
 // ============================================================
 // 2. Enkripsi NIK (SMTP_ENCRYPTION_KEY fallback loader)
 // ============================================================
@@ -333,6 +509,8 @@ export interface SeedCommunityResult {
         payments: number;
         cashTransactions: number;
         announcements: number;
+        letters: number;
+        events: number;
     };
     /** Jumlah record yang BARU dibuat pada run ini (0 = idempotent). */
     created: {
@@ -344,6 +522,8 @@ export interface SeedCommunityResult {
         payments: number;
         cashTransactions: number;
         announcements: number;
+        letters: number;
+        events: number;
     };
     roles: CommunityEntityRef[];
     users: CommunityUserRef[];
@@ -372,7 +552,7 @@ export async function seedCommunityData(
             subscriptionStatus: 'TRIAL',
             trialEndsAt: addDays(toUtcDate(anchorDate), 30),
         },
-        select: { id: true, slug: true },
+        select: { id: true, slug: true, name: true, address: true, settings: true },
     });
     const tenantId = tenant.id;
 
@@ -455,6 +635,15 @@ export async function seedCommunityData(
     let membersCreated = 0;
     for (let i = 0; i < COMMUNITY_MEMBERS.length; i++) {
         const spec = COMMUNITY_MEMBERS[i];
+        // RNG DISCIPLINE: nilai acak SELALU dihasilkan SEBELUM cek idempoten.
+        // Konsumsi rng() tidak boleh bergantung pada kondisi DB — run ke-2 dst
+        // harus memakai stream yang sama persis dengan run pertama, kalau tidak
+        // plan tagihan di bawah bergeser dan pembayaran yatim tercipta.
+        const nik = buildDummyNik('3273', rng, i + 1);
+        const nkk = buildDummyNik('3273', rng, 9000 + i + 1);
+        const joinedYear = 2015 + Math.floor(rng() * 11); // 2015..2025
+        const joinedMonth = 1 + Math.floor(rng() * 12);
+        const joinedDay = 1 + Math.floor(rng() * 27);
         const existing = await db.communityMember.findUnique({
             where: { tenantId_code: { tenantId, code: spec.code } },
             select: { id: true, fullName: true },
@@ -463,11 +652,6 @@ export async function seedCommunityData(
             members.push({ id: existing.id, name: existing.fullName });
             continue;
         }
-        const nik = buildDummyNik('3273', rng, i + 1);
-        const nkk = buildDummyNik('3273', rng, 9000 + i + 1);
-        const joinedYear = 2015 + Math.floor(rng() * 11); // 2015..2025
-        const joinedMonth = 1 + Math.floor(rng() * 12);
-        const joinedDay = 1 + Math.floor(rng() * 27);
         // W-001 di-link ke akun portal warga (relasi opsional User — Subtask H).
         const linkPortal = i === 0 && wargaUserId !== null;
         const created = await db.communityMember.create({
@@ -678,6 +862,11 @@ export async function seedCommunityData(
         const memberId = memberIdByCode.get(plan.memberCode);
         if (!billId || !memberId || !plan.paidAt) continue;
 
+        // RNG DISCIPLINE: roll metode juga dihasilkan sebelum cek idempoten
+        // (lihat catatan pada loop member di atas) — konsumsi rng() konstan.
+        const methodRoll = rng();
+        const method = methodRoll < 0.6 ? 'CASH' : methodRoll < 0.85 ? 'TRANSFER' : 'QRIS';
+
         // Idempotent: 1 bayar per tagihan (seed hanya membuat 1x per bill).
         const existingPayment = await db.communityDuesPayment.findFirst({
             where: { tenantId, billId },
@@ -687,8 +876,6 @@ export async function seedCommunityData(
 
         const { dayIso, seq } = await nextPaymentSeq(plan.paidAt);
         const paymentNumber = `BYR/${dayIso.replace(/-/g, '')}-${String(seq).padStart(3, '0')}`;
-        const methodRoll = rng();
-        const method = methodRoll < 0.6 ? 'CASH' : methodRoll < 0.85 ? 'TRANSFER' : 'QRIS';
         await db.communityDuesPayment.create({
             data: {
                 tenantId,
@@ -754,13 +941,17 @@ export async function seedCommunityData(
 
     // ─── Announcements (2) ───────────────────────────────────────
     let announcementsCreated = 0;
+    const announcementIdByTitle = new Map<string, string>();
     for (const spec of COMMUNITY_ANNOUNCEMENTS) {
         const existing = await db.communityAnnouncement.findFirst({
             where: { tenantId, title: spec.title },
             select: { id: true },
         });
-        if (existing) continue;
-        await db.communityAnnouncement.create({
+        if (existing) {
+            announcementIdByTitle.set(spec.title, existing.id);
+            continue;
+        }
+        const createdAnnouncement = await db.communityAnnouncement.create({
             data: {
                 tenantId,
                 title: spec.title,
@@ -772,22 +963,246 @@ export async function seedCommunityData(
                 isActive: true,
                 createdBy: ketuaId ?? createdBy,
             },
+            select: { id: true },
         });
+        announcementIdByTitle.set(spec.title, createdAnnouncement.id);
         announcementsCreated += 1;
     }
 
+    // ════════════════════════════════════════════════════════════
+    // FASE 2: Surat (5) + Kegiatan (3) + Kas terkait kegiatan (2)
+    // ════════════════════════════════════════════════════════════
+    // RNG TERPISAH (anchor 20261013) — menjamin hasil Fase 1 (rng 772026)
+    // tidak berubah apa pun urutan pemanggilan di sini.
+    const rngPhase2 = mulberry32(20261013);
+
+    /** Token verifikasi 32-hex deterministik dari PRNG (unik via collision-check). */
+    function buildDeterministicHexToken(): string {
+        let out = '';
+        for (let i = 0; i < 16; i++) {
+            out += Math.floor(rngPhase2() * 256).toString(16).padStart(2, '0');
+        }
+        return out;
+    }
+
+    // ─── Fase 2: Letters (5 — 3 ISSUED + 1 DRAFT + 1 REVOKED) ───
+    // Idempotent: findFirst by [tenantId, letterType, memberId, purpose]
+    // (kombinasi unik untuk 5 surat seed; DRAFT punya letterNumber null).
+    const usedVerifyTokens = new Set<string>();
+    let lettersCreated = 0;
+    for (const spec of COMMUNITY_LETTERS) {
+        const memberId = memberIdByCode.get(spec.memberCode);
+        if (!memberId) continue;
+
+        // eslint-disable-next-line no-await-in-loop
+        const existingLetter = await db.communityLetter.findFirst({
+            where: { tenantId, letterType: spec.letterType, memberId, purpose: spec.purpose },
+            select: { id: true, verifyToken: true },
+        });
+        if (existingLetter) {
+            if (existingLetter.verifyToken) usedVerifyTokens.add(existingLetter.verifyToken);
+            continue;
+        }
+
+        const isIssuedOrRevoked = spec.status === 'ISSUED' || spec.status === 'REVOKED';
+
+        // Token unik global — collision-check lokal + DB (kolom @unique global).
+        let verifyToken: string | null = null;
+        if (isIssuedOrRevoked) {
+            // eslint-disable-next-line no-await-in-loop
+            verifyToken = await (async () => {
+                let candidate = buildDeterministicHexToken();
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                    if (!usedVerifyTokens.has(candidate)) {
+                        // eslint-disable-next-line no-await-in-loop
+                        const taken = await db.communityLetter.findFirst({
+                            where: { verifyToken: candidate },
+                            select: { id: true },
+                        });
+                        if (!taken) return candidate;
+                    }
+                    candidate = buildDeterministicHexToken();
+                }
+            })();
+            usedVerifyTokens.add(verifyToken);
+        }
+
+        // bodySnapshot (immutable) — hanya ISSUED/REVOKED; NIK plain hasil
+        // safeDecrypt HIDUP DI SNAPSHOT INI SAJA (untuk PDF — bukan API).
+        let bodySnapshot: Prisma.InputJsonValue | undefined;
+        if (isIssuedOrRevoked) {
+            // eslint-disable-next-line no-await-in-loop
+            const memberRow = await db.communityMember.findUnique({
+                where: { id: memberId },
+                select: {
+                    code: true, fullName: true, nikEncrypted: true,
+                    address: true, rtRw: true, gender: true,
+                },
+            });
+            const communitySettings =
+                (tenant.settings as { community?: Record<string, string> | null } | null)?.community ?? null;
+            bodySnapshot = {
+                version: 1,
+                letterNumber: spec.letterNumber,
+                letterType: spec.letterType,
+                purpose: spec.purpose,
+                destination: spec.destination ?? null,
+                issuedAt: spec.issuedAtDate ? toUtcDate(spec.issuedAtDate).toISOString() : null,
+                signedByName: 'Ketua RT 02',
+                member: {
+                    code: memberRow?.code ?? spec.memberCode,
+                    fullName: memberRow?.fullName ?? '',
+                    nik: memberRow ? safeDecrypt(memberRow.nikEncrypted) : null,
+                    address: memberRow?.address ?? null,
+                    rtRw: memberRow?.rtRw ?? null,
+                    gender: memberRow?.gender ?? null,
+                },
+                rt: {
+                    name: tenant.name,
+                    address: tenant.address,
+                    kelurahan: communitySettings?.kelurahan ?? null,
+                    kecamatan: communitySettings?.kecamatan ?? null,
+                    kabupaten: communitySettings?.kabupaten ?? null,
+                    provinsi: communitySettings?.provinsi ?? null,
+                    rwNumber: communitySettings?.rwNumber ?? null,
+                    kodePos: communitySettings?.kodePos ?? null,
+                    kopLine1: communitySettings?.kopLine1 ?? null,
+                    kopLine2: communitySettings?.kopLine2 ?? null,
+                },
+            };
+        }
+
+        await db.communityLetter.create({
+            data: {
+                tenantId,
+                letterNumber: spec.letterNumber,
+                letterType: spec.letterType,
+                memberId,
+                purpose: spec.purpose,
+                destination: spec.destination ?? null,
+                notes: null,
+                status: spec.status,
+                bodySnapshot: bodySnapshot as Prisma.InputJsonValue | undefined,
+                issuedAt: spec.issuedAtDate ? toUtcDate(spec.issuedAtDate) : null,
+                signedBy: isIssuedOrRevoked ? ketuaId : null,
+                signedByName: isIssuedOrRevoked ? 'Ketua RT 02' : null,
+                revokedAt: spec.revokedAtDate ? toUtcDate(spec.revokedAtDate) : null,
+                revokedBy: spec.revokedAtDate ? ketuaId : null,
+                revokeReason: spec.revokeReason ?? null,
+                verifyToken,
+                createdBy: sekretarisId ?? createdBy,
+                createdAt: toUtcDate(spec.createdAtDate),
+            },
+        });
+        lettersCreated += 1;
+    }
+
+    // ─── Fase 2: Events (3 — DONE / PLANNED / CANCELLED) ─────────
+    // Idempotent: findUnique by [tenantId, eventNumber].
+    let eventsCreated = 0;
+    for (const spec of COMMUNITY_EVENTS) {
+        // eslint-disable-next-line no-await-in-loop
+        const existingEvent = await db.communityEvent.findUnique({
+            where: { tenantId_eventNumber: { tenantId, eventNumber: spec.eventNumber } },
+            select: { id: true },
+        });
+        if (existingEvent) continue;
+
+        await db.communityEvent.create({
+            data: {
+                tenantId,
+                eventNumber: spec.eventNumber,
+                title: spec.title,
+                description: spec.description ?? null,
+                category: spec.category ?? null,
+                startsAt: spec.startsAt,
+                endsAt: spec.endsAt ?? null,
+                location: spec.location ?? null,
+                maxCapacity: null,
+                budgetAmount: spec.budgetAmount ?? null,
+                status: spec.status,
+                publishedAt: spec.publishedAt ?? null,
+                announcementId: spec.linkAnnouncementTitle
+                    ? announcementIdByTitle.get(spec.linkAnnouncementTitle) ?? null
+                    : null,
+                createdBy: sekretarisId ?? createdBy,
+            },
+        });
+        eventsCreated += 1;
+    }
+
+    // ─── Fase 2: Kas terkait kegiatan (2 — EXPENSE APPROVED, eventId terisi) ──
+    // Idempotent: findFirst by [tenantId, txDate, amount, description] (pola Fase 1).
+    let eventCashCreated = 0;
+    for (const spec of COMMUNITY_EVENT_CASH_TXS) {
+        const txDate = toUtcDate(spec.txDate);
+        const dayIso = spec.txDate;
+
+        // eslint-disable-next-line no-await-in-loop
+        const existingTx = await db.communityCashTransaction.findFirst({
+            where: { tenantId, txDate, amount: spec.amount, description: spec.description },
+            select: { id: true },
+        });
+        if (existingTx) continue;
+
+        // eslint-disable-next-line no-await-in-loop
+        const eventRow = await db.communityEvent.findUnique({
+            where: { tenantId_eventNumber: { tenantId, eventNumber: spec.eventNumber } },
+            select: { id: true },
+        });
+
+        // Nomor KAS/<YYYYMMDD>-<seq> collision-safe lanjutan dari urutan existing.
+        let seq = 1;
+        let txNumber = `KAS/${dayIso.replace(/-/g, '')}-${String(seq).padStart(3, '0')}`;
+        // eslint-disable-next-line no-await-in-loop
+        while (
+            // eslint-disable-next-line no-await-in-loop
+            await db.communityCashTransaction.findUnique({
+                where: { tenantId_txNumber: { tenantId, txNumber } },
+                select: { id: true },
+            })
+        ) {
+            seq += 1;
+            txNumber = `KAS/${dayIso.replace(/-/g, '')}-${String(seq).padStart(3, '0')}`;
+        }
+
+        const isApproved = spec.status === 'APPROVED';
+        await db.communityCashTransaction.create({
+            data: {
+                tenantId,
+                txNumber,
+                type: spec.type,
+                category: spec.category,
+                amount: spec.amount,
+                description: spec.description,
+                txDate,
+                eventId: eventRow?.id ?? null,
+                status: spec.status,
+                approvedBy: isApproved ? ketuaId : null,
+                approvedAt: isApproved ? addDays(txDate, 1) : null,
+                createdBy: bendaharaId ?? createdBy, // SoD: pencatat ≠ approver
+            },
+        });
+        eventCashCreated += 1;
+    }
+
     // ─── Counts (total dalam tenant — termasuk data existing) ────
-    const [rolesTotal, usersTotal, membersTotal, duesTypesTotal, billsTotal, paymentsTotal, cashTotal, announcementsTotal] =
-        await Promise.all([
-            db.role.count({ where: { tenantId } }),
-            db.user.count({ where: { tenantId } }),
-            db.communityMember.count({ where: { tenantId } }),
-            db.communityDuesType.count({ where: { tenantId } }),
-            db.communityDuesBill.count({ where: { tenantId } }),
-            db.communityDuesPayment.count({ where: { tenantId } }),
-            db.communityCashTransaction.count({ where: { tenantId } }),
-            db.communityAnnouncement.count({ where: { tenantId } }),
-        ]);
+    const [
+        rolesTotal, usersTotal, membersTotal, duesTypesTotal, billsTotal,
+        paymentsTotal, cashTotal, announcementsTotal, lettersTotal, eventsTotal,
+    ] = await Promise.all([
+        db.role.count({ where: { tenantId } }),
+        db.user.count({ where: { tenantId } }),
+        db.communityMember.count({ where: { tenantId } }),
+        db.communityDuesType.count({ where: { tenantId } }),
+        db.communityDuesBill.count({ where: { tenantId } }),
+        db.communityDuesPayment.count({ where: { tenantId } }),
+        db.communityCashTransaction.count({ where: { tenantId } }),
+        db.communityAnnouncement.count({ where: { tenantId } }),
+        db.communityLetter.count({ where: { tenantId } }),
+        db.communityEvent.count({ where: { tenantId } }),
+    ]);
 
     return {
         tenant,
@@ -800,6 +1215,8 @@ export async function seedCommunityData(
             payments: paymentsTotal,
             cashTransactions: cashTotal,
             announcements: announcementsTotal,
+            letters: lettersTotal,
+            events: eventsTotal,
         },
         created: {
             roles: rolesCreated,
@@ -808,8 +1225,10 @@ export async function seedCommunityData(
             duesTypes: duesTypesCreated,
             bills: billsCreated,
             payments: paymentsCreated,
-            cashTransactions: cashTransactionsCreated,
+            cashTransactions: cashTransactionsCreated + eventCashCreated,
             announcements: announcementsCreated,
+            letters: lettersCreated,
+            events: eventsCreated,
         },
         roles,
         users,

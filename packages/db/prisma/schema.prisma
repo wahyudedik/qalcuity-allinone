@@ -180,6 +180,9 @@ model Tenant {
   communityDuesPayments     CommunityDuesPayment[]
   communityCashTransactions CommunityCashTransaction[]
   communityAnnouncements    CommunityAnnouncement[]
+  // Community module (Fase 2: Surat & Kegiatan)
+  communityLetters          CommunityLetter[]
+  communityEvents           CommunityEvent[]
 }
 
 model User {
@@ -3036,6 +3039,7 @@ model CommunityMember {
 
   bills       CommunityDuesBill[]
   payments    CommunityDuesPayment[]
+  letters     CommunityLetter[] // Fase 2: riwayat surat pengantar milik warga
 
   // Unik: 1 kode warga per tenant. Saat warga pindah → status MOVED + buat record
   // baru (code baru) — tagihan lama tetap menempel ke record lama (riwayat utuh).
@@ -3148,6 +3152,8 @@ model CommunityCashTransaction {
   description String
   txDate      DateTime
   attachmentUrl String? // Foto nota/kwitansi (opsional)
+  eventId       String? // Fase 2: relasi opsional ke kegiatan (realisasi anggaran) — NULL untuk kas umum
+  event         CommunityEvent? @relation(fields: [eventId], references: [id])
 
   // KEPUTUSAN (c): approval state machine inline — BUKAN integrasi ApprovalRequest.
   status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
@@ -3167,6 +3173,7 @@ model CommunityCashTransaction {
   @@index([tenantId, status])
   @@index([tenantId, txDate])
   @@index([tenantId, type])
+  @@index([tenantId, eventId])
   @@index([tenantId])
 }
 
@@ -3184,11 +3191,91 @@ model CommunityAnnouncement {
   isActive    Boolean  @default(true)
 
   createdBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
   deletedBy   String?
 
+  events CommunityEvent[] // Fase 2: kegiatan terkait pengumuman ini (relasi opsional)
+
   @@index([tenantId, isActive])
+  @@index([tenantId])
+}
+
+// ─── Community Module (Fase 2: Surat & Kegiatan) ─────────────────────────────
+// Referensi: plans/community-phase2-implementation.md §4
+// Surat pengantar RT/RW (PDF+QR verifikasi) + agenda kegiatan warga.
+
+model CommunityLetter {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  // Dokumen
+  letterNumber String?  // Di-assign saat ISSUE: "SRT/<PNG|DOM|SKT|KTR>/<YYYY>-<seq3>" — NULL saat DRAFT
+  letterType  String    // PENGANTAR, DOMISILI, SKTM, KETERANGAN_LAIN (kode+template di lib/community-letter.ts)
+  memberId    String
+  member      CommunityMember @relation(fields: [memberId], references: [id])
+  purpose     String    // Keperluan surat, e.g. "Pengurusan paspor"
+  destination String?   // Instansi tujuan, e.g. "Imigrasi Kelas I Cibinong"
+  notes       String?
+
+  // Status & penerbitan
+  status      String    @default("DRAFT") // DRAFT, ISSUED, REVOKED
+  bodySnapshot Json?    // Snapshot isi surat saat ISSUE (nama, nik plain di PDF-saja, alamat, kop RT) — immutability dokumen
+  issuedAt    DateTime?
+  signedBy    String?   // User id ketua penerbit
+  signedByName String?  // Snapshot nama ketua penerbit
+  revokedAt   DateTime?
+  revokedBy   String?
+  revokeReason String?
+
+  // Verifikasi publik (QR)
+  verifyToken String?   @unique // crypto.randomBytes(16).toString('hex') — dibuat saat ISSUE; QR → /verify/community-letter/<token>
+
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  @@unique([tenantId, letterNumber]) // NULL (draft) diizinkan ganda oleh Postgres
+  @@index([tenantId, status])
+  @@index([tenantId, memberId])
+  @@index([tenantId])
+}
+
+model CommunityEvent {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  eventNumber String    // Di-assign saat CREATE: "KGT/<YYYY>-<seq3>", unik per tenant
+  title       String
+  description String?
+  category    String?   // RAPAT, KERJA_BAKTI, PERAYAAN, SOSIAL, LAINNYA (label bebas terkontrol)
+  startsAt    DateTime
+  endsAt      DateTime?
+  location    String?
+  maxCapacity Int?      // Informatif (pendaftaran peserta = Fase 3)
+  budgetAmount Decimal? @db.Decimal(19, 4) // Anggaran rencana (opsional) — realisasi = agregat CommunityCashTransaction.eventId
+  status      String    @default("PLANNED") // PLANNED, ONGOING, DONE, CANCELLED
+  publishedAt DateTime? // Waktu tayang di portal warga (null = draft internal)
+
+  // Relasi opsional (opsional + onDelete SetNull — pengumuman boleh dihapus tanpa menghapus kegiatan)
+  announcementId String? // Link opsional ke pengumuman terkait
+  announcement   CommunityAnnouncement? @relation(fields: [announcementId], references: [id])
+
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  transactions CommunityCashTransaction[] // Realisasi anggaran per kegiatan
+
+  @@unique([tenantId, eventNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, startsAt])
   @@index([tenantId])
 }

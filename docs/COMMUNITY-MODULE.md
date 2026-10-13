@@ -3,9 +3,9 @@
 > **Modul administrasi warga untuk RT/RW — iuran warga, kas & approval, pengumuman, dan portal warga read-only.**
 > Dokumen ini adalah referensi lengkap: scope, arsitektur data, API, permission model, seed demo, smoke test, lessons learned, dan roadmap.
 
-> **Session:** 72 (Subtask F–J, 13 Okt 2026)
-> **Status:** 🚀 `production_ready` (MVP Fase 1)
-> **Docs version:** 1.0
+> **Session:** 73 (Fase 2: Surat Pengantar PDF+QR & Kegiatan, 13 Okt 2026)
+> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2)
+> **Docs version:** 2.0
 
 ---
 
@@ -25,7 +25,8 @@
 12. [Smoke Test Guide](#12-smoke-test-guide)
 13. [Verify Scripts & DB Hygiene](#13-verify-scripts--db-hygiene)
 14. [Lessons Learned](#14-lessons-learned)
-15. [Roadmap Fase Berikutnya](#15-roadmap-fase-berikutnya)
+15. [Fase 2 — Surat Pengantar PDF+QR & Kegiatan](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)
+16. [Roadmap Fase Berikutnya](#16-roadmap-fase-berikutnya)
 
 ---
 
@@ -656,22 +657,88 @@ npx prisma generate        # generate client normal (local engine)
 
 ---
 
-## 15. Roadmap Fase Berikutnya
+## 15. Fase 2 — Surat Pengantar PDF+QR & Kegiatan (Session 73)
+
+> **Scope:** 2 model Prisma baru ([`CommunityLetter`](packages/db/prisma/schema.prisma) + [`CommunityEvent`](packages/db/prisma/migrations/20261013060951_community_phase2_surat_kegiatan)), 15 API handlers di 9 route files, verify page publik, portal warga extension, export CSV/PDF, i18n 163 keys.
+> **Status:** 🚀 `production_ready` — smoke 22/22 PASS, tsc 0 errors, seed DB check LOLOS.
+
+### 15.1 Surat Pengantar (CommunityLetter)
+
+| Aspek | Detail |
+|-------|--------|
+| **Lifecycle** | `DRAFT` → `ISSUE` (assign nomor + generate verifyToken) → `REVOKE` (alasan wajib) |
+| **Numbering** | `SRT/<PNG|DOM|SKT|KTR>/<YYYY>-<seq3>` — assign **atomik saat ISSUE** (bukan saat create) |
+| **Types** | PENGANTAR (umum), DOMISILI, SKTM, KETERANGAN_LAIN |
+| **Snapshot** | `bodySnapshot Json` — salinan immutable data warga saat ISSUE (perubahan data warga setelahnya TIDAK mengubah surat terbit) |
+| **Penandatangan** | `signedBy` (user id) + `signedByName` (snapshot nama immutable) — **tanpa relasi** ke model User ([§15.4](#154-deviation--bug-fixes)) |
+| **PDF** | [`community-letter-pdf.ts`](apps/web/lib/community-letter-pdf.ts) — jsPDF template surat + QR code verifikasi; download via blob di UI detail |
+| **Verify token** | 32-char hex (128-bit), `@unique` **global** (capability URL — bukan per-tenant) |
+| **verifyUrl** | **ABSOLUTE URL** (`letterVerifyUrl()`) → `http://<host>/verify/community-letter/<token>` |
+| **API** | `GET/POST /api/community/letters`, `GET/PUT/DELETE /api/community/letters/[id]`, `POST .../issue`, `POST .../revoke`, `GET .../pdf`, `GET /api/community/portal/letters` |
+
+### 15.2 Kegiatan (CommunityEvent)
+
+| Aspek | Detail |
+|-------|--------|
+| **Lifecycle** | `PLANNED` → `ONGOING` → `DONE` / `CANCELLED` |
+| **Numbering** | `KGT/<YYYY>-<seq3>` |
+| **Budget** | `budgetAmount Decimal?` — usage % bar dengan threshold 70% (kuning) / 90% (merah) |
+| **Realisasi kas** | Transaksi kas terkait via `eventId` → ⚠️ **DEVIATION**: filter client-side ([§15.4](#154-deviation--bug-fixes)) |
+| **Relasi** | `announcementId` → CommunityAnnouncement (`SetNull`), `transactions` → CommunityCashTransaction (Set) |
+| **API** | `GET/POST /api/community/events`, `GET/PUT/DELETE /api/community/events/[id]`, `GET /api/community/portal/events` |
+
+### 15.3 Halaman UI (Internal + Portal + Publik)
+
+| Halaman | Path |
+|---------|------|
+| Letters list + detail (+`loading.tsx`/`error.tsx`) | [`dashboard/community/(internal)/letters/`](apps/web/app/dashboard/community/(internal)/letters) |
+| Events list + detail (+`loading.tsx`/`error.tsx`) | [`dashboard/community/(internal)/events/`](apps/web/app/dashboard/community/(internal)/events) |
+| Portal: surat saya | [`dashboard/community/portal/letters/`](apps/web/app/dashboard/community/portal/letters/page.tsx) |
+| Portal: kegiatan saya | [`dashboard/community/portal/events/`](apps/web/app/dashboard/community/portal/events/page.tsx) |
+| Verify publik (server component) | [`/verify/community-letter/[token]`](apps/web/app/verify/community-letter/[token]/page.tsx) |
+| Layout tabs | letters + events di [internal layout](apps/web/app/dashboard/community/(internal)/layout.tsx) & portal layout |
+| Overview | StatCards `lettersThisMonth` + `upcomingEvents` |
+| Cash page | select `eventId` di form transaksi |
+
+### 15.4 Deviation & Bug Fixes
+
+**⚠️ DEVIATION — Realisasi kas kegiatan (client-side filter):**
+`GET /api/community/cash-transactions` (Fase 1) belum mendukung filter `eventId`. Halaman detail kegiatan meng-fetch transaksi kas lalu filter `row.eventId === id` di client. **Fase 3:** tambah param `eventId` ke server route agar tidak over-fetch.
+
+**🔴 Bug fix 1 — Prisma include `signedByUser` (verify page):**
+Verify page awalnya `include: { signedByUser: { select: { name: true } } }` — model CommunityLetter **TIDAK punya relasi** `signedByUser` (hanya kolom `signedBy String?` + snapshot `signedByName String?`) → `findUnique` throw `Unknown field 'signedByUser'` → catch → null → **surat valid tampil "tidak ditemukan"**. **Fix:** hapus include (hanya `member`), tampilkan `signedByName` snapshot.
+
+**🟠 Bug fix 2 — verifyUrl absolut di smoke script:**
+`verifyUrl` dari API adalah URL absolut; script PowerShell melakukan `$base + $path` → URL ganda (`http://localhost:3001/http://...`) → status 0. **Fix:** ekstrak `([uri]$verifyUrl).PathAndQuery` sebelum request.
+
+### 15.5 Verifikasi Session 73
+
+| Check | Hasil |
+|-------|-------|
+| `npx tsc --noEmit` (apps/web) | ✅ **0 errors** |
+| `npx vitest run` (root, 13 files) | ✅ **365/366 pass** — 1 failure **pre-existing** di `packages/workflow` (`should have all default workflows pass validation`, package clean di git — bukan regresi Session 73) |
+| Smoke matrix ([`smoke-community-login.ps1`](scripts/smoke-community-login.ps1)) | ✅ **22/22 PASS** — [17]-[18] letters/events pages 200; [19] verify token valid → 200 + body `SRT/DOM/2026-`; [20] random 32-hex → not-found; [21]-[22] portal letters/events 200 |
+| Seed DB check (Prisma `groupBy`) | ✅ **LOLOS** — Letters 7 ISSUED (semua punya verifyToken) / 1 REVOKED / 2 DRAFT; Events 6 PLANNED / 1 DONE / 1 CANCELLED (count > seed karena smoke create data per run) |
+| i18n parity | ✅ **163 keys/file**, 472 community leaf keys identik id/en; semantic check vs HEAD: lost=0 changed=0 |
+
+---
+
+## 16. Roadmap Fase Berikutnya
 
 Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-analysis.md)
 
 ### Fase 2 (Prioritas Berikutnya)
 
-| Feature | Scope | Estimasi |
-|---------|-------|----------|
-| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau多个 kelurahan) — relasi parent-child | 3–4 model baru |
-| **Surat Pengantar PDF + QR** | Generate surat pengantar (domisili, SKTM) — template PDF + QR code verifikasi | Integration jsPDF + QR lib |
-| **Kegiatan** | Event/warga gathering — CRUD + pendaftaran + documentation | 1 model baru |
-| **Aset Komunitas** | Inventaris aset RT/RW (asset register, depresiasi opsional) | 1–2 model baru |
-| **Mode Akuntansi Opsional** | Jurnal double-entry untuk kas — optional, off by default | Integration ke [`@qalcuity/workflow`](packages/workflow/src/index.ts) / Finance module |
-| **Offline Mode Bendahara** | IndexedDB + sync queue (pola POS Offline) | Reuse [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline) |
-| **Mobile RN Bendahara** | React Native — catat iuran, upload receipt, approve kas (mobile-first bendahara) | Extend [`apps/mobile`](apps/mobile) (JWT auth sudah ada) |
-| **Auto-debit / Payment Gateway** | Integrasi Xendit/Midtrans untuk auto-debit iuran | Reuse Finance payment gateway |
+| Feature | Scope | Estimasi | Status |
+|---------|-------|----------|--------|
+| **Surat Pengantar PDF + QR** | Generate surat pengantar (domisili, SKTM) — template PDF + QR code verifikasi | Integration jsPDF + QR lib | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
+| **Kegiatan** | Event/warga gathering — CRUD + budget + realisasi kas | 1 model baru | ✅ **DONE** (Session 73 — pendaftaran peserta → Fase 3) |
+| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau多个 kelurahan) — relasi parent-child | 3–4 model baru | 📋 Fase 3 |
+| **Aset Komunitas** | Inventaris aset RT/RW (asset register, depresiasi opsional) | 1–2 model baru | 📋 Fase 3 |
+| **Mode Akuntansi Opsional** | Jurnal double-entry untuk kas — optional, off by default | Integration ke [`@qalcuity/workflow`](packages/workflow/src/index.ts) / Finance module | 📋 Fase 3 |
+| **Offline Mode Bendahara** | IndexedDB + sync queue (pola POS Offline) | Reuse [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline) | 📋 Fase 3 |
+| **Mobile RN Bendahara** | React Native — catat iuran, upload receipt, approve kas (mobile-first bendahara) | Extend [`apps/mobile`](apps/mobile) (JWT auth sudah ada) | 📋 Fase 3 |
+| **Auto-debit / Payment Gateway** | Integrasi Xendit/Midtrans untuk auto-debit iuran | Reuse Finance payment gateway | 📋 Fase 3 |
 
 ### Fase 3 (Kajian & Regulasi)
 
@@ -694,12 +761,13 @@ Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-
 |---------|-----|
 | [`plans/community-gov-product-analysis.md`](plans/community-gov-product-analysis.md) | Kajian produk lengkap, user personas, competitive analysis |
 | [`plans/community-mvp-implementation.md`](plans/community-mvp-implementation.md) | Plan implementasi MVP (Subtask F–J) |
+| [`plans/community-phase2-implementation.md`](plans/community-phase2-implementation.md) | Plan implementasi Fase 2 — Surat Pengantar PDF+QR & Kegiatan (Subtask K–N) |
 | [`AGENT.md`](../AGENT.md) | Hard rules (tenant isolation, RBAC, Zod validation, SoD) |
 | [`FEATURES.md`](../FEATURES.md) §14.10 | Industry Pack: Community & Public Administration |
-| [`CURRENT.md`](../CURRENT.md) Session 72 | Hasil verifikasi final + commit |
+| [`CURRENT.md`](../CURRENT.md) Session 73 | Hasil verifikasi Fase 2 + commit |
 
 ---
 
-**Last Updated:** 13 Oktober 2026 (Session 72: Community & Public Administration MVP — Subtask J FINAL)
+**Last Updated:** 13 Oktober 2026 (Session 73: Fase 2 — Surat Pengantar PDF+QR & Kegiatan)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 1.0 — Initial (MVP Fase 1)
+**Document Version:** 2.0 — Fase 2 (Surat Pengantar + Kegiatan + Verify Publik)

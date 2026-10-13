@@ -56,6 +56,46 @@ export function serializeCommunityMember(row: MemberRow): Record<string, unknown
     };
 }
 
+// ─── Select & serialization kegiatan (Fase 2 — Surat & Kegiatan) ──────────────
+
+/**
+ * Select kegiatan untuk list/detail admin. `budgetAmount` Decimal → number via
+ * `serializeCommunityEvent`. Hitungan transaksi kas ter-link di-attach per route
+ * (filtered `_count`) karena filternya kontekstual (deletedAt null).
+ */
+export const EVENT_LIST_SELECT = {
+    id: true,
+    eventNumber: true,
+    title: true,
+    description: true,
+    category: true,
+    startsAt: true,
+    endsAt: true,
+    location: true,
+    maxCapacity: true,
+    budgetAmount: true,
+    status: true,
+    publishedAt: true,
+    announcementId: true,
+    createdBy: true,
+    createdAt: true,
+    updatedAt: true,
+} as const;
+
+type EventRow = {
+    budgetAmount?: unknown;
+} & Record<string, unknown>;
+
+/** Serialize baris kegiatan — `budgetAmount` Decimal → number/null untuk response JSON. */
+export function serializeCommunityEvent(row: EventRow): Record<string, unknown> {
+    const { budgetAmount, ...rest } = row;
+    return {
+        ...rest,
+        budgetAmount:
+            budgetAmount === null || budgetAmount === undefined ? null : Number(budgetAmount),
+    };
+}
+
 // ─── Period & date helpers ────────────────────────────────────────────────────
 
 const APP_TZ = process.env.APP_TIMEZONE || 'Asia/Jakarta';
