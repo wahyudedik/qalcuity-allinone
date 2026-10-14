@@ -355,24 +355,28 @@ describe('WorkflowEngine', () => {
         });
 
         it('should have all default workflows pass validation', () => {
-            // Known issue: PAYROLL workflow has REJECTED in transitions but missing from states.
-            // This test documents that the validation engine correctly catches this.
-            const knownIssues: Record<string, string[]> = {
-                PAYROLL: ['REJECTED state missing from states array'],
-            };
+            // All 6 default workflows must validate cleanly (no errors).
+            // PAYROLL previously had REJECTED in transitions but missing from states —
+            // that was fixed in definitions.ts, so all workflows are now valid.
+            expect(Object.keys(DEFAULT_WORKFLOWS)).toHaveLength(6);
 
             for (const [name, workflow] of Object.entries(DEFAULT_WORKFLOWS)) {
                 const result = WorkflowEngine.validateWorkflow(workflow);
-                if (knownIssues[name]) {
-                    // Known issue — validation should catch it (errors present)
-                    expect(result.valid).toBe(false);
-                    expect(result.errors.length).toBeGreaterThan(0);
-                } else {
-                    // No known issues — should pass validation cleanly
-                    expect(result.valid).toBe(true);
-                    expect(result.errors).toEqual([]);
-                }
+                expect(result.valid, `${name} workflow should be valid`).toBe(true);
+                expect(result.errors, `${name} workflow should have no errors`).toEqual([]);
             }
+        });
+
+        it('should have PAYROLL with REJECTED in states (locking correct behavior)', () => {
+            // Regression lock: PAYROLL states MUST contain REJECTED because
+            // PAYROLL_TRANSITIONS includes PENDING_APPROVAL -> REJECTED.
+            const payroll = DEFAULT_WORKFLOWS['PAYROLL'];
+            expect(payroll.states).toContain('REJECTED');
+            expect(payroll.finalStates).toContain('REJECTED');
+
+            const result = WorkflowEngine.validateWorkflow(payroll);
+            expect(result.valid).toBe(true);
+            expect(result.errors).toEqual([]);
         });
     });
 

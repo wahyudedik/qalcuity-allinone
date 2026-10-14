@@ -1,4 +1,4 @@
-# Smoke test helper: NextAuth credentials login + API assertions (Session 72)
+﻿# Smoke test helper: NextAuth credentials login + API assertions (Session 72-74)
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-community-login.ps1
 $ErrorActionPreference = 'Continue'
 $base = 'http://localhost:3001'
@@ -54,7 +54,26 @@ function Api-Post($session, $path, $json) {
     }
 }
 
-Write-Host "=== SMOKE TEST: Community RT/RW (Session 72) ===" -ForegroundColor Cyan
+function Api-Delete($session, $path) {
+    try {
+        $r = Invoke-WebRequest -Uri "$base$path" -Method DELETE -WebSession $session -UseBasicParsing
+        return @{ status = $r.StatusCode; body = $r.Content }
+    }
+    catch {
+        $resp = $_.Exception.Response
+        $code = if ($resp) { [int]$resp.StatusCode } else { 0 }
+        $bodyText = ''
+        try {
+            $stream = $resp.GetResponseStream()
+            $reader = New-Object System.IO.StreamReader($stream)
+            $bodyText = $reader.ReadToEnd()
+        }
+        catch {}
+        return @{ status = $code; body = [string]$bodyText }
+    }
+}
+
+Write-Host "=== SMOKE TEST: Community RT/RW (Session 72-74) ===" -ForegroundColor Cyan
 
 # 1. Login ketua
 Write-Host "`n[1] Login ketua@rt02-melati.test" -ForegroundColor Yellow
@@ -125,7 +144,7 @@ Write-Host "`n[8] ketua GET /dashboard/community (expect 200/307)" -ForegroundCo
 $r = Api-Get $ketua '/dashboard/community'
 Write-Host "  status: $($r.status)"
 
-# ─── Fase 2: Surat & Kegiatan (Subtask M smoke) ─────────────────────────────
+# --- Fase 2: Surat & Kegiatan (Subtask M smoke) -----------------------------
 
 # 9. ketua GET /api/community/letters -> 200, response TANPA bodySnapshot
 Write-Host "`n[9] ketua GET /api/community/letters (expect 200, no bodySnapshot)" -ForegroundColor Yellow
@@ -217,11 +236,14 @@ $evBody = '{"title":"Kerja Bakti Smoke Test","startsAt":"' + $startsAt + '","loc
 $r = Api-Post $ketua '/api/community/events' $evBody
 Write-Host "  POST status: $($r.status)"
 Write-Host "  POST body: $($r.body)"
+$eventId = $null
+try { $eventId = ($r.body | ConvertFrom-Json).data.id } catch {}
+Write-Host "  eventId: $eventId"
 $r = Api-Get $ketua '/api/community/events?limit=5'
 Write-Host "  GET status: $($r.status)"
 Write-Host "  GET body(first 400): $($r.body.Substring(0, [Math]::Min(400, $r.body.Length)))"
 
-# ─── Session 73: UI smoke (halaman internal/portal + verify publik) ────────────
+# --- Session 73: UI smoke (halaman internal/portal + verify publik) ------------
 
 # 17. ketua GET /dashboard/community/letters -> 200
 Write-Host "`n[17] ketua GET /dashboard/community/letters (expect 200)" -ForegroundColor Yellow
@@ -283,12 +305,219 @@ Write-Host "  status: $($r.status)"
 $ok22 = ($r.status -eq 200)
 Write-Host "  OK: $ok22 (expect True)"
 
-Write-Host "`n=== RINGKASAN SESSION 73 ===" -ForegroundColor Cyan
+# --- Session 74: cash-transactions ?eventId= server-side filter --------------
+
+# 23. ketua GET cash-transactions?eventId=<valid> -> 200, semua data.eventId sama
+$ok23 = $false
+if ($eventId) {
+    Write-Host "`n[23] ketua GET /api/community/cash-transactions?eventId=<valid> (expect 200, all rows same eventId)" -ForegroundColor Yellow
+    $r = Api-Get $ketua "/api/community/cash-transactions?eventId=$eventId&limit=50"
+    Write-Host "  status: $($r.status)"
+    try {
+        $parsed = $r.body | ConvertFrom-Json
+        $rows = @($parsed.data)
+        $mismatch = @($rows | Where-Object { $_.eventId -ne $eventId })
+        Write-Host "  total: $($parsed.total) rows: $($rows.Count) | eventId mismatch: $($mismatch.Count) (expect 0)"
+        $ok23 = ($r.status -eq 200) -and ($mismatch.Count -eq 0)
+    }
+    catch {
+        Write-Host "  parse error: $_"
+    }
+    Write-Host "  OK: $ok23 (expect True)"
+}
+else {
+    Write-Host "`n[23] SKIP: eventId tidak tersedia dari [16]" -ForegroundColor Yellow
+}
+
+# 24. ketua GET cash-transactions?eventId=<invalid> -> 404 EVENT_NOT_FOUND
+Write-Host "`n[24] ketua GET /api/community/cash-transactions?eventId=<invalid> (expect 404)" -ForegroundColor Yellow
+$invalidEventId = [Guid]::NewGuid().ToString()
+$r = Api-Get $ketua "/api/community/cash-transactions?eventId=$invalidEventId"
+Write-Host "  eventId: $invalidEventId | status: $($r.status)"
+Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+$ok24 = ($r.status -eq 404)
+Write-Host "  OK: $ok24 (expect True)"
+
+# --- Fase 3: Pendaftaran peserta kegiatan (Subtask Q smoke) ------------------
+# Catatan seed: akun warga ter-link ke member W-001 - sudah ATTENDED di
+# KGT/2026-001 & REGISTERED di KGT/2026-002 (startsAt 17 Okt, masih Future).
+
+# Resolve id kegiatan seed berdasarkan eventNumber (posisi baris tidak diandalkan)
+$kgt001Id = $null; $kgt002Id = $null; $kgt003Id = $null
+try {
+    $er = Api-Get $ketua '/api/community/events?limit=20'
+    foreach ($ev in (($er.body | ConvertFrom-Json).data)) {
+        if ($ev.eventNumber -eq 'KGT/2026-001') { $kgt001Id = $ev.id }
+        elseif ($ev.eventNumber -eq 'KGT/2026-002') { $kgt002Id = $ev.id }
+        elseif ($ev.eventNumber -eq 'KGT/2026-003') { $kgt003Id = $ev.id }
+    }
+}
+catch {}
+Write-Host "  kgt001=$kgt001Id | kgt002=$kgt002Id | kgt003=$kgt003Id"
+
+$ok25 = $false; $ok26 = $false; $ok27 = $false; $ok28 = $false
+$ok29 = $false; $ok30 = $false; $ok31 = $false; $ok32 = $false
+$ok33 = $false; $ok34 = $false; $ok35 = $false; $ok36 = $false
+
+if ($kgt001Id -and $kgt002Id -and $kgt003Id) {
+    # 25. ketua GET participants KGT-001 -> 200, 5 baris, W-001 ATTENDED
+    Write-Host "`n[25] ketua GET events/[kgt001]/participants (expect 200, 5 rows, W-001 ATTENDED)" -ForegroundColor Yellow
+    $w001MemberId = $null
+    $r = Api-Get $ketua "/api/community/events/$kgt001Id/participants?limit=50"
+    Write-Host "  status: $($r.status)"
+    try {
+        $parsed = $r.body | ConvertFrom-Json
+        $rows = @($parsed.data)
+        $w001 = $rows | Where-Object { $_.member.code -eq 'W-001' } | Select-Object -First 1
+        if ($w001) { $w001MemberId = $w001.member.id }
+        Write-Host "  total: $($parsed.total) rows: $($rows.Count) | W-001 status: $($w001.status) | warga memberId: $w001MemberId"
+        $ok25 = ($r.status -eq 200) -and ($rows.Count -eq 5) -and ($w001.status -eq 'ATTENDED') -and ([bool]$w001MemberId)
+    }
+    catch { Write-Host "  parse error: $_" }
+    Write-Host "  OK: $ok25 (expect True)"
+
+    # 26. ketua POST duplikat member (W-001 sudah ATTENDED di KGT-001) -> 409
+    Write-Host "`n[26] ketua POST participants duplikat (expect 409 already registered)" -ForegroundColor Yellow
+    if ($w001MemberId) {
+        $r = Api-Post $ketua "/api/community/events/$kgt001Id/participants" ('{"memberId":"' + $w001MemberId + '"}')
+        Write-Host "  status: $($r.status)"
+        Write-Host "  body: $($r.body)"
+        $ok26 = ($r.status -eq 409) -and ($r.body -match 'already registered')
+    }
+    else {
+        Write-Host "  SKIP: memberId W-001 tidak tersedia dari [25]"
+    }
+    Write-Host "  OK: $ok26 (expect True)"
+
+    # 27. ketua POST memberId tidak ada (pola id tenant lain / random GUID) -> 404
+    Write-Host "`n[27] ketua POST participants memberId random GUID (expect 404 Member not found)" -ForegroundColor Yellow
+    $ghostMemberId = [Guid]::NewGuid().ToString()
+    $r = Api-Post $ketua "/api/community/events/$kgt001Id/participants" ('{"memberId":"' + $ghostMemberId + '"}')
+    Write-Host "  status: $($r.status) | memberId: $ghostMemberId"
+    Write-Host "  body: $($r.body)"
+    $ok27 = ($r.status -eq 404) -and ($r.body -match 'Member not found')
+    Write-Host "  OK: $ok27 (expect True)"
+
+    # 28. warga POST internal participants (hanya community:portal) -> 403
+    Write-Host "`n[28] warga POST internal events/[id]/participants (expect 403)" -ForegroundColor Yellow
+    if ($w001MemberId) {
+        $r = Api-Post $warga "/api/community/events/$kgt001Id/participants" ('{"memberId":"' + $w001MemberId + '"}')
+        Write-Host "  status: $($r.status)"
+        Write-Host "  body: $($r.body)"
+        $ok28 = ($r.status -eq 403)
+    }
+    else {
+        Write-Host "  SKIP: memberId W-001 tidak tersedia dari [25]"
+    }
+    Write-Host "  OK: $ok28 (expect True)"
+
+    # 29. warga GET portal/events -> 200 + embed participantStatus & participantCount
+    Write-Host "`n[29] warga GET /api/community/portal/events (expect 200 + participantStatus/participantCount)" -ForegroundColor Yellow
+    $r = Api-Get $warga '/api/community/portal/events?limit=20'
+    Write-Host "  status: $($r.status)"
+    try {
+        $parsed = $r.body | ConvertFrom-Json
+        $rows = @($parsed.data)
+        $allEmbed = @($rows | Where-Object { $null -eq $_.participantStatus -or $_.participantStatus -eq 'REGISTERED' -or $_.participantStatus -eq 'ATTENDED' -or $_.participantStatus -eq 'CANCELLED' }).Count -eq $rows.Count -and @($rows | Where-Object { $null -ne $_.participantCount }).Count -eq $rows.Count
+        $kgt002Row = $rows | Where-Object { $_.eventNumber -eq 'KGT/2026-002' } | Select-Object -First 1
+        Write-Host "  rows: $($rows.Count) | all have embed: $allEmbed | KGT-002: status=$($kgt002Row.participantStatus) active=$($kgt002Row.participantCount.active) max=$($kgt002Row.participantCount.maxCapacity)"
+        $ok29 = ($r.status -eq 200) -and $allEmbed -and ($kgt002Row.participantStatus -eq 'REGISTERED') -and ($kgt002Row.participantCount.active -eq 3) -and ($kgt002Row.participantCount.maxCapacity -eq 30)
+    }
+    catch { Write-Host "  parse error: $_" }
+    Write-Host "  OK: $ok29 (expect True)"
+
+    # 30. warga POST register KGT-002 (sudah REGISTERED) -> 409
+    Write-Host "`n[30] warga POST portal register KGT-002 (expect 409 already registered)" -ForegroundColor Yellow
+    $r = Api-Post $warga "/api/community/portal/events/$kgt002Id/register" ''
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body: $($r.body)"
+    $ok30 = ($r.status -eq 409) -and ($r.body -match 'already registered')
+    Write-Host "  OK: $ok30 (expect True)"
+
+    # 31. warga DELETE register KGT-002 (sebelum startsAt 17 Okt) -> 200 CANCELLED
+    Write-Host "`n[31] warga DELETE portal register KGT-002 (expect 200 CANCELLED)" -ForegroundColor Yellow
+    $r = Api-Delete $warga "/api/community/portal/events/$kgt002Id/register"
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body: $($r.body)"
+    try {
+        $row = ($r.body | ConvertFrom-Json).data
+        Write-Host "  data.status: $($row.status) (expect CANCELLED)"
+        $ok31 = ($r.status -eq 200) -and ($row.status -eq 'CANCELLED')
+    }
+    catch {}
+    Write-Host "  OK: $ok31 (expect True)"
+
+    # 32. warga DELETE lagi (sudah CANCELLED) -> 404 not registered
+    Write-Host "`n[32] warga DELETE portal register KGT-002 lagi (expect 404 not registered)" -ForegroundColor Yellow
+    $r = Api-Delete $warga "/api/community/portal/events/$kgt002Id/register"
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body: $($r.body)"
+    $ok32 = ($r.status -eq 404) -and ($r.body -match 'not registered')
+    Write-Host "  OK: $ok32 (expect True)"
+
+    # 33. warga POST register ulang (reactivasi in-place) -> 201 REGISTERED
+    Write-Host "`n[33] warga POST portal register KGT-002 (expect 201 reactivated REGISTERED)" -ForegroundColor Yellow
+    $r = Api-Post $warga "/api/community/portal/events/$kgt002Id/register" ''
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body: $($r.body)"
+    try {
+        $row = ($r.body | ConvertFrom-Json).data
+        Write-Host "  data.status: $($row.status) (expect REGISTERED)"
+        $ok33 = ($r.status -eq 201) -and ($row.status -eq 'REGISTERED') -and ($r.body -match 'reactivated')
+    }
+    catch {}
+    Write-Host "  OK: $ok33 (expect True)"
+
+    # 34. warga DELETE register KGT-001 (W-001 ATTENDED - kehadiran final) -> 409
+    Write-Host "`n[34] warga DELETE portal register KGT-001 (expect 409 attendance already recorded)" -ForegroundColor Yellow
+    $r = Api-Delete $warga "/api/community/portal/events/$kgt001Id/register"
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body: $($r.body)"
+    $ok34 = ($r.status -eq 409) -and ($r.body -match 'attendance already recorded')
+    Write-Host "  OK: $ok34 (expect True)"
+
+    # 35. warga POST register KGT-003 (CANCELLED + unpublished) -> 404
+    Write-Host "`n[35] warga POST portal register KGT-003 (expect 404 event not found)" -ForegroundColor Yellow
+    $r = Api-Post $warga "/api/community/portal/events/$kgt003Id/register" ''
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body: $($r.body)"
+    $ok35 = ($r.status -eq 404)
+    Write-Host "  OK: $ok35 (expect True)"
+}
+else {
+    Write-Host "`n[25-35] SKIP: id kegiatan seed KGT/2026-001..003 tidak ter-resolve dari [16]/list" -ForegroundColor Yellow
+}
+
+# 36. admin tenant lain GET portal/events -> 401/403
+Write-Host "`n[36] admin@qalcuity.com GET /api/community/portal/events (expect 401/403)" -ForegroundColor Yellow
+$r = Api-Get $admin '/api/community/portal/events?limit=5'
+Write-Host "  status: $($r.status)"
+Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+$ok36 = ($r.status -eq 401) -or ($r.status -eq 403)
+Write-Host "  OK: $ok36 (expect True)"
+
+Write-Host "`n=== RINGKASAN SESSION 73/74 ===" -ForegroundColor Cyan
 Write-Host "  [17] letters page:      $ok17" -ForegroundColor $(if ($ok17) { 'Green' } else { 'Red' })
 Write-Host "  [18] events page:       $ok18" -ForegroundColor $(if ($ok18) { 'Green' } else { 'Red' })
 Write-Host "  [19] verify valid:      $ok19" -ForegroundColor $(if ($ok19) { 'Green' } else { 'Red' })
 Write-Host "  [20] verify 404:        $notFoundOk" -ForegroundColor $(if ($notFoundOk) { 'Green' } else { 'Red' })
 Write-Host "  [21] portal letters:    $ok21" -ForegroundColor $(if ($ok21) { 'Green' } else { 'Red' })
 Write-Host "  [22] portal events:     $ok22" -ForegroundColor $(if ($ok22) { 'Green' } else { 'Red' })
+Write-Host "  [23] cash eventId=valid:  $ok23" -ForegroundColor $(if ($ok23) { 'Green' } else { 'Red' })
+Write-Host "  [24] cash eventId=404:    $ok24" -ForegroundColor $(if ($ok24) { 'Green' } else { 'Red' })
+
+Write-Host "`n--- Fase 3: Pendaftaran Peserta Kegiatan ---" -ForegroundColor Cyan
+Write-Host "  [25] GET participants 5 rows:   $ok25" -ForegroundColor $(if ($ok25) { 'Green' } else { 'Red' })
+Write-Host "  [26] duplikat 409:              $ok26" -ForegroundColor $(if ($ok26) { 'Green' } else { 'Red' })
+Write-Host "  [27] ghost member 404:          $ok27" -ForegroundColor $(if ($ok27) { 'Green' } else { 'Red' })
+Write-Host "  [28] warga internal 403:        $ok28" -ForegroundColor $(if ($ok28) { 'Green' } else { 'Red' })
+Write-Host "  [29] portal embed:              $ok29" -ForegroundColor $(if ($ok29) { 'Green' } else { 'Red' })
+Write-Host "  [30] register dup 409:          $ok30" -ForegroundColor $(if ($ok30) { 'Green' } else { 'Red' })
+Write-Host "  [31] cancel 200 CANCELLED:      $ok31" -ForegroundColor $(if ($ok31) { 'Green' } else { 'Red' })
+Write-Host "  [32] cancel lagi 404:           $ok32" -ForegroundColor $(if ($ok32) { 'Green' } else { 'Red' })
+Write-Host "  [33] re-register 201:           $ok33" -ForegroundColor $(if ($ok33) { 'Green' } else { 'Red' })
+Write-Host "  [34] ATTENDED cancel 409:       $ok34" -ForegroundColor $(if ($ok34) { 'Green' } else { 'Red' })
+Write-Host "  [35] unpublished 404:           $ok35" -ForegroundColor $(if ($ok35) { 'Green' } else { 'Red' })
+Write-Host "  [36] admin portal 401/403:      $ok36" -ForegroundColor $(if ($ok36) { 'Green' } else { 'Red' })
 
 Write-Host "`n=== SELESAI ===" -ForegroundColor Cyan

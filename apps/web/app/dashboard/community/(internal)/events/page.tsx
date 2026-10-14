@@ -25,7 +25,7 @@ interface EventRow {
     publishedAt: string | null
     createdAt: string
     updatedAt: string
-    _count?: { transactions: number }
+    _count?: { transactions: number; participants?: number }
 }
 
 interface EventForm {
@@ -427,7 +427,7 @@ export default function CommunityEventsPage() {
                 </div>
             ) : rows.length === 0 ? (
                 <EmptyState
-                    icon={<CalendarDays className="h-10 w-10 text-gray-400" />}
+                    icon={CalendarDays}
                     title={t('community.events.empty')}
                     description={t('community.events.emptyDesc')}
                     actionLabel={canManage ? t('community.events.new') : undefined}
@@ -456,6 +456,11 @@ export default function CommunityEventsPage() {
                                     <dd>{dateRange(row)}</dd>
                                     <dt>{t('community.events.table.budget')}</dt>
                                     <dd>{row.budgetAmount != null ? formatCurrencyIDR(row.budgetAmount) : '-'}</dd>
+                                    <dt>{t('community.events.table.participants')}</dt>
+                                    <dd>
+                                        {row._count?.participants ?? 0}
+                                        {row.maxCapacity != null ? ` / ${row.maxCapacity}` : ''}
+                                    </dd>
                                 </dl>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     <Link
@@ -511,6 +516,9 @@ export default function CommunityEventsPage() {
                                         {t('community.events.table.budget')}
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.events.table.participants')}
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                         {t('community.events.table.status')}
                                     </th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -538,6 +546,10 @@ export default function CommunityEventsPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                                             {row.budgetAmount != null ? formatCurrencyIDR(row.budgetAmount) : '-'}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                            {row._count?.participants ?? 0}
+                                            {row.maxCapacity != null ? ` / ${row.maxCapacity}` : ''}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">{statusBadge(row.status)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">

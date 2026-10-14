@@ -183,6 +183,8 @@ model Tenant {
   // Community module (Fase 2: Surat & Kegiatan)
   communityLetters          CommunityLetter[]
   communityEvents           CommunityEvent[]
+  // Community module (Fase 3: Peserta Kegiatan)
+  communityEventParticipants CommunityEventParticipant[]
 }
 
 model User {
@@ -3040,6 +3042,7 @@ model CommunityMember {
   bills       CommunityDuesBill[]
   payments    CommunityDuesPayment[]
   letters     CommunityLetter[] // Fase 2: riwayat surat pengantar milik warga
+  eventParticipations CommunityEventParticipant[] // Fase 3: pendaftaran kegiatan
 
   // Unik: 1 kode warga per tenant. Saat warga pindah → status MOVED + buat record
   // baru (code baru) — tagihan lama tetap menempel ke record lama (riwayat utuh).
@@ -3273,9 +3276,42 @@ model CommunityEvent {
   deletedBy   String?
 
   transactions CommunityCashTransaction[] // Realisasi anggaran per kegiatan
+  participants CommunityEventParticipant[] // Fase 3: peserta terdaftar
 
   @@unique([tenantId, eventNumber])
   @@index([tenantId, status])
   @@index([tenantId, startsAt])
+  @@index([tenantId])
+}
+
+// ─── Community Module (Fase 3: Peserta Kegiatan) ──────────────────────────────
+// Referensi: plans/community-phase3-implementation.md §3.1
+// Pendaftaran peserta kegiatan — 1 baris per warga per kegiatan.
+
+model CommunityEventParticipant {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  eventId      String
+  event        CommunityEvent      @relation(fields: [eventId], references: [id])
+  memberId     String
+  member       CommunityMember     @relation(fields: [memberId], references: [id])
+
+  status       String   @default("REGISTERED") // REGISTERED, ATTENDED, CANCELLED
+  note         String?
+  registeredAt DateTime @default(now())
+
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Satu baris per warga per kegiatan. Cancel = flip status in-place (bukan insert
+  // baru) agar unique terjaga; reaktivasi setelah cancel = flip kembali REGISTERED.
+  // Tanpa soft-delete: baris dipertahankan untuk riwayat + menopang unique constraint.
+  @@unique([tenantId, eventId, memberId])
+  @@index([tenantId, eventId])
+  @@index([tenantId, memberId])
+  @@index([tenantId, status])
   @@index([tenantId])
 }

@@ -671,6 +671,22 @@
                 "quickDesc": "Jadwal kegiatan lingkungan",
                 "empty": "Belum ada kegiatan",
                 "emptyDesc": "Kegiatan yang akan datang akan muncul di sini."
+            },
+            "participants": {
+                "registered": "Terdaftar",
+                "attended": "Hadir",
+                "cancelled": "Dibatalkan",
+                "register": "Daftar",
+                "cancel": "Batalkan",
+                "myStatus": "Status Saya",
+                "countLabel": "Peserta",
+                "errorNetwork": "Terjadi kesalahan jaringan, silakan coba lagi.",
+                "cancelConfirmTitle": "Batalkan Pendaftaran?",
+                "cancelConfirmDesc": "Anda yakin ingin membatalkan pendaftaran kegiatan ini?",
+                "toast": {
+                    "registered": "Pendaftaran berhasil",
+                    "cancelled": "Pendaftaran dibatalkan"
+                }
             }
         },
         "letters": {
@@ -794,7 +810,8 @@
                 "endsAt": "Selesai",
                 "location": "Lokasi",
                 "budget": "Anggaran",
-                "status": "Status"
+                "status": "Status",
+                "participants": "Peserta"
             },
             "status": {
                 "planned": "Terjadwal",
@@ -837,7 +854,33 @@
                 "expense": "Pengeluaran",
                 "budgetUsage": "Penggunaan Anggaran",
                 "cashRealization": "Realisasi Kas",
-                "noCash": "Belum ada transaksi kas untuk kegiatan ini."
+                "noCash": "Belum ada transaksi kas untuk kegiatan ini.",
+                "noBudget": "Tanpa anggaran"
+            },
+            "participants": {
+                "title": "Peserta Kegiatan",
+                "add": "Tambah Peserta",
+                "addTitle": "Tambah Peserta",
+                "empty": "Belum ada peserta terdaftar.",
+                "memberRequired": "Pilih anggota terlebih dahulu",
+                "selectMember": "Pilih anggota...",
+                "noMembers": "Tidak ada anggota tersedia",
+                "noteOptional": "Catatan (opsional)",
+                "registeredAt": "Terdaftar",
+                "markAttended": "Tandai Hadir",
+                "cancel": "Batalkan",
+                "cancelConfirmTitle": "Batalkan Peserta?",
+                "cancelConfirmDesc": "Status peserta akan diubah menjadi Dibatalkan. Pendaftaran ini dapat diaktifkan kembali nanti.",
+                "status": {
+                    "registered": "Terdaftar",
+                    "attended": "Hadir",
+                    "cancelled": "Dibatalkan"
+                },
+                "toast": {
+                    "added": "Peserta berhasil ditambahkan",
+                    "markedAttended": "Kehadiran berhasil ditandai",
+                    "cancelled": "Pendaftaran peserta dibatalkan"
+                }
             }
         },
         "verify": {

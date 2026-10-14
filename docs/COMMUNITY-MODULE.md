@@ -3,9 +3,9 @@
 > **Modul administrasi warga untuk RT/RW — iuran warga, kas & approval, pengumuman, dan portal warga read-only.**
 > Dokumen ini adalah referensi lengkap: scope, arsitektur data, API, permission model, seed demo, smoke test, lessons learned, dan roadmap.
 
-> **Session:** 73 (Fase 2: Surat Pengantar PDF+QR & Kegiatan, 13 Okt 2026)
-> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2)
-> **Docs version:** 2.0
+> **Session:** 74 (Fase 3: Pendaftaran Peserta Kegiatan, 14 Okt 2026)
+> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2 + Fase 3)
+> **Docs version:** 3.0
 
 ---
 
@@ -26,7 +26,8 @@
 13. [Verify Scripts & DB Hygiene](#13-verify-scripts--db-hygiene)
 14. [Lessons Learned](#14-lessons-learned)
 15. [Fase 2 — Surat Pengantar PDF+QR & Kegiatan](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)
-16. [Roadmap Fase Berikutnya](#16-roadmap-fase-berikutnya)
+16. [Fase 3 — Pendaftaran Peserta Kegiatan](#16-fase-3--pendaftaran-peserta-kegiatan-session-74)
+17. [Roadmap Fase Berikutnya](#17-roadmap-fase-berikutnya)
 
 ---
 
@@ -723,24 +724,132 @@ Verify page awalnya `include: { signedByUser: { select: { name: true } } }` — 
 
 ---
 
-## 16. Roadmap Fase Berikutnya
+## 16. Fase 3 — Pendaftaran Peserta Kegiatan (Session 74)
+
+> **Scope:** 1 model Prisma baru ([`CommunityEventParticipant`](packages/db/prisma/schema.prisma)) + migrasi additive [`20261013223117_community_event_participants`](packages/db/prisma/migrations/20261013223117_community_event_participants), 6 API handlers baru + portal events GET embed, UI internal Peserta section + portal Daftar/Batalkan, seed 8 baris deterministik, smoke [25]–[36].
+> **Status:** 🚀 `production_ready` — smoke **36/36 PASS**, tsc 0 errors, vitest **367/367**, verify 🎉 ALL PASS.
+> **Plan:** [`plans/community-phase3-implementation.md`](plans/community-phase3-implementation.md)
+
+### 16.1 Model CommunityEventParticipant
+
+| Aspek | Detail |
+|-------|--------|
+| **Status String** | `REGISTERED` / `ATTENDED` / `CANCELLED` — **String @default("REGISTERED")**, bukan DB enum (deviation #1, konsisten konvensi String-status Prisma lain) |
+| **Unique** | `[tenantId, eventId, memberId]` — 1 warga = 1 baris per kegiatan |
+| **Cancel/Reactivate** | **In-place status flip**, NEVER insert/delete — baris lama di-flip REGISTERED↔CANCELLED, `registeredAt` di-refresh saat reaktivasi (deviation #2) |
+| **ATTENDED final** | Portal cancel untuk ATTENDED → 409 `Cannot cancel - attendance already recorded` |
+| **FK** | `tenantId`/`eventId`/`memberId` — semua `OnDelete: Restrict` (cleanup harus hapus participants sebelum events) |
+| **Quota** | Hitung `status IN ('REGISTERED','ATTENDED')` vs `maxCapacity` (null = unlimited); penuh → 409 `EVENT_FULL` |
+
+### 16.2 Status Machine
+
+```
+REGISTERED ──► ATTENDED      (admin/internal tandai hadir — final)
+     │
+     ▼
+ CANCELLED ──► REGISTERED    (re-activate, registeredAt = now)
+```
+
+| Transisi | Arah | Kapan |
+|----------|------|-------|
+| REGISTERED → CANCELLED | Portal `DELETE .../register` atau internal `PATCH [pid]` | Warga batal daftar / admin batalkan |
+| CANCELLED → REGISTERED | Portal `POST .../register` | Warga daftar ulang (reactivated) |
+| REGISTERED → ATTENDED | Internal `PATCH [pid]` | Admin tandai hadir |
+| ATTENDED → * | ❌ blocked | Portal cancel → 409; internal PATCH ke status lain → 409 |
+
+### 16.3 API Endpoints (6 handlers baru)
+
+| Method | Path | Auth | Catatan |
+|--------|------|------|---------|
+| GET | `/api/community/events/[id]/participants` | `community:manage` | List peserta + embed member |
+| POST | `/api/community/events/[id]/participants` | `community:manage` | Daftarkan member; 409 duplikat, 404 member/event |
+| PATCH | `/api/community/events/[id]/participants/[pid]` | `community:manage` | Flip status (hadir/batal) — guard ATTENDED final |
+| DELETE | `/api/community/events/[id]/participants/[pid]` | `community:manage` | Soft-cancel in-place (bukan hard delete) |
+| POST | `/api/community/portal/events/[id]/register` | `community:portal` | **Tanpa body** — memberId dari `resolvePortalMember`; 409 duplikat/EVENT_FULL |
+| DELETE | `/api/community/portal/events/[id]/register` | `community:portal` | Cancel milik sendiri; 404 belum terdaftar; 409 ATTENDED/EVENT_STARTED |
+
+> **Portal events GET** ([`portal/events/route.ts`](apps/web/app/api/community/portal/events/route.ts)) kini embed `participantStatus: string|null` + `participantCount: { active, maxCapacity }` — memakai `PORTAL_EVENT_SELECT` + batch `findMany`/`groupBy` (2 query ekstra, bukan N+1).
+
+### 16.4 Eligibility Portal Register
+
+Event **layak didaftar** jika: `publishedAt != null && publishedAt <= now && status != 'CANCELLED'`. Selain itu → **404 `Event not found`** (sama dengan event tidak ada — tidak membocorkan event unpublished ke warga). Guard tambahan: `now >= startsAt` → 409 `EVENT_STARTED`.
+
+### 16.5 UI
+
+| Halaman | Tambahan |
+|---------|----------|
+| Events list (internal) | Badge jumlah peserta aktif (active-only) di kolom |
+| Events detail (internal) | Section **"Peserta"** — tabel + form tambah peserta + aksi Hadir/Batal |
+| Portal events | Tombol **Daftar** / **Batalkan** + badge status peserta (REGISTERED/ATTENDED/CANCELLED) + `participantCount` label (`3/30 peserta`) |
+
+### 16.6 Seed (8 baris deterministik)
+
+| Kegiatan | Peserta |
+|----------|---------|
+| KGT-001 (DONE, maxCap 10) | 5 baris: W-001 ATTENDED, W-002/003 REGISTERED, W-004 CANCELLED, W-005 REGISTERED |
+| KGT-002 (PLANNED, maxCap 30) | 3 baris: W-001/006/007 REGISTERED |
+| KGT-003 (CANCELLED, unpublished) | 0 baris |
+
+> **Capacity-drift sync (deviation #12):** loop seed events kini **sinkronkan `maxCapacity`** saat existing row drift dari spec (dibuat seed era Fase 2 sebelum field capacity ada). Hanya `maxCapacity` yang di-sync — edit manual field lain tidak tertimpa.
+
+### 16.7 Verifikasi Session 74
+
+| Check | Hasil |
+|-------|-------|
+| `npx tsc --noEmit` (apps/web) | ✅ **0 errors** |
+| `npx tsc --noEmit` (packages/db) | ✅ **0 errors** |
+| `npx vitest run` (root, 13 files) | ✅ **367/367 pass** (workflow pre-existing failure ter-fix) |
+| Seed idempoten | ✅ run#1 `participants: 8`, run#2 `participants: 0` |
+| Verify community | ✅ 🎉 **SEMUA VERIFIKASI LOLOS** — 8 peserta, unik constraint, kuota 4/10 & 3/30 |
+| Smoke matrix | ✅ **36/36 PASS** — [1]–[24] regression + [25]–[36] Fase 3 (duplikat 409, ghost 404, warga 403, register/cancel/reactivate cycle, ATTENDED 409, unpublished 404, portal embed max=30) |
+| i18n parity | ✅ 32 leaf keys (`events.participants.*` 19 + `portal.participants.*` 12 + `events.table.participants` 1) identik id/en |
+
+### 16.8 Deviations (12 total)
+
+1. Status `String @default("REGISTERED")` — bukan DB enum (konsisten konvensi Prisma)
+2. Internal DELETE = **soft-cancel in-place** (flip status), bukan hard delete
+3. `memberId` Zod `min(1).max(100)` — bukan `.uuid()` (id Prisma non-UUID)
+4. Update schema **omit `memberId`** — pindah member = cancel + create baru
+5. Route-permissions **5 entries** (plan: 3) — method-aware GET/POST/PATCH/DELETE
+6. i18n key names mengikuti referensi UI aktual (tambah `errorNetwork`/`countLabel`/`myStatus`)
+7. Portal desktop table **drop kolom endsAt** (hemat lebar — mobile card sudah tampil)
+8. Events list badge = **active-only** (REGISTERED+ATTENDED), bukan total baris
+9. Portal page pakai `common.error` (string) + key `errorNetwork`
+10. `guards()`/`portalGate()` di-refactor return `NextResponse | context` (TS narrowing fix, behavior identik)
+11. Cleanup prefix matcher diperluas: 'Smoke test kegiatan' **+** 'Kerja Bakti Smoke Test'
+12. Seed events loop: **capacity-drift sync** (selective `maxCapacity`-only update)
+
+### 16.9 Tooling Notes
+
+- **PS1 encoding:** Windows PowerShell 5.1 membaca `.ps1` tanpa BOM sebagai ANSI → char non-ASCII (en-dash/em-dash/box-drawing) merusak parser. Fix: normalisasi ke ASCII **dan** tulis dengan UTF-8 BOM (`UTF8Encoding::new($true)`).
+- **Stale Prisma client:** `next dev` yang hidup sebelum `prisma generate` akan 500 `Unknown field 'participants' ... CommunityEventCountOutputType` → **wajib restart** dev server setelah generate model/relation baru.
+
+---
+
+## 17. Roadmap Fase Berikutnya
 
 Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-analysis.md)
 
-### Fase 2 (Prioritas Berikutnya)
+### Fase 1–3 (Selesai)
 
-| Feature | Scope | Estimasi | Status |
-|---------|-------|----------|--------|
-| **Surat Pengantar PDF + QR** | Generate surat pengantar (domisili, SKTM) — template PDF + QR code verifikasi | Integration jsPDF + QR lib | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
-| **Kegiatan** | Event/warga gathering — CRUD + budget + realisasi kas | 1 model baru | ✅ **DONE** (Session 73 — pendaftaran peserta → Fase 3) |
-| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau多个 kelurahan) — relasi parent-child | 3–4 model baru | 📋 Fase 3 |
-| **Aset Komunitas** | Inventaris aset RT/RW (asset register, depresiasi opsional) | 1–2 model baru | 📋 Fase 3 |
-| **Mode Akuntansi Opsional** | Jurnal double-entry untuk kas — optional, off by default | Integration ke [`@qalcuity/workflow`](packages/workflow/src/index.ts) / Finance module | 📋 Fase 3 |
-| **Offline Mode Bendahara** | IndexedDB + sync queue (pola POS Offline) | Reuse [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline) | 📋 Fase 3 |
-| **Mobile RN Bendahara** | React Native — catat iuran, upload receipt, approve kas (mobile-first bendahara) | Extend [`apps/mobile`](apps/mobile) (JWT auth sudah ada) | 📋 Fase 3 |
-| **Auto-debit / Payment Gateway** | Integrasi Xendit/Midtrans untuk auto-debit iuran | Reuse Finance payment gateway | 📋 Fase 3 |
+| Feature | Scope | Status |
+|---------|-------|--------|
+| **Surat Pengantar PDF + QR** | Generate surat pengantar (domisili, SKTM) — template PDF + QR code verifikasi | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
+| **Kegiatan** | Event/warga gathering — CRUD + budget + realisasi kas | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
+| **Pendaftaran Peserta** | Quota + status machine + portal register/cancel | ✅ **DONE** (Session 74 — [§16](#16-fase-3--pendaftaran-peserta-kegiatan-session-74)) |
 
-### Fase 3 (Kajian & Regulasi)
+### Fase 4 (Prioritas Berikutnya)
+
+| Feature | Scope | Estimasi |
+|---------|-------|----------|
+| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau beberapa kelurahan) — relasi parent-child | 3–4 model baru |
+| **Aset Komunitas** | Inventaris aset RT/RW (asset register, depresiasi opsional) | 1–2 model baru |
+| **Mode Akuntansi Opsional** | Jurnal double-entry untuk kas — optional, off by default | Integration ke [`@qalcuity/workflow`](packages/workflow/src/index.ts) / Finance module |
+| **Offline Mode Bendahara** | IndexedDB + sync queue (pola POS Offline) | Reuse [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline) |
+| **Mobile RN Bendahara** | React Native — catat iuran, upload receipt, approve kas (mobile-first bendahara) | Extend [`apps/mobile`](apps/mobile) (JWT auth sudah ada) |
+| **Auto-debit / Payment Gateway** | Integrasi Xendit/Midtrans untuk auto-debit iuran | Reuse Finance payment gateway |
+
+### Fase 4+ (Kajian & Regulasi)
 
 | Feature | Scope | Risiko |
 |---------|-------|--------|
@@ -768,6 +877,6 @@ Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-
 
 ---
 
-**Last Updated:** 13 Oktober 2026 (Session 73: Fase 2 — Surat Pengantar PDF+QR & Kegiatan)
+**Last Updated:** 14 Oktober 2026 (Session 74: Fase 3 — Pendaftaran Peserta Kegiatan)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 2.0 — Fase 2 (Surat Pengantar + Kegiatan + Verify Publik)
+**Document Version:** 3.0 — Fase 3 (Pendaftaran Peserta + Portal Register/Cancel)

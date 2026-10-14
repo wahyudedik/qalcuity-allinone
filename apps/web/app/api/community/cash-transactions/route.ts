@@ -41,7 +41,7 @@ async function nextKasNumber(tx: Prisma.TransactionClient, tenantId: string, whe
 }
 
 // GET /api/community/cash-transactions — list transaksi kas (community:finance).
-// Query: ?period=YYYY-MM&type=INCOME|EXPENSE&status=PENDING|APPROVED|REJECTED&page=&limit=
+// Query: ?period=YYYY-MM&type=INCOME|EXPENSE&status=PENDING|APPROVED|REJECTED&eventId=<id>&page=&limit=
 export async function GET(request: Request) {
     try {
         const ip = getClientIp(request);
@@ -65,6 +65,7 @@ export async function GET(request: Request) {
         const period = searchParams.get('period');
         const type = searchParams.get('type');
         const status = searchParams.get('status');
+        const eventIdParam = searchParams.get('eventId');
         const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10) || 20));
         const skip = (page - 1) * limit;
@@ -76,6 +77,19 @@ export async function GET(request: Request) {
         }
         if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
         if (status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED') where.status = status;
+
+        // eventId (opsional) — filter kas per kegiatan; event harus milik tenant ini (404 jika bukan).
+        if (eventIdParam && eventIdParam.trim()) {
+            const eventId = eventIdParam.trim();
+            const event = await prisma.communityEvent.findFirst({
+                where: { id: eventId, tenantId: auth.tenantId, deletedAt: null },
+                select: { id: true },
+            });
+            if (!event) {
+                return NextResponse.json({ error: MSG_COMMUNITY_EVENTS.EVENT_NOT_FOUND }, { status: 404 });
+            }
+            where.eventId = eventId;
+        }
 
         const [rows, total] = await Promise.all([
             prisma.communityCashTransaction.findMany({

@@ -421,6 +421,16 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     // Portal warga Fase 2 — di bawah prefix /api/community/portal (community:portal).
     '/api/community/portal/letters': { permission: 'community:portal', fallbackRole: 'VIEWER' },
     '/api/community/portal/events': { permission: 'community:portal', fallbackRole: 'VIEWER' },
+
+    // ─── Community Module (Fase 3: Peserta Kegiatan) ───────────────────────────
+    // Peserta kegiatan: GET = community:view (BENDAHARA boleh lihat daftar),
+    // mutasi = community:manage. Portal register/cancel own-only = community:portal
+    // (konsisten dengan prefix /api/community/portal — entry eksplisit dokumentatif).
+    '/api/community/events/[id]/participants': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    'GET /api/community/events/[id]/participants': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    '/api/community/events/[id]/participants/[pid]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/portal/events/[id]/register': { permission: 'community:portal', fallbackRole: 'VIEWER' },
+    '/api/community/portal/events/[id]/participants/count': { permission: 'community:portal', fallbackRole: 'VIEWER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────

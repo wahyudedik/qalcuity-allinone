@@ -20,17 +20,32 @@ function isUniqueViolation(error: unknown): boolean {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
 
-/** Hitungan transaksi kas ter-link (belum dihapus) — attach di select list/detail. */
+/**
+ * Hitungan relasi ter-filter — attach di select list/detail.
+ *
+ * - `transactions` = transaksi kas ter-link yang belum dihapus (proteksi delete + badge UI).
+ * - `participants` = peserta aktif (`REGISTERED`/`ATTENDED`) — konsisten dengan
+ *   semantik kuota di POST participants (Fase 3). Baris `CANCELLED` tidak dihitung.
+ */
+/** Status peserta yang mengisi kuota (aktif) — dipakai `_count` badge daftar. */
+const ACTIVE_PARTICIPANT_STATUSES: string[] = ['REGISTERED', 'ATTENDED'];
+
+// Tanpa `as const` — Prisma select butuh array mutable (StringFilter.in: string[]).
 const EVENT_TX_COUNT = {
-    _count: { select: { transactions: { where: { deletedAt: null } } } },
-} as const;
+    _count: {
+        select: {
+            transactions: { where: { deletedAt: null } },
+            participants: { where: { status: { in: ACTIVE_PARTICIPANT_STATUSES } } },
+        },
+    },
+};
 
 /**
  * GET /api/community/events — daftar kegiatan (community:view).
  *
  * Filter: `?status=&year=` (`year` = tahun `startsAt`) + paginasi standar.
- * Setiap baris menyertakan `_count.transactions` = jumlah transaksi kas
- * ter-link yang belum dihapus (untuk proteksi delete + badge UI).
+ * Setiap baris menyertakan `_count.transactions` (proteksi delete + badge UI)
+ * dan `_count.participants` = jumlah peserta aktif (Fase 3, badge daftar).
  */
 export async function GET(request: Request) {
     try {

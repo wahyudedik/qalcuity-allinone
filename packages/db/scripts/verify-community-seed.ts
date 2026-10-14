@@ -1,10 +1,12 @@
 /**
- * Verifikasi READ-ONLY data Community seed — RT 02 Melati (Subtask H + Fase 2 Subtask L).
+ * Verifikasi READ-ONLY data Community seed — RT 02 Melati
+ * (Subtask H + Fase 2 Subtask L + Fase 3 Subtask Q).
  *
  * Jalankan: npx tsx scripts/verify-community-seed.ts  (dari packages/db)
  *
- * Membuktikan (plans/community-mvp-implementation.md §7.4 +
- * plans/community-phase2-implementation.md §8.2):
+ * Membuktikan (plans/community-mvp-implementation.md §7.4,
+ * plans/community-phase2-implementation.md §8.2,
+ * plans/community-phase3-implementation.md §8):
  *  (a) Tenant rt02-melati ada & terisolasi dari qalcuity-demo
  *  (b) 4 custom roles (isSystem=false) dengan permission matrix persis §4.2
  *      + 4 users ter-link roleId (system role MEMBER)
@@ -25,8 +27,13 @@
  *      eventNumber KGT/<YYYY>-<seq3> unique; CANCELLED tanpa publishedAt
  *  (i) Realisasi (Fase 2): Σ APPROVED tx eventId=KGT/2026-001 = 480000; semua
  *      tx ber-eventId APPROVED; cash tx lama (10 baris Fase 1) eventId NULL
- *  (j) Isolasi: tidak ada surat/kegiatan di tenant selain rt02-melati —
+ *  (j) Isolasi: tidak ada surat/kegiatan/peserta di tenant selain rt02-melati —
  *      khususnya qalcuity-demo bersih
+ *  (k) Peserta kegiatan (Fase 3): 8 baris (KGT/2026-001: 5 dengan mix
+ *      REGISTERED 3 / ATTENDED 1 / CANCELLED 1; KGT/2026-002: 3 semua
+ *      REGISTERED; KGT/2026-003: 0); unik [tenantId, eventId, memberId];
+ *      kuota terpenuhi (aktif REGISTERED+ATTENDED <= maxCapacity);
+ *      registeredAt <= now
  */
 import { PrismaClient } from "@prisma/client";
 
@@ -344,7 +351,7 @@ async function main() {
         where: { tenantId },
         select: {
             id: true, eventNumber: true, status: true,
-            publishedAt: true, announcementId: true,
+            publishedAt: true, announcementId: true, maxCapacity: true,
         },
         orderBy: { eventNumber: "asc" },
     });
@@ -417,9 +424,75 @@ async function main() {
             where: { tenantId: demoTenant.id, eventId: { not: null } },
         });
         check("Isolasi: qalcuity-demo punya 0 kas ber-eventId", leakedEventTx === 0, `${leakedEventTx}`);
+        const leakedParticipants = await prisma.communityEventParticipant.count({
+            where: { tenantId: demoTenant.id },
+        });
+        check("Isolasi: qalcuity-demo punya 0 peserta kegiatan", leakedParticipants === 0, `${leakedParticipants}`);
     } else {
         check("Tenant qalcuity-demo ditemukan (cek isolasi)", false, "tidak ada — DB belum ter-seed core?");
     }
+
+    // ══════════════════════════════════════════════════════════
+    // (k) Peserta Kegiatan (Fase 3) — §8 plan
+    // ══════════════════════════════════════════════════════════
+    console.log("\n── Peserta Kegiatan (Fase 3) ──");
+    const participants = await prisma.communityEventParticipant.findMany({
+        where: { tenantId },
+        select: {
+            id: true, eventId: true, memberId: true, status: true,
+            registeredAt: true,
+            event: { select: { eventNumber: true, maxCapacity: true } },
+            member: { select: { code: true } },
+        },
+    });
+    check("8 peserta total", participants.length === 8, `${participants.length}`);
+
+    const rowsByEvent = new Map<string, typeof participants>();
+    for (const p of participants) {
+        const list = rowsByEvent.get(p.event.eventNumber) ?? [];
+        list.push(p);
+        rowsByEvent.set(p.event.eventNumber, list);
+    }
+
+    const kgt001Rows = rowsByEvent.get("KGT/2026-001") ?? [];
+    const kgt001Status = new Map<string, number>();
+    for (const p of kgt001Rows) kgt001Status.set(p.status, (kgt001Status.get(p.status) ?? 0) + 1);
+    check("KGT/2026-001: 5 baris (REGISTERED 3, ATTENDED 1, CANCELLED 1)",
+        kgt001Rows.length === 5 && kgt001Status.get("REGISTERED") === 3 &&
+        kgt001Status.get("ATTENDED") === 1 && kgt001Status.get("CANCELLED") === 1,
+        kgt001Rows.map((p) => `${p.member.code}:${p.status}`).join(", "));
+
+    const kgt002Rows = rowsByEvent.get("KGT/2026-002") ?? [];
+    check("KGT/2026-002: 3 baris (semua REGISTERED)",
+        kgt002Rows.length === 3 && kgt002Rows.every((p) => p.status === "REGISTERED"),
+        kgt002Rows.map((p) => `${p.member.code}:${p.status}`).join(", "));
+
+    const kgt003Rows = rowsByEvent.get("KGT/2026-003") ?? [];
+    check("KGT/2026-003 (CANCELLED, unpublished): 0 baris", kgt003Rows.length === 0,
+        `${kgt003Rows.length} baris`);
+
+    // Unik [tenantId, eventId, memberId] via groupBy (bukti di atas level unique index)
+    const dupGroups = await prisma.communityEventParticipant.groupBy({
+        by: ["tenantId", "eventId", "memberId"],
+        where: { tenantId },
+        _count: { _all: true },
+    });
+    const dupParticipants = dupGroups.filter((g) => g._count._all > 1);
+    check("Unik [tenantId, eventId, memberId] — tanpa duplikat", dupParticipants.length === 0,
+        `${dupParticipants.length} kunci duplikat`);
+
+    // Kuota: jumlah peserta aktif (REGISTERED/ATTENDED) <= maxCapacity (null = tanpa batas)
+    const ACTIVE_STATUSES = new Set(["REGISTERED", "ATTENDED"]);
+    for (const e of events) {
+        if (e.maxCapacity == null) continue;
+        const active = (rowsByEvent.get(e.eventNumber) ?? []).filter((p) => ACTIVE_STATUSES.has(p.status)).length;
+        check(`Kuota ${e.eventNumber}: aktif ${active} <= maxCapacity ${e.maxCapacity}`,
+            active <= e.maxCapacity, `${active}/${e.maxCapacity}`);
+    }
+
+    const futureRegistered = participants.filter((p) => p.registeredAt.getTime() > Date.now());
+    check("registeredAt semua peserta <= now", futureRegistered.length === 0,
+        futureRegistered.map((p) => `${p.event.eventNumber}:${p.member.code}`).join(", "));
 
     // ── Ringkasan ──
     console.log(`\n${failures === 0 ? "🎉 SEMUA VERIFIKASI COMMUNITY LOLOS" : `⚠️  ${failures} pemeriksaan GAGAL`}`);

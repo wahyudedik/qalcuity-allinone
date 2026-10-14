@@ -32,6 +32,13 @@
  *  - 2 CommunityCashTransaction TAMBAHAN (EXPENSE APPROVED, ter-link
  *    eventId -> KGT/2026-001) — kontrak angka: cash 10 -> 12, EXPENSE 6 -> 8.
  *
+ * Fase 3 (Pendaftaran Peserta — plans/community-phase3-implementation.md §8):
+ *  - 8 CommunityEventParticipant deterministik (7 aktif + 1 CANCELLED):
+ *    KGT/2026-001 5 baris (W-001 ATTENDED; W-002/003/005 REGISTERED;
+ *    W-004 CANCELLED 'Berhalangan'), KGT/2026-002 3 REGISTERED
+ *    (W-001/W-006/W-007), KGT/2026-003 sengaja 0.
+ *  - maxCapacity seed: KGT/2026-001 = 10, KGT/2026-002 = 30 (kuota demo UI).
+ *
  * PRINSIP HARD:
  *  - Idempotent: re-run tidak pernah menduplikasi (upsert / findUnique by
  *    kunci bisnis @@unique per-tenant; created = 0 pada run ke-2).
@@ -340,6 +347,8 @@ export interface CommunityEventSpec {
     budgetAmount?: number;
     status: string; // PLANNED, ONGOING, DONE, CANCELLED
     publishedAt?: Date | null;
+    /** Kapasitas peserta opsional (null = tanpa batas — Fase 3). */
+    maxCapacity?: number;
     /** Link opsional ke pengumuman berdasarkan title (idempotent resolve). */
     linkAnnouncementTitle?: string;
 }
@@ -358,6 +367,7 @@ export const COMMUNITY_EVENTS: CommunityEventSpec[] = [
         budgetAmount: 750000,
         status: 'DONE',
         publishedAt: new Date(Date.UTC(2026, 8, 10)), // tayang 10 Sep (lampau)
+        maxCapacity: 10, // Fase 3 — kuota demo terlihat di UI
     },
     {
         eventNumber: 'KGT/2026-002',
@@ -370,6 +380,7 @@ export const COMMUNITY_EVENTS: CommunityEventSpec[] = [
         location: 'Balai Warga RT 02 Melati',
         status: 'PLANNED',
         publishedAt: new Date(Date.UTC(2026, 9, 10)), // tayang 10 Okt (anchor)
+        maxCapacity: 30, // Fase 3 — kuota demo terlihat di UI
         linkAnnouncementTitle: 'Rapat Bulanan RT - Sabtu, 17 Okt 2026',
     },
     {
@@ -417,6 +428,32 @@ export const COMMUNITY_EVENT_CASH_TXS: CommunityEventCashTxSpec[] = [
         txDate: '2026-09-19',
         status: 'APPROVED',
     },
+];
+
+// ─── Fase 3: Peserta kegiatan (8 baris — 7 aktif + 1 CANCELLED) ──────────────
+// Deterministik & idempotent: unique [tenantId, eventId, memberId] — baris yang
+// sudah ada dilewati (findUnique), tanpa konsumsi rng(). registeredAt <= now.
+
+export interface CommunityEventParticipantSpec {
+    eventNumber: string;
+    memberCode: string;
+    status: string; // REGISTERED, ATTENDED, CANCELLED
+    note?: string;
+    registeredAt: Date;
+}
+
+export const COMMUNITY_EVENT_PARTICIPANTS: CommunityEventParticipantSpec[] = [
+    // KGT/2026-001 (DONE, published 2026-09-10) — 5 baris
+    { eventNumber: 'KGT/2026-001', memberCode: 'W-001', status: 'ATTENDED', registeredAt: new Date(Date.UTC(2026, 8, 15)) },
+    { eventNumber: 'KGT/2026-001', memberCode: 'W-002', status: 'REGISTERED', registeredAt: new Date(Date.UTC(2026, 8, 15)) },
+    { eventNumber: 'KGT/2026-001', memberCode: 'W-003', status: 'REGISTERED', registeredAt: new Date(Date.UTC(2026, 8, 16)) },
+    { eventNumber: 'KGT/2026-001', memberCode: 'W-004', status: 'CANCELLED', note: 'Berhalangan', registeredAt: new Date(Date.UTC(2026, 8, 16)) },
+    { eventNumber: 'KGT/2026-001', memberCode: 'W-005', status: 'REGISTERED', registeredAt: new Date(Date.UTC(2026, 8, 17)) },
+    // KGT/2026-002 (PLANNED, published 2026-10-10) — 3 REGISTERED
+    { eventNumber: 'KGT/2026-002', memberCode: 'W-001', status: 'REGISTERED', registeredAt: new Date(Date.UTC(2026, 9, 11)) },
+    { eventNumber: 'KGT/2026-002', memberCode: 'W-006', status: 'REGISTERED', registeredAt: new Date(Date.UTC(2026, 9, 11)) },
+    { eventNumber: 'KGT/2026-002', memberCode: 'W-007', status: 'REGISTERED', registeredAt: new Date(Date.UTC(2026, 9, 12)) },
+    // KGT/2026-003 (CANCELLED, unpublished): sengaja 0 peserta
 ];
 
 // ============================================================
@@ -511,6 +548,7 @@ export interface SeedCommunityResult {
         announcements: number;
         letters: number;
         events: number;
+        participants: number;
     };
     /** Jumlah record yang BARU dibuat pada run ini (0 = idempotent). */
     created: {
@@ -524,6 +562,7 @@ export interface SeedCommunityResult {
         announcements: number;
         letters: number;
         events: number;
+        participants: number;
     };
     roles: CommunityEntityRef[];
     users: CommunityUserRef[];
@@ -1105,9 +1144,22 @@ export async function seedCommunityData(
         // eslint-disable-next-line no-await-in-loop
         const existingEvent = await db.communityEvent.findUnique({
             where: { tenantId_eventNumber: { tenantId, eventNumber: spec.eventNumber } },
-            select: { id: true },
+            select: { id: true, maxCapacity: true },
         });
-        if (existingEvent) continue;
+        if (existingEvent) {
+            // Fase 3: sinkronkan kuota — event bisa dibuat oleh seed versi
+            // sebelum spec capacity ada (drift maxCapacity null vs 10/30).
+            // Hanya maxCapacity yang di-sync agar edit manual field lain
+            // di demo tidak tertimpa.
+            const wantedCapacity = spec.maxCapacity ?? null;
+            if (existingEvent.maxCapacity !== wantedCapacity) {
+                await db.communityEvent.update({
+                    where: { id: existingEvent.id },
+                    data: { maxCapacity: wantedCapacity },
+                });
+            }
+            continue;
+        }
 
         await db.communityEvent.create({
             data: {
@@ -1119,7 +1171,7 @@ export async function seedCommunityData(
                 startsAt: spec.startsAt,
                 endsAt: spec.endsAt ?? null,
                 location: spec.location ?? null,
-                maxCapacity: null,
+                maxCapacity: spec.maxCapacity ?? null,
                 budgetAmount: spec.budgetAmount ?? null,
                 status: spec.status,
                 publishedAt: spec.publishedAt ?? null,
@@ -1187,10 +1239,57 @@ export async function seedCommunityData(
         eventCashCreated += 1;
     }
 
+    // ─── Fase 3: Peserta kegiatan (8 — 7 aktif + 1 CANCELLED) ────
+    // Idempotent: findUnique by [tenantId, eventId, memberId] — baris existing
+    // dilewati (status tidak dioverwrite — riwayat terjaga). Tanpa rng().
+    let participantsCreated = 0;
+    for (const spec of COMMUNITY_EVENT_PARTICIPANTS) {
+        // eslint-disable-next-line no-await-in-loop
+        const eventRow = await db.communityEvent.findUnique({
+            where: { tenantId_eventNumber: { tenantId, eventNumber: spec.eventNumber } },
+            select: { id: true },
+        });
+        if (!eventRow) continue;
+
+        // eslint-disable-next-line no-await-in-loop
+        const memberRow = await db.communityMember.findFirst({
+            where: { tenantId, code: spec.memberCode },
+            select: { id: true },
+        });
+        if (!memberRow) continue;
+
+        // eslint-disable-next-line no-await-in-loop
+        const existingParticipant = await db.communityEventParticipant.findUnique({
+            where: {
+                tenantId_eventId_memberId: {
+                    tenantId,
+                    eventId: eventRow.id,
+                    memberId: memberRow.id,
+                },
+            },
+            select: { id: true },
+        });
+        if (existingParticipant) continue;
+
+        await db.communityEventParticipant.create({
+            data: {
+                tenantId,
+                eventId: eventRow.id,
+                memberId: memberRow.id,
+                status: spec.status,
+                note: spec.note ?? null,
+                registeredAt: spec.registeredAt,
+                createdBy: sekretarisId ?? createdBy,
+            },
+        });
+        participantsCreated += 1;
+    }
+
     // ─── Counts (total dalam tenant — termasuk data existing) ────
     const [
         rolesTotal, usersTotal, membersTotal, duesTypesTotal, billsTotal,
         paymentsTotal, cashTotal, announcementsTotal, lettersTotal, eventsTotal,
+        participantsTotal,
     ] = await Promise.all([
         db.role.count({ where: { tenantId } }),
         db.user.count({ where: { tenantId } }),
@@ -1202,6 +1301,7 @@ export async function seedCommunityData(
         db.communityAnnouncement.count({ where: { tenantId } }),
         db.communityLetter.count({ where: { tenantId } }),
         db.communityEvent.count({ where: { tenantId } }),
+        db.communityEventParticipant.count({ where: { tenantId } }),
     ]);
 
     return {
@@ -1217,6 +1317,7 @@ export async function seedCommunityData(
             announcements: announcementsTotal,
             letters: lettersTotal,
             events: eventsTotal,
+            participants: participantsTotal,
         },
         created: {
             roles: rolesCreated,
@@ -1229,6 +1330,7 @@ export async function seedCommunityData(
             announcements: announcementsCreated,
             letters: lettersCreated,
             events: eventsCreated,
+            participants: participantsCreated,
         },
         roles,
         users,

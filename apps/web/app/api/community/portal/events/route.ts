@@ -2,13 +2,21 @@
  * GET /api/community/portal/events — kegiatan publik untuk warga (read-only, spec §3.8).
  * Query: ?page=&limit= (default 10, max 50).
  *
- * Visibility (tenant-wide, pola portal/announcements — tanpa resolusi member):
+ * Visibility (tenant-wide, pola portal/announcements):
  * - `publishedAt != null && publishedAt <= now`
  * - status ≠ CANCELLED
  * - PLANNED/ONGOING tampil semua; DONE hanya 30 hari terakhir — window pada
  *   (`endsAt ?? startsAt`) yang diekspresikan sebagai OR dua bentuk tanggal.
  * Kolom internal (createdBy, createdAt, updatedAt, budgetAmount, announcementId)
  * tidak di-expose ke portal.
+ *
+ * Fase 3 (spec §4.3/R8 — join hanya MENAMBAH field, response lama tetap kompatibel):
+ * - `participantStatus`: status peserta milik warga login ini (REGISTERED/ATTENDED/
+ *   CANCELLED) atau `null` bila belum pernah mendaftar / akun tidak terpasangkan member.
+ * - `participantCount`: jumlah peserta AKTIF (REGISTERED+ATTENDED) + `maxCapacity`
+ *   agar UI portal bisa menampilkan "X peserta" dan sisa kuota.
+ * Kedua field dihitung dari `session.user.id` via `resolvePortalMember` — memberId
+ * TIDAK pernah datang dari query/body (anti mass-assignment).
  */
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -20,6 +28,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { hasPermission } from '@/lib/permissions';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { resolvePortalMember } from '@/lib/community';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,9 +100,51 @@ export async function GET(request: Request) {
             prisma.communityEvent.count({ where }),
         ]);
 
+        // —— Fase 3: embed status peserta milik warga login + jumlah peserta aktif ——
+        const eventIds = rows.map((r) => r.id);
+        const member = await resolvePortalMember(tenantId, session.user.id);
+
+        type RowWithParticipants = (typeof rows)[number] & {
+            participantStatus: string | null;
+            participantCount: { active: number; maxCapacity: number | null };
+        };
+        let data: RowWithParticipants[] = rows.map((r) => ({
+            ...r,
+            participantStatus: null,
+            participantCount: { active: 0, maxCapacity: r.maxCapacity },
+        }));
+
+        if (eventIds.length > 0) {
+            const [ownRows, activeGroups] = await Promise.all([
+                member
+                    ? prisma.communityEventParticipant.findMany({
+                        where: { tenantId, memberId: member.id, eventId: { in: eventIds } },
+                        select: { eventId: true, status: true },
+                    })
+                    : Promise.resolve([]),
+                prisma.communityEventParticipant.groupBy({
+                    by: ['eventId'],
+                    where: { tenantId, eventId: { in: eventIds }, status: { in: ['REGISTERED', 'ATTENDED'] } },
+                    _count: { _all: true },
+                }),
+            ]);
+
+            const ownByEvent = new Map(ownRows.map((r) => [r.eventId, r.status]));
+            const activeByEvent = new Map(activeGroups.map((g) => [g.eventId, g._count._all]));
+
+            data = rows.map((r) => ({
+                ...r,
+                participantStatus: ownByEvent.get(r.id) ?? null,
+                participantCount: {
+                    active: activeByEvent.get(r.id) ?? 0,
+                    maxCapacity: r.maxCapacity,
+                },
+            }));
+        }
+
         return NextResponse.json({
             success: true,
-            data: rows,
+            data,
             total,
             page,
             limit,

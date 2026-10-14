@@ -671,6 +671,22 @@
                 "quickDesc": "Community event schedule",
                 "empty": "No events yet",
                 "emptyDesc": "Upcoming events will appear here."
+            },
+            "participants": {
+                "registered": "Registered",
+                "attended": "Attended",
+                "cancelled": "Cancelled",
+                "register": "Register",
+                "cancel": "Cancel",
+                "myStatus": "My Status",
+                "countLabel": "Participants",
+                "errorNetwork": "A network error occurred, please try again.",
+                "cancelConfirmTitle": "Cancel Registration?",
+                "cancelConfirmDesc": "Are you sure you want to cancel your registration for this event?",
+                "toast": {
+                    "registered": "Registration successful",
+                    "cancelled": "Registration cancelled"
+                }
             }
         },
         "letters": {
@@ -794,7 +810,8 @@
                 "endsAt": "Ends",
                 "location": "Location",
                 "budget": "Budget",
-                "status": "Status"
+                "status": "Status",
+                "participants": "Participants"
             },
             "status": {
                 "planned": "Planned",
@@ -837,7 +854,33 @@
                 "expense": "Expense",
                 "budgetUsage": "Budget Usage",
                 "cashRealization": "Cash Realization",
-                "noCash": "No cash transactions for this event yet."
+                "noCash": "No cash transactions for this event yet.",
+                "noBudget": "No budget"
+            },
+            "participants": {
+                "title": "Event Participants",
+                "add": "Add Participant",
+                "addTitle": "Add Participant",
+                "empty": "No participants registered yet.",
+                "memberRequired": "Please select a member first",
+                "selectMember": "Select a member...",
+                "noMembers": "No members available",
+                "noteOptional": "Note (optional)",
+                "registeredAt": "Registered",
+                "markAttended": "Mark Attended",
+                "cancel": "Cancel",
+                "cancelConfirmTitle": "Cancel Participant?",
+                "cancelConfirmDesc": "The participant status will be changed to Cancelled. This registration can be reactivated later.",
+                "status": {
+                    "registered": "Registered",
+                    "attended": "Attended",
+                    "cancelled": "Cancelled"
+                },
+                "toast": {
+                    "added": "Participant added successfully",
+                    "markedAttended": "Attendance marked successfully",
+                    "cancelled": "Participant registration cancelled"
+                }
             }
         },
         "verify": {

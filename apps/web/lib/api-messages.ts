@@ -510,4 +510,26 @@ export const MSG_COMMUNITY_EVENTS = {
     EVENT_INVALID_DATE: 'End time must be after start time',
 } as const;
 
+/**
+ * Pesan API Community Fase 3 — Peserta Kegiatan (participants).
+ * Referensi: plans/community-phase3-implementation.md §10.1.
+ * Catatan: `EVENT_NOT_FOUND` → reuse MSG_COMMUNITY_EVENTS; `PORTAL_MEMBER_NOT_FOUND`
+ * → reuse MSG_COMMUNITY (sudah ada sejak Fase 1) — tanpa duplikat string.
+ */
+export const MSG_COMMUNITY_PARTICIPANTS = {
+    REGISTERED: 'Participant registered',
+    REACTIVATED: 'Participant registration reactivated',
+    ALREADY_REGISTERED: 'Member is already registered for this event',
+    EVENT_FULL: 'Event quota is full',
+    MEMBER_NOT_FOUND: 'Member not found',
+    PARTICIPANT_NOT_FOUND: 'Participant not found',
+    MARKED_ATTENDED: 'Participant marked as attended',
+    UPDATED: 'Participant updated',
+    CANCELLED: 'Participant registration cancelled',
+    PORTAL_NOT_REGISTERED: 'You are not registered for this event',
+    ALREADY_ATTENDED: 'Cannot cancel — attendance already recorded',
+    EVENT_STARTED: 'Cannot cancel — event has already started',
+    INVALID_STATUS_TRANSITION: 'Invalid status transition',
+} as const;
+
 export type ApiMessageKey = keyof typeof MSG;

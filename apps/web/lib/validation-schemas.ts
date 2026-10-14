@@ -2678,3 +2678,36 @@ export const updateCommunityEventSchema = communityEventBase
         (d) => !d.startsAt || !d.endsAt || d.endsAt >= d.startsAt,
         { message: 'EVENT_INVALID_DATE', path: ['endsAt'] }
     );
+
+/**
+ * Peserta kegiatan (Fase 3): base object TANPA `.refine()` — pola aman Zod v4
+ * (`.partial()` setelah `.refine()` melempar error di module evaluation).
+ * Referensi: plans/community-phase3-implementation.md §9.
+ */
+const communityEventParticipantBase = z.object({
+    // id Prisma = cuid (bukan UUID) — pola Fase 2 (createCommunityLetterSchema):
+    // trim + min(1); keberadaan & kecocokan tenant divalidasi di route → 404 MEMBER_NOT_FOUND.
+    memberId: z.string().trim().min(1, 'Warga peserta wajib dipilih').max(100),
+    status: z
+        .enum(['REGISTERED', 'ATTENDED', 'CANCELLED'], {
+            message: 'Status peserta tidak valid',
+        })
+        .optional(),
+    note: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
+});
+
+/** POST internal — status selalu REGISTERED di server (jangan percaya body). */
+export const createCommunityEventParticipantSchema = communityEventParticipantBase.omit({
+    status: true,
+});
+
+/**
+ * PATCH internal — kontrak body { status?, note? } (§4.2); `memberId` dikecualikan
+ * karena sudah terkunci lewat path param [pid].
+ */
+export const updateCommunityEventParticipantSchema = communityEventParticipantBase
+    .omit({ memberId: true })
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });

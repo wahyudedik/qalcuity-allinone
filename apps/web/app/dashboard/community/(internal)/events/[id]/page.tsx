@@ -7,10 +7,13 @@ import {
     ArrowDownRight,
     ArrowLeft,
     ArrowUpRight,
+    Ban,
     CalendarDays,
+    CheckCircle2,
     MapPin,
     Pencil,
     Trash2,
+    UserPlus,
     Users,
     Wallet,
 } from 'lucide-react'
@@ -49,6 +52,21 @@ interface CashRow {
     txDate: string
     status: string
     eventId: string | null
+}
+
+interface ParticipantRow {
+    id: string
+    memberId: string
+    status: string
+    note: string | null
+    registeredAt: string
+    member: { id: string; code: string; fullName: string; phone: string | null }
+}
+
+interface MemberOption {
+    id: string
+    code: string
+    fullName: string
 }
 
 interface EventForm {
@@ -97,8 +115,20 @@ export default function CommunityEventDetailPage() {
 
     const [event, setEvent] = useState<EventDetail | null>(null)
     const [cashRows, setCashRows] = useState<CashRow[]>([])
+    const [participants, setParticipants] = useState<ParticipantRow[]>([])
     const [loading, setLoading] = useState(true)
     const [notFound, setNotFound] = useState(false)
+
+    // —— Peserta (Fase 3) ——
+    const [addOpen, setAddOpen] = useState(false)
+    const [addMemberId, setAddMemberId] = useState('')
+    const [addNote, setAddNote] = useState('')
+    const [addSaving, setAddSaving] = useState(false)
+    const [memberOptions, setMemberOptions] = useState<MemberOption[]>([])
+    const [memberOptionsLoading, setMemberOptionsLoading] = useState(false)
+    const [participantAction, setParticipantAction] = useState<string | null>(null) // id baris yang sedang diproses
+    const [cancelParticipant, setCancelParticipant] = useState<ParticipantRow | null>(null)
+    const [cancelSaving, setCancelSaving] = useState(false)
 
     const [formOpen, setFormOpen] = useState(false)
     const [form, setForm] = useState<EventForm>({
@@ -121,11 +151,12 @@ export default function CommunityEventDetailPage() {
         if (!id) return
         try {
             setLoading(true)
-            const [eventRes, cashRes] = await Promise.all([
+            const [eventRes, cashRes, participantRes] = await Promise.all([
                 fetch(`/api/community/events/${id}`, { credentials: 'include' }),
-                // DEVIASI: backend GET /api/community/cash-transactions belum mendukung filter
-                // `eventId` — fetch lalu filter client-side (dicatat di COMMUNITY-MODULE.md).
-                fetch('/api/community/cash-transactions?limit=100', { credentials: 'include' }),
+                // Server-side filter eventId (GET /api/community/cash-transactions?eventId=<id>) —
+                // 404 jika event bukan milik tenant ini (guard backend).
+                fetch(`/api/community/cash-transactions?eventId=${encodeURIComponent(id)}&limit=100`, { credentials: 'include' }),
+                fetch(`/api/community/events/${id}/participants`, { credentials: 'include' }),
             ])
             if (eventRes.status === 404) {
                 setNotFound(true)
@@ -144,7 +175,14 @@ export default function CommunityEventDetailPage() {
             }
             if (cashRes.ok) {
                 const cashJson = (await cashRes.json()) as { data?: CashRow[] }
-                setCashRows((cashJson.data ?? []).filter((r) => r.eventId === id))
+                setCashRows(cashJson.data ?? [])
+            }
+            if (participantRes.ok) {
+                const pJson = (await participantRes.json()) as { data?: ParticipantRow[] }
+                setParticipants(pJson.data ?? [])
+            } else {
+                // 403 community:view — section disembunyikan tanpa menggagalkan seluruh halaman.
+                setParticipants([])
             }
         } catch {
             addToast('Error', 'error')
@@ -172,6 +210,19 @@ export default function CommunityEventDetailPage() {
         if (!event?.budgetAmount || event.budgetAmount <= 0) return null
         return Math.min(100, Math.round((totalExpense / event.budgetAmount) * 100))
     }, [totalExpense, event?.budgetAmount])
+
+    /** Ringkasan peserta — `active` = REGISTERED + ATTENDED (mengisi kuota). */
+    const participantStats = {
+        registered: participants.filter((p) => p.status === 'REGISTERED').length,
+        attended: participants.filter((p) => p.status === 'ATTENDED').length,
+        cancelled: participants.filter((p) => p.status === 'CANCELLED').length,
+        active: participants.filter((p) => p.status === 'REGISTERED' || p.status === 'ATTENDED').length,
+    }
+
+    /** Opsi dropdown Tambah — kecualikan warga yang sudah terdaftar aktif (CANCELLED boleh diaktifkan lagi). */
+    const addableMemberOptions = memberOptions.filter(
+        (m) => !participants.some((p) => p.memberId === m.id && p.status !== 'CANCELLED')
+    )
 
     const setField = (key: keyof EventForm, value: string) => {
         setForm((prev) => ({ ...prev, [key]: value }))
@@ -266,6 +317,105 @@ export default function CommunityEventDetailPage() {
         }
     }
 
+    // —— Peserta (Fase 3) ——
+    const openAddParticipant = async () => {
+        setAddMemberId('')
+        setAddNote('')
+        setAddOpen(true)
+        if (memberOptions.length > 0) return
+        try {
+            setMemberOptionsLoading(true)
+            const res = await fetch('/api/community/members?limit=100&status=ACTIVE', { credentials: 'include' })
+            if (res.ok) {
+                const json = (await res.json()) as { data?: Array<{ id: string; code: string; fullName: string }> }
+                setMemberOptions((json.data ?? []).map((m) => ({ id: m.id, code: m.code, fullName: m.fullName })))
+            }
+        } catch {
+            addToast('Error', 'error')
+        } finally {
+            setMemberOptionsLoading(false)
+        }
+    }
+
+    const handleAddParticipant = async () => {
+        if (!event) return
+        if (!addMemberId) {
+            addToast(t('community.events.participants.memberRequired'), 'error')
+            return
+        }
+        try {
+            setAddSaving(true)
+            const res = await fetch(`/api/community/events/${event.id}/participants`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ memberId: addMemberId, note: addNote.trim() || undefined }),
+            })
+            const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+            if (!res.ok) {
+                // 409 ALREADY_REGISTERED / EVENT_FULL — tampilkan pesan API apa adanya.
+                addToast(apiErrorMessage(json), 'error')
+                return
+            }
+            addToast(t('community.events.participants.toast.added'), 'success')
+            setAddOpen(false)
+            await fetchAll()
+        } catch {
+            addToast('Error', 'error')
+        } finally {
+            setAddSaving(false)
+        }
+    }
+
+    const handleMarkAttended = async (row: ParticipantRow) => {
+        if (!event) return
+        try {
+            setParticipantAction(row.id)
+            const res = await fetch(`/api/community/events/${event.id}/participants/${row.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ status: 'ATTENDED' }),
+            })
+            const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+            if (!res.ok) {
+                // ATTENDED → hanya boleh ATTENDED (400 INVALID_STATUS_TRANSITION bila dicoba diubah).
+                addToast(apiErrorMessage(json), 'error')
+                return
+            }
+            addToast(t('community.events.participants.toast.markedAttended'), 'success')
+            await fetchAll()
+        } catch {
+            addToast('Error', 'error')
+        } finally {
+            setParticipantAction(null)
+        }
+    }
+
+    const handleCancelParticipant = async () => {
+        if (!event || !cancelParticipant) return
+        try {
+            setCancelSaving(true)
+            // DELETE internal = soft-cancel in-place (spec §4.2) — flip status CANCELLED.
+            const res = await fetch(`/api/community/events/${event.id}/participants/${cancelParticipant.id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            })
+            const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+            if (!res.ok) {
+                addToast(apiErrorMessage(json), 'error')
+                return
+            }
+            addToast(t('community.events.participants.toast.cancelled'), 'success')
+            setCancelParticipant(null)
+            await fetchAll()
+        } catch {
+            addToast('Error', 'error')
+        } finally {
+            setCancelSaving(false)
+        }
+    }
+
     const statusBadge = (status: string) => {
         switch (status) {
             case 'PLANNED':
@@ -290,6 +440,35 @@ export default function CommunityEventDetailPage() {
                 return (
                     <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
                         {t('community.events.status.cancelled')}
+                    </span>
+                )
+            default:
+                return (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                        {status}
+                    </span>
+                )
+        }
+    }
+
+    const participantStatusBadge = (status: string) => {
+        switch (status) {
+            case 'REGISTERED':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        {t('community.events.participants.status.registered')}
+                    </span>
+                )
+            case 'ATTENDED':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        {t('community.events.participants.status.attended')}
+                    </span>
+                )
+            case 'CANCELLED':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                        {t('community.events.participants.status.cancelled')}
                     </span>
                 )
             default:
@@ -492,7 +671,7 @@ export default function CommunityEventDetailPage() {
                     <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
                         <p className="text-xs text-gray-500 dark:text-gray-400">{t('community.events.table.budget')}</p>
                         <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {event.budgetAmount != null ? formatCurrencyIDR(event.budgetAmount) : '-'}
+                            {event.budgetAmount != null ? formatCurrencyIDR(event.budgetAmount) : t('community.events.detail.noBudget')}
                         </p>
                     </div>
                     <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
@@ -526,6 +705,158 @@ export default function CommunityEventDetailPage() {
                                 style={{ width: `${budgetUsagePct}%` }}
                             />
                         </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Peserta kegiatan (Fase 3) */}
+            <div>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <Users className="h-4 w-4" />
+                        {t('community.events.participants.title')}
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                            {participantStats.active}
+                            {event.maxCapacity != null ? ` / ${event.maxCapacity}` : ''}
+                        </span>
+                    </h2>
+                    <button
+                        type="button"
+                        onClick={() => void openAddParticipant()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        {t('community.events.participants.add')}
+                    </button>
+                </div>
+                {participants.length === 0 ? (
+                    <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        {t('community.events.participants.empty')}
+                    </p>
+                ) : (
+                    <div className="space-y-3 md:hidden">
+                        {participants.map((row) => (
+                            <div
+                                key={row.id}
+                                className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{row.member.code}</p>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {row.member.fullName}
+                                        </p>
+                                    </div>
+                                    {participantStatusBadge(row.status)}
+                                </div>
+                                {row.note && (
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{row.note}</p>
+                                )}
+                                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                    {formatDateID(row.registeredAt)}
+                                </p>
+                                {row.status === 'REGISTERED' && (
+                                    <div className="mt-3 flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleMarkAttended(row)}
+                                            disabled={participantAction === row.id}
+                                            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                                        >
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                            {t('community.events.participants.markAttended')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCancelParticipant(row)}
+                                            disabled={participantAction === row.id}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                        >
+                                            <Ban className="h-3.5 w-3.5" />
+                                            {t('community.events.participants.cancel')}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {participants.length > 0 && (
+                    <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.members.table.code')}
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.members.table.fullName')}
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.members.table.phone')}
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.events.participants.registeredAt')}
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.events.table.status')}
+                                    </th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        {t('community.common.actions')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {participants.map((row) => (
+                                    <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {row.member.code}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                            {row.member.fullName}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                            {row.member.phone ?? '-'}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                            {formatDateID(row.registeredAt)}
+                                            {row.note && (
+                                                <span className="ml-2 text-xs text-gray-400">{row.note}</span>
+                                            )}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                            {participantStatusBadge(row.status)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+                                            {row.status === 'REGISTERED' ? (
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void handleMarkAttended(row)}
+                                                        disabled={participantAction === row.id}
+                                                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                                                    >
+                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                        {t('community.events.participants.markAttended')}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCancelParticipant(row)}
+                                                        disabled={participantAction === row.id}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                    >
+                                                        <Ban className="h-3.5 w-3.5" />
+                                                        {t('community.events.participants.cancel')}
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
@@ -619,6 +950,66 @@ export default function CommunityEventDetailPage() {
                     </div>
                 )}
             </div>
+
+            {/* Modal Tambah Peserta */}
+            {addOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {t('community.events.participants.addTitle')}
+                        </h3>
+                        <div className="mt-4 space-y-4">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {t('community.events.participants.selectMember')}
+                                <select
+                                    value={addMemberId}
+                                    onChange={(e) => setAddMemberId(e.target.value)}
+                                    disabled={memberOptionsLoading}
+                                    className={`mt-1 ${inputClass}`}
+                                >
+                                    <option value="">
+                                        {memberOptionsLoading
+                                            ? t('community.common.loading')
+                                            : t('community.events.participants.noMembers')}
+                                    </option>
+                                    {addableMemberOptions.map((m) => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.code} — {m.fullName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {t('community.events.participants.noteOptional')}
+                                <textarea
+                                    value={addNote}
+                                    onChange={(e) => setAddNote(e.target.value)}
+                                    rows={2}
+                                    maxLength={500}
+                                    className={`mt-1 ${inputClass}`}
+                                />
+                            </label>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setAddOpen(false)}
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                            >
+                                {t('community.common.cancel')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void handleAddParticipant()}
+                                disabled={addSaving}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {addSaving ? t('community.common.loading') : t('community.common.save')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal Edit */}
             {formOpen && (
@@ -783,6 +1174,18 @@ export default function CommunityEventDetailPage() {
                 cancelText={t('community.common.cancel')}
                 variant="danger"
                 isLoading={deleting}
+            />
+
+            <ConfirmDialog
+                isOpen={cancelParticipant !== null}
+                onClose={() => setCancelParticipant(null)}
+                onConfirm={() => void handleCancelParticipant()}
+                title={t('community.events.participants.cancelConfirmTitle')}
+                message={t('community.events.participants.cancelConfirmDesc')}
+                confirmText={t('community.events.participants.cancel')}
+                cancelText={t('community.common.cancel')}
+                variant="danger"
+                isLoading={cancelSaving}
             />
         </div>
     )
