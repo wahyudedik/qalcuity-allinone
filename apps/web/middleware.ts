@@ -54,10 +54,17 @@ function getRateLimitRule(pathname: string): { maxRequests: number; windowMs: nu
 }
 
 // ─── Public API paths (no auth required) ─────────────────────────────────────
+// NOTE: "/api/cron" is public at the middleware layer because cron requests
+// authenticate via `Authorization: Bearer <CRON_SECRET>` (verified by
+// `verifyCronAuth()` inside each cron route handler — defense-in-depth).
+// Session 79 fix: without this entry, withAuth redirected every cron call
+// to /login (it only reads the JWT cookie), silently killing all scheduled
+// tasks in production (payment-reminder, recurring-invoice, stock-alert, etc).
 const PUBLIC_API_PATHS = [
     "/api/auth",
     "/api/billing/payments/midtrans/callback",
     "/api/billing/payments/xendit/callback",
+    "/api/cron",
     "/api/health",
 ];
 
