@@ -494,6 +494,94 @@ async function main() {
     check("registeredAt semua peserta <= now", futureRegistered.length === 0,
         futureRegistered.map((p) => `${p.event.eventNumber}:${p.member.code}`).join(", "));
 
+    // ══════════════════════════════════════════════════════════
+    // (l) ASET KOMUNITAS (CommunityAsset) — Fase 4A
+    // ══════════════════════════════════════════════════════════
+    console.log("\n── (l) Aset Komunitas ──────────────────────────────");
+
+    const assets = await prisma.communityAsset.findMany({
+        where: { tenantId, deletedAt: null },
+        include: { custodian: { select: { code: true, status: true } } },
+        orderBy: { assetCode: "asc" },
+    });
+
+    // Total = 12 (seeded)
+    check("Jumlah aset = 12", assets.length === 12, `${assets.length} aset`);
+
+    // assetCode unik via groupBy (bukti di atas level unique index)
+    const assetDupGroups = await prisma.communityAsset.groupBy({
+        by: ["assetCode"],
+        where: { tenantId, deletedAt: null },
+        _count: { _all: true },
+    });
+    const assetDups = assetDupGroups.filter((g) => g._count._all > 1);
+    check("Unik assetCode — tanpa duplikat", assetDups.length === 0,
+        `${assetDups.length} kode duplikat`);
+
+    // assetCode tidak null
+    const nullAssetCodes = assets.filter((a) => !a.assetCode);
+    check("assetCode tidak null (semua terisi)", nullAssetCodes.length === 0,
+        `${nullAssetCodes.length} null`);
+
+    // Distribusi kategori
+    const CATEGORY_EXPECTED: Record<string, number> = {
+        ELEKTRONIK: 4, PERABOT: 3, ALAT: 2, KENDARAAN: 1, BANGUNAN: 1, LAINNYA: 1,
+    };
+    for (const [cat, expected] of Object.entries(CATEGORY_EXPECTED)) {
+        const actual = assets.filter((a) => a.category === cat).length;
+        check(`Kategori ${cat}: ${expected}`, actual === expected, `${actual}`);
+    }
+
+    // Distribusi kondisi (recount dari array seed — 8+2+1+1=12)
+    const CONDITION_EXPECTED: Record<string, number> = {
+        BAIK: 8, PERLU_PERBAIKAN: 2, RUSAK_RINGAN: 1, RUSAK_BERAT: 1,
+    };
+    for (const [cond, expected] of Object.entries(CONDITION_EXPECTED)) {
+        const actual = assets.filter((a) => a.condition === cond).length;
+        check(`Kondisi ${cond}: ${expected}`, actual === expected, `${actual}`);
+    }
+
+    // Distribusi status
+    const STATUS_EXPECTED: Record<string, number> = {
+        AKTIF: 10, PERAWATAN: 1, TIDAK_AKTIF: 1,
+    };
+    for (const [st, expected] of Object.entries(STATUS_EXPECTED)) {
+        const actual = assets.filter((a) => a.status === st).length;
+        check(`Status ${st}: ${expected}`, actual === expected, `${actual}`);
+    }
+
+    // Custodian semua menunjuk member aktif rt02-melati
+    const badCustodians = assets.filter(
+        (a) => a.custodianMemberId && (!a.custodian || a.custodian.status !== "ACTIVE")
+    );
+    check("Custodian menunjuk member aktif rt02-melati", badCustodians.length === 0,
+        badCustodians.map((a) => a.assetCode ?? "?").join(", "));
+
+    // 2 aset tanpa custodian = AST/2026-007 & AST/2026-008
+    const noCustodian = assets.filter((a) => !a.custodianMemberId).map((a) => a.assetCode).sort();
+    const expectedNoCustodian = ["AST/2026-007", "AST/2026-008"];
+    check("2 aset tanpa custodian = AST/2026-007 & AST/2026-008",
+        JSON.stringify(noCustodian) === JSON.stringify(expectedNoCustodian),
+        noCustodian.join(", ") || "(tidak ada)");
+
+    // Total nilai perolehan = 25.800.000
+    const totalCost = assets.reduce((sum, a) => sum + Number(a.acquisitionCost ?? 0), 0);
+    check("Total nilai perolehan = 25.800.000", totalCost === 25800000,
+        `${totalCost.toLocaleString("id-ID")}`);
+
+    // Tenant lain (qalcuity-demo): 0 aset
+    const otherTenants = await prisma.tenant.findMany({
+        where: { slug: { not: "rt02-melati" } },
+        select: { id: true },
+    });
+    for (const other of otherTenants) {
+        const otherAssetCount = await prisma.communityAsset.count({
+            where: { tenantId: other.id },
+        });
+        check(`Isolasi: tenant lain ${other.id.slice(0, 8)}… punya 0 aset`,
+            otherAssetCount === 0, `${otherAssetCount} aset`);
+    }
+
     // ── Ringkasan ──
     console.log(`\n${failures === 0 ? "🎉 SEMUA VERIFIKASI COMMUNITY LOLOS" : `⚠️  ${failures} pemeriksaan GAGAL`}`);
     process.exitCode = failures === 0 ? 0 : 1;

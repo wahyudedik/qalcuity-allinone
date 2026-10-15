@@ -532,4 +532,18 @@ export const MSG_COMMUNITY_PARTICIPANTS = {
     INVALID_STATUS_TRANSITION: 'Invalid status transition',
 } as const;
 
+/**
+ * Pesan API Community Fase 4A — Aset Komunitas (assets).
+ * Referensi: plans/community-phase4-aset-implementation.md §4.9.
+ * Catatan: `MEMBER_NOT_FOUND` → reuse MSG_COMMUNITY (Fase 1); `PERMISSION_DENIED`
+ * → reuse MSG_COMMUNITY — tanpa duplikat string.
+ */
+export const MSG_COMMUNITY_ASSETS = {
+    ASSET_CREATED: 'Asset created',
+    ASSET_UPDATED: 'Asset updated',
+    ASSET_DELETED: 'Asset deleted',
+    ASSET_NOT_FOUND: 'Asset not found',
+    DUPLICATE_ASSET_CODE: 'Asset code already exists',
+} as const;
+
 export type ApiMessageKey = keyof typeof MSG;

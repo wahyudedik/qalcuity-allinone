@@ -31,6 +31,7 @@
 - [ADR-022: Period Closing Wizard](#adr-022-period-closing-wizard)
 - [ADR-023: Control Dashboard Tiers](#adr-023-control-dashboard-tiers)
 - [ADR-024: QR Verify = Public Page under /verify/*](#adr-024-qr-verify--public-page-under-verify)
+- [ADR-025: Multi-RT/RW Tenancy Model (DRAFT)](#adr-025-multi-rt-rw-tenancy-model-draft)
 
 ---
 
@@ -1452,5 +1453,48 @@ Surat pengantar (domisili, SKTM, dll.) dicetak dalam bentuk PDF fisik dengan QR 
 
 ---
 
-**Last Updated:** October 13, 2026
+## ADR-025: Multi-RT/RW Tenancy Model (DRAFT)
+
+**Status:** 🟡 **DRAFT — Menunggu keputusan founder**
+**Date:** 2026-10-15 (diajukan Session 75 — Fase 4A Aset Komunitas)
+
+### Decision (PROPOSED — belum final)
+
+Model tenancy untuk Community: **1 tenant = 1 unit komunitas tunggal (mis. 1 RT)** vs **1 tenant = induk (RW/kelurahan) dengan N unit RT di bawahnya** — menentukan desain `CommunityUnit` parent-child untuk Fase 4B (Multi-RT/RW).
+
+### Context
+
+Modul Community (Fase 1–4A) mengasumsikan **1 tenant = 1 RT/RW** — semua data (warga, iuran, kas, surat, kegiatan, aset) terisolasi per-tenant. Pertanyaan founder (Session 74, masih terbuka): apakah Qalcuity men-target 1 aplikasi per RT, atau 1 aplikasi per RW/kelurahan yang membawahi beberapa RT?
+
+### Options
+
+| Opsi | Model | Pros | Cons |
+|------|-------|------|------|
+| **A. 1 tenant = 1 RT** (status quo) | Tenant = RT; RW = tenant terpisah | Isolasi sederhana; sesuai arsitektur multi-tenant existing; seed rt02-melati valid | RW yang membawahi 8 RT butuh 8 akun terpisah; laporan gabungan RW harus export manual |
+| **B. 1 tenant = RW + `CommunityUnit` (RT) child** | Tenant = induk; model baru `CommunityUnit` dengan `parentId`; semua query community bertambah filter `unitId` | Laporan RW agregat native; 1 akun pengurus RW; RT tetap terisolasi via unit scope | Migrasi data existing (tambah `unitId` di 7 model); kompleksitas query & RBAC naik; risk regression tinggi |
+| **C. Hybrid — tenant = kelurahan + unit hierarki 3 level** | Seperti B + level desa | Skala penuh | Over-engineering untuk mayoritas RT/RW; ditolak sementara |
+
+### Recommendation (untuk founder)
+
+**Opsi B** jika target pasar utama adalah **RW** (cluster RT); **Opsi A** jika target adalah **RT mandiri**. Keputusan menentukan:
+
+1. Apakah butuh model `CommunityUnit` + migrasi `unitId` di 7 model Community (Fase 4B).
+2. Apakah portal warga di-scope per-unit (RT) dalam 1 tenant.
+3. Apakah laporan bulanan & kas summary di-aggregate level RW.
+
+### Consequences (jika Opsi B disetujui)
+
+- ✅ 1 akun pengurus RW melihat semua RT di bawahnya (dengan role/unit scoping).
+- ✅ Laporan agregat RW native (per-RT drill-down).
+- ⚠️ **Migrasi data** — semua row community existing dapat `unitId` (default unit tunggal per tenant lama).
+- ⚠️ **Tenant isolation bertingkat** — setiap query wajib filter `tenantId` + `unitId` (kecuali scope RW).
+- ⚠️ RBAC bertambah unit-scope check — memperluas route-permissions.
+
+### Founder Approval Required
+
+> ⚠️ **ADR ini DRAFT.** Implementasi Multi-RT/RW (Fase 4B) TIDAK dimulai sebelum founder memilih Opsi A/B/C. Fase 4A (aset) selesai tanpa keputusan ini karena mengasumsikan 1 tenant = 1 unit (status quo Opsi A).
+
+---
+
+**Last Updated:** October 15, 2026
 **Maintainer:** Qalcuity Architecture Team

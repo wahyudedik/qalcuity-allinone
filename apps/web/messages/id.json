@@ -258,7 +258,8 @@
                 "reports": "Laporan",
                 "portal": "Portal Warga",
                 "letters": "Surat",
-                "events": "Kegiatan"
+                "events": "Kegiatan",
+                "assets": "Aset"
             }
         },
         "common": {
@@ -687,6 +688,13 @@
                     "registered": "Pendaftaran berhasil",
                     "cancelled": "Pendaftaran dibatalkan"
                 }
+            },
+            "assets": {
+                "title": "Aset Komunitas",
+                "subtitle": "Daftar aset milik komunitas",
+                "empty": "Belum ada aset",
+                "location": "Lokasi",
+                "quickDesc": "Aset milik komunitas"
             }
         },
         "letters": {
@@ -901,6 +909,87 @@
             "tanggalDicabut": "Tanggal Dibatalkan",
             "alasanDicabut": "Alasan Pembatalan",
             "footer": "Halaman ini diverifikasi otomatis oleh Qalcuity. NIK tidak ditampilkan untuk melindungi privasi."
+        },
+        "assets": {
+            "title": "Aset Komunitas",
+            "subtitle": "Inventaris aset milik komunitas",
+            "add": "Tambah Aset",
+            "editTitle": "Edit Aset",
+            "deleteConfirm": "Yakin menghapus aset ini? Tindakan ini tidak dapat dibatalkan.",
+            "empty": "Belum ada aset terdaftar",
+            "accessDenied": {
+                "title": "Akses Ditolak",
+                "desc": "Anda tidak memiliki izin untuk mengelola aset."
+            },
+            "toast": {
+                "created": "Aset berhasil ditambahkan",
+                "updated": "Aset berhasil diperbarui",
+                "deleted": "Aset berhasil dihapus"
+            },
+            "stat": {
+                "active": "Aset Aktif",
+                "totalCost": "Total Nilai Perolehan",
+                "needRepair": "Perlu Perbaikan",
+                "maintenance": "Dalam Perawatan"
+            },
+            "search": {
+                "placeholder": "Cari nama aset..."
+            },
+            "filter": {
+                "allCategories": "Semua Kategori",
+                "allConditions": "Semua Kondisi",
+                "allStatuses": "Semua Status",
+                "reset": "Reset Filter"
+            },
+            "table": {
+                "assetCode": "Kode Aset",
+                "name": "Nama",
+                "category": "Kategori",
+                "condition": "Kondisi",
+                "status": "Status",
+                "location": "Lokasi",
+                "custodian": "Penanggung Jawab"
+            },
+            "category": {
+                "elektronik": "Elektronik",
+                "perabot": "Perabot",
+                "kendaraan": "Kendaraan",
+                "alat": "Peralatan",
+                "bangunan": "Bangunan",
+                "lainnya": "Lainnya"
+            },
+            "condition": {
+                "baik": "Baik",
+                "perluPerbaikan": "Perlu Perbaikan",
+                "rusakRingan": "Rusak Ringan",
+                "rusakBerat": "Rusak Berat"
+            },
+            "status": {
+                "aktif": "Aktif",
+                "perawatan": "Perawatan",
+                "tidakAktif": "Tidak Aktif"
+            },
+            "field": {
+                "name": "Nama Aset",
+                "category": "Kategori",
+                "condition": "Kondisi",
+                "status": "Status",
+                "acquisitionDate": "Tanggal Perolehan",
+                "acquisitionCost": "Nilai Perolehan",
+                "location": "Lokasi",
+                "custodian": "Penanggung Jawab",
+                "notes": "Catatan"
+            },
+            "custodian": {
+                "none": "— Tanpa penanggung jawab —"
+            },
+            "summary": {
+                "title": "Ringkasan Aset",
+                "byCategory": "Per Kategori",
+                "byCondition": "Per Kondisi",
+                "count": "Jumlah",
+                "totalCost": "Total Nilai"
+            }
         }
     },
     "dashboard": {

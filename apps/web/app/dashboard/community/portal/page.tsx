@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BellRing, Banknote, CalendarDays, FileText, Home, Megaphone, PiggyBank, UserX } from 'lucide-react'
+import { BellRing, Banknote, CalendarDays, FileText, Home, Megaphone, Package, PiggyBank, UserX } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useToast } from '@/components/ui/toast'
@@ -127,8 +127,8 @@ export default function CommunityPortalPage() {
                 <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{t('community.portal.readInfo')}</p>
             </div>
 
-            {/* Quick links: Surat & Kegiatan */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Quick links: Surat, Kegiatan & Aset */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Link
                     href="/dashboard/community/portal/letters"
                     className="group rounded-xl border border-gray-200 bg-white p-4 transition hover:border-purple-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-purple-700"
@@ -158,6 +158,22 @@ export default function CommunityPortalPage() {
                                 {t('community.portal.myEvents.title')}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{t('community.portal.myEvents.quickDesc')}</p>
+                        </div>
+                    </div>
+                </Link>
+                <Link
+                    href="/dashboard/community/portal/assets"
+                    className="group rounded-xl border border-gray-200 bg-white p-4 transition hover:border-orange-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-orange-700"
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="rounded-lg bg-orange-100 p-2 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                            <Package className="h-5 w-5" />
+                        </span>
+                        <div>
+                            <p className="font-medium text-gray-900 group-hover:text-orange-600 dark:text-gray-100 dark:group-hover:text-orange-400">
+                                {t('community.portal.assets.title')}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('community.portal.assets.quickDesc')}</p>
                         </div>
                     </div>
                 </Link>

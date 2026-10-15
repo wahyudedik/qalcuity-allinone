@@ -457,6 +457,40 @@ export const COMMUNITY_EVENT_PARTICIPANTS: CommunityEventParticipantSpec[] = [
 ];
 
 // ============================================================
+// 1b. Fase 4A: Aset komunitas (CommunityAsset) — TANPA RNG
+// ============================================================
+
+export interface CommunityAssetSpec {
+    assetCode: string;            // business key, e.g. "AST/2026-001" (unik per tenant)
+    name: string;
+    category: 'ELEKTRONIK' | 'PERABOT' | 'KENDARAAN' | 'ALAT' | 'BANGUNAN' | 'LAINNYA';
+    condition: 'BAIK' | 'PERLU_PERBAIKAN' | 'RUSAK_RINGAN' | 'RUSAK_BERAT';
+    status: 'AKTIF' | 'PERAWATAN' | 'TIDAK_AKTIF';
+    acquisitionDate?: Date;       // deterministik (Date.UTC fixed)
+    acquisitionCost?: number;
+    location?: string;
+    custodianMemberCode?: string | null; // business key ke member seed (W-xxx) — null = tanpa custodian
+    notes?: string;
+}
+
+export const COMMUNITY_ASSETS: CommunityAssetSpec[] = [
+    // Mix kategori + kondisi + status; 2 tanpa custodian; 1 PERAWATAN; 2 perlu perbaikan; 1 rusak ringan; 1 rusak berat.
+    // Total nilai perolehan = 25.800.000 (diverifikasi verify section (l)).
+    { assetCode: 'AST/2026-001', name: 'Kursi Lipat 50 pcs', category: 'PERABOT', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2024, 2, 10)), acquisitionCost: 1250000, location: 'Balai RT', custodianMemberCode: 'W-005', notes: 'Set 50 kursi lipat untuk acara' },
+    { assetCode: 'AST/2026-002', name: 'Sound System RT', category: 'ELEKTRONIK', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2023, 7, 22)), acquisitionCost: 3500000, location: 'Balai RT', custodianMemberCode: 'W-007' },
+    { assetCode: 'AST/2026-003', name: 'Mikrofon Wireless', category: 'ELEKTRONIK', condition: 'PERLU_PERBAIKAN', status: 'PERAWATAN', acquisitionDate: new Date(Date.UTC(2023, 7, 22)), acquisitionCost: 450000, location: 'Balai RT', custodianMemberCode: 'W-007', notes: 'Mic 2 bermasalah' },
+    { assetCode: 'AST/2026-004', name: 'Tenda 6x8m', category: 'ALAT', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2022, 10, 5)), acquisitionCost: 2200000, location: 'Gudang', custodianMemberCode: 'W-013' },
+    { assetCode: 'AST/2026-005', name: 'Gerobak Sampah', category: 'ALAT', condition: 'RUSAK_RINGAN', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2021, 4, 18)), acquisitionCost: 800000, location: 'Pos Keamanan', custodianMemberCode: 'W-009' },
+    { assetCode: 'AST/2026-006', name: 'Sepeda Motor Operasional', category: 'KENDARAAN', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2020, 1, 14)), acquisitionCost: 14500000, location: 'Garase RT', custodianMemberCode: 'W-001', notes: 'Honda Beat, plat B' },
+    { assetCode: 'AST/2026-007', name: 'Meja Kayu Panjang', category: 'PERABOT', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2022, 3, 9)), acquisitionCost: 900000, location: 'Balai RT', custodianMemberCode: null },   // tanpa custodian
+    { assetCode: 'AST/2026-008', name: 'Lampu Penerangan Jalan', category: 'ELEKTRONIK', condition: 'RUSAK_BERAT', status: 'TIDAK_AKTIF', acquisitionDate: new Date(Date.UTC(2019, 8, 30)), acquisitionCost: 600000, location: 'Pos Keamanan', custodianMemberCode: null },   // tanpa custodian
+    { assetCode: 'AST/2026-009', name: 'Kotak Amal', category: 'LAINNYA', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2023, 0, 12)), acquisitionCost: 150000, location: 'Balai RT', custodianMemberCode: 'W-002' },
+    { assetCode: 'AST/2026-010', name: 'Papan Pengumuman', category: 'BANGUNAN', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2021, 10, 3)), acquisitionCost: 400000, location: 'Depan Balai RT', custodianMemberCode: 'W-003' },
+    { assetCode: 'AST/2026-011', name: 'Kipas Angin', category: 'ELEKTRONIK', condition: 'PERLU_PERBAIKAN', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2022, 6, 20)), acquisitionCost: 350000, location: 'Balai RT', custodianMemberCode: 'W-008' },
+    { assetCode: 'AST/2026-012', name: 'Karpet Merah 10m', category: 'PERABOT', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2023, 11, 1)), acquisitionCost: 700000, location: 'Gudang', custodianMemberCode: 'W-016' },
+];
+
+// ============================================================
 // 2. Enkripsi NIK (SMTP_ENCRYPTION_KEY fallback loader)
 // ============================================================
 
@@ -549,6 +583,7 @@ export interface SeedCommunityResult {
         letters: number;
         events: number;
         participants: number;
+        assets: number;
     };
     /** Jumlah record yang BARU dibuat pada run ini (0 = idempotent). */
     created: {
@@ -563,6 +598,7 @@ export interface SeedCommunityResult {
         letters: number;
         events: number;
         participants: number;
+        assets: number;
     };
     roles: CommunityEntityRef[];
     users: CommunityUserRef[];
@@ -1285,11 +1321,45 @@ export async function seedCommunityData(
         participantsCreated += 1;
     }
 
+    // ─── Fase 4A: Aset komunitas (12 — mix kategori/kondisi/status) ──
+    // Idempotent: findUnique on [tenantId, assetCode] — kode aset deterministik
+    // dari spec (bukan nextAssetNumber runtime); tanpa rng().
+    // memberIdByCode (code→id) sudah dibangun di blok Members di atas.
+    let assetsCreated = 0;
+    for (const spec of COMMUNITY_ASSETS) {
+        // eslint-disable-next-line no-await-in-loop
+        const existingAsset = await db.communityAsset.findUnique({
+            where: { tenantId_assetCode: { tenantId, assetCode: spec.assetCode } },
+            select: { id: true },
+        });
+        if (existingAsset) continue;
+
+        await db.communityAsset.create({
+            data: {
+                tenantId,
+                assetCode: spec.assetCode,
+                name: spec.name,
+                category: spec.category,
+                condition: spec.condition,
+                status: spec.status,
+                acquisitionDate: spec.acquisitionDate ?? null,
+                acquisitionCost: spec.acquisitionCost ?? null,
+                location: spec.location ?? null,
+                custodianMemberId: spec.custodianMemberCode
+                    ? (memberIdByCode.get(spec.custodianMemberCode) ?? null)
+                    : null,
+                notes: spec.notes ?? null,
+                createdBy: sekretarisId ?? createdBy,
+            },
+        });
+        assetsCreated += 1;
+    }
+
     // ─── Counts (total dalam tenant — termasuk data existing) ────
     const [
         rolesTotal, usersTotal, membersTotal, duesTypesTotal, billsTotal,
         paymentsTotal, cashTotal, announcementsTotal, lettersTotal, eventsTotal,
-        participantsTotal,
+        participantsTotal, assetsTotal,
     ] = await Promise.all([
         db.role.count({ where: { tenantId } }),
         db.user.count({ where: { tenantId } }),
@@ -1302,6 +1372,7 @@ export async function seedCommunityData(
         db.communityLetter.count({ where: { tenantId } }),
         db.communityEvent.count({ where: { tenantId } }),
         db.communityEventParticipant.count({ where: { tenantId } }),
+        db.communityAsset.count({ where: { tenantId } }),
     ]);
 
     return {
@@ -1318,6 +1389,7 @@ export async function seedCommunityData(
             letters: lettersTotal,
             events: eventsTotal,
             participants: participantsTotal,
+            assets: assetsTotal,
         },
         created: {
             roles: rolesCreated,
@@ -1331,6 +1403,7 @@ export async function seedCommunityData(
             letters: lettersCreated,
             events: eventsCreated,
             participants: participantsCreated,
+            assets: assetsCreated,
         },
         roles,
         users,

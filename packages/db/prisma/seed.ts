@@ -1291,6 +1291,7 @@ async function main() {
       letters: community.created.letters,
       events: community.created.events,
       participants: community.created.participants,
+      assets: community.created.assets,
     });
 
     console.log("\n✅ Demo data seeded (Users, Categories, Contacts, Suppliers, Activities, Warehouses, Products, StockMovements, StockOpnames, Invoices, Payments, Quotations, POs, Leads, Deals, Departments, Employees, Attendance, Leaves, Payroll, Billing, Audit, CoA, BankTx, FinanceP0, Community)");
@@ -1359,6 +1360,7 @@ async function main() {
     console.log("  ✅ Dues Bills: periode 2026-08/09/10 (mix PAID/PARTIAL/UNPAID + VOID)");
     console.log("  ✅ Dues Payments + Cash Transactions (SoD: bendahara catat, ketua approve)");
     console.log("  ✅ Announcements: 2");
+    console.log("  ✅ Community Assets: 12");
   }
 }
 

@@ -160,6 +160,21 @@ async function main() {
         console.log(`  - ${p.event.eventNumber} ${p.member.code}: ${p.status} -> ${baseline.get(`${p.eventId}|${p.memberId}`) ?? p.status}`);
     }
 
+    // ─── 6. Aset asap (prefix 'Smoke test aset') ─────────────────
+    const smokeAssets = await prisma.communityAsset.findMany({
+        where: { tenantId, name: { startsWith: "Smoke test aset" } },
+        select: { id: true, assetCode: true, name: true },
+    });
+    if (smokeAssets.length) {
+        await prisma.communityAsset.deleteMany({
+            where: { id: { in: smokeAssets.map((a) => a.id) } },
+        });
+    }
+    console.log(`\nSmoke aset dihapus: ${smokeAssets.length}`);
+    for (const a of smokeAssets) {
+        console.log(`  - ${a.assetCode ?? "(tanpa kode)"} ${a.name}`);
+    }
+
     await prisma.$disconnect();
 }
 

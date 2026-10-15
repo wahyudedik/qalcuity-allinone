@@ -8,6 +8,7 @@
  * - Pencarian warga hanya via fullName/code/address/phone (tanpa NIK).
  */
 
+import { Prisma } from '@prisma/client';
 import { prisma } from './db';
 
 // ─── Select & serialization member ────────────────────────────────────────────
@@ -186,4 +187,74 @@ export function portalAnnouncementWhere(now: Date = new Date()) {
         publishedAt: { lte: now },
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     };
+}
+
+// ─── Aset komunitas (Fase 4A) ────────────────────────────────────────────────
+
+/**
+ * Select aset untuk list/detail internal. `custodian` = relasi CommunityMember
+ * dengan select ringkas (code + nama). `acquisitionCost` Decimal → number via
+ * `serializeCommunityAsset`. Projection publik (portal) memakai select 5 kolom
+ * TERPISAH di route portal — jangan pakai select ini untuk portal.
+ */
+export const ASSET_LIST_SELECT = {
+    id: true,
+    assetCode: true,
+    name: true,
+    category: true,
+    acquisitionDate: true,
+    acquisitionCost: true,
+    condition: true,
+    status: true,
+    location: true,
+    custodianMemberId: true,
+    custodian: { select: { id: true, code: true, fullName: true } },
+    notes: true,
+    createdBy: true,
+    createdAt: true,
+    updatedAt: true,
+} as const;
+
+type AssetRow = {
+    acquisitionCost?: unknown;
+} & Record<string, unknown>;
+
+/** Serialize baris aset — `acquisitionCost` Decimal → number/null untuk response JSON. */
+export function serializeCommunityAsset(row: AssetRow): Record<string, unknown> {
+    const { acquisitionCost, ...rest } = row;
+    return {
+        ...rest,
+        acquisitionCost:
+            acquisitionCost === null || acquisitionCost === undefined ? null : Number(acquisitionCost),
+    };
+}
+
+/** Prefix nomor aset "AST/<YYYY>-" (tanpa seq) — di-assign saat CREATE. */
+export function assetNumberPrefix(year: number): string {
+    return `AST/${year}-`;
+}
+
+type AssetTx = Pick<Prisma.TransactionClient, 'communityAsset'>;
+
+/**
+ * Nomor aset berikutnya: `AST/<YYYY>-<seq3>` — max+bump pada prefix tahun,
+ * WAJIB dipanggil di dalam transaksi; caller me-retry ×1 saat P2002 pada
+ * unique `[tenantId, assetCode]` (pola nextEventNumber, plans §2.6).
+ */
+export async function nextAssetNumber(
+    tx: AssetTx,
+    tenantId: string,
+    year: number
+): Promise<string> {
+    const prefix = assetNumberPrefix(year);
+    const rows = await tx.communityAsset.findMany({
+        where: { tenantId, assetCode: { startsWith: prefix } },
+        select: { assetCode: true },
+    });
+    let maxSeq = 0;
+    for (const row of rows) {
+        const seq = parseInt((row.assetCode ?? '').slice(prefix.length), 10);
+        if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+    }
+    return `${prefix}${formatSeq3(maxSeq + 1)}`;
 }

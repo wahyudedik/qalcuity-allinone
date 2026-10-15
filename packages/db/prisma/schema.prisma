@@ -185,6 +185,8 @@ model Tenant {
   communityEvents           CommunityEvent[]
   // Community module (Fase 3: Peserta Kegiatan)
   communityEventParticipants CommunityEventParticipant[]
+  // Community module (Fase 4A: Aset Komunitas)
+  communityAssets            CommunityAsset[]
 }
 
 model User {
@@ -3043,6 +3045,7 @@ model CommunityMember {
   payments    CommunityDuesPayment[]
   letters     CommunityLetter[] // Fase 2: riwayat surat pengantar milik warga
   eventParticipations CommunityEventParticipant[] // Fase 3: pendaftaran kegiatan
+  custodiedAssets     CommunityAsset[]             // Fase 4A: aset yang menjadi penanggung jawab member ini
 
   // Unik: 1 kode warga per tenant. Saat warga pindah → status MOVED + buat record
   // baru (code baru) — tagihan lama tetap menempel ke record lama (riwayat utuh).
@@ -3312,6 +3315,52 @@ model CommunityEventParticipant {
   @@unique([tenantId, eventId, memberId])
   @@index([tenantId, eventId])
   @@index([tenantId, memberId])
+  @@index([tenantId, status])
+  @@index([tenantId])
+}
+
+// ─── Community Module (Fase 4A: Aset Komunitas) ───────────────────────────────
+// Referensi: plans/community-phase4-aset-implementation.md §3
+// Inventaris aset RT/RW — model DEDICATED (bukan reuse Product/StockMovement).
+// Peminjaman/pengembalian = Fase 4B (CommunityAssetLoan) — TIDAK di scope 4A.
+
+model CommunityAsset {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Identifikasi
+  assetCode   String?  // Auto: "AST/<YYYY>-<seq3>" — di-assign saat CREATE (bukan draft). Unik per tenant.
+  name        String   // Nama aset, e.g. "Kursi Lipat", "Sound System RT"
+  category    String   @default("LAINNYA") // ELEKTRONIK, PERABOT, KENDARAAN, ALAT, BANGUNAN, LAINNYA
+
+  // Perolehan
+  acquisitionDate DateTime?  // Tanggal perolehan (opsional)
+  acquisitionCost Decimal?   @db.Decimal(19, 4) // Biaya perolehan per item (opsional, internal-only)
+
+  // Kondisi & status
+  condition   String   @default("BAIK") // BAIK, PERLU_PERBAIKAN, RUSAK_RINGAN, RUSAK_BERAT
+  status      String   @default("AKTIF") // AKTIF, PERAWATAN, TIDAK_AKTIF
+
+  // Penempatan & penanggung jawab
+  location    String?  // Lokasi penyimpanan, e.g. "Balai RT", "Gudang belakang"
+  custodianMemberId String?              // Relasi opsional ke CommunityMember — SetNull saat member dihapus
+  custodian   CommunityMember? @relation(fields: [custodianMemberId], references: [id], onDelete: SetNull)
+
+  notes       String?
+
+  // Meta
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?                    // Soft-delete (konsisten model community lain)
+  deletedBy   String?
+
+  // Unik: 1 kode aset per tenant. assetCode NULL (kompatibilitas) diizinkan ganda oleh Postgres.
+  @@unique([tenantId, assetCode])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, category])
+  @@index([tenantId, condition])
   @@index([tenantId, status])
   @@index([tenantId])
 }

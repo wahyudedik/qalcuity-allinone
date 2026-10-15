@@ -54,6 +54,25 @@ function Api-Post($session, $path, $json) {
     }
 }
 
+function Api-Put($session, $path, $json) {
+    try {
+        $r = Invoke-WebRequest -Uri "$base$path" -Method PUT -Body $json -ContentType 'application/json' -WebSession $session -UseBasicParsing
+        return @{ status = $r.StatusCode; body = $r.Content }
+    }
+    catch {
+        $resp = $_.Exception.Response
+        $code = if ($resp) { [int]$resp.StatusCode } else { 0 }
+        $bodyText = ''
+        try {
+            $stream = $resp.GetResponseStream()
+            $reader = New-Object System.IO.StreamReader($stream)
+            $bodyText = $reader.ReadToEnd()
+        }
+        catch {}
+        return @{ status = $code; body = [string]$bodyText }
+    }
+}
+
 function Api-Delete($session, $path) {
     try {
         $r = Invoke-WebRequest -Uri "$base$path" -Method DELETE -WebSession $session -UseBasicParsing
@@ -259,26 +278,28 @@ Write-Host "  status: $($r.status)"
 $ok18 = ($r.status -eq 200)
 Write-Host "  OK: $ok18 (expect True)"
 
-# 19. GET verify page valid token TANPA login -> 200 + body mengandung SRT/DOM/2026-
-Write-Host "`n[19] GET /verify/community-letter/[token valid] anonim (expect 200 + SRT/DOM/2026-)" -ForegroundColor Yellow
+# 19. GET verify page valid token TANPA login -> 200 + body mengandung nomor surat ISSUED yang dipilih
+Write-Host "`n[19] GET /verify/community-letter/[token valid] anonim (expect 200 + nomor surat valid)" -ForegroundColor Yellow
 $anon = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $verifyPath = $null
+$verifyLetterNo = $null
 try {
     $lr = Api-Get $ketua '/api/community/letters?limit=20'
     $rows = ($lr.body | ConvertFrom-Json).data
     foreach ($row in $rows) {
-        if ($row.status -eq 'ISSUED' -and $row.verifyUrl) { $verifyPath = $row.verifyUrl; break }
+        if ($row.status -eq 'ISSUED' -and $row.verifyUrl) { $verifyPath = $row.verifyUrl; $verifyLetterNo = $row.letterNumber; break }
     }
 }
 catch {}
 if ($verifyPath) { $verifyPath = ([uri]$verifyPath).PathAndQuery } # verifyUrl absolut -> ekstrak path agar bisa digabung $base
-Write-Host "  verifyPath: $verifyPath"
+Write-Host "  verifyPath: $verifyPath | letterNumber: $verifyLetterNo"
 $ok19 = $false
-if ($verifyPath) {
+if ($verifyPath -and $verifyLetterNo) {
     $r = Api-Get $anon $verifyPath
-    $hasNumber = ($r.body -match 'SRT/DOM/2026-')
+    # Cocokkan nomor surat YANG DIPILIH dari list (PNG/DOM/SKT — tergantung urutan), jangan hardcode DOM.
+    $hasNumber = ($r.body -match [regex]::Escape($verifyLetterNo))
     $ok19 = ($r.status -eq 200) -and $hasNumber
-    Write-Host "  status: $($r.status) | contains SRT/DOM/2026-: $hasNumber | OK: $ok19 (expect True)"
+    Write-Host "  status: $($r.status) | contains $verifyLetterNo : $hasNumber | OK: $ok19 (expect True)"
 }
 else {
     Write-Host "  SKIP: verifyUrl tidak tersedia (tidak ada letter ISSUED)"
@@ -496,6 +517,122 @@ Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.L
 $ok36 = ($r.status -eq 401) -or ($r.status -eq 403)
 Write-Host "  OK: $ok36 (expect True)"
 
+# ═══ Fase 4A: Aset Komunitas (S37–S44) ═══════════════════════
+
+# 37. ketua GET /api/community/assets (expect 200, 12 rows seed)
+Write-Host "`n[37] ketua GET /api/community/assets (expect 200, total=12)" -ForegroundColor Yellow
+$r = Api-Get $ketua '/api/community/assets?limit=100'
+Write-Host "  status: $($r.status)"
+$ok37 = $false
+$seedAssetId = $null
+try {
+    $json37 = $r.body | ConvertFrom-Json
+    $ok37 = ($r.status -eq 200) -and ($json37.total -eq 12) -and ($json37.data.Count -eq 12)
+    $seedAssetId = $json37.data[0].id
+    Write-Host "  total: $($json37.total), rows: $($json37.data.Count)"
+}
+catch { Write-Host "  parse error: $_" }
+Write-Host "  OK: $ok37 (expect True)"
+
+# 38. ketua POST aset smoke (expect 201 + assetCode auto AST/…)
+$smokeAssetName = 'Smoke test aset ' + (Get-Date -Format 'yyyyMMddHHmmss')
+$createBody = '{"name":"' + $smokeAssetName + '","category":"PERABOT","condition":"BAIK","status":"AKTIF","location":"Balai RT","notes":"Smoke test Fase 4A"}'
+Write-Host "`n[38] ketua POST /api/community/assets (expect 201 + auto assetCode)" -ForegroundColor Yellow
+$r = Api-Post $ketua '/api/community/assets' $createBody
+Write-Host "  status: $($r.status)"
+$ok38 = $false
+$smokeAssetId = $null
+try {
+    $json38 = $r.body | ConvertFrom-Json
+    $smokeAssetId = $json38.data.id
+    $smokeAssetCode = $json38.data.assetCode
+    $ok38 = ($r.status -eq 201) -and ($smokeAssetId) -and ($smokeAssetCode -match '^AST/')
+    Write-Host "  id: $smokeAssetId, assetCode: $smokeAssetCode"
+}
+catch { Write-Host "  parse error: $_" }
+Write-Host "  OK: $ok38 (expect True)"
+
+# 39. ketua POST dengan custodianMemberId ghost (expect 404 — custodian tidak boleh diterima)
+Write-Host "`n[39] ketua POST aset w/ ghost custodian (expect 404 member not found)" -ForegroundColor Yellow
+$ghostBody = '{"name":"Smoke test aset ghost","category":"LAINNYA","condition":"BAIK","status":"AKTIF","custodianMemberId":"cm_smoke_ghost_member_x"}'
+$r = Api-Post $ketua '/api/community/assets' $ghostBody
+Write-Host "  status: $($r.status)"
+Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+# handleApiError menghasilkan plain error message (tanpa field code) — wajib 404 + "not found".
+$ok39 = ($r.status -eq 404) -and ($r.body -match 'not found')
+Write-Host "  OK: $ok39 (expect True)"
+
+# 40. ketua PUT aset smoke condition -> RUSAK_RINGAN (expect 200)
+$ok40 = $false
+if ($smokeAssetId) {
+    Write-Host "`n[40] ketua PUT aset smoke condition -> RUSAK_RINGAN (expect 200)" -ForegroundColor Yellow
+    $r = Api-Put $ketua "/api/community/assets/$smokeAssetId" '{"condition":"RUSAK_RINGAN"}'
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok40 = ($r.status -eq 200) -and ($r.body -match 'RUSAK_RINGAN')
+    Write-Host "  OK: $ok40 (expect True)"
+}
+else {
+    Write-Host "`n[40] SKIP: id aset smoke dari [38] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 41. warga GET portal/assets (expect 200, HANYA 5 field — tanpa cost/custodian)
+Write-Host "`n[41] warga GET /api/community/portal/assets (expect 200, 5-field only)" -ForegroundColor Yellow
+$r = Api-Get $warga '/api/community/portal/assets'
+Write-Host "  status: $($r.status)"
+$leaked41 = ($r.body -match 'acquisitionCost') -or ($r.body -match 'custodianMemberId') -or ($r.body -match 'custodian')
+$ok41 = ($r.status -eq 200) -and (-not $leaked41)
+Write-Host "  leak field terlarang: $leaked41"
+Write-Host "  OK: $ok41 (expect True)"
+
+# 42. bendahara POST aset (expect 403 — role tidak punya community:manage)
+Write-Host "`n[42] bendahara POST /api/community/assets (expect 403)" -ForegroundColor Yellow
+$r = Api-Post $bendahara '/api/community/assets' $createBody
+Write-Host "  status: $($r.status)"
+Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+$ok42 = ($r.status -eq 403)
+Write-Host "  OK: $ok42 (expect True)"
+
+# 43. admin tenant lain GET /api/community/assets/[id] rt02 (expect DENIED: 403 RBAC_STRICT atau 404 ASSET_NOT_FOUND — tanpa kebocoran data)
+$ok43 = $false
+if ($seedAssetId) {
+    Write-Host "`n[43] admin@qalcuity.com GET aset rt02 (expect denied 403/404, no data leak)" -ForegroundColor Yellow
+    $r = Api-Get $admin "/api/community/assets/$seedAssetId"
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    # admin tenant lain tidak punya community:view (RBAC_STRICT 403 di depan) ATAU tenant isolation 404.
+    # Keduanya MENOLAK akses — keamanan tetap berlaku; yang diuji: tidak ada data aset yang bocor.
+    $denied43 = ($r.status -eq 403) -or ($r.status -eq 404)
+    $leak43 = ($r.body -match '"assetCode"') -or ($r.body -match 'AST/2026-')
+    Write-Host "  denied(403/404): $denied43 | data leak: $leak43"
+    $ok43 = $denied43 -and (-not $leak43)
+    Write-Host "  OK: $ok43 (expect True)"
+}
+else {
+    Write-Host "`n[43] SKIP: id aset seed dari [37] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 44. ketua DELETE aset smoke (expect 200; list & summary totalAssets turun 1)
+$ok44 = $false
+if ($smokeAssetId) {
+    Write-Host "`n[44] ketua DELETE aset smoke (expect 200 + totalAssets turun 1)" -ForegroundColor Yellow
+    $sumBefore = Api-Get $ketua '/api/community/assets/summary'
+    $totalBefore = ($sumBefore.body | ConvertFrom-Json).data.totalAssets
+    $r = Api-Delete $ketua "/api/community/assets/$smokeAssetId"
+    Write-Host "  status: $($r.status)"
+    $sumAfter = Api-Get $ketua '/api/community/assets/summary'
+    $totalAfter = ($sumAfter.body | ConvertFrom-Json).data.totalAssets
+    Write-Host "  totalAssets before: $totalBefore, after: $totalAfter"
+    $listAfter = Api-Get $ketua '/api/community/assets?limit=100'
+    $listTotal = ($listAfter.body | ConvertFrom-Json).total
+    Write-Host "  list total after delete: $listTotal (expect 12)"
+    $ok44 = ($r.status -eq 200) -and ($totalAfter -eq ($totalBefore - 1)) -and ($listTotal -eq 12)
+    Write-Host "  OK: $ok44 (expect True)"
+}
+else {
+    Write-Host "`n[44] SKIP: id aset smoke dari [38] tidak tersedia" -ForegroundColor Yellow
+}
+
 Write-Host "`n=== RINGKASAN SESSION 73/74 ===" -ForegroundColor Cyan
 Write-Host "  [17] letters page:      $ok17" -ForegroundColor $(if ($ok17) { 'Green' } else { 'Red' })
 Write-Host "  [18] events page:       $ok18" -ForegroundColor $(if ($ok18) { 'Green' } else { 'Red' })
@@ -519,5 +656,15 @@ Write-Host "  [33] re-register 201:           $ok33" -ForegroundColor $(if ($ok3
 Write-Host "  [34] ATTENDED cancel 409:       $ok34" -ForegroundColor $(if ($ok34) { 'Green' } else { 'Red' })
 Write-Host "  [35] unpublished 404:           $ok35" -ForegroundColor $(if ($ok35) { 'Green' } else { 'Red' })
 Write-Host "  [36] admin portal 401/403:      $ok36" -ForegroundColor $(if ($ok36) { 'Green' } else { 'Red' })
+
+Write-Host "`n--- Fase 4A: Aset Komunitas ---" -ForegroundColor Cyan
+Write-Host "  [37] ketua list 12 rows:        $ok37" -ForegroundColor $(if ($ok37) { 'Green' } else { 'Red' })
+Write-Host "  [38] POST 201 auto assetCode:   $ok38" -ForegroundColor $(if ($ok38) { 'Green' } else { 'Red' })
+Write-Host "  [39] ghost custodian 404:       $ok39" -ForegroundColor $(if ($ok39) { 'Green' } else { 'Red' })
+Write-Host "  [40] PUT condition 200:         $ok40" -ForegroundColor $(if ($ok40) { 'Green' } else { 'Red' })
+Write-Host "  [41] portal 5-field no leak:    $ok41" -ForegroundColor $(if ($ok41) { 'Green' } else { 'Red' })
+Write-Host "  [42] bendahara POST 403:        $ok42" -ForegroundColor $(if ($ok42) { 'Green' } else { 'Red' })
+Write-Host "  [43] cross-tenant denied:       $ok43" -ForegroundColor $(if ($ok43) { 'Green' } else { 'Red' })
+Write-Host "  [44] DELETE + turun 1:          $ok44" -ForegroundColor $(if ($ok44) { 'Green' } else { 'Red' })
 
 Write-Host "`n=== SELESAI ===" -ForegroundColor Cyan

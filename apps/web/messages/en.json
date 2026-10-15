@@ -258,7 +258,8 @@
                 "reports": "Reports",
                 "portal": "Resident Portal",
                 "letters": "Letters",
-                "events": "Events"
+                "events": "Events",
+                "assets": "Assets"
             }
         },
         "common": {
@@ -687,6 +688,13 @@
                     "registered": "Registration successful",
                     "cancelled": "Registration cancelled"
                 }
+            },
+            "assets": {
+                "title": "Community Assets",
+                "subtitle": "List of community-owned assets",
+                "empty": "No assets yet",
+                "location": "Location",
+                "quickDesc": "Community-owned assets"
             }
         },
         "letters": {
@@ -901,6 +909,87 @@
             "tanggalDicabut": "Revocation Date",
             "alasanDicabut": "Revocation Reason",
             "footer": "This page is automatically verified by Qalcuity. NIK is never displayed to protect privacy."
+        },
+        "assets": {
+            "title": "Community Assets",
+            "subtitle": "Inventory of community-owned assets",
+            "add": "Add Asset",
+            "editTitle": "Edit Asset",
+            "deleteConfirm": "Delete this asset? This action cannot be undone.",
+            "empty": "No assets registered yet",
+            "accessDenied": {
+                "title": "Access Denied",
+                "desc": "You do not have permission to manage assets."
+            },
+            "toast": {
+                "created": "Asset created successfully",
+                "updated": "Asset updated successfully",
+                "deleted": "Asset deleted successfully"
+            },
+            "stat": {
+                "active": "Active Assets",
+                "totalCost": "Total Acquisition Cost",
+                "needRepair": "Need Repair",
+                "maintenance": "Under Maintenance"
+            },
+            "search": {
+                "placeholder": "Search asset name..."
+            },
+            "filter": {
+                "allCategories": "All Categories",
+                "allConditions": "All Conditions",
+                "allStatuses": "All Statuses",
+                "reset": "Reset Filters"
+            },
+            "table": {
+                "assetCode": "Asset Code",
+                "name": "Name",
+                "category": "Category",
+                "condition": "Condition",
+                "status": "Status",
+                "location": "Location",
+                "custodian": "Custodian"
+            },
+            "category": {
+                "elektronik": "Electronics",
+                "perabot": "Furniture",
+                "kendaraan": "Vehicle",
+                "alat": "Equipment",
+                "bangunan": "Structure",
+                "lainnya": "Others"
+            },
+            "condition": {
+                "baik": "Good",
+                "perluPerbaikan": "Need Repair",
+                "rusakRingan": "Lightly Damaged",
+                "rusakBerat": "Heavily Damaged"
+            },
+            "status": {
+                "aktif": "Active",
+                "perawatan": "Maintenance",
+                "tidakAktif": "Inactive"
+            },
+            "field": {
+                "name": "Asset Name",
+                "category": "Category",
+                "condition": "Condition",
+                "status": "Status",
+                "acquisitionDate": "Acquisition Date",
+                "acquisitionCost": "Acquisition Cost",
+                "location": "Location",
+                "custodian": "Custodian",
+                "notes": "Notes"
+            },
+            "custodian": {
+                "none": "— No custodian —"
+            },
+            "summary": {
+                "title": "Asset Summary",
+                "byCategory": "By Category",
+                "byCondition": "By Condition",
+                "count": "Count",
+                "totalCost": "Total Cost"
+            }
         }
     },
     "dashboard": {

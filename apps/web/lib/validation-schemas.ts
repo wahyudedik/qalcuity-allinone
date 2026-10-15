@@ -2711,3 +2711,65 @@ export const updateCommunityEventParticipantSchema = communityEventParticipantBa
     .refine((data) => Object.keys(data).length > 0, {
         message: 'Minimal satu field harus diupdate',
     });
+
+// ─── Community Phase 4A (Aset Komunitas) ─────────────────────────────────────
+// Referensi: plans/community-phase4-aset-implementation.md §4.8.
+// Pola aman anti gotcha Zod v4: base object TANPA `.refine()` →
+// create = base.refine(...), update = base.partial().refine(...).
+// `assetCode` DI-ASSIGN server-side saat CREATE ("AST/<YYYY>-<seq3>") — TIDAK
+// pernah dari client (anti mass-assignment).
+
+/**
+ * Aset: base object TANPA cross-field refine.
+ * `custodianMemberId` — id Prisma = cuid (bukan UUID) → pola Fase 2/3:
+ * trim + min(1); keberadaan & kecocokan tenant divalidasi di route → 404 MEMBER_NOT_FOUND.
+ */
+const communityAssetBase = z.object({
+    name: z
+        .string()
+        .trim()
+        .min(1, 'Nama aset wajib diisi')
+        .max(200, 'Nama aset maksimal 200 karakter')
+        .optional(),
+    category: z
+        .enum(['ELEKTRONIK', 'PERABOT', 'KENDARAAN', 'ALAT', 'BANGUNAN', 'LAINNYA'], {
+            message: 'Kategori aset tidak valid',
+        })
+        .optional(),
+    condition: z
+        .enum(['BAIK', 'PERLU_PERBAIKAN', 'RUSAK_RINGAN', 'RUSAK_BERAT'], {
+            message: 'Kondisi aset tidak valid',
+        })
+        .optional(),
+    status: z
+        .enum(['AKTIF', 'PERAWATAN', 'TIDAK_AKTIF'], {
+            message: 'Status aset tidak valid',
+        })
+        .optional(),
+    acquisitionDate: z.coerce.date().optional(),
+    /** Diterima number → konversi Decimal di route (pola budgetAmount/events). */
+    acquisitionCost: z
+        .number({ message: 'Biaya perolehan harus angka' })
+        .nonnegative('Biaya perolehan tidak boleh negatif')
+        .max(1_000_000_000_000, 'Biaya perolehan terlalu besar')
+        .optional(),
+    location: z.string().trim().max(200, 'Lokasi maksimal 200 karakter').optional(),
+    // '' diperbolehkan di base agar PUT bisa CLEAR custodian (route map '' → null);
+    // CREATE me-reject '' via refine di bawah (kirim undefined bila tanpa custodian).
+    custodianMemberId: z.string().trim().max(100, 'Penanggung jawab tidak valid').optional(),
+    notes: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
+});
+
+export const createCommunityAssetSchema = communityAssetBase.refine(
+    (data) => data.name !== undefined && data.name.length > 0,
+    { message: 'Nama aset wajib diisi', path: ['name'] }
+).refine(
+    (data) => data.custodianMemberId === undefined || data.custodianMemberId.length > 0,
+    { message: 'Penanggung jawab tidak valid', path: ['custodianMemberId'] }
+);
+
+export const updateCommunityAssetSchema = communityAssetBase
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });

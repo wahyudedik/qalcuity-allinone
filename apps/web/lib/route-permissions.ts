@@ -431,6 +431,18 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     '/api/community/events/[id]/participants/[pid]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
     '/api/community/portal/events/[id]/register': { permission: 'community:portal', fallbackRole: 'VIEWER' },
     '/api/community/portal/events/[id]/participants/count': { permission: 'community:portal', fallbackRole: 'VIEWER' },
+
+    // ─── Community Module (Fase 4A: Aset Komunitas) ───────────────────────────
+    // Aset: GET = community:view (BENDAHARA boleh lihat), mutasi = community:manage.
+    '/api/community/assets': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    'GET /api/community/assets': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    '/api/community/assets/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    'GET /api/community/assets/[id]': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    // Ringkasan — child path; entri eksplisit agar terbidik community:view
+    // (bukan jatuh ke longest-prefix match entri [id]/manage).
+    'GET /api/community/assets/summary': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    // Portal warga — aset read-only (hanya 5 kolom publik).
+    '/api/community/portal/assets': { permission: 'community:portal', fallbackRole: 'VIEWER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────

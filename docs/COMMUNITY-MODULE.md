@@ -3,9 +3,9 @@
 > **Modul administrasi warga untuk RT/RW — iuran warga, kas & approval, pengumuman, dan portal warga read-only.**
 > Dokumen ini adalah referensi lengkap: scope, arsitektur data, API, permission model, seed demo, smoke test, lessons learned, dan roadmap.
 
-> **Session:** 74 (Fase 3: Pendaftaran Peserta Kegiatan, 14 Okt 2026)
-> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2 + Fase 3)
-> **Docs version:** 3.0
+> **Session:** 75 (Fase 4A: Aset Komunitas — CommunityAsset, 15 Okt 2026)
+> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2 + Fase 3 + Fase 4A)
+> **Docs version:** 3.1
 
 ---
 
@@ -27,7 +27,8 @@
 14. [Lessons Learned](#14-lessons-learned)
 15. [Fase 2 — Surat Pengantar PDF+QR & Kegiatan](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)
 16. [Fase 3 — Pendaftaran Peserta Kegiatan](#16-fase-3--pendaftaran-peserta-kegiatan-session-74)
-17. [Roadmap Fase Berikutnya](#17-roadmap-fase-berikutnya)
+17. [Fase 4A — Aset Komunitas](#17-fase-4a--aset-komunitas-communityasset-session-75)
+18. [Roadmap Fase Berikutnya](#18-roadmap-fase-berikutnya)
 
 ---
 
@@ -826,24 +827,98 @@ Event **layak didaftar** jika: `publishedAt != null && publishedAt <= now && sta
 
 ---
 
-## 17. Roadmap Fase Berikutnya
+## 17. Fase 4A — Aset Komunitas (CommunityAsset, Session 75)
+
+> **Spec:** [`plans/community-phase4-aset-implementation.md`](plans/community-phase4-aset-implementation.md) — work order U→V→W→X, audit-first re-dispatch.
+
+### 17.1 Model: CommunityAsset
+
+1 model baru [`CommunityAsset`](packages/db/prisma/schema.prisma) + migrasi additive [`20261014163421_community_assets`](packages/db/prisma/migrations/20261014163421_community_assets) (total **53** folder migrasi). String defaults — **tanpa Prisma enum**:
+
+| Field | Tipe | Catatan |
+|-------|------|---------|
+| `assetCode` | String `@unique` | `AST/<YYYY>-<seq3>` — auto saat CREATE, collision-safe dalam `$transaction` + P2002 retry ×1 |
+| `name` | String | wajib |
+| `description` / `location` / `notes` | String? | opsional |
+| `category` | String default `LAINNYA` | ELEKTRONIK, PERABOT, ALAT_KERJA, KENDARAAN, BANGUNAN, LAINNYA |
+| `acquisitionDate` | DateTime? | opsional |
+| `acquisitionCost` | Decimal `@decimal(19,4)` | serialisasi Number di JSON response |
+| `condition` | String default `BAIK` | BAIK, PERLU_PERBAIKAN, RUSAK_RINGAN, RUSAK_BERAT |
+| `status` | String default `AKTIF` | AKTIF, PERAWATAN, TIDAK_AKTIF |
+| `custodianMemberId` | String? FK → CommunityMember | `onDelete: SetNull` — hapus warga tidak menghapus aset; custodian dicek ada + ACTIVE + satu tenant saat CREATE/UPDATE |
+| `deletedAt` / `deletedBy` | soft-delete | pola modul lain; DELETE = soft-delete |
+
+**Satu-satunya perubahan model existing:** reverse relation `custodiedAssets` di `CommunityMember`. **DEFER ke Fase 4B:** peminjaman aset (loans) & depresiasi.
+
+### 17.2 API (7 handlers)
+
+| Route | Method | Permission | Catatan |
+|-------|--------|------------|---------|
+| `/api/community/assets` | GET | `community:view` | filter `category`/`condition`/`status`/`search`/`custodianMemberId`, pagination `{success, data, total, page, limit, totalPages}` |
+| `/api/community/assets` | POST | `community:manage` | Zod `createCommunityAssetSchema`; assetCode auto-generate dalam `$transaction` |
+| `/api/community/assets/[id]` | GET | `community:view` | detail + custodian embed |
+| `/api/community/assets/[id]` | PUT | `community:manage` | partial update |
+| `/api/community/assets/[id]` | DELETE | `community:manage` | soft-delete |
+| `/api/community/assets/summary` | GET | `community:view` | **route terpisah** — `totalAssets`, `totalAcquisitionCost`, `byCategory`, `byCondition`, `byStatus` |
+| `/api/community/portal/assets` | GET | `community:portal` | **HANYA 5 field:** `{assetCode, name, category, condition, location}` — tanpa cost/custodian/notes/description |
+
+- Route-permissions: entries **method-aware** + **explicit summary entry** (FE-PE-09a hardening).
+- `handleApiError()` di catch + `MSG_COMMUNITY_ASSETS.*` dari [`api-messages.ts`](apps/web/lib/api-messages.ts) — tanpa hardcoded message.
+- Community **custom roles** — tidak ada `session.user.role === 'ADMIN'`; permission dari `Role.permissions` Json per-tenant.
+
+### 17.3 UI
+
+- **Internal** [`/dashboard/community/assets`](apps/web/app/dashboard/community/(internal)/assets/page.tsx) — dual layout (mobile cards ≤768px + desktop table), 3 panel ringkasan (per kategori / kondisi / status), filter bar (category, condition, status, search), form create/edit (custodian select dari members ACTIVE), delete ConfirmDialog, export CSV semua baris, [`loading.tsx`](apps/web/app/dashboard/community/(internal)/assets/loading.tsx) + [`error.tsx`](apps/web/app/dashboard/community/(internal)/assets/error.tsx).
+- **Portal** [`/dashboard/community/portal/assets`](apps/web/app/dashboard/community/portal/assets/page.tsx) — read-only card list, **strict 5 field**.
+
+### 17.4 Seed, Verify, Smoke, i18n
+
+| Gate | Hasil |
+|------|-------|
+| Seed | ✅ `COMMUNITY_ASSETS` **12 baris** deterministik (kode aset fixed spec — tanpa RNG), total **Rp 25.800.000**; AST/2026-007 & AST/2026-008 tanpa custodian; print contract `assets:` di [`seed.ts`](packages/db/prisma/seed.ts); idempoten run#1 `assets: 12` / run#2 `assets: 0` |
+| Verify | ✅ section **(l) Aset Komunitas** — 12 aset, 0 dup assetCode, 0 null; kategori ELEKTRONIK:4/PERABOT:3/ALAT_KERJA:2/KENDARAAN:1/BANGUNAN:1/LAINNYA:1; kondisi BAIK:8/PERLU_PERBAIKAN:2/RUSAK_RINGAN:1/RUSAK_BERAT:1; status AKTIF:10/PERAWATAN:1/TIDAK_AKTIF:1; custodian aktif; tepat 2 tanpa custodian; total 25.800.000; cross-tenant 0 → 🎉 **SEMUA VERIFIKASI COMMUNITY LOLOS** |
+| Smoke | ✅ **44/44 PASS** (aux :3001) — [37] list 12 rows; [38] POST 201 auto `AST/2026-XXX`; [39] ghost custodian → 404 member not found; [40] PUT condition → RUSAK_RINGAN 200; [41] portal 200 tanpa leak; [42] bendahara POST → 403; [43] cross-tenant denied (403/404) tanpa data leak; [44] DELETE → totalAssets 13→12, list kembali 12 |
+| Cleanup | ✅ step 6 — prefix `Smoke test aset` (hard delete; DB bersih pasca smoke) |
+| i18n | ✅ **61 leaf keys** (`community.assets.*` + `community.portal.assets.*` + `community.layout.tabs.assets`) — parity **566** identik id/en |
+| tsc / vitest | ✅ apps/web **0 errors**, packages/db **0 errors**; vitest **367/367** |
+
+### 17.5 Deviations
+
+1. `category`/`condition`/`status` String defaults — bukan DB enum (kebijakan non-negosiable spec).
+2. `acquisitionCost Decimal(19,4)` → Number saat serialisasi JSON.
+3. `custodianMemberId` Zod `min(1).max(100)` — bukan uuid (pola Fase 3).
+4. Smoke [39] assertion cocok `not found` — `handleApiError` untuk member-not-found menghasilkan plain error message **tanpa field `code`** (bukan `MEMBER_NOT_FOUND`).
+5. Smoke [43] menerima **403 RBAC_STRICT ATAU 404** + assert no-leak — admin sistem tenant lain di-deny di permission layer **sebelum** handler tenant-check (keamanan utuh: tidak ada data aset yang bocor di response mana pun).
+6. Smoke [19] cocokkan `letterNumber` surat yang dipilih dari list (bukan hardcode `SRT/DOM/2026-` — surat ISSUED pertama di list bisa PNG/SKT tergantung urutan).
+7. Loans (peminjaman) & depresiasi aset **DEFER ke Fase 4B** — di luar scope 4A.
+8. Portal response **strict 5 field** — field lain di-drop server-side, bukan hanya disembunyikan di UI.
+
+### 17.6 Tooling Notes
+
+- **RBAC_STRICT preemption:** admin `qalcuity-demo` GET aset `rt02-melati` → **403** `community:view` di route-permissions layer (bukan 404 tenant isolation) — keduanya menolak akses; smoke menverifikasi tidak ada kebocoran data aset.
+- **findstr multi-token** cmd.exe tidak reliable (`netstat | findstr ":3000 :3001"` exit 1) → gunakan PowerShell `Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 3000,3001 }`.
+
+---
+
+## 18. Roadmap Fase Berikutnya
 
 Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-analysis.md)
 
-### Fase 1–3 (Selesai)
+### Fase 1–4A (Selesai)
 
 | Feature | Scope | Status |
 |---------|-------|--------|
 | **Surat Pengantar PDF + QR** | Generate surat pengantar (domisili, SKTM) — template PDF + QR code verifikasi | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
 | **Kegiatan** | Event/warga gathering — CRUD + budget + realisasi kas | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
 | **Pendaftaran Peserta** | Quota + status machine + portal register/cancel | ✅ **DONE** (Session 74 — [§16](#16-fase-3--pendaftaran-peserta-kegiatan-session-74)) |
+| **Aset Komunitas** | Inventaris aset RT/RW — CommunityAsset register, custodian, summary, portal read-only 5-field | ✅ **DONE** (Session 75 — [§17](#17-fase-4a--aset-komunitas-communityasset-session-75)) |
 
-### Fase 4 (Prioritas Berikutnya)
+### Fase 4B (Prioritas Berikutnya)
 
 | Feature | Scope | Estimasi |
 |---------|-------|----------|
-| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau beberapa kelurahan) — relasi parent-child | 3–4 model baru |
-| **Aset Komunitas** | Inventaris aset RT/RW (asset register, depresiasi opsional) | 1–2 model baru |
+| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau beberapa kelurahan) — relasi parent-child — **ADR-025 DRAFT, menunggu keputusan founder** | 3–4 model baru |
+| **Peminjaman & Depresiasi Aset** | Loans lifecycle + depresiasi opsional (DEFER dari Fase 4A) | 1–2 model baru |
 | **Mode Akuntansi Opsional** | Jurnal double-entry untuk kas — optional, off by default | Integration ke [`@qalcuity/workflow`](packages/workflow/src/index.ts) / Finance module |
 | **Offline Mode Bendahara** | IndexedDB + sync queue (pola POS Offline) | Reuse [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline) |
 | **Mobile RN Bendahara** | React Native — catat iuran, upload receipt, approve kas (mobile-first bendahara) | Extend [`apps/mobile`](apps/mobile) (JWT auth sudah ada) |
@@ -877,6 +952,6 @@ Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-
 
 ---
 
-**Last Updated:** 14 Oktober 2026 (Session 74: Fase 3 — Pendaftaran Peserta Kegiatan)
+**Last Updated:** 15 Oktober 2026 (Session 75: Fase 4A — Aset Komunitas)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 3.0 — Fase 3 (Pendaftaran Peserta + Portal Register/Cancel)
+**Document Version:** 3.1 — Fase 4A (CommunityAsset + Summary + Portal 5-field)
