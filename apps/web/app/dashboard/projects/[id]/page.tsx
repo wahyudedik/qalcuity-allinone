@@ -157,12 +157,13 @@ function ProgressBar({ value, label }: { value: number; label?: string }) {
 
 function OverviewTab({ project }: { project: ProjectDetail }) {
     const { t } = useTranslation();
+    // taskSummary bisa undefined saat data belum lengkap — guard dengan optional chaining penuh
     const taskSummary = project.taskSummary;
-    const totalTasks = taskSummary.total;
-    const doneTasks = taskSummary.byStatus['DONE'] || 0;
-    const inProgressTasks = taskSummary.byStatus['IN_PROGRESS'] || 0;
-    const todoTasks = taskSummary.byStatus['TODO'] || 0;
-    const reviewTasks = taskSummary.byStatus['IN_REVIEW'] || 0;
+    const totalTasks = taskSummary?.total || 0;
+    const doneTasks = taskSummary?.byStatus?.['DONE'] || 0;
+    const inProgressTasks = taskSummary?.byStatus?.['IN_PROGRESS'] || 0;
+    const todoTasks = taskSummary?.byStatus?.['TODO'] || 0;
+    const reviewTasks = taskSummary?.byStatus?.['IN_REVIEW'] || 0;
 
     return (
         <div className="space-y-6">

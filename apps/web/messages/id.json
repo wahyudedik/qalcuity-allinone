@@ -5954,6 +5954,7 @@
         "startFresh": "Mulai dari Nol",
         "freshDescription": "Kosongkan workspace dan tambahkan data Anda sendiri",
         "hint": "Anda selalu bisa memuat data demo nanti dari menu Pengaturan.",
+        "dismiss": "Lewati untuk sekarang",
         "loadingDemo": "Memuat Data Demo",
         "preparingData": "Menyiapkan data demo...",
         "loadingCategories": "Memuat kategori & produk...",

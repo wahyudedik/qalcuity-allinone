@@ -171,8 +171,9 @@ export default function StockOpnameDetailPage({ params }: { params: { id: string
     // COMPUTED VALUES
     // ============================================
 
-    const itemsWithVariance = opname?.items.filter((item) => item.difference !== 0) || []
-    const totalItems = opname?.items.length || 0
+    // Optional-chain penuh — items bisa undefined saat data parsial/loading
+    const itemsWithVariance = opname?.items?.filter((item) => item.difference !== 0) || []
+    const totalItems = opname?.items?.length || 0
     const varianceCount = itemsWithVariance.length
 
     // ============================================
@@ -426,10 +427,10 @@ export default function StockOpnameDetailPage({ params }: { params: { id: string
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${item.difference === 0
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : item.difference > 0
-                                                            ? 'bg-blue-100 text-blue-700'
-                                                            : 'bg-red-100 text-red-700'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : item.difference > 0
+                                                        ? 'bg-blue-100 text-blue-700'
+                                                        : 'bg-red-100 text-red-700'
                                                     }`}>
                                                     {item.difference > 0 ? '+' : ''}{item.difference}
                                                 </span>
@@ -453,10 +454,10 @@ export default function StockOpnameDetailPage({ params }: { params: { id: string
                                             <p className="text-xs text-gray-500">{item.product.sku} · {item.product.unit}</p>
                                         </div>
                                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${item.difference === 0
-                                                ? 'bg-green-100 text-green-700'
-                                                : item.difference > 0
-                                                    ? 'bg-blue-100 text-blue-700'
-                                                    : 'bg-red-100 text-red-700'
+                                            ? 'bg-green-100 text-green-700'
+                                            : item.difference > 0
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-red-100 text-red-700'
                                             }`}>
                                             {item.difference > 0 ? '+' : ''}{item.difference}
                                         </span>

@@ -5954,6 +5954,7 @@
         "startFresh": "Start from Scratch",
         "freshDescription": "Clear workspace and add your own data",
         "hint": "You can always load demo data later from the Settings menu.",
+        "dismiss": "Skip for now",
         "loadingDemo": "Loading Demo Data",
         "preparingData": "Preparing demo data...",
         "loadingCategories": "Loading categories & products...",

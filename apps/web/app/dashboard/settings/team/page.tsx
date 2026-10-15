@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
 import { getInitials } from '@/lib/utils'
 import { Mail, User, Eye, Search, Loader2, Pencil, Trash2, X, ChevronDown } from 'lucide-react'
@@ -49,6 +50,11 @@ function formatRelativeTime(dateStr: string | null, t: (key: string) => string):
 
 export default function TeamSettingsPage() {
     const { t } = useTranslation()
+    const { data: session } = useSession()
+    // Layer 3 RBAC: hanya ADMIN/SUPERADMIN yang boleh invite/edit/hapus member
+    // (backend POST/PUT/DELETE /api/settings/team juga membatasi role yang sama)
+    const currentUserRole = session?.user?.role ?? ''
+    const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN'
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -271,12 +277,14 @@ export default function TeamSettingsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-medium text-gray-900">{t('settings.teamMembers') || 'Anggota Tim'}</h3>
-                    <button
-                        onClick={() => setShowInviteModal(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                        {t('settings.inviteMember') || 'Undang Anggota'}
-                    </button>
+                    {isAdmin && (
+                        <button
+                            onClick={() => setShowInviteModal(true)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                            {t('settings.inviteMember') || 'Undang Anggota'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Search */}
@@ -320,8 +328,8 @@ export default function TeamSettingsPage() {
                                         <div className="text-xs text-gray-500">{formatRelativeTime(member.lastActive, t)}</div>
                                     </div>
                                     {getStatusBadge(member.status)}
-                                    {/* Tombol aksi — sembunyikan untuk current user */}
-                                    {!member.isCurrentUser && (
+                                    {/* Tombol aksi — hanya ADMIN/SUPERADMIN, sembunyikan untuk current user */}
+                                    {isAdmin && !member.isCurrentUser && (
                                         <div className="flex items-center gap-1">
                                             <button
                                                 onClick={() => openEditModal(member)}

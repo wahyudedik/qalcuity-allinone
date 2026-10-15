@@ -441,7 +441,7 @@ export default function DataExplorerPage() {
                                 onChange={(e) => updateFilter(index, { field: e.target.value })}
                                 className="rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                             >
-                                {dataset?.dimensions.map(dim => (
+                                {dataset?.dimensions?.map(dim => (
                                     <option key={dim.id} value={dim.id}>{dim.name}</option>
                                 ))}
                             </select>

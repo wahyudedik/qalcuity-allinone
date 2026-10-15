@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Tenant, User } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedFinanceData } from "../../../apps/web/lib/seed-data/finance";
 import { seedCrmData } from "../../../apps/web/lib/seed-data/crm";
@@ -11,65 +11,104 @@ const prisma = new PrismaClient();
 /**
  * Seed script yang aman untuk production.
  *
- * Core data (Tenant, SuperAdmin, Plans, Settings) SELALU di-seed setiap migrate fresh.
+ * Core data (Tenant, SuperAdmin, Plans, Settings) di-seed saat DB fresh.
+ * Jika SUPERADMIN sudah ada, upsert Tenant & SuperAdmin DILEWATI (password
+ * tidak di-reset) — set FORCE_CORE_SEED=true untuk memaksa re-seed.
+ * Plans/PlatformSettings/TaxRates tetap di-upsert (grandfather-safe).
  * Demo data (Contacts, Products, Invoices, dll) hanya di-load jika SEED_DEMO=true.
  *
  * Usage:
- *   SEED_DEMO=false npx prisma db seed  (production — core only)
- *   SEED_DEMO=true  npx prisma db seed  (development — full)
+ *   SEED_DEMO=false npx prisma db seed          (production — core only)
+ *   SEED_DEMO=true  npx prisma db seed          (development — full)
+ *   FORCE_CORE_SEED=true npx prisma db seed     (reset tenant demo + SuperAdmin)
  */
 
 const SEED_DEMO = process.env.SEED_DEMO === 'true';
+const FORCE_CORE_SEED = process.env.FORCE_CORE_SEED === 'true';
 
 async function main() {
   console.log("🌱 Seeding database...");
   console.log(`   Mode: ${SEED_DEMO ? 'FULL (core + demo)' : 'CORE ONLY'}`);
 
   // ═══════════════════════════════════════════════════════════
-  // CORE DATA — Selalu dijalankan setiap migrate fresh
+  // CORE DATA — Dijalankan saat DB fresh (aman untuk re-run)
   // ═══════════════════════════════════════════════════════════
 
-  // ============================================
-  // TENANT (upsert berdasarkan slug — aman untuk re-run)
-  // ============================================
-  const tenant = await prisma.tenant.upsert({
-    where: { slug: "qalcuity-demo" },
-    update: {
-      name: "PT Qalcuity Demo",
-      email: "demo@qalcuity.com",
-      phone: "021-1234567",
-      address: "Jl. Sudirman No. 123, Jakarta Selatan",
-    },
-    create: {
-      name: "PT Qalcuity Demo",
-      slug: "qalcuity-demo",
-      email: "demo@qalcuity.com",
-      phone: "021-1234567",
-      address: "Jl. Sudirman No. 123, Jakarta Selatan",
-    },
-  });
-  console.log("✅ Tenant:", tenant.name);
+  let tenant: Tenant;
+  let superadmin: User;
+  let coreSeedSkipped = false;
 
   // ============================================
-  // SUPERADMIN USER (upsert berdasarkan email)
+  // GUARD: Jangan reset password SuperAdmin yang sudah ada
   // ============================================
-  const superadminPasswordHash = await bcrypt.hash("Wahyu123456789@", 10);
-  const superadmin = await prisma.user.upsert({
-    where: { email: "info@qalcuity.com" },
-    update: {
-      name: "Super Admin",
-      passwordHash: superadminPasswordHash,
-      role: "SUPERADMIN",
-    },
-    create: {
-      email: "info@qalcuity.com",
-      name: "Super Admin",
-      passwordHash: superadminPasswordHash,
-      role: "SUPERADMIN",
-      tenantId: tenant.id,
-    },
+  // Upset SuperAdmin selalu menulis ulang passwordHash ke default —
+  // berbahaya jika seed dijalankan ulang di production yang sudah
+  // punya akun. Lewati kedua upsert ini jika SUPERADMIN sudah ada.
+  const existingSuperAdmin = await prisma.user.findFirst({
+    where: { role: "SUPERADMIN" },
   });
-  console.log("✅ SuperAdmin:", superadmin.email);
+
+  if (existingSuperAdmin && !FORCE_CORE_SEED) {
+    const existingTenant = existingSuperAdmin.tenantId
+      ? await prisma.tenant.findUnique({ where: { id: existingSuperAdmin.tenantId } })
+      : null;
+    if (!existingTenant) {
+      throw new Error(
+        "SUPERADMIN sudah ada tetapi tenantId tidak valid. Perbaiki data atau jalankan dengan FORCE_CORE_SEED=true."
+      );
+    }
+    tenant = existingTenant;
+    superadmin = existingSuperAdmin;
+    coreSeedSkipped = true;
+    console.log(`⏭️  Core seed dilewati — SuperAdmin sudah ada: ${superadmin.email}`);
+    console.log("   (Tenant & password dipertahankan. Set FORCE_CORE_SEED=true untuk reset.)");
+  } else {
+    if (FORCE_CORE_SEED && existingSuperAdmin) {
+      console.log("⚠️  FORCE_CORE_SEED=true — reset Tenant demo & SuperAdmin ke default");
+    }
+
+    // ============================================
+    // TENANT (upsert berdasarkan slug — aman untuk re-run)
+    // ============================================
+    tenant = await prisma.tenant.upsert({
+      where: { slug: "qalcuity-demo" },
+      update: {
+        name: "PT Qalcuity Demo",
+        email: "demo@qalcuity.com",
+        phone: "021-1234567",
+        address: "Jl. Sudirman No. 123, Jakarta Selatan",
+      },
+      create: {
+        name: "PT Qalcuity Demo",
+        slug: "qalcuity-demo",
+        email: "demo@qalcuity.com",
+        phone: "021-1234567",
+        address: "Jl. Sudirman No. 123, Jakarta Selatan",
+      },
+    });
+    console.log("✅ Tenant:", tenant.name);
+
+    // ============================================
+    // SUPERADMIN USER (upsert berdasarkan email)
+    // ============================================
+    const superadminPasswordHash = await bcrypt.hash("Wahyu123456789@", 10);
+    superadmin = await prisma.user.upsert({
+      where: { email: "info@qalcuity.com" },
+      update: {
+        name: "Super Admin",
+        passwordHash: superadminPasswordHash,
+        role: "SUPERADMIN",
+      },
+      create: {
+        email: "info@qalcuity.com",
+        name: "Super Admin",
+        passwordHash: superadminPasswordHash,
+        role: "SUPERADMIN",
+        tenantId: tenant.id,
+      },
+    });
+    console.log("✅ SuperAdmin:", superadmin.email);
+  }
 
   // ============================================
   // PLANS (Entitlement Engine) — upsert berdasarkan slug
@@ -1308,7 +1347,11 @@ async function main() {
   console.log("\n🎉 Seeding completed!");
   console.log(`\n📋 Mode: ${SEED_DEMO ? 'FULL (core + demo)' : 'CORE ONLY'}`);
   console.log("\n📋 Accounts:");
-  console.log("  SuperAdmin: info@qalcuity.com / Wahyu123456789@");
+  if (coreSeedSkipped) {
+    console.log("  ⏭️  Core seed dilewati — akun SuperAdmin & tenant yang sudah ada dipertahankan (password TIDAK di-reset)");
+  } else {
+    console.log("  SuperAdmin: info@qalcuity.com / Wahyu123456789@");
+  }
   if (SEED_DEMO) {
     console.log("  Admin:      admin@qalcuity.com / admin123");
     console.log("  Demo:       demo@qalcuity.com / demo123");

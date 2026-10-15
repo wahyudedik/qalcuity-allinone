@@ -1588,6 +1588,13 @@ export const aiAnomalyQuerySchema = z.object({
     offset: z.number().int().min(0).optional(),
 });
 
+export const updateAnomalyStatusSchema = z.object({
+    status: z.enum(['OPEN', 'INVESTIGATING', 'DISMISSED', 'BLOCKED'], {
+        message: 'Status tidak valid',
+    }),
+    statusNote: z.string().max(1000, 'Catatan maksimal 1000 karakter').optional(),
+});
+
 // ============================================
 // Notification Schemas
 // ============================================

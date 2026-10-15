@@ -358,6 +358,63 @@ prisma_migrate() {
 }
 
 # ============================================================
+# Step 6b: Core Seed (fresh DB bootstrap)
+# ============================================================
+# Jalankan core seed (Tenant demo + SuperAdmin + Plans + Settings, TANPA
+# demo data) hanya saat database masih fresh (0 user SUPERADMIN).
+# Idempoten: seed.ts punya guard — upsert tenant/superadmin dilewati jika
+# SUPERADMIN sudah ada (kecuali FORCE_CORE_SEED=true).
+seed_core() {
+    print_step "6b/8" "Core seed (fresh DB bootstrap)"
+
+    # Ensure DATABASE_URL from production env is available for Prisma CLI
+    local WEB_ENV="$APP_DIR/apps/web/.env"
+    if [ -f "$WEB_ENV" ]; then
+        local PROD_DB_URL
+        PROD_DB_URL=$(grep -E "^DATABASE_URL=" "$WEB_ENV" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        if [ -n "$PROD_DB_URL" ]; then
+            export DATABASE_URL="$PROD_DB_URL"
+        fi
+    fi
+
+    if [ -z "$DATABASE_URL" ]; then
+        print_warning "DATABASE_URL tidak ditemukan — skip core seed check"
+        cd "$APP_DIR"
+        return 0
+    fi
+
+    cd "$APP_DIR/packages/db"
+
+    # Deteksi DB fresh: hitung user SUPERADMIN via Prisma Client
+    # (psql mungkin tidak tersedia di aaPanel — pakai node + Prisma saja)
+    local superadmin_count
+    superadmin_count=$(node -e "
+        const { PrismaClient } = require('@prisma/client');
+        const p = new PrismaClient();
+        p.user.count({ where: { role: 'SUPERADMIN' } })
+            .then(c => { console.log(c); })
+            .catch(() => { console.log(-1); })
+            .finally(() => p.\$disconnect());
+    " 2>/dev/null | tail -1)
+
+    if [ "$superadmin_count" = "-1" ] || [ -z "$superadmin_count" ]; then
+        print_warning "Tidak bisa query database — skip core seed (cek DATABASE_URL & koneksi)"
+    elif [ "$superadmin_count" = "0" ]; then
+        print_info "Database fresh terdeteksi (0 SuperAdmin) — menjalankan core seed (SEED_DEMO=false)..."
+        if SEED_DEMO=false npx prisma db seed 2>&1; then
+            print_success "Core seed selesai — akun SuperAdmin info@qalcuity.com sudah dibuat"
+            print_warning "SEGERA ganti password default SuperAdmin setelah login pertama!"
+        else
+            print_warning "Core seed gagal — lanjut build (bisa dijalankan manual: cd packages/db && SEED_DEMO=false npx prisma db seed)"
+        fi
+    else
+        print_success "Database sudah ter-seed ($superadmin_count SuperAdmin) — skip core seed"
+    fi
+
+    cd "$APP_DIR"
+}
+
+# ============================================================
 # Step 7: Build Application
 # ============================================================
 build_app() {
@@ -471,6 +528,7 @@ pull_code
 install_deps
 prisma_generate
 prisma_migrate
+seed_core
 build_app
 restart_app
 print_summary

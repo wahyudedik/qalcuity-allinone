@@ -208,29 +208,29 @@ export default function POSReportsPage() {
         setToast({ message: t('pos.reports.successExport') || 'Berhasil diekspor ke CSV', type: 'success' })
     }, [analytics, cashiers, dateFrom, dateTo, t, PAYMENT_METHOD_LABELS])
 
-    // Chart data
-    const salesChartLabels = analytics?.salesByPeriod.map((d) => {
+    // Chart data — optional-chain penuh (field child bisa undefined saat API return data parsial)
+    const salesChartLabels = analytics?.salesByPeriod?.map((d) => {
         const date = new Date(d.date)
         return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
     }) || []
-    const salesChartData = analytics?.salesByPeriod.map((d) => d.total) || []
+    const salesChartData = analytics?.salesByPeriod?.map((d) => d.total) || []
 
-    const hourlyLabels = analytics?.hourlyTrend.map((h) => `${h.hour}:00`) || []
-    const hourlyData = analytics?.hourlyTrend.map((h) => h.total) || []
+    const hourlyLabels = analytics?.hourlyTrend?.map((h) => `${h.hour}:00`) || []
+    const hourlyData = analytics?.hourlyTrend?.map((h) => h.total) || []
 
-    const pieLabels = analytics?.paymentMethodBreakdown.map((p) => PAYMENT_METHOD_LABELS[p.method] || p.method) || []
-    const pieData = analytics?.paymentMethodBreakdown.map((p) => p.total) || []
+    const pieLabels = analytics?.paymentMethodBreakdown?.map((p) => PAYMENT_METHOD_LABELS[p.method] || p.method) || []
+    const pieData = analytics?.paymentMethodBreakdown?.map((p) => p.total) || []
 
-    const catLabels = analytics?.salesByCategory.map((c) => c.category) || []
-    const catData = analytics?.salesByCategory.map((c) => c.revenue) || []
+    const catLabels = analytics?.salesByCategory?.map((c) => c.category) || []
+    const catData = analytics?.salesByCategory?.map((c) => c.revenue) || []
 
-    // Summary calculations
-    const todaySales = summary?.today.sales || 0
-    const todayCount = summary?.today.transactionCount || 0
-    const todayAvg = summary?.today.avgTransactionValue || 0
-    const salesChange = summary?.change.salesPercent || 0
-    const countChange = summary?.change.countPercent || 0
-    const avgChange = summary?.change.avgPercent || 0
+    // Summary calculations — optional-chain penuh (summary/today/change bisa null parsial)
+    const todaySales = summary?.today?.sales || 0
+    const todayCount = summary?.today?.transactionCount || 0
+    const todayAvg = summary?.today?.avgTransactionValue || 0
+    const salesChange = summary?.change?.salesPercent || 0
+    const countChange = summary?.change?.countPercent || 0
+    const avgChange = summary?.change?.avgPercent || 0
 
     return (
         <div className="space-y-6">

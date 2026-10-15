@@ -11,7 +11,12 @@ import { MSG } from '@/lib/api-messages';
 import { handleApiError } from '@/lib/api-error';
 import { optimisticUpdateRaw } from '@/lib/optimistic-lock';
 
-export async function GET(request: Request) {
+// ─── GET /api/hr/employees/[id] ────────────────────────────────────────────────
+// Ambil detail SATU employee berdasarkan ID (termasuk attendance, leaves, payroll).
+// Catatan: sebelumnya handler ini adalah copy-paste dari list handler (mengabaikan
+// params.id dan mengembalikan array) — diperbaiki 2026-10-15.
+
+export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -21,66 +26,102 @@ export async function GET(request: Request) {
         if (!rateLimitResult.success) {
             return NextResponse.json({ error: MSG.TOO_MANY_REQUESTS, code: 'TOO_MANY_REQUESTS' }, { status: 429 });
         }
-        const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
-        const department = searchParams.get('department');
-        const search = searchParams.get('search');
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '50');
-        const skip = (page - 1) * limit;
 
-        const where: Record<string, unknown> = { tenantId };
-
-        if (status) {
-            where.status = status.toUpperCase();
-        }
-
-        if (department) {
-            where.department = department;
-        }
-
-        if (search) {
-            where.OR = [
-                { name: { contains: search } },
-                { email: { contains: search } },
-                { position: { contains: search } },
-                { phone: { contains: search } },
-            ];
-        }
-
-        const [employees, total] = await Promise.all([
-            prisma.employee.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            prisma.employee.count({ where }),
-        ]);
-
-        const data = employees.map((emp) => ({
-            id: emp.id,
-            employeeId: emp.employeeId,
-            name: emp.name,
-            email: emp.email,
-            phone: emp.phone || '',
-            position: emp.position,
-            department: emp.department || '',
-            joinDate: emp.joinDate.toISOString(),
-            salary: emp.salary,
-            status: emp.status,
-            version: emp.version,
-            createdAt: emp.createdAt.toISOString(),
-        }));
-
-        return NextResponse.json({
-            success: true,
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+        const employee = await prisma.employee.findFirst({
+            where: { id: params.id, tenantId, deletedAt: null },
+            include: {
+                attendanceRecords: {
+                    orderBy: { date: 'desc' },
+                    take: 30,
+                    select: {
+                        id: true,
+                        date: true,
+                        clockIn: true,
+                        clockOut: true,
+                        status: true,
+                        workHours: true,
+                    },
+                },
+                leaveRequests: {
+                    orderBy: { startDate: 'desc' },
+                    take: 30,
+                    select: {
+                        id: true,
+                        type: true,
+                        startDate: true,
+                        endDate: true,
+                        days: true,
+                        reason: true,
+                        status: true,
+                        appliedDate: true,
+                    },
+                },
+                payrollRecords: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 12,
+                    select: {
+                        id: true,
+                        period: true,
+                        baseSalary: true,
+                        allowances: true,
+                        deductions: true,
+                        netSalary: true,
+                        status: true,
+                    },
+                },
+            },
         });
+
+        if (!employee) {
+            return NextResponse.json(
+                { success: false, error: MSG.EMPLOYEE_NOT_FOUND, code: 'EMPLOYEE_NOT_FOUND' },
+                { status: 404 }
+            );
+        }
+
+        const data = {
+            id: employee.id,
+            employeeId: employee.employeeId,
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone || '',
+            position: employee.position,
+            department: employee.department || '',
+            joinDate: employee.joinDate.toISOString(),
+            salary: Number(employee.salary),
+            status: employee.status,
+            version: employee.version,
+            createdAt: employee.createdAt.toISOString(),
+            attendance: employee.attendanceRecords.map((a) => ({
+                id: a.id,
+                date: a.date.toISOString(),
+                clockIn: a.clockIn?.toISOString() || null,
+                clockOut: a.clockOut?.toISOString() || null,
+                status: a.status,
+                workHours: Number(a.workHours),
+            })),
+            leaves: employee.leaveRequests.map((l) => ({
+                id: l.id,
+                type: l.type,
+                startDate: l.startDate.toISOString(),
+                endDate: l.endDate.toISOString(),
+                days: l.days,
+                reason: l.reason || '',
+                status: l.status,
+                appliedDate: l.appliedDate.toISOString(),
+            })),
+            payroll: employee.payrollRecords.map((p) => ({
+                id: p.id,
+                period: p.period,
+                baseSalary: Number(p.baseSalary),
+                allowances: Number(p.allowances),
+                deductions: Number(p.deductions),
+                netSalary: Number(p.netSalary),
+                status: p.status,
+            })),
+        };
+
+        return NextResponse.json({ success: true, data });
     } catch (error) {
         return handleApiError(error);
     }
@@ -157,27 +198,18 @@ export async function POST(request: Request) {
     }
 }
 
-export async function PUT(request: Request) {
+// ─── PUT /api/hr/employees/[id] ────────────────────────────────────────────────
+// Update employee. ID diambil dari URL params (bukan body) — backward compatible:
+// `version` bersifat opsional; jika tidak dikirim, gunakan versi terkini dari DB.
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
+        const id = params.id;
         const body = await request.json();
-        const { id, version, ...updateData } = body;
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
-                { status: 400 }
-            );
-        }
-
-        if (version === undefined || version === null) {
-            return NextResponse.json(
-                { success: false, error: 'Version is required for concurrent update safety', code: 'VERSION_REQUIRED' },
-                { status: 400 }
-            );
-        }
+        const { version, id: _bodyId, ...updateData } = body;
 
         const validation = updateEmployeeSchema.safeParse(updateData);
         if (!validation.success) {
@@ -190,7 +222,7 @@ export async function PUT(request: Request) {
         const validatedData = validation.data;
 
         const existing = await prisma.employee.findFirst({
-            where: { id, tenantId },
+            where: { id, tenantId, deletedAt: null },
         });
 
         if (!existing) {
@@ -199,6 +231,10 @@ export async function PUT(request: Request) {
                 { status: 404 }
             );
         }
+
+        // Jika client tidak mengirim version, gunakan versi terkini (tetap lewat
+        // jalur optimistic update agar bump version dilakukan secara konsisten).
+        const expectedVersion = version === undefined || version === null ? existing.version : version;
 
         // Build SET clauses for optimistic update (with sanitization)
         const setClauses: string[] = [];
@@ -221,7 +257,7 @@ export async function PUT(request: Request) {
             );
         }
 
-        await optimisticUpdateRaw('Employee', id, tenantId, version as number, setClauses.join(', '), values);
+        await optimisticUpdateRaw('Employee', id, tenantId, expectedVersion as number, setClauses.join(', '), values);
 
         const employee = await prisma.employee.findUnique({ where: { id } });
 
@@ -233,23 +269,18 @@ export async function PUT(request: Request) {
     }
 }
 
-export async function DELETE(request: Request) {
+// ─── DELETE /api/hr/employees/[id] ──────────────────────────────────────────────
+// Hapus employee berdasarkan ID dari URL params (sebelumnya membaca searchParams).
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
     try {
         const auth = await requirePermissionForRoute(request);
         if ('error' in auth) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         const { userId, tenantId } = auth;
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-
-        if (!id) {
-            return NextResponse.json(
-                { success: false, error: MSG.ID_REQUIRED, code: 'ID_REQUIRED' },
-                { status: 400 }
-            );
-        }
+        const id = params.id;
 
         const existing = await prisma.employee.findFirst({
-            where: { id, tenantId },
+            where: { id, tenantId, deletedAt: null },
         });
 
         if (!existing) {

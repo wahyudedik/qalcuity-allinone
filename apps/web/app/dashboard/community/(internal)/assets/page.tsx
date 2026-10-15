@@ -398,12 +398,12 @@ export default function CommunityAssetsPage() {
         )
     }
 
-    // Stat cards dari summary (spec §6.1).
-    const statActive = summary?.byStatus.find((s) => s.status === 'AKTIF')?.count ?? 0
+    // Stat cards dari summary (spec §6.1) — optional-chain penuh (byStatus/byCondition bisa undefined)
+    const statActive = summary?.byStatus?.find((s) => s.status === 'AKTIF')?.count ?? 0
     const statNeedRepair =
-        (summary?.byCondition.find((c) => c.condition === 'PERLU_PERBAIKAN')?.count ?? 0) +
-        (summary?.byCondition.find((c) => c.condition === 'RUSAK_RINGAN')?.count ?? 0)
-    const statMaintenance = summary?.byStatus.find((s) => s.status === 'PERAWATAN')?.count ?? 0
+        (summary?.byCondition?.find((c) => c.condition === 'PERLU_PERBAIKAN')?.count ?? 0) +
+        (summary?.byCondition?.find((c) => c.condition === 'RUSAK_RINGAN')?.count ?? 0)
+    const statMaintenance = summary?.byStatus?.find((s) => s.status === 'PERAWATAN')?.count ?? 0
 
     const resetFilters = () => {
         setSearch('')

@@ -175,13 +175,13 @@ export default function TablesPage() {
         setShowReservationForm(false);
     };
 
-    // Stats data
-    const totalTables = stats?.tables.total || 0;
-    const availableTables = stats?.tables.available || 0;
-    const occupiedTables = stats?.tables.occupied || 0;
-    const reservedTables = stats?.tables.reserved || 0;
-    const cleaningTables = stats?.tables.cleaning || 0;
-    const utilizationRate = stats?.utilization.rate || 0;
+    // Stats data — optional-chain penuh (stats/tables/utilization bisa null saat loading atau API gagal)
+    const totalTables = stats?.tables?.total || 0;
+    const availableTables = stats?.tables?.available || 0;
+    const occupiedTables = stats?.tables?.occupied || 0;
+    const reservedTables = stats?.tables?.reserved || 0;
+    const cleaningTables = stats?.tables?.cleaning || 0;
+    const utilizationRate = stats?.utilization?.rate || 0;
 
     return (
         <div className="space-y-4">

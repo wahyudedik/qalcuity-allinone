@@ -1,18 +1,84 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
+
+/**
+ * localStorage key — saat "Mulai dari Nol" / "Lewati" dipilih, auto-show
+ * tidak akan muncul lagi di visit berikutnya untuk tenant ini (per-browser).
+ */
+const DISMISS_KEY = 'qalcuity_onboarding_dismissed'
 
 export default function OnboardingModal() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const showOnboarding = searchParams?.get('onboard') === 'true'
-    const [isLoading, setIsLoading] = useState(false)
-    const [loadingStep, setLoadingStep] = useState('')
+    const { data: session } = useSession()
     const { t } = useTranslation()
 
+    const [isLoading, setIsLoading] = useState(false)
+    const [loadingStep, setLoadingStep] = useState('')
+    // Auto-show untuk tenant kosong (fallback: ?onboard=true eksplisit dari register)
+    const [autoShow, setAutoShow] = useState(false)
+
+    const role = session?.user?.role as string | undefined
+    const explicitOnboard = searchParams?.get('onboard') === 'true'
+    const showOnboarding = explicitOnboard || autoShow
+
+    useEffect(() => {
+        // Jalur eksplisit ?onboard=true (post-register) — selalu tampilkan.
+        if (explicitOnboard) return
+
+        // Auto-show hanya untuk ADMIN/SUPERADMIN (guard server juga ada,
+        // tapi skip fetch sama sekali untuk role lain).
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') return
+
+        // Sudah pernah dismiss / pilih jalur — jangan ganggu lagi.
+        try {
+            if (localStorage.getItem(DISMISS_KEY) === '1') return
+        } catch {
+            return // localStorage unavailable (private mode) — jangan auto-show
+        }
+
+        // Tunggu session benar-benar loaded agar role valid.
+        if (!session?.user) return
+
+        let cancelled = false
+        const checkTenantEmpty = async () => {
+            try {
+                const res = await fetch('/api/demo/status')
+                if (!res.ok) return
+                const data = await res.json()
+                if (cancelled) return
+                if (data?.success && data?.data?.hasData === false) {
+                    setAutoShow(true)
+                }
+            } catch {
+                // Network/API error — jangan tampilkan modal, biarkan dashboard normal.
+            }
+        }
+        void checkTenantEmpty()
+        return () => {
+            cancelled = true
+        }
+    }, [explicitOnboard, role, session?.user])
+
     if (!showOnboarding) return null
+
+    const persistDismiss = () => {
+        try {
+            localStorage.setItem(DISMISS_KEY, '1')
+        } catch {
+            // Ignore — modal tetap tertutup untuk sesi ini via state.
+        }
+    }
+
+    const stripOnboardParam = () => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('onboard')
+        router.push(url.pathname)
+    }
 
     const handleLoadDemo = async () => {
         setIsLoading(true)
@@ -30,6 +96,9 @@ export default function OnboardingModal() {
 
             if (data.success) {
                 setLoadingStep(t('onboarding.demoLoaded') || 'Data demo berhasil dimuat!')
+                // Data sudah ada → auto-show tidak akan muncul lagi (hasData=true),
+                // tapi dismiss eksplisit agar tidak ada fetch status percuma.
+                persistDismiss()
                 // Remove onboard param and refresh
                 const url = new URL(window.location.href)
                 url.searchParams.delete('onboard')
@@ -54,9 +123,21 @@ export default function OnboardingModal() {
     }
 
     const handleStartFresh = () => {
-        const url = new URL(window.location.href)
-        url.searchParams.delete('onboard')
-        router.push(url.pathname)
+        persistDismiss()
+        if (explicitOnboard) {
+            stripOnboardParam()
+        } else {
+            setAutoShow(false)
+        }
+    }
+
+    const handleDismiss = () => {
+        persistDismiss()
+        if (explicitOnboard) {
+            stripOnboardParam()
+        } else {
+            setAutoShow(false)
+        }
     }
 
     return (
@@ -119,7 +200,16 @@ export default function OnboardingModal() {
                             </button>
                         </div>
 
-                        <p className="mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
+                        <div className="mt-4 text-center">
+                            <button
+                                onClick={handleDismiss}
+                                className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
+                            >
+                                {t('onboarding.dismiss') || 'Lewati untuk sekarang'}
+                            </button>
+                        </div>
+
+                        <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">
                             {t('onboarding.hint') || 'Anda selalu bisa memuat data demo nanti dari menu Pengaturan.'}
                         </p>
                     </>

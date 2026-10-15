@@ -51,6 +51,7 @@ interface EmployeeDetail {
     joinDate: string
     status: string
     salary: number
+    version: number
     attendance: EmployeeAttendance[]
     leaves: EmployeeLeave[]
     payroll: EmployeePayroll[]
@@ -127,7 +128,7 @@ export default function EmployeeDetailPage({ params }: { params: { id: string } 
             const res = await fetch(`/api/hr/employees/${params.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm),
+                body: JSON.stringify({ ...editForm, version: employee?.version }),
             })
             const data = await res.json()
             if (data.success) {

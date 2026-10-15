@@ -315,7 +315,12 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     // ─── AI Features ──────────────────────────────────────────────────────────
     '/api/ai/agents': { permission: 'ai:view', fallbackRole: 'MEMBER' },
     '/api/ai/anomalies': { permission: 'ai:view', fallbackRole: 'ADMIN' },
+    // GET di /[id] adalah cron endpoint (verifyCronAuth, tanpa session auth).
+    // Entry generic di bawah berlaku untuk metode lain selain PATCH.
     '/api/ai/anomalies/[id]': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
+    // PATCH = update status anomaly dari dashboard (investigate/dismiss/block).
+    // Diizinkan untuk ADMIN (konsisten dengan entry /api/ai/anomalies di atas).
+    'PATCH /api/ai/anomalies/[id]': { permission: 'ai:view', fallbackRole: 'ADMIN', method: 'PATCH' },
     '/api/ai/anomalies/export': { permission: 'ai:view', fallbackRole: 'ADMIN' },
     '/api/ai/anomalies/scan': { permission: 'system:admin', fallbackRole: 'SUPERADMIN' },
     '/api/ai/chat': { permission: 'ai:view', fallbackRole: 'MEMBER' },

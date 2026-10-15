@@ -8,19 +8,60 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { handleApiError } from "@/lib/api-error";
 
 /**
+ * Guard role eksplisit untuk demo endpoints.
+ *
+ * CATATAN KEAMANAN: /api/demo/load berada di skip-list hardcoded
+ * requirePermissionForRoute() (session.ts) — route lolos tanpa cek
+ * permission engine. Guard role ini WAJIB ada agar MEMBER/VIEWER
+ * tidak bisa memuat/mengecek data demo (sesuai dokumentasi route:
+ * "Requires ADMIN or SUPERADMIN").
+ */
+function isDemoAdmin(role: string | undefined): boolean {
+    return role === "ADMIN" || role === "SUPERADMIN";
+}
+
+/**
+ * GET /api/demo/status
+ *
+ * Returns whether the current tenant already has business data.
+ * Used by the onboarding modal to decide whether to offer demo data.
+ * Requires ADMIN or SUPERADMIN.
+ */
+export async function GET(req: Request) {
+    try {
+        const auth = await requirePermissionForRoute(req);
+        if ('error' in auth) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        if (!isDemoAdmin(auth.role)) {
+            return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        }
+        const { tenantId } = auth;
+
+        const hasData = await tenantHasData(tenantId);
+        return NextResponse.json({ success: true, data: { hasData } });
+    } catch (error) {
+        return handleApiError(error);
+    }
+}
+
+/**
  * POST /api/demo/load
  *
  * Loads demo data into the current user's tenant.
  * Requires authenticated user with ADMIN or SUPERADMIN role.
  *
  * Request body (optional):
- * - force: boolean â€” skip the "already has data" check
+ * - force: boolean — skip the "already has data" check
  */
 export async function POST(req: Request) {
     try {
         const auth = await requirePermissionForRoute(req);
         if ('error' in auth) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        if (!isDemoAdmin(auth.role)) {
+            return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
         }
         const { tenantId } = auth;
 

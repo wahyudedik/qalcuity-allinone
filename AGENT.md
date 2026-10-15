@@ -114,6 +114,12 @@ Baru tentukan tempat implementasi
 - JANGAN gunakan PM2 commands di VPS
 - `.env` di VPS harus punya production values
 
+> **Core Seed & Bootstrap VPS Fresh (Session 78):**
+> - [`packages/db/prisma/seed.ts`](packages/db/prisma/seed.ts) **idempoten-safe**: guard skip tenant + SuperAdmin upsert jika SUPERADMIN sudah ada (password TIDAK di-reset di re-seed) — override via env `FORCE_CORE_SEED=true`. Plans/PlatformSettings/TaxRates tetap jalan (idempoten).
+> - [`update.sh`](update.sh) **Step 6b `seed_core`**: deteksi DB fresh via Prisma Client (`user.count({role:'SUPERADMIN'})`) — count=0 → auto `SEED_DEMO=false npx prisma db seed` sekali; ≥1 → skip; gagal query → warn + lanjut (tidak block deploy).
+> - Demo data **opt-in saja** (tenant registrasi baru = kosong): OnboardingModal auto-show `GET /api/demo/status` + tombol Settings. Jangan pernah auto-seed demo di production.
+> - Runbook lengkap bootstrap VPS fresh: [`docs/FRESH-VPS.md`](docs/FRESH-VPS.md).
+
 ---
 
 ## 2. AI Agent Roles
