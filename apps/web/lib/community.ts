@@ -213,19 +213,24 @@ export const ASSET_LIST_SELECT = {
     createdBy: true,
     createdAt: true,
     updatedAt: true,
+    // Fase 4B: hitung pinjaman aktif (returnedAt null) per aset — filtered
+    // relation count (Prisma 5 GA) → serializer mengekspos `activeLoanCount`.
+    _count: { select: { loans: { where: { returnedAt: null } } } },
 } as const;
 
 type AssetRow = {
     acquisitionCost?: unknown;
+    _count?: { loans?: number } | null;
 } & Record<string, unknown>;
 
-/** Serialize baris aset — `acquisitionCost` Decimal → number/null untuk response JSON. */
+/** Serialize baris aset — `acquisitionCost` Decimal → number/null; `activeLoanCount` dari filtered `_count`. */
 export function serializeCommunityAsset(row: AssetRow): Record<string, unknown> {
-    const { acquisitionCost, ...rest } = row;
+    const { acquisitionCost, _count, ...rest } = row;
     return {
         ...rest,
         acquisitionCost:
             acquisitionCost === null || acquisitionCost === undefined ? null : Number(acquisitionCost),
+        activeLoanCount: _count?.loans ?? 0,
     };
 }
 
@@ -257,4 +262,128 @@ export async function nextAssetNumber(
         if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
     }
     return `${prefix}${formatSeq3(maxSeq + 1)}`;
+}
+
+// ─── Pinjaman aset (Fase 4B) ─────────────────────────────────────────────────
+// Referensi: plans/community-phase4b-loan-depreciation-implementation.md §4.2.
+
+/**
+ * Select pinjaman untuk list internal — embed ringkas asset (code/nama/kondisi)
+ * + member (code/nama peminjam). Projection portal memakai PORTAL_LOAN_SELECT.
+ */
+export const LOAN_LIST_SELECT = {
+    id: true, assetId: true, memberId: true,
+    loanDate: true, dueDate: true, returnedAt: true,
+    conditionAtLoan: true, conditionAtReturn: true,
+    status: true, notes: true, returnNotes: true,
+    createdBy: true, returnedBy: true, createdAt: true, updatedAt: true,
+    asset: { select: { assetCode: true, name: true, condition: true } },
+    member: { select: { code: true, fullName: true } },
+} as const;
+
+/** Select pinjaman untuk portal warga — hanya field yang layak tampil (§3.5). */
+export const PORTAL_LOAN_SELECT = {
+    loanDate: true,
+    dueDate: true,
+    returnedAt: true,
+    conditionAtLoan: true,
+    conditionAtReturn: true,
+    asset: { select: { assetCode: true, name: true } },
+} as const;
+
+/**
+ * Serialize baris pinjaman + derive `isOverdue` (turunan, bukan kolom):
+ * `returnedAt == null && formatYmd(dueDate) < formatYmd(now)` — perbandingan
+ * string YYYY-MM-DD dalam APP_TIMEZONE (plans Q1). Tidak ada Decimal di model.
+ */
+export function serializeCommunityAssetLoan(row: Record<string, unknown>): Record<string, unknown> {
+    const returnedAt = row.returnedAt as Date | null | undefined;
+    const dueDate = row.dueDate as Date | null | undefined;
+    const isOverdue = !returnedAt && !!dueDate && formatYmd(dueDate) < formatYmd(new Date());
+    return { ...row, isOverdue };
+}
+
+/** Proyeksi portal "Pinjaman Saya" — 8 field non-sensitif; drop catatan & identitas pengurus. */
+export function serializePortalLoan(row: Record<string, unknown>): Record<string, unknown> {
+    const asset = (row.asset ?? {}) as { assetCode?: string | null; name?: string | null };
+    const returnedAt = (row.returnedAt ?? null) as Date | null;
+    const dueDate = row.dueDate as Date | null | undefined;
+    const isOverdue = !returnedAt && !!dueDate && formatYmd(dueDate) < formatYmd(new Date());
+    return {
+        assetCode: asset.assetCode ?? null,
+        assetName: asset.name ?? null,
+        loanDate: row.loanDate,
+        dueDate: row.dueDate,
+        returnedAt,
+        isOverdue,
+        conditionAtLoan: row.conditionAtLoan,
+        conditionAtReturn: row.conditionAtReturn ?? null,
+    };
+}
+
+/** Start-of-today (00:00) APP_TIMEZONE sebagai Date UTC — filter overdue di query list. */
+/**
+ * Error domain pinjaman — dibuang dari dalam `prisma.$transaction` untuk
+ * mapping status code (throw ⇒ rollback otomatis; 404/409 tidak commit apa pun).
+ * Pola: catch handler memeriksa `instanceof LoanRequestError` sebelum
+ * `handleApiError()`. Reuse lintas loans/route.ts, [id], [id]/return.
+ */
+export class LoanRequestError extends Error {
+    constructor(
+        public readonly status: number,
+        message: string
+    ) {
+        super(message);
+        this.name = 'LoanRequestError';
+    }
+}
+
+export function startOfTodayAppTz(now: Date = new Date()): Date {
+    const [y, m, d] = formatYmd(now).split('-').map((v) => parseInt(v, 10));
+    return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+}
+
+// ─── Depresiasi informatif (Fase 4B) ─────────────────────────────────────────
+// INFORMATIF — bukan akuntansi (ADR-026): straight-line on-the-fly, tanpa
+// kolom tersimpan, tanpa scheduled job, tanpa jurnal.
+
+/** Umur pakai informatif (tahun) per kategori aset — depresiasi INFORMATIF (§5.2). */
+export const ASSET_USEFUL_LIFE_YEARS: Record<string, number> = {
+    ELEKTRONIK: 5,
+    PERABOT: 10,
+    KENDARAAN: 5,
+    ALAT: 8,
+    BANGUNAN: 20,
+    LAINNYA: 5, // fallback untuk kategori tak dikenal
+};
+
+/**
+ * Hitung nilai buku informatif — straight-line granularitas bulan (§5.1):
+ * `bookValue = max(0, round(cost × (1 − usedMonths/totalMonths)))`.
+ * `bookValue = null` bila tanpa biaya ATAU tanggal perolehan (UI menampilkan "—").
+ */
+export function computeAssetBookValue(asset: {
+    category: string;
+    acquisitionCost: unknown; // Decimal | number | null
+    acquisitionDate: Date | null;
+}): { bookValue: number | null; usefulLifeYears: number } {
+    const usefulLifeYears =
+        ASSET_USEFUL_LIFE_YEARS[asset.category] ?? ASSET_USEFUL_LIFE_YEARS.LAINNYA;
+    if (asset.acquisitionCost === null || asset.acquisitionCost === undefined) {
+        return { bookValue: null, usefulLifeYears };
+    }
+    if (!asset.acquisitionDate) {
+        return { bookValue: null, usefulLifeYears };
+    }
+    const cost = Number(asset.acquisitionCost);
+    if (!Number.isFinite(cost)) {
+        return { bookValue: null, usefulLifeYears };
+    }
+    const totalMonths = usefulLifeYears * 12;
+    const [yNow, mNow] = formatYmd(new Date()).split('-').map((v) => parseInt(v, 10));
+    const [yAcq, mAcq] = formatYmd(asset.acquisitionDate).split('-').map((v) => parseInt(v, 10));
+    const elapsedMonths = Math.max(0, (yNow - yAcq) * 12 + (mNow - mAcq));
+    const usedMonths = Math.min(elapsedMonths, totalMonths);
+    const bookValue = Math.max(0, Math.round(cost * (1 - usedMonths / totalMonths)));
+    return { bookValue, usefulLifeYears };
 }

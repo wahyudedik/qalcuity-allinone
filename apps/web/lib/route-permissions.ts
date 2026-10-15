@@ -443,6 +443,17 @@ export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: st
     'GET /api/community/assets/summary': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
     // Portal warga — aset read-only (hanya 5 kolom publik).
     '/api/community/portal/assets': { permission: 'community:portal', fallbackRole: 'VIEWER' },
+
+    // ─── Community Module (Fase 4B: Peminjaman Aset) ──────────────────────────
+    // Loans: GET = community:view (BENDAHARA boleh lihat daftar pinjaman),
+    // mutasi (create/extend/return) = community:manage. Return gate
+    // community:approve TIDAK diperlukan — pengembalian aset cukup manage.
+    '/api/community/loans': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    'GET /api/community/loans': { permission: 'community:view', method: 'GET', fallbackRole: 'MEMBER' },
+    '/api/community/loans/[id]': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    '/api/community/loans/[id]/return': { permission: 'community:manage', fallbackRole: 'ADMIN' },
+    // Portal warga — pinjaman sendiri read-only (8 kolom whitelist).
+    '/api/community/portal/loans': { permission: 'community:portal', fallbackRole: 'VIEWER' },
 };
 
 // ─── Routes that intentionally have NO permission entry ───────────────────────

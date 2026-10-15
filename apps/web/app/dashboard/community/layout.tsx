@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
+    ArrowLeftRight,
     BarChart3,
     CalendarDays,
     FileText,
@@ -38,6 +39,7 @@ const internalTabs: TabItem[] = [
     { href: `${BASE}/letters`, labelKey: 'community.layout.tabs.letters', icon: FileText },
     { href: `${BASE}/events`, labelKey: 'community.layout.tabs.events', icon: CalendarDays },
     { href: `${BASE}/assets`, labelKey: 'community.layout.tabs.assets', icon: Package },
+    { href: `${BASE}/loans`, labelKey: 'community.layout.tabs.loans', icon: ArrowLeftRight },
     { href: `${BASE}/announcements`, labelKey: 'community.layout.tabs.announcements', icon: Megaphone },
     { href: `${BASE}/reports`, labelKey: 'community.layout.tabs.reports', icon: BarChart3 },
 ]
@@ -48,6 +50,7 @@ const portalTabs: TabItem[] = [
     { href: `${BASE}/portal/letters`, labelKey: 'community.layout.tabs.letters', icon: FileText },
     { href: `${BASE}/portal/events`, labelKey: 'community.layout.tabs.events', icon: CalendarDays },
     { href: `${BASE}/portal/assets`, labelKey: 'community.layout.tabs.assets', icon: Package },
+    { href: `${BASE}/portal/loans`, labelKey: 'community.layout.tabs.loans', icon: ArrowLeftRight },
     { href: `${BASE}/portal/announcements`, labelKey: 'community.layout.tabs.announcements', icon: Megaphone },
 ]
 

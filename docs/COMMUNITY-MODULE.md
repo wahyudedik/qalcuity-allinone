@@ -3,9 +3,9 @@
 > **Modul administrasi warga untuk RT/RW — iuran warga, kas & approval, pengumuman, dan portal warga read-only.**
 > Dokumen ini adalah referensi lengkap: scope, arsitektur data, API, permission model, seed demo, smoke test, lessons learned, dan roadmap.
 
-> **Session:** 75 (Fase 4A: Aset Komunitas — CommunityAsset, 15 Okt 2026)
-> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2 + Fase 3 + Fase 4A)
-> **Docs version:** 3.1
+> **Session:** 76 (Fase 4B: Pinjaman Aset + Depresiasi Informatif, 15 Okt 2026)
+> **Status:** 🚀 `production_ready` (Fase 1 + Fase 2 + Fase 3 + Fase 4A + Fase 4B)
+> **Docs version:** 3.2
 
 ---
 
@@ -28,7 +28,8 @@
 15. [Fase 2 — Surat Pengantar PDF+QR & Kegiatan](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)
 16. [Fase 3 — Pendaftaran Peserta Kegiatan](#16-fase-3--pendaftaran-peserta-kegiatan-session-74)
 17. [Fase 4A — Aset Komunitas](#17-fase-4a--aset-komunitas-communityasset-session-75)
-18. [Roadmap Fase Berikutnya](#18-roadmap-fase-berikutnya)
+18. [Fase 4B — Pinjaman Aset & Depresiasi Informatif](#18-fase-4b--pinjaman-aset--depreciasi-informatif-session-76)
+19. [Roadmap Fase Berikutnya](#19-roadmap-fase-berikutnya)
 
 ---
 
@@ -900,11 +901,95 @@ Event **layak didaftar** jika: `publishedAt != null && publishedAt <= now && sta
 
 ---
 
-## 18. Roadmap Fase Berikutnya
+## 18. Fase 4B — Pinjaman Aset & Depresiasi Informatif (Session 76)
+
+> **Spec:** [`plans/community-phase4b-loan-depreciation-implementation.md`](plans/community-phase4b-loan-depreciation-implementation.md) — work order U (Subtask U FINAL), audit-first, non-negosiable Q1–Q8.
+
+### 18.1 Model: CommunityAssetLoan
+
+1 model baru [`CommunityAssetLoan`](packages/db/prisma/schema.prisma) + migrasi additive [`20261015102650_community_asset_loans`](packages/db/prisma/migrations/20261015102650_community_asset_loans) (total **54** folder migrasi). String status — **tanpa Prisma enum**, **tanpa soft-delete** (riwayat pertanggungjawaban bersifat immutable):
+
+| Field | Tipe | Catatan |
+|-------|------|---------|
+| `assetId` | String FK → CommunityAsset | `onDelete: Restrict` — hapus aset hanya soft-delete; hard delete wajib urutan loans dulu |
+| `memberId` | String FK → CommunityMember | borrower; `onDelete: Restrict` |
+| `loanDate` | DateTime | wajib |
+| `dueDate` | DateTime | **WAJIB** (Q1) — UI default `loanDate + 14 hari` |
+| `returnedAt` | DateTime? | null = masih dipinjam; terisi ⇔ status RETURNED |
+| `conditionAtLoan` | String default `BAIK` | snapshot **server-side** dari `asset.condition` saat CREATE (bukan input form) |
+| `conditionAtReturn` | String? | diisi opsional saat return (vocabulary sama dengan `CommunityAsset.condition`) |
+| `status` | String default `ACTIVE` | **ACTIVE \| RETURNED** saja — `OVERDUE` = derived turunan |
+| `notes` / `returnNotes` | String? | catatan pinjam / kembali |
+| `createdBy` / `returnedBy` | String? | userId pelaku |
+
+- **4 index:** `[tenantId, assetId]` (active-loan check), `[tenantId, memberId]` (pinjaman saya), `[tenantId, status]` (filter), `[tenantId, dueDate]` (scan jatuh tempo).
+- **OVERDUE derived** (Q1): `!returnedAt && formatYmd(dueDate) < formatYmd(now)` — via helper [`formatYmd()`](apps/web/lib/community.ts) (Intl `en-CA`, APP_TIMEZONE) — **tanpa job flip harian**, tanpa nilai tersimpan.
+- **Enforcement satu-active-loan:** `SELECT ... FOR UPDATE` row-lock pada `assetId` di dalam `prisma.$transaction` — cek `returnedAt == null` di-lock; eligibility = aset `status AKTIF` & `condition ≠ RUSAK_BERAT`. **Ditolak:** partial unique index (Prisma 5 tidak mengekspresikan filtered index; [`check-drift.sh`](packages/db/scripts/check-drift.sh) akan gagal).
+- **Riwayat immutable:** tanpa endpoint DELETE, tanpa kolom `deletedAt` — salah catat → catat pengembalian.
+
+### 18.2 API (5 handlers baru + 2 dimodifikasi)
+
+| Route | Method | Permission | Catatan |
+|-------|--------|------------|---------|
+| `/api/community/loans` | GET | `community:view` (fallback MEMBER) | filter `status`/`assetId`/`memberId`/`search`, pagination `{success, data, total, page, limit, totalPages}` |
+| `/api/community/loans` | POST | `community:manage` | create dalam `$transaction` + row-lock; 409 `ASSET_ALREADY_ON_LOAN` / `ASSET_NOT_AVAILABLE`; 404 `MEMBER_NOT_FOUND` / `ASSET_NOT_FOUND` |
+| `/api/community/loans/[id]` | PUT | `community:manage` | **perpanjang** — hanya ACTIVE; `dueDate` baru > `loanDate` |
+| `/api/community/loans/[id]/return` | PATCH | `community:manage` | tandai kembali — hanya ACTIVE; dua kali → 409 `LOAN_ALREADY_RETURNED` |
+| `/api/community/portal/loans` | GET | `community:portal` (fallback VIEWER) | **strict 8-field** via `PORTAL_LOAN_SELECT` — pinjaman milik sendiri saja |
+| `/api/community/assets/[id]` | GET | *(dimodifikasi)* | `bookValue` + `usefulLifeYears` disisipkan ke `data` setelah serialize |
+| `/api/community/assets/summary` | GET | *(dimodifikasi)* | `data.totalBookValue` + `data.byCategory[].totalBookValue` — via `findMany` select minimal + agregasi JS (skala RT trivial); groupBy lama dipertahankan |
+
+- **Tidak ada `GET /api/community/loans/[id]`** — list + filter sudah cukup (YAGNI).
+- Route-permissions: **5 entries method-aware** (`'GET /api/community/loans'` view vs prefix manage) — lihat spec §7; aset tidak menambah path baru.
+- **Depresiasi informatif** (lihat [ADR-026](DECISIONS.md)): [`computeAssetBookValue()`](apps/web/lib/community.ts) — straight-line per bulan on-the-fly, `bookValue = max(0, round(cost × (1 − usedMonths/totalMonths)))`, **null** bila `acquisitionCost`/`acquisitionDate` kosong; `ASSET_USEFUL_LIFE_YEARS` = ELEKTRONIK 5, PERABOT 10, KENDARAAN 5, ALAT_KERJA 8, BANGUNAN 20, LAINNYA 5 (fallback). **Detail aset + summary ONLY** — tidak di list, **tidak pernah di portal** (kebijakan transparansi).
+- Zod v4 safe pattern: `communityLoanBase` **tanpa refine** → create = `base.refine(dueDate > loanDate)`, update = `base.partial().refine(...)`; return schema murni opsional **tanpa** partial/refine. Pesan dari `MSG_COMMUNITY_LOANS.*`; `handleApiError()` di catch.
+
+### 18.3 UI
+
+- **Internal** [`/dashboard/community/loans`](apps/web/app/dashboard/community/(internal)/loans/page.tsx) — **halaman sendiri** (pola letters/events), dual layout (mobile cards ≤768px + desktop table), stat cards (Dipinjam / Terlambat / Dikembalikan bulan ini / Total riwayat), filter (status/aset/member/search), badge (Dipinjam biru / Terlambat merah / Kembali hijau), aksi `Tandai Kembali` (modal kondisi + catatan) & `Perpanjang` (modal date picker) hanya untuk ACTIVE, modal create `+ Pinjam Aset` (aset disabled "Sedang dipinjam" bila sedang dipinjam), [`loading.tsx`](apps/web/app/dashboard/community/(internal)/loans/loading.tsx) + [`error.tsx`](apps/web/app/dashboard/community/(internal)/loans/error.tsx), `logAudit` setiap mutasi.
+- **Aset** ([`assets/page.tsx`](apps/web/app/dashboard/community/(internal)/assets/page.tsx)) — badge **"Dipinjam"** saat `activeLoanCount > 0` + kartu **"Nilai Buku (estimasi)"** (`totalBookValue` + caption "Estimasi informatif — bukan laporan akuntansi").
+- **Portal** [`/dashboard/community/portal/loans`](apps/web/app/dashboard/community/portal/loans/page.tsx) — card list read-only **strict 8-field** (`assetCode`, `name`, `loanDate`, `dueDate`, `returnedAt`, `conditionAtLoan`, `conditionAtReturn`, status badge); empty state ganda: `member: null` → "Akun Anda belum terhubung dengan data warga"; `data: []` → "Belum ada pinjaman atas nama Anda".
+
+### 18.4 Seed, Verify, Smoke, i18n, Test
+
+| Gate | Hasil |
+|------|-------|
+| Seed | ✅ `COMMUNITY_ASSET_LOANS` **3 baris** deterministik (L1 Tenda `AST/2026-004` RETURNED; L2 Sound System `AST/2026-002` **ACTIVE + OVERDUE turunan** — dueDate 2026-10-12; L3 Kotak Amal `AST/2026-009` ACTIVE — borrower = akun warga smoke); idempotency guard `findFirst({tenantId, assetId, loanDate, memberId})`; print contract `loans:` — run#1 `loans: 3` / run#2 `loans: 0` |
+| Verify | ✅ section **(m) Pinjaman Aset** 13/13 — 3 loan, tepat 1 RETURNED (+`conditionAtReturn`+notes ASCII), 2 ACTIVE, 1 overdue-turunan (`AST/2026-002`), **invariant satu-active-loan** (`groupBy(assetId)` `_count ≤ 1`), borrower/asset valid tenant rt02, tuple unik, cross-tenant 0 → 🎉 **SEMUA VERIFIKASI COMMUNITY LOLOS** (seluruh section Fase 1–4B hijau pasca-cleanup) |
+| Smoke | ✅ **S45–S57 = 13/13 PASS** (aux :3001) — [45] create 201 ACTIVE; [46] duplikat 409 `ASSET_ALREADY_ON_LOAN`; [47] aset PERAWATAN → 409 `ASSET_NOT_AVAILABLE`; [48] ghost member → 404; [49] return 200 RETURNED; [50] double return 409; [51] active 2 / overdue 1; [52] extend 200 + extend RETURNED → 409; [53] warga portal 200 8-field tanpa leak; [54] bendahara POST → 403; [55] warga POST internal → 403; [56] admin cross-tenant → 403/404 no-leak; [57] Karpet bookValue **501667**, usefulLifeYears **10**, summary `totalBookValue` **5145000** |
+| Cleanup | ✅ urutan **loans (step 6) → assets (step 7)** — FK RESTRICT-safe; menghapus 2 loan + 3 aset + 4 kas + 4 surat + 4 kegiatan smoke — DB bersih pasca-smoke |
+| i18n | ✅ **65 leaf keys** (`community.loans.*` + `community.portal.loans.*` + `community.assets.onLoan` + `assets.summary.bookValue(Caption)` + `layout.tabs.loans`) — parity **631** identik id/en |
+| Unit test | ✅ [`community-depreciation.test.ts`](apps/web/__tests__/unit/lib/community-depreciation.test.ts) **7/7** — null-cost → null, null-date → null, lewat umur → 0, karpet 34/120 → **501667**, unknown-category fallback LAINNYA, tabel useful-life, month-0 = nilai penuh |
+| tsc / vitest | ✅ apps/web **0 errors**, packages/db **0 errors**; vitest **374/374** (14 files) |
+
+### 18.5 Deviations
+
+1. **Enforcement row-lock `FOR UPDATE`** (`$queryRaw` tagged template dalam `$transaction`) — bukan partial unique index (Prisma 5 limitation; lihat §18.1).
+2. **`OVERDUE` derived** — bukan nilai `status` tersimpan; tanpa job flip harian.
+3. **`dueDate` wajib** — tanpa jatuh tempo fitur overdue tidak bernilai; default +14 hari di UI.
+4. **`conditionAtLoan` server-side** — bukan input form.
+5. **Tanpa endpoint DELETE loan** — riwayat immutable; salah catat → return.
+6. **Smoke [45] fetch `memberId` runtime** dari `GET /api/community/members` — FK id (bukan kode `W-xxx`).
+7. **Portal `member: null` → 200 `data: []`** (bukan 404) — konsisten pola portal overview.
+8. **Book value di-round integer rupiah** — IDR tanpa desimal.
+9. **Summary book value via `findMany` + agregasi JS** (bukan SQL groupBy) — skala RT trivial; pertahankan groupBy count/kondisi/status lama.
+10. **Smoke [12]/[13] (letter issue/PDF) 500 `SMTP_ENCRYPTION_KEY`** — **environmental, di luar gate Fase 4B**: env var absen dari proses dev server yang berjalan (key hanya ada di `.env.production`); fix durable ditambahkan ke [`apps/web/.env`](apps/web/.env) (key identik — NIK ter-seed tetap dapat didekripsi); hot-reload Next.js tidak mencapai RSC runtime, verifikasi runtime butuh restart (tidak diminta ulang). **Bukan regresi Fase 4B** — tidak ada file surat yang disentuh; S45–S57 tetap 13/13 PASS.
+
+### 18.6 Tooling Notes
+
+- **Row-lock pattern:** `SELECT id FROM "CommunityAssetLoan" WHERE "assetId" = $1 AND "returnedAt" IS NULL FOR UPDATE` via `prisma.$queryRaw` tagged template (bukan string interpolation — cegah SQL injection); seluruh cek + insert dalam 1 `prisma.$transaction` interaktif; `LoanRequestError` (status+message) di-throw di dalam tx → rollback otomatis → route catch → status-coded JSON.
+- **Derived overdue deterministik:** selalu bandingkan string `formatYmd` (bukan `Date` mentah) — menghindari boundary bug timezone UTC vs APP_TZ.
+- **Zod v4 cascade guard:** schema yang sudah `.refine()` **tidak boleh** dipanggil `.partial()` (melempar saat module eval) — pola base-tanpa-refine → derive create/update; return schema murni opsional tanpa partial.
+- **Unit test import community.ts:** [`lib/db.ts`](apps/web/lib/db.ts) meng-instantiate `PrismaClient` + `validateEnv()` di module level → test **wajib mock kedua path** relatif (`../../../lib/db`) **dan** alias (`@/lib/db`) — pola [`sod-enforcement.test.ts`](apps/web/__tests__/unit/lib/sod-enforcement.test.ts).
+- **Observability error 500:** `handleApiError` → `logApiError` → `<cwd>/.logs/errors/errors-YYYY-MM-DD.jsonl` (TZ Jakarta) — dipakai untuk diagnosa [12]/[13] SMTP_ENCRYPTION_KEY.
+
+---
+
+## 19. Roadmap Fase Berikutnya
 
 Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-analysis.md)
 
-### Fase 1–4A (Selesai)
+### Fase 1–4B (Selesai)
 
 | Feature | Scope | Status |
 |---------|-------|--------|
@@ -912,13 +997,13 @@ Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-
 | **Kegiatan** | Event/warga gathering — CRUD + budget + realisasi kas | ✅ **DONE** (Session 73 — [§15](#15-fase-2--surat-pengantar-pdfqr--kegiatan-session-73)) |
 | **Pendaftaran Peserta** | Quota + status machine + portal register/cancel | ✅ **DONE** (Session 74 — [§16](#16-fase-3--pendaftaran-peserta-kegiatan-session-74)) |
 | **Aset Komunitas** | Inventaris aset RT/RW — CommunityAsset register, custodian, summary, portal read-only 5-field | ✅ **DONE** (Session 75 — [§17](#17-fase-4a--aset-komunitas-communityasset-session-75)) |
+| **Peminjaman & Depresiasi Aset** | Loans lifecycle (satu-active-loan row-lock, OVERDUE derived) + depresiasi informatif straight-line + portal pinjaman-saya | ✅ **DONE** (Session 76 — [§18](#18-fase-4b--pinjaman-aset--depreciasi-informatif-session-76)) |
 
-### Fase 4B (Prioritas Berikutnya)
+### Fase 5 (Prioritas Berikutnya)
 
 | Feature | Scope | Estimasi |
 |---------|-------|----------|
-| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau beberapa kelurahan) — relasi parent-child — **ADR-025 DRAFT, menunggu keputusan founder** | 3–4 model baru |
-| **Peminjaman & Depresiasi Aset** | Loans lifecycle + depresiasi opsional (DEFER dari Fase 4A) | 1–2 model baru |
+| **Multi-RT/RW** | 1 tenant → N unit komunitas (RT di bawah RW, atau beberapa kelurahan) — relasi parent-child — **ADR-025 ACCEPTED (Option A: 1 tenant = 1 komunitas operasional) — Multi-RT/RW DEFERRED sampai demand terbukti**; `CommunityUnit` tetap jalur evolusi masa depan | 3–4 model baru |
 | **Mode Akuntansi Opsional** | Jurnal double-entry untuk kas — optional, off by default | Integration ke [`@qalcuity/workflow`](packages/workflow/src/index.ts) / Finance module |
 | **Offline Mode Bendahara** | IndexedDB + sync queue (pola POS Offline) | Reuse [`apps/web/lib/pos-offline/`](apps/web/lib/pos-offline) |
 | **Mobile RN Bendahara** | React Native — catat iuran, upload receipt, approve kas (mobile-first bendahara) | Extend [`apps/mobile`](apps/mobile) (JWT auth sudah ada) |
@@ -952,6 +1037,6 @@ Lokasi: [`plans/community-gov-product-analysis.md`](plans/community-gov-product-
 
 ---
 
-**Last Updated:** 15 Oktober 2026 (Session 75: Fase 4A — Aset Komunitas)
+**Last Updated:** 15 Oktober 2026 (Session 76: Fase 4B — Pinjaman Aset + Depresiasi Informatif)
 **Maintainer:** Qalcuity AI Team
-**Document Version:** 3.1 — Fase 4A (CommunityAsset + Summary + Portal 5-field)
+**Document Version:** 3.2 — Fase 4B (CommunityAssetLoan + Depresiasi Informatif + Portal Pinjaman)

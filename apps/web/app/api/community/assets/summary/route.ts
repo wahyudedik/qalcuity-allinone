@@ -10,6 +10,7 @@ import { requirePermissionForRoute } from '@/lib/session';
 import { hasPermission } from '@/lib/permissions';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/api-error';
+import { computeAssetBookValue } from '@/lib/community';
 
 /** Serialisasi Decimal Prisma → number aman-JSON (null-safe). */
 function decimalToNumber(value: unknown): number | null {
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
         const { tenantId } = auth;
         const where: Prisma.CommunityAssetWhereInput = { tenantId, deletedAt: null };
 
-        const [byCategory, byCondition, byStatus, totalStats] = await Promise.all([
+        const [byCategory, byCondition, byStatus, totalStats, bookRows] = await Promise.all([
             prisma.communityAsset.groupBy({
                 by: ['category'],
                 where,
@@ -73,17 +74,40 @@ export async function GET(request: Request) {
                 _count: { _all: true },
                 _sum: { acquisitionCost: true },
             }),
+            // Depresiasi informatif (spec §5.3): select minimal utk hitung bookValue
+            // per kategori via JS (computeAssetBookValue per row) — bukan kolom DB.
+            prisma.communityAsset.findMany({
+                where,
+                select: { category: true, acquisitionCost: true, acquisitionDate: true },
+            }),
         ]);
+
+        // Agregasi bookValue per kategori + total di JS (bukan query DB).
+        // `bookValue` null (biaya/tanggal tidak lengkap) TIDAK dihitung dalam sum —
+        // agar totalBookValue ≤ totalAcquisitionCost selalu konsisten.
+        const bookValueByCategory = new Map<string, number>();
+        let totalBookValue = 0;
+        for (const row of bookRows) {
+            const { bookValue } = computeAssetBookValue(row);
+            if (bookValue === null) continue;
+            bookValueByCategory.set(
+                row.category,
+                (bookValueByCategory.get(row.category) ?? 0) + bookValue
+            );
+            totalBookValue += bookValue;
+        }
 
         return NextResponse.json({
             success: true,
             data: {
                 totalAssets: totalStats._count._all,
                 totalAcquisitionCost: decimalToNumber(totalStats._sum.acquisitionCost),
+                totalBookValue,
                 byCategory: byCategory.map((row) => ({
                     category: row.category,
                     count: row._count._all,
                     totalAcquisitionCost: decimalToNumber(row._sum.acquisitionCost),
+                    totalBookValue: bookValueByCategory.get(row.category) ?? 0,
                 })),
                 byCondition: byCondition.map((row) => ({
                     condition: row.condition,

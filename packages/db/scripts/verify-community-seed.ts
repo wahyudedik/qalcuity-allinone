@@ -34,6 +34,12 @@
  *      REGISTERED; KGT/2026-003: 0); unik [tenantId, eventId, memberId];
  *      kuota terpenuhi (aktif REGISTERED+ATTENDED <= maxCapacity);
  *      registeredAt <= now
+ *  (l) Aset komunitas (Fase 4A): 12 baris, distribusi kategori/kondisi/status,
+ *      total nilai perolehan 25.800.000, 2 tanpa custodian
+ *  (m) Pinjaman aset (Fase 4B): 3 baris (1 RETURNED + 2 ACTIVE; OVERDUE-derived
+ *      = 1 via dueDate < hari-ini pada baris RETURNED=false); conditionAtLoan
+ *      terisi; one-active-loan-per-asset (max 1 ACTIVE per assetId); peminjam
+ *      aktif rt02-melati; assetId menunjuk aset existing; isolasi tenant
  */
 import { PrismaClient } from "@prisma/client";
 
@@ -580,6 +586,98 @@ async function main() {
         });
         check(`Isolasi: tenant lain ${other.id.slice(0, 8)}… punya 0 aset`,
             otherAssetCount === 0, `${otherAssetCount} aset`);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // (m) PINJAMAN ASET (CommunityAssetLoan) — Fase 4B
+    // ══════════════════════════════════════════════════════════
+    console.log("\n── (m) Pinjaman Aset (Fase 4B) ────────────────────");
+
+    const loans = await prisma.communityAssetLoan.findMany({
+        where: { tenantId },
+        include: {
+            asset: { select: { id: true, name: true, deletedAt: true } },
+            member: { select: { id: true, code: true, status: true } },
+        },
+        orderBy: { loanDate: "asc" },
+    });
+
+    // (1) Jumlah pinjaman = 3 (tanpa filter deletedAt — model memang tanpa soft-delete)
+    check("Jumlah pinjaman = 3", loans.length === 3, `${loans.length} pinjaman`);
+
+    // (2) Tepat 1 RETURNED, dengan returnedAt + conditionAtReturn + returnNotes ASCII
+    const returnedLoans = loans.filter((l) => l.status === "RETURNED");
+    check("Tepat 1 RETURNED", returnedLoans.length === 1, `${returnedLoans.length}`);
+    const returned = returnedLoans[0];
+    if (returned) {
+        check("RETURNED punya returnedAt", returned.returnedAt !== null,
+            returned.returnedAt?.toISOString() ?? "null");
+        check("RETURNED punya conditionAtReturn", returned.conditionAtReturn !== null,
+            returned.conditionAtReturn ?? "null");
+        const returnNotes = returned.returnNotes;
+        check("RETURNED returnNotes ASCII",
+            returnNotes !== null && /^[\x20-\x7E]+$/.test(returnNotes),
+            returnNotes ?? "null");
+    }
+
+    // (3) Tepat 2 ACTIVE
+    const activeLoans = loans.filter((l) => l.status === "ACTIVE");
+    check("Tepat 2 ACTIVE", activeLoans.length === 2, `${activeLoans.length}`);
+
+    // (4) Tepat 1 OVERDUE-derived (ACTIVE + dueDate < awal hari ini) = L2 AST/2026-002
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const overdueLoans = activeLoans.filter(
+        (l) => l.returnedAt === null && l.dueDate < todayStart
+    );
+    const overdueCodes = overdueLoans.map((l) => l.asset.name);
+    check("Tepat 1 OVERDUE-derived (dueDate lewat, ACTIVE)",
+        overdueLoans.length === 1, `${overdueLoans.length}: ${overdueCodes.join(", ") || "-"}`);
+
+    // (5) One-active-loan-per-asset: tidak ada assetId dengan >1 baris RETURNED=null
+    const activeByAsset = await prisma.communityAssetLoan.groupBy({
+        by: ["assetId"],
+        where: { tenantId, returnedAt: null },
+        _count: { _all: true },
+    });
+    const multiActive = activeByAsset.filter((g) => g._count._all > 1);
+    check("One-active-loan-per-asset (max 1 ACTIVE per aset)",
+        multiActive.length === 0, `${multiActive.length} aset dengan >1 aktif`);
+
+    // (6) Semua peminjam = CommunityMember ACTIVE rt02-melati
+    const inactiveBorrowers = loans.filter((l) => l.member.status !== "ACTIVE");
+    check("Semua peminjam berstatus ACTIVE",
+        inactiveBorrowers.length === 0,
+        inactiveBorrowers.map((l) => `${l.member.code}(${l.member.status})`).join(", ") || "-");
+
+    // (7) Semua assetId menunjuk aset existing (deletedAt null) di tenant yang sama
+    const orphanAssetLinks = loans.filter((l) => l.asset.deletedAt !== null);
+    check("Semua assetId menunjuk aset existing (non-deleted)",
+        orphanAssetLinks.length === 0,
+        orphanAssetLinks.map((l) => l.asset.name).join(", ") || "-");
+
+    // (8) conditionAtLoan terisi pada semua pinjaman (snapshot wajib)
+    const missingCondition = loans.filter((l) => !l.conditionAtLoan);
+    check("conditionAtLoan terisi pada semua pinjaman",
+        missingCondition.length === 0, `${missingCondition.length} tanpa kondisi`);
+
+    // (9) Unik (tenantId, assetId, memberId, loanDate) — bukti di atas unique index
+    const loanDupGroups = await prisma.communityAssetLoan.groupBy({
+        by: ["tenantId", "assetId", "memberId", "loanDate"],
+        where: { tenantId },
+        _count: { _all: true },
+    });
+    const loanDups = loanDupGroups.filter((g) => g._count._all > 1);
+    check("Unik (assetId, memberId, loanDate) — tanpa duplikat",
+        loanDups.length === 0, `${loanDups.length} grup duplikat`);
+
+    // (10) Isolasi tenant: 0 pinjaman di tenant selain rt02-melati
+    for (const other of otherTenants) {
+        const otherLoanCount = await prisma.communityAssetLoan.count({
+            where: { tenantId: other.id },
+        });
+        check(`Isolasi: tenant lain ${other.id.slice(0, 8)}… punya 0 pinjaman`,
+            otherLoanCount === 0, `${otherLoanCount} pinjaman`);
     }
 
     // ── Ringkasan ──

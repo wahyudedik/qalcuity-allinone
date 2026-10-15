@@ -73,6 +73,25 @@ function Api-Put($session, $path, $json) {
     }
 }
 
+function Api-Patch($session, $path, $json) {
+    try {
+        $r = Invoke-WebRequest -Uri "$base$path" -Method PATCH -Body $json -ContentType 'application/json' -WebSession $session -UseBasicParsing
+        return @{ status = $r.StatusCode; body = $r.Content }
+    }
+    catch {
+        $resp = $_.Exception.Response
+        $code = if ($resp) { [int]$resp.StatusCode } else { 0 }
+        $bodyText = ''
+        try {
+            $stream = $resp.GetResponseStream()
+            $reader = New-Object System.IO.StreamReader($stream)
+            $bodyText = $reader.ReadToEnd()
+        }
+        catch {}
+        return @{ status = $code; body = [string]$bodyText }
+    }
+}
+
 function Api-Delete($session, $path) {
     try {
         $r = Invoke-WebRequest -Uri "$base$path" -Method DELETE -WebSession $session -UseBasicParsing
@@ -633,6 +652,262 @@ else {
     Write-Host "`n[44] SKIP: id aset smoke dari [38] tidak tersedia" -ForegroundColor Yellow
 }
 
+# ═══ Fase 4B: Pinjaman Aset & Depresiasi Informatif (S45–S57) ═══
+
+# Resolve ids runtime: peminjam + aset seed per assetCode
+$loanMemberId = $null
+$assetTendaId = $null    # AST/2026-004 (BAIK, AKTIF — L1 seed RETURNED jadi available)
+$assetMicId = $null      # AST/2026-003 (PERAWATAN → ineligible)
+$assetMejaId = $null     # AST/2026-007 (AKTIF, tanpa custodian)
+$assetKarpetId = $null   # AST/2026-012 (PERABOT → cek bookValue usefulLife 10y)
+try {
+    $mr = Api-Get $ketua '/api/community/members?limit=1'
+    $loanMemberId = (($mr.body | ConvertFrom-Json).data[0]).id
+}
+catch {}
+try {
+    $ar = Api-Get $ketua '/api/community/assets?limit=100'
+    $adata = ($ar.body | ConvertFrom-Json).data
+    $assetTendaId = ($adata | Where-Object { $_.assetCode -eq 'AST/2026-004' } | Select-Object -First 1).id
+    $assetMicId = ($adata | Where-Object { $_.assetCode -eq 'AST/2026-003' } | Select-Object -First 1).id
+    $assetMejaId = ($adata | Where-Object { $_.assetCode -eq 'AST/2026-007' } | Select-Object -First 1).id
+    $assetKarpetId = ($adata | Where-Object { $_.assetCode -eq 'AST/2026-012' } | Select-Object -First 1).id
+}
+catch {}
+Write-Host "  loanMemberId: $loanMemberId | tenda: $assetTendaId | mic: $assetMicId | meja: $assetMejaId | karpet: $assetKarpetId"
+
+# 45. ketua POST /api/community/loans (aset BAIK+AKTIF) -> 201 ACTIVE, isOverdue false
+$ok45 = $false
+$smokeLoanId = $null
+$loanDateYmd = (Get-Date).ToString('yyyy-MM-dd')
+$dueDateYmd = (Get-Date).AddDays(14).ToString('yyyy-MM-dd')
+if ($loanMemberId -and $assetTendaId) {
+    Write-Host "`n[45] ketua POST /api/community/loans (expect 201 ACTIVE, isOverdue false)" -ForegroundColor Yellow
+    $body45 = '{"assetId":"' + $assetTendaId + '","memberId":"' + $loanMemberId + '","loanDate":"' + $loanDateYmd + '","dueDate":"' + $dueDateYmd + '","notes":"Smoke test pinjaman Fase 4B"}'
+    $r = Api-Post $ketua '/api/community/loans' $body45
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    try {
+        $d45 = ($r.body | ConvertFrom-Json).data
+        $smokeLoanId = $d45.id
+        $ok45 = ($r.status -eq 201) -and ([bool]$smokeLoanId) -and ($d45.status -eq 'ACTIVE') -and ($d45.isOverdue -eq $false) -and ([bool]$d45.conditionAtLoan)
+        Write-Host "  id: $smokeLoanId | status: $($d45.status) | isOverdue: $($d45.isOverdue) | conditionAtLoan: $($d45.conditionAtLoan)"
+    }
+    catch { Write-Host "  parse error: $_" }
+    Write-Host "  OK: $ok45 (expect True)"
+}
+else {
+    Write-Host "`n[45] SKIP: loanMemberId/AST-2026-004 tidak ter-resolve" -ForegroundColor Yellow
+}
+
+# 46. ketua POST loan aset sama lagi -> 409 already on loan (one-active-loan-per-asset via FOR UPDATE)
+$ok46 = $false
+if ($loanMemberId -and $assetTendaId) {
+    Write-Host "`n[46] ketua POST loan aset sama lagi (expect 409 already on loan)" -ForegroundColor Yellow
+    $r = Api-Post $ketua '/api/community/loans' $body45
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok46 = ($r.status -eq 409) -and ($r.body -match 'already on loan')
+    Write-Host "  OK: $ok46 (expect True)"
+}
+else {
+    Write-Host "`n[46] SKIP: dependency [45] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 47. ketua POST loan aset PERAWATAN (AST/2026-003) -> 409 not available (eligibility)
+$ok47 = $false
+if ($loanMemberId -and $assetMicId) {
+    Write-Host "`n[47] ketua POST loan aset PERAWATAN (expect 409 not available)" -ForegroundColor Yellow
+    $body47 = '{"assetId":"' + $assetMicId + '","memberId":"' + $loanMemberId + '","loanDate":"' + $loanDateYmd + '","dueDate":"' + $dueDateYmd + '","notes":"Smoke test pinjaman Fase 4B mic"}'
+    $r = Api-Post $ketua '/api/community/loans' $body47
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok47 = ($r.status -eq 409) -and ($r.body -match 'not available')
+    Write-Host "  OK: $ok47 (expect True)"
+}
+else {
+    Write-Host "`n[47] SKIP: AST-2026-003 tidak ter-resolve" -ForegroundColor Yellow
+}
+
+# 48. ketua POST loan memberId ghost -> 404 member not found
+$ok48 = $false
+if ($assetTendaId) {
+    Write-Host "`n[48] ketua POST loan ghost memberId (expect 404 member not found)" -ForegroundColor Yellow
+    $body48 = '{"assetId":"' + $assetTendaId + '","memberId":"cm_smoke_ghost_x","loanDate":"' + $loanDateYmd + '","dueDate":"' + $dueDateYmd + '"}'
+    $r = Api-Post $ketua '/api/community/loans' $body48
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok48 = ($r.status -eq 404) -and ($r.body -match 'not found')
+    Write-Host "  OK: $ok48 (expect True)"
+}
+else {
+    Write-Host "`n[48] SKIP: AST-2026-004 tidak ter-resolve" -ForegroundColor Yellow
+}
+
+# 49. ketua PATCH return loan [45] -> 200 RETURNED + returnedAt terisi
+$ok49 = $false
+if ($smokeLoanId) {
+    Write-Host "`n[49] ketua PATCH return loan (expect 200 RETURNED)" -ForegroundColor Yellow
+    $r = Api-Patch $ketua "/api/community/loans/$smokeLoanId/return" '{"conditionAtReturn":"BAIK","returnNotes":"Smoke return ok"}'
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    try {
+        $d49 = ($r.body | ConvertFrom-Json).data
+        $ok49 = ($r.status -eq 200) -and ($d49.status -eq 'RETURNED') -and ([bool]$d49.returnedAt)
+        Write-Host "  status(data): $($d49.status) | returnedAt: $($d49.returnedAt)"
+    }
+    catch { Write-Host "  parse error: $_" }
+    Write-Host "  OK: $ok49 (expect True)"
+}
+else {
+    Write-Host "`n[49] SKIP: smokeLoanId [45] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 50. ketua PATCH return lagi loan sama -> 409 already been returned
+$ok50 = $false
+if ($smokeLoanId) {
+    Write-Host "`n[50] ketua PATCH return loan sama lagi (expect 409 already been returned)" -ForegroundColor Yellow
+    $r = Api-Patch $ketua "/api/community/loans/$smokeLoanId/return" '{"returnNotes":"Smoke return dup"}'
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok50 = ($r.status -eq 409) -and ($r.body -match 'already been returned')
+    Write-Host "  OK: $ok50 (expect True)"
+}
+else {
+    Write-Host "`n[50] SKIP: smokeLoanId [45] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 51. ketua GET ?status=active -> total >= 2 (seed L2+L3) & smokeLoanId tidak ada; ?status=overdue -> total >= 1
+$ok51 = $false
+Write-Host "`n[51] ketua GET loans status=active/overdue (expect active>=2 tanpa smokeLoan, overdue>=1)" -ForegroundColor Yellow
+$rAct = Api-Get $ketua '/api/community/loans?status=active&limit=100'
+$rOvd = Api-Get $ketua '/api/community/loans?status=overdue&limit=100'
+try {
+    $jAct = $rAct.body | ConvertFrom-Json
+    $jOvd = $rOvd.body | ConvertFrom-Json
+    $smokeInActive = @($jAct.data | Where-Object { $_.id -eq $smokeLoanId }).Count -gt 0
+    $activeOk = ($rAct.status -eq 200) -and ($jAct.total -ge 2) -and (-not $smokeInActive)
+    $overdueOk = ($rOvd.status -eq 200) -and ($jOvd.total -ge 1)
+    Write-Host "  active total: $($jAct.total) (smokeLoan present: $smokeInActive) | overdue total: $($jOvd.total)"
+    $ok51 = $activeOk -and $overdueOk
+}
+catch { Write-Host "  parse error: $_" }
+Write-Host "  OK: $ok51 (expect True)"
+
+# 52. ketua POST loan AST-2026-007 -> 201; PUT extend dueDate+7d -> 200; PUT extend loan RETURNED -> 409
+$ok52 = $false
+$extendDueYmd = (Get-Date).AddDays(21).ToString('yyyy-MM-dd')
+if ($loanMemberId -and $assetMejaId) {
+    Write-Host "`n[52] create loan Meja + extend 200 + extend RETURNED 409" -ForegroundColor Yellow
+    $body52 = '{"assetId":"' + $assetMejaId + '","memberId":"' + $loanMemberId + '","loanDate":"' + $loanDateYmd + '","dueDate":"' + $dueDateYmd + '","notes":"Smoke test pinjaman Fase 4B meja"}'
+    $rCreate = Api-Post $ketua '/api/community/loans' $body52
+    $smokeLoan2Id = $null
+    try { $smokeLoan2Id = ($rCreate.body | ConvertFrom-Json).data.id } catch {}
+    Write-Host "  create: $($rCreate.status) | id2: $smokeLoan2Id"
+    $extendOk = $false
+    if ($smokeLoan2Id) {
+        $rExt = Api-Put $ketua "/api/community/loans/$smokeLoan2Id" ('{"dueDate":"' + $extendDueYmd + '"}')
+        Write-Host "  extend ACTIVE: $($rExt.status) (expect 200)"
+        $extendOk = ($rExt.status -eq 200) -and ($rExt.body -match $extendDueYmd)
+    }
+    $extendReturnedOk = $false
+    if ($smokeLoanId) {
+        $rExtRet = Api-Put $ketua "/api/community/loans/$smokeLoanId" ('{"dueDate":"' + $extendDueYmd + '"}')
+        Write-Host "  extend RETURNED: $($rExtRet.status) (expect 409)"
+        Write-Host "  body(first 300): $($rExtRet.body.Substring(0, [Math]::Min(300, $rExtRet.body.Length)))"
+        $extendReturnedOk = ($rExtRet.status -eq 409) -and ($rExtRet.body -match 'already been returned')
+    }
+    $ok52 = ([bool]$smokeLoan2Id) -and $extendOk -and $extendReturnedOk
+    Write-Host "  OK: $ok52 (expect True)"
+}
+else {
+    Write-Host "`n[52] SKIP: loanMemberId/AST-2026-007 tidak ter-resolve" -ForegroundColor Yellow
+}
+
+# 53. warga GET /api/community/portal/loans -> 200, 8-field whitelist (tanpa returnNotes/createdBy/acquisitionCost), member linked -> >=1 baris
+$ok53 = $false
+Write-Host "`n[53] warga GET /api/community/portal/loans (expect 200, 8-field only, member>=1 row)" -ForegroundColor Yellow
+$r = Api-Get $warga '/api/community/portal/loans'
+Write-Host "  status: $($r.status)"
+$leak53 = ($r.body -match 'returnNotes') -or ($r.body -match 'createdBy') -or ($r.body -match 'acquisitionCost')
+try {
+    $j53 = $r.body | ConvertFrom-Json
+    $memberRowsOk = ($null -eq $j53.member) -or (@($j53.data).Count -ge 1)
+    Write-Host "  member: $(if ($null -eq $j53.member) { 'null' } else { 'linked' }) | rows: @($($j53.data).Count) | leak: $leak53"
+    $ok53 = ($r.status -eq 200) -and (-not $leak53) -and $memberRowsOk
+}
+catch { Write-Host "  parse error: $_" }
+Write-Host "  OK: $ok53 (expect True)"
+
+# 54. bendahara POST /api/community/loans -> 403 (BENDAHARA tanpa community:manage)
+$ok54 = $false
+if ($loanMemberId -and $assetTendaId) {
+    Write-Host "`n[54] bendahara POST /api/community/loans (expect 403)" -ForegroundColor Yellow
+    $r = Api-Post $bendahara '/api/community/loans' $body45
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok54 = ($r.status -eq 403)
+    Write-Host "  OK: $ok54 (expect True)"
+}
+else {
+    Write-Host "`n[54] SKIP: dependency [45] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 55. warga POST internal /api/community/loans -> 403 (hanya community:portal)
+$ok55 = $false
+if ($loanMemberId -and $assetTendaId) {
+    Write-Host "`n[55] warga POST internal /api/community/loans (expect 403)" -ForegroundColor Yellow
+    $r = Api-Post $warga '/api/community/loans' $body45
+    Write-Host "  status: $($r.status)"
+    Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+    $ok55 = ($r.status -eq 403)
+    Write-Host "  OK: $ok55 (expect True)"
+}
+else {
+    Write-Host "`n[55] SKIP: dependency [45] tidak tersedia" -ForegroundColor Yellow
+}
+
+# 56. admin tenant lain GET /api/community/loans -> 403/404 + no leak (AST/2026- / "assetId")
+$ok56 = $false
+Write-Host "`n[56] admin@qalcuity.com GET /api/community/loans (expect 403/404, no leak)" -ForegroundColor Yellow
+$r = Api-Get $admin '/api/community/loans?limit=5'
+Write-Host "  status: $($r.status)"
+Write-Host "  body(first 300): $($r.body.Substring(0, [Math]::Min(300, $r.body.Length)))"
+$denied56 = ($r.status -eq 403) -or ($r.status -eq 404)
+$leak56 = ($r.body -match 'AST/2026-') -or ($r.body -match '"assetId"')
+Write-Host "  denied(403/404): $denied56 | data leak: $leak56"
+$ok56 = $denied56 -and (-not $leak56)
+Write-Host "  OK: $ok56 (expect True)"
+
+# 57. ketua GET aset AST/2026-012 -> bookValue terisi (0 < bv < 700000), usefulLifeYears=10; summary totalBookValue <= totalAcquisitionCost
+$ok57 = $false
+if ($assetKarpetId) {
+    Write-Host "`n[57] ketua GET aset Karpet (bookValue 0<bv<700000, usefulLife=10) + summary (expect True x2)" -ForegroundColor Yellow
+    $rDet = Api-Get $ketua "/api/community/assets/$assetKarpetId"
+    $detailOk = $false
+    try {
+        $det = ($rDet.body | ConvertFrom-Json).data
+        $bv = $det.bookValue
+        $ul = $det.usefulLifeYears
+        Write-Host "  bookValue: $bv | usefulLifeYears: $ul (expect 10) | acquisitionCost: $($det.acquisitionCost)"
+        $detailOk = ($rDet.status -eq 200) -and ($null -ne $bv) -and ($bv -gt 0) -and ($bv -lt 700000) -and ($ul -eq 10)
+    }
+    catch { Write-Host "  parse error: $_" }
+    $summaryOk = $false
+    $rSum = Api-Get $ketua '/api/community/assets/summary'
+    try {
+        $sum = ($rSum.body | ConvertFrom-Json).data
+        Write-Host "  totalBookValue: $($sum.totalBookValue) | totalAcquisitionCost: $($sum.totalAcquisitionCost)"
+        $summaryOk = ($rSum.status -eq 200) -and ($null -ne $sum.totalBookValue) -and ($sum.totalBookValue -le $sum.totalAcquisitionCost)
+    }
+    catch { Write-Host "  parse error: $_" }
+    $ok57 = $detailOk -and $summaryOk
+    Write-Host "  OK: $ok57 (expect True)"
+}
+else {
+    Write-Host "`n[57] SKIP: AST-2026-012 tidak ter-resolve" -ForegroundColor Yellow
+}
+
 Write-Host "`n=== RINGKASAN SESSION 73/74 ===" -ForegroundColor Cyan
 Write-Host "  [17] letters page:      $ok17" -ForegroundColor $(if ($ok17) { 'Green' } else { 'Red' })
 Write-Host "  [18] events page:       $ok18" -ForegroundColor $(if ($ok18) { 'Green' } else { 'Red' })
@@ -666,5 +941,20 @@ Write-Host "  [41] portal 5-field no leak:    $ok41" -ForegroundColor $(if ($ok4
 Write-Host "  [42] bendahara POST 403:        $ok42" -ForegroundColor $(if ($ok42) { 'Green' } else { 'Red' })
 Write-Host "  [43] cross-tenant denied:       $ok43" -ForegroundColor $(if ($ok43) { 'Green' } else { 'Red' })
 Write-Host "  [44] DELETE + turun 1:          $ok44" -ForegroundColor $(if ($ok44) { 'Green' } else { 'Red' })
+
+Write-Host "`n--- Fase 4B: Pinjaman & Depresiasi ---" -ForegroundColor Cyan
+Write-Host "  [45] create ACTIVE 201:          $ok45" -ForegroundColor $(if ($ok45) { 'Green' } else { 'Red' })
+Write-Host "  [46] duplicate 409:              $ok46" -ForegroundColor $(if ($ok46) { 'Green' } else { 'Red' })
+Write-Host "  [47] PERAWATAN 409:              $ok47" -ForegroundColor $(if ($ok47) { 'Green' } else { 'Red' })
+Write-Host "  [48] ghost member 404:           $ok48" -ForegroundColor $(if ($ok48) { 'Green' } else { 'Red' })
+Write-Host "  [49] return 200 RETURNED:        $ok49" -ForegroundColor $(if ($ok49) { 'Green' } else { 'Red' })
+Write-Host "  [50] double return 409:          $ok50" -ForegroundColor $(if ($ok50) { 'Green' } else { 'Red' })
+Write-Host "  [51] filters active/overdue:     $ok51" -ForegroundColor $(if ($ok51) { 'Green' } else { 'Red' })
+Write-Host "  [52] extend 200 + returned 409:  $ok52" -ForegroundColor $(if ($ok52) { 'Green' } else { 'Red' })
+Write-Host "  [53] portal 8-field no leak:     $ok53" -ForegroundColor $(if ($ok53) { 'Green' } else { 'Red' })
+Write-Host "  [54] bendahara POST 403:         $ok54" -ForegroundColor $(if ($ok54) { 'Green' } else { 'Red' })
+Write-Host "  [55] warga internal POST 403:    $ok55" -ForegroundColor $(if ($ok55) { 'Green' } else { 'Red' })
+Write-Host "  [56] cross-tenant denied:        $ok56" -ForegroundColor $(if ($ok56) { 'Green' } else { 'Red' })
+Write-Host "  [57] bookValue + summary:        $ok57" -ForegroundColor $(if ($ok57) { 'Green' } else { 'Red' })
 
 Write-Host "`n=== SELESAI ===" -ForegroundColor Cyan

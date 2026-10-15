@@ -31,7 +31,8 @@
 - [ADR-022: Period Closing Wizard](#adr-022-period-closing-wizard)
 - [ADR-023: Control Dashboard Tiers](#adr-023-control-dashboard-tiers)
 - [ADR-024: QR Verify = Public Page under /verify/*](#adr-024-qr-verify--public-page-under-verify)
-- [ADR-025: Multi-RT/RW Tenancy Model (DRAFT)](#adr-025-multi-rt-rw-tenancy-model-draft)
+- [ADR-025: Multi-RT/RW Tenancy Model (ACCEPTED)](#adr-025-multi-rt-rw-tenancy-model-accepted)
+- [ADR-026: Depresiasi Informatif Community (ACCEPTED)](#adr-026-depreciasi-informatif-community-accepted)
 
 ---
 
@@ -1453,12 +1454,12 @@ Surat pengantar (domisili, SKTM, dll.) dicetak dalam bentuk PDF fisik dengan QR 
 
 ---
 
-## ADR-025: Multi-RT/RW Tenancy Model (DRAFT)
+## ADR-025: Multi-RT/RW Tenancy Model (ACCEPTED — Option A)
 
-**Status:** 🟡 **DRAFT — Menunggu keputusan founder**
-**Date:** 2026-10-15 (diajukan Session 75 — Fase 4A Aset Komunitas)
+**Status:** 🟢 **ACCEPTED — Option A (1 tenant = 1 komunitas operasional)** — diratifikasi founder 15 Okt 2026
+**Date:** 2026-10-15 (diajukan Session 75; diratifikasi Session 76 — Fase 4B)
 
-### Decision (PROPOSED — belum final)
+### Decision (ACCEPTED — Option A)
 
 Model tenancy untuk Community: **1 tenant = 1 unit komunitas tunggal (mis. 1 RT)** vs **1 tenant = induk (RW/kelurahan) dengan N unit RT di bawahnya** — menentukan desain `CommunityUnit` parent-child untuk Fase 4B (Multi-RT/RW).
 
@@ -1490,9 +1491,57 @@ Modul Community (Fase 1–4A) mengasumsikan **1 tenant = 1 RT/RW** — semua dat
 - ⚠️ **Tenant isolation bertingkat** — setiap query wajib filter `tenantId` + `unitId` (kecuali scope RW).
 - ⚠️ RBAC bertambah unit-scope check — memperluas route-permissions.
 
-### Founder Approval Required
+### Ratification (Session 76 — 15 Okt 2026)
 
-> ⚠️ **ADR ini DRAFT.** Implementasi Multi-RT/RW (Fase 4B) TIDAK dimulai sebelum founder memilih Opsi A/B/C. Fase 4A (aset) selesai tanpa keputusan ini karena mengasumsikan 1 tenant = 1 unit (status quo Opsi A).
+> ✅ **Founder meratifikasi Opsi A:** 1 tenant = 1 komunitas operasional (1 RT atau 1 RW mandiri). Model `CommunityUnit` parent-child TIDAK dibangun sekarang; jalur evolusi tetap terbuka bila demand multi-RT/RW terbukti dari pelanggan (skenario migrasi = tambah `unitId` di 7 model Community, sesuai skenario Opsi B di tabel atas).
+
+**Consequences (Opsi A — dipilih):**
+
+- ✅ Tanpa migrasi data — semua model Community existing tetap tanpa `unitId`.
+- ✅ Tenant isolation sederhana (satu lapis `tenantId`) — sesuai arsitektur multi-tenant existing.
+- ✅ Seed rt02-melati tetap valid sebagai 1 komunitas operasional.
+- ⚠️ RW dengan beberapa RT membutuhkan akun terpisah per RT (diterima — mayoritas target pasar adalah RT mandiri).
+- 📌 `CommunityUnit` tercatat sebagai **deferred evolution path** (lihat §13.4 spec Fase 4B & §19 COMMUNITY-MODULE.md).
+
+---
+
+## ADR-026: Depresiasi Informatif Community (ACCEPTED)
+
+**Status:** 🟢 **ACCEPTED**
+**Date:** 2026-10-15 (Session 76 — Fase 4B: Pinjaman Aset + Depresiasi Informatif)
+
+### Decision
+
+Estimasi nilai buku aset komunitas memakai **depresiasi straight-line informatif, dihitung on-the-fly**:
+
+```
+bookValue = max(0, round(biayaPerolehan × (1 − bulanPemakaian / bulanUmurPakai)))
+```
+
+- Umur pakai per kategori (`ASSET_USEFUL_LIFE_YEARS` di `apps/web/lib/community.ts`): ELEKTRONIK 5, PERABOT 10, KENDARAAN 5, ALAT_KERJA 8, BANGUNAN 20, LAINNYA 5 (fallback).
+- **Tanpa journal entries, tanpa kolom tersimpan, tanpa scheduled job** — dihitung ulang setiap request.
+- `bookValue` hanya di **detail aset internal** + **summary internal** — tidak pernah di list aset dan tidak pernah di portal warga.
+
+### Context
+
+Pengurus RT/RW perlu estimasi sisa umur pakai aset (laporan musyawarah, perencanaan penggantian), tetapi modul Community **bukan modul akuntansi** — tidak ada buku besar, tidak ada journal engine di domain Community.
+
+### Options
+
+| Opsi | Deskripsi | Alasan |
+|------|-----------|--------|
+| (a) Tanpa depresiasi | Tampilkan biaya perolehan saja | Ditolak — pengurus butuh estimasi sisa nilai |
+| **(b) Straight-line informatif** | Hitung on-the-fly, tampil sebagai estimasi | **Diterima** — sederhana, transparan, non-akuntansi |
+| (c) Full skedul + jurnal | Penyusutan berjadwal + posting GL | Ditolak — over-engineering; mencemari boundary akuntansi Community |
+
+### Consequences
+
+- ✅ Angka adalah **estimasi informatif** — UI mencantumkan caption "Estimasi informatif — bukan laporan akuntansi".
+- ✅ Tanpa state tambahan di database (tidak ada kolom `bookValue` tersimpan, tidak ada tabel skedul).
+- ✅ Konstanta umur pakai per kategori mudah diubah di satu tempat (`ASSET_USEFUL_LIFE_YEARS`).
+- ⚠️ Umur pakai **bukan tenant-configurable** saat ini — defer ke konfigurasi industri bila ada kebutuhan nyata.
+- ⚠️ Pembulatan integer rupiah (`Math.round`) — selisih maksimal ±1 rupiah per aset, tidak material.
+- 🚫 **Non-goals:** jurnal/GL, skedul penyusutan berjadwal, disposal/penjualan aset, perubahan estimasi (revaluation).
 
 ---
 

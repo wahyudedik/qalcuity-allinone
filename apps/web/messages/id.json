@@ -259,7 +259,8 @@
                 "portal": "Portal Warga",
                 "letters": "Surat",
                 "events": "Kegiatan",
-                "assets": "Aset"
+                "assets": "Aset",
+                "loans": "Pinjaman"
             }
         },
         "common": {
@@ -695,6 +696,25 @@
                 "empty": "Belum ada aset",
                 "location": "Lokasi",
                 "quickDesc": "Aset milik komunitas"
+            },
+            "loans": {
+                "title": "Pinjaman Aset Saya",
+                "subtitle": "Riwayat peminjaman aset komunitas atas nama Anda",
+                "badge": {
+                    "active": "Dipinjam",
+                    "overdue": "Terlambat",
+                    "returned": "Sudah Kembali"
+                },
+                "field": {
+                    "loanDate": "Tgl Pinjam",
+                    "dueDate": "Tgl Kembali",
+                    "returnedAt": "Dikembalikan",
+                    "conditionAtLoan": "Kondisi saat Dipinjam",
+                    "conditionAtReturn": "Kondisi saat Kembali"
+                },
+                "notReturned": "Belum dikembalikan",
+                "empty": "Belum ada pinjaman atas nama Anda",
+                "emptyMember": "Akun Anda belum terhubung dengan data warga — hubungi pengurus RT"
             }
         },
         "letters": {
@@ -988,7 +1008,82 @@
                 "byCategory": "Per Kategori",
                 "byCondition": "Per Kondisi",
                 "count": "Jumlah",
-                "totalCost": "Total Nilai"
+                "totalCost": "Total Nilai",
+                "bookValue": "Nilai Buku (estimasi)",
+                "bookValueCaption": "Estimasi informatif — bukan laporan akuntansi"
+            },
+            "onLoan": "Dipinjam"
+        },
+        "loans": {
+            "title": "Pinjaman Aset",
+            "subtitle": "Peminjaman & pengembalian aset komunitas",
+            "add": "Tambah Pinjaman",
+            "empty": "Belum ada pinjaman aset",
+            "loanedOut": "Sedang dipinjam",
+            "stat": {
+                "active": "Sedang Dipinjam",
+                "overdue": "Terlambat",
+                "returnedThisMonth": "Kembali Bulan Ini",
+                "total": "Total Pinjaman"
+            },
+            "filter": {
+                "allStatuses": "Semua Status",
+                "allAssets": "Semua Aset",
+                "allMembers": "Semua Anggota",
+                "reset": "Reset Filter"
+            },
+            "search": {
+                "placeholder": "Cari aset, anggota, catatan..."
+            },
+            "badge": {
+                "active": "Dipinjam",
+                "overdue": "Terlambat",
+                "returned": "Sudah Kembali"
+            },
+            "table": {
+                "asset": "Aset",
+                "member": "Anggota",
+                "loanDate": "Tgl Pinjam",
+                "dueDate": "Tgl Kembali",
+                "returnedAt": "Dikembalikan",
+                "conditionAtReturn": "Kondisi saat Kembali",
+                "status": "Status"
+            },
+            "action": {
+                "return": "Kembalikan",
+                "extend": "Perpanjang"
+            },
+            "form": {
+                "required": "Aset dan anggota wajib dipilih",
+                "dueBeforeLoan": "Tgl kembali tidak boleh sebelum tgl pinjam",
+                "extendAfterLoan": "Tgl perpanjangan harus setelah tanggal hari ini",
+                "asset": "Aset",
+                "selectAsset": "Pilih aset...",
+                "member": "Anggota",
+                "selectMember": "Pilih anggota...",
+                "loanDate": "Tgl Pinjam",
+                "dueDate": "Tgl Kembali",
+                "notes": "Catatan"
+            },
+            "toast": {
+                "created": "Pinjaman aset berhasil dibuat",
+                "returned": "Pengembalian aset berhasil dicatat",
+                "extended": "Tgl kembali berhasil diperpanjang"
+            },
+            "return": {
+                "title": "Kembalikan Aset",
+                "condition": "Kondisi saat Kembali",
+                "notes": "Catatan Pengembalian",
+                "submit": "Kembalikan"
+            },
+            "extend": {
+                "title": "Perpanjang Tgl Kembali",
+                "newDueDate": "Tgl Kembali Baru",
+                "submit": "Perpanjang"
+            },
+            "accessDenied": {
+                "title": "Akses Ditolak",
+                "desc": "Anda tidak memiliki izin untuk mengelola pinjaman aset."
             }
         }
     },

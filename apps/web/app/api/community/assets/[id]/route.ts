@@ -13,7 +13,7 @@ import { sanitizeObject } from '@/lib/sanitize';
 import { logAudit, toAuditPayload, diffValues } from '@/lib/audit';
 import { handleApiError } from '@/lib/api-error';
 import { updateCommunityAssetSchema, formatZodError } from '@/lib/validation-schemas';
-import { ASSET_LIST_SELECT, serializeCommunityAsset } from '@/lib/community';
+import { ASSET_LIST_SELECT, serializeCommunityAsset, computeAssetBookValue } from '@/lib/community';
 
 /**
  * GET /api/community/assets/[id] — detail aset komunitas (community:view).
@@ -49,7 +49,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
             return NextResponse.json({ error: MSG_COMMUNITY_ASSETS.ASSET_NOT_FOUND }, { status: 404 });
         }
 
-        return NextResponse.json({ success: true, data: serializeCommunityAsset(asset) });
+        // Depresiasi informatif (spec §5): straight-line on-the-fly — TIDAK menyimpan
+        // kolom bookValue di DB. `bookValue` null bila biaya/tanggal perolehan tidak
+        // lengkap; `usefulLifeYears` selalu terisi (default 5 thn utk LAINNYA).
+        const { bookValue, usefulLifeYears } = computeAssetBookValue(asset);
+
+        return NextResponse.json({
+            success: true,
+            data: { ...serializeCommunityAsset(asset), bookValue, usefulLifeYears },
+        });
     } catch (error) {
         return handleApiError(error);
     }

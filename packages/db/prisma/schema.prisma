@@ -187,6 +187,7 @@ model Tenant {
   communityEventParticipants CommunityEventParticipant[]
   // Community module (Fase 4A: Aset Komunitas)
   communityAssets            CommunityAsset[]
+  communityAssetLoans        CommunityAssetLoan[]
 }
 
 model User {
@@ -3046,6 +3047,7 @@ model CommunityMember {
   letters     CommunityLetter[] // Fase 2: riwayat surat pengantar milik warga
   eventParticipations CommunityEventParticipant[] // Fase 3: pendaftaran kegiatan
   custodiedAssets     CommunityAsset[]             // Fase 4A: aset yang menjadi penanggung jawab member ini
+  borrowedAssets      CommunityAssetLoan[]         // Fase 4B: riwayat sebagai peminjam
 
   // Unik: 1 kode warga per tenant. Saat warga pindah → status MOVED + buat record
   // baru (code baru) — tagihan lama tetap menempel ke record lama (riwayat utuh).
@@ -3346,6 +3348,7 @@ model CommunityAsset {
   location    String?  // Lokasi penyimpanan, e.g. "Balai RT", "Gudang belakang"
   custodianMemberId String?              // Relasi opsional ke CommunityMember — SetNull saat member dihapus
   custodian   CommunityMember? @relation(fields: [custodianMemberId], references: [id], onDelete: SetNull)
+  loans       CommunityAssetLoan[]       // Fase 4B: riwayat peminjaman
 
   notes       String?
 
@@ -3363,4 +3366,49 @@ model CommunityAsset {
   @@index([tenantId, condition])
   @@index([tenantId, status])
   @@index([tenantId])
+}
+
+// ─── Community Module (Fase 4B: Pinjaman Aset) ────────────────────────────────
+// Referensi: plans/community-phase4b-loan-depreciation-implementation.md §2
+// Ledger pinjaman aset RT/RW. Riwayat IMMUTABLE — tanpa soft-delete, tanpa
+// endpoint hapus. OVERDUE derived dari dueDate (bukan kolom status).
+
+model CommunityAssetLoan {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Relasi — RESTRICT: pinjaman = pertanggungjawaban; riwayat tidak boleh
+  // kehilangan relasi. Delete aset hanya soft-delete (tidak menyentuh FK);
+  // hard delete hanya di cleanup — urutan: loans dulu, baru assets.
+  assetId    String
+  asset      CommunityAsset    @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  memberId   String            // borrower
+  member     CommunityMember   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  // Tanggal
+  loanDate   DateTime          // tanggal pinjam (wajib)
+  dueDate    DateTime          // jatuh tempo (WAJIB — Q1); UI default loanDate + 14 hari
+  returnedAt DateTime?         // null = masih dipinjam; terisi ⇔ status RETURNED
+
+  // Snapshot kondisi (vocabulary sama dengan CommunityAsset.condition)
+  conditionAtLoan   String  @default("BAIK") // server-side snapshot dari asset.condition saat CREATE
+  conditionAtReturn String?                  // diisi opsional saat return
+
+  // State — ACTIVE | RETURNED saja. OVERDUE = derived (formatYmd compare, APP_TZ).
+  status     String   @default("ACTIVE")
+
+  notes       String?  // catatan saat peminjaman
+  returnNotes String?  // catatan saat pengembalian
+
+  // Meta
+  createdBy   String?
+  returnedBy  String?  // userId yang mencatat pengembalian
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, assetId])    // list per aset + active-loan check
+  @@index([tenantId, memberId])   // pinjaman saya / per warga
+  @@index([tenantId, status])     // filter status
+  @@index([tenantId, dueDate])    // scan jatuh tempo / overdue
 }

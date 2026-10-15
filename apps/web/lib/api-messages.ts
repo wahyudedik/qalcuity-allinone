@@ -546,4 +546,20 @@ export const MSG_COMMUNITY_ASSETS = {
     DUPLICATE_ASSET_CODE: 'Asset code already exists',
 } as const;
 
+/**
+ * Pesan API Community Fase 4B — Peminjaman Aset (loans).
+ * Referensi: plans/community-phase4b-loan-depreciation-implementation.md §4.3.
+ * Catatan: `MEMBER_NOT_FOUND` → reuse MSG_COMMUNITY (Fase 1); `PERMISSION_DENIED`
+ * → reuse MSG_COMMUNITY — tanpa duplikat string.
+ */
+export const MSG_COMMUNITY_LOANS = {
+    LOAN_CREATED: 'Loan created',
+    LOAN_UPDATED: 'Loan updated',
+    LOAN_RETURNED: 'Loan returned',
+    LOAN_NOT_FOUND: 'Loan not found',
+    ASSET_ALREADY_ON_LOAN: 'Asset is already on loan',
+    ASSET_NOT_AVAILABLE: 'Asset is not available for loan',
+    LOAN_ALREADY_RETURNED: 'Loan has already been returned',
+} as const;
+
 export type ApiMessageKey = keyof typeof MSG;

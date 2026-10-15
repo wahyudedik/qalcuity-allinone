@@ -1,6 +1,6 @@
 /**
- * Cleanup script (Session 72 final verification + Session 74 Fase 3): bersihkan
- * artifact eksperimen/smoke di DB lokal sehingga state kembali ke seed-baseline.
+ * Cleanup script (Session 72 final verification + Session 74 Fase 3 + Session 76 Fase 4B):
+ * bersihkan artifact eksperimen/smoke di DB lokal sehingga state kembali ke seed-baseline.
  *
  * Yang dihapus/dikembalikan (targeted, BUKAN reset DB):
  *  1. CommunityDuesPayment yatim: payment pada bill ber-status UNPAID & amountPaid=0.
@@ -13,6 +13,10 @@
  *     menuntut peserta dihapus sebelum kegiatan).
  *  5. CommunityEventParticipant di luar baseline seed 8 baris (artefak smoke Fase 3 /
  *     eksperimen portal) + status baris baseline yang ter-flip dikembalikan ke seed.
+ *  6. CommunityAssetLoan dengan notes prefix 'Smoke test pinjaman' (artefak smoke
+ *     Fase 4B) — DIHAPUS SEBELUM aset karena FK RESTRICT assetId menuntut
+ *     pinjaman dihapus lebih dulu.
+ *  7. CommunityAsset dengan name prefix 'Smoke test aset' (artefak smoke Fase 4A).
  *
  * Idempoten: aman dijalankan berulang.
  */
@@ -160,7 +164,29 @@ async function main() {
         console.log(`  - ${p.event.eventNumber} ${p.member.code}: ${p.status} -> ${baseline.get(`${p.eventId}|${p.memberId}`) ?? p.status}`);
     }
 
-    // ─── 6. Aset asap (prefix 'Smoke test aset') ─────────────────
+    // ─── 6. Pinjaman asap (notes prefix 'Smoke test pinjaman') ───
+    //     DIHAPUS SEBELUM aset (FK RESTRICT pada assetId).
+    const smokeLoans = await prisma.communityAssetLoan.findMany({
+        where: { tenantId, notes: { startsWith: "Smoke test pinjaman" } },
+        select: {
+            id: true, status: true, notes: true,
+            asset: { select: { assetCode: true, name: true } },
+            member: { select: { code: true } },
+        },
+    });
+    if (smokeLoans.length) {
+        await prisma.communityAssetLoan.deleteMany({
+            where: { id: { in: smokeLoans.map((l) => l.id) } },
+        });
+    }
+    console.log(`\nSmoke pinjaman aset dihapus: ${smokeLoans.length}`);
+    for (const l of smokeLoans) {
+        console.log(`  - ${l.asset.assetCode} -> ${l.member.code} status=${l.status} notes=${l.notes ?? "(tanpa catatan)"}`);
+    }
+
+    // ─── 7. Aset asap (prefix 'Smoke test aset') ─────────────────
+    //     Setelah pinjaman (FK RESTRICT) — aset smoke yang pernah dipinjam
+    //     di smoke test baru bisa dihapus setelah pinjaman terhapus.
     const smokeAssets = await prisma.communityAsset.findMany({
         where: { tenantId, name: { startsWith: "Smoke test aset" } },
         select: { id: true, assetCode: true, name: true },

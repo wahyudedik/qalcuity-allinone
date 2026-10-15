@@ -259,7 +259,8 @@
                 "portal": "Resident Portal",
                 "letters": "Letters",
                 "events": "Events",
-                "assets": "Assets"
+                "assets": "Assets",
+                "loans": "Loans"
             }
         },
         "common": {
@@ -695,6 +696,25 @@
                 "empty": "No assets yet",
                 "location": "Location",
                 "quickDesc": "Community-owned assets"
+            },
+            "loans": {
+                "title": "My Asset Loans",
+                "subtitle": "History of community asset loans under your name",
+                "badge": {
+                    "active": "On Loan",
+                    "overdue": "Overdue",
+                    "returned": "Returned"
+                },
+                "field": {
+                    "loanDate": "Loan Date",
+                    "dueDate": "Due Date",
+                    "returnedAt": "Returned At",
+                    "conditionAtLoan": "Condition at Loan",
+                    "conditionAtReturn": "Condition at Return"
+                },
+                "notReturned": "Not yet returned",
+                "empty": "No loans under your name yet",
+                "emptyMember": "Your account is not linked to a resident record — contact the RT administrator"
             }
         },
         "letters": {
@@ -988,7 +1008,82 @@
                 "byCategory": "By Category",
                 "byCondition": "By Condition",
                 "count": "Count",
-                "totalCost": "Total Cost"
+                "totalCost": "Total Cost",
+                "bookValue": "Book Value (est.)",
+                "bookValueCaption": "Informative estimate — not an accounting report"
+            },
+            "onLoan": "On Loan"
+        },
+        "loans": {
+            "title": "Asset Loans",
+            "subtitle": "Community asset lending & returns",
+            "add": "Add Loan",
+            "empty": "No asset loans yet",
+            "loanedOut": "On loan",
+            "stat": {
+                "active": "On Loan",
+                "overdue": "Overdue",
+                "returnedThisMonth": "Returned This Month",
+                "total": "Total Loans"
+            },
+            "filter": {
+                "allStatuses": "All Statuses",
+                "allAssets": "All Assets",
+                "allMembers": "All Members",
+                "reset": "Reset Filters"
+            },
+            "search": {
+                "placeholder": "Search assets, members, notes..."
+            },
+            "badge": {
+                "active": "On Loan",
+                "overdue": "Overdue",
+                "returned": "Returned"
+            },
+            "table": {
+                "asset": "Asset",
+                "member": "Member",
+                "loanDate": "Loan Date",
+                "dueDate": "Due Date",
+                "returnedAt": "Returned At",
+                "conditionAtReturn": "Condition at Return",
+                "status": "Status"
+            },
+            "action": {
+                "return": "Return",
+                "extend": "Extend"
+            },
+            "form": {
+                "required": "Asset and member must be selected",
+                "dueBeforeLoan": "Due date cannot be before loan date",
+                "extendAfterLoan": "New due date must be after today",
+                "asset": "Asset",
+                "selectAsset": "Select asset...",
+                "member": "Member",
+                "selectMember": "Select member...",
+                "loanDate": "Loan Date",
+                "dueDate": "Due Date",
+                "notes": "Notes"
+            },
+            "toast": {
+                "created": "Asset loan created",
+                "returned": "Asset return recorded",
+                "extended": "Due date extended"
+            },
+            "return": {
+                "title": "Return Asset",
+                "condition": "Condition at Return",
+                "notes": "Return Notes",
+                "submit": "Return"
+            },
+            "extend": {
+                "title": "Extend Due Date",
+                "newDueDate": "New Due Date",
+                "submit": "Extend"
+            },
+            "accessDenied": {
+                "title": "Access Denied",
+                "desc": "You do not have permission to manage asset loans."
             }
         }
     },

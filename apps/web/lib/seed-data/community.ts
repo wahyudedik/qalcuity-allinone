@@ -490,6 +490,53 @@ export const COMMUNITY_ASSETS: CommunityAssetSpec[] = [
     { assetCode: 'AST/2026-012', name: 'Karpet Merah 10m', category: 'PERABOT', condition: 'BAIK', status: 'AKTIF', acquisitionDate: new Date(Date.UTC(2023, 11, 1)), acquisitionCost: 700000, location: 'Gudang', custodianMemberCode: 'W-016' },
 ];
 
+// ─── Fase 4B: Peminjaman aset (3 — 1 RETURNED + 2 ACTIVE; L2 OVERDUE-derived) ──
+// Kontrak angka (spec §8): loans total = 3, RETURNED = 1, ACTIVE = 2,
+// OVERDUE-derived = 1 (L2, due 2026-10-12 < hari-verifikasi).
+// borrowerMemberCode null = resolve RUNTIME member ter-link akun portal
+// (userId != null — W-001 pada seed) untuk smoke portal loans.
+
+export interface CommunityAssetLoanSpec {
+    assetCode: string;
+    /** null = resolve runtime: member dengan userId ter-link akun portal. */
+    borrowerMemberCode: string | null;
+    loanDate: string;
+    dueDate: string;
+    /** Ada = RETURNED (status ikut diturunkan di loop seed). */
+    returnedAt?: string;
+    notes?: string;
+    returnNotes?: string;
+}
+
+export const COMMUNITY_ASSET_LOANS: CommunityAssetLoanSpec[] = [
+    // L1: Tenda 6x8m dipinjam W-009 untuk acara 17 Agustusan — sudah dikembalikan.
+    {
+        assetCode: 'AST/2026-004',
+        borrowerMemberCode: 'W-009',
+        loanDate: '2026-10-01',
+        dueDate: '2026-10-05',
+        returnedAt: '2026-10-04',
+        notes: 'Pinjaman untuk acara 17 Agustusan',
+        returnNotes: 'Kembali dalam kondisi baik',
+    },
+    // L2: Sound System dipinjam W-005 — ACTIVE & sengaja OVERDUE-derived (due < hari ini).
+    {
+        assetCode: 'AST/2026-002',
+        borrowerMemberCode: 'W-005',
+        loanDate: '2026-10-08',
+        dueDate: '2026-10-12',
+        notes: 'Pengajian malam Jumat',
+    },
+    // L3: Kotak Amal dipinjam member ter-link portal (resolve runtime) — ACTIVE, jatuh tempo Desember.
+    {
+        assetCode: 'AST/2026-009',
+        borrowerMemberCode: null,
+        loanDate: '2026-10-14',
+        dueDate: '2026-12-31',
+        notes: 'Kotak amal pengajian rutin',
+    },
+];
+
 // ============================================================
 // 2. Enkripsi NIK (SMTP_ENCRYPTION_KEY fallback loader)
 // ============================================================
@@ -584,6 +631,7 @@ export interface SeedCommunityResult {
         events: number;
         participants: number;
         assets: number;
+        loans: number;
     };
     /** Jumlah record yang BARU dibuat pada run ini (0 = idempotent). */
     created: {
@@ -599,6 +647,7 @@ export interface SeedCommunityResult {
         events: number;
         participants: number;
         assets: number;
+        loans: number;
     };
     roles: CommunityEntityRef[];
     users: CommunityUserRef[];
@@ -1355,11 +1404,70 @@ export async function seedCommunityData(
         assetsCreated += 1;
     }
 
+    // ─── Fase 4B: Peminjaman aset (3 — 1 RETURNED + 2 ACTIVE; L2 OVERDUE-derived) ──
+    // Idempotent: findFirst on komposit (tenantId, assetId, memberId, loanDate) —
+    // model tanpa business-key unique, jadi guard memakai 4 field tersebut.
+    // conditionAtLoan = snapshot kondisi aset SAAT dipinjam (server-side di API;
+    // di seed dibaca dari baris aset — ketiganya seed-BAIK).
+    // createdBy: ketua (peminjaman = kewenangan community:manage).
+    let loansCreated = 0;
+    const loanAssetRows = await db.communityAsset.findMany({
+        where: { tenantId, assetCode: { in: COMMUNITY_ASSET_LOANS.map((l) => l.assetCode) } },
+        select: { id: true, assetCode: true, condition: true },
+    });
+    const loanAssetByCode = new Map(loanAssetRows.map((a) => [a.assetCode, a]));
+    for (const spec of COMMUNITY_ASSET_LOANS) {
+        const assetRow = loanAssetByCode.get(spec.assetCode);
+        if (!assetRow) continue;
+
+        let memberId: string | undefined;
+        if (spec.borrowerMemberCode) {
+            memberId = memberIdByCode.get(spec.borrowerMemberCode);
+        } else {
+            // Resolve runtime: member ter-link akun portal (untuk smoke portal loans).
+            // eslint-disable-next-line no-await-in-loop
+            const linked = await db.communityMember.findFirst({
+                where: { tenantId, userId: { not: null } },
+                select: { id: true },
+            });
+            memberId = linked?.id;
+        }
+        if (!memberId) continue;
+
+        const loanDate = toUtcDate(spec.loanDate);
+        // eslint-disable-next-line no-await-in-loop
+        const existingLoan = await db.communityAssetLoan.findFirst({
+            where: { tenantId, assetId: assetRow.id, memberId, loanDate },
+            select: { id: true },
+        });
+        if (existingLoan) continue;
+
+        const returnedAt = spec.returnedAt ? toUtcDate(spec.returnedAt) : null;
+        await db.communityAssetLoan.create({
+            data: {
+                tenantId,
+                assetId: assetRow.id,
+                memberId,
+                loanDate,
+                dueDate: toUtcDate(spec.dueDate),
+                returnedAt,
+                conditionAtLoan: assetRow.condition,
+                conditionAtReturn: returnedAt ? 'BAIK' : null, // L1: semua aset seed BAIK
+                status: returnedAt ? 'RETURNED' : 'ACTIVE',
+                notes: spec.notes ?? null,
+                returnNotes: spec.returnNotes ?? null,
+                createdBy: ketuaId ?? createdBy,
+                returnedBy: returnedAt ? (ketuaId ?? createdBy) : null,
+            },
+        });
+        loansCreated += 1;
+    }
+
     // ─── Counts (total dalam tenant — termasuk data existing) ────
     const [
         rolesTotal, usersTotal, membersTotal, duesTypesTotal, billsTotal,
         paymentsTotal, cashTotal, announcementsTotal, lettersTotal, eventsTotal,
-        participantsTotal, assetsTotal,
+        participantsTotal, assetsTotal, loansTotal,
     ] = await Promise.all([
         db.role.count({ where: { tenantId } }),
         db.user.count({ where: { tenantId } }),
@@ -1373,6 +1481,7 @@ export async function seedCommunityData(
         db.communityEvent.count({ where: { tenantId } }),
         db.communityEventParticipant.count({ where: { tenantId } }),
         db.communityAsset.count({ where: { tenantId } }),
+        db.communityAssetLoan.count({ where: { tenantId } }),
     ]);
 
     return {
@@ -1390,6 +1499,7 @@ export async function seedCommunityData(
             events: eventsTotal,
             participants: participantsTotal,
             assets: assetsTotal,
+            loans: loansTotal,
         },
         created: {
             roles: rolesCreated,
@@ -1404,6 +1514,7 @@ export async function seedCommunityData(
             events: eventsCreated,
             participants: participantsCreated,
             assets: assetsCreated,
+            loans: loansCreated,
         },
         roles,
         users,

@@ -2773,3 +2773,50 @@ export const updateCommunityAssetSchema = communityAssetBase
     .refine((data) => Object.keys(data).length > 0, {
         message: 'Minimal satu field harus diupdate',
     });
+
+// ─── Community Phase 4B (Peminjaman Aset) ─────────────────────────────────────
+// Referensi: plans/community-phase4b-loan-depreciation-implementation.md §4.1.
+// Pola aman anti gotcha Zod v4: base object TANPA `.refine()` →
+// create = base.refine(...), update = base.partial().refine(...).
+// Schema RETURN = object murni opsional — TANPA `.partial()` dan TANPA
+// `.refine()` (karena base sudah opsional semua; partial/refine di atas
+// object yang sudah optional = throw saat module evaluation → cascade 500).
+
+/**
+ * Peminjaman: base object TANPA cross-field refine.
+ * `assetId`/`memberId` — id Prisma = cuid → trim + min(1); keberadaan &
+ * kecocokan tenant divalidasi di route → 404 (member) / 409 (asset).
+ */
+const communityLoanBase = z.object({
+    assetId: z.string().trim().min(1, 'Aset wajib dipilih'),
+    memberId: z.string().trim().min(1, 'Peminjam wajib dipilih'),
+    loanDate: z.coerce.date({ message: 'Tanggal pinjam tidak valid' }),
+    dueDate: z.coerce.date({ message: 'Tanggal tenggat tidak valid' }),
+    notes: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
+});
+
+export const createCommunityLoanSchema = communityLoanBase.refine(
+    (data) => data.dueDate >= data.loanDate,
+    { message: 'Tenggat tidak boleh sebelum tanggal pinjam', path: ['dueDate'] }
+);
+
+export const updateCommunityLoanSchema = communityLoanBase
+    .pick({ dueDate: true, notes: true })
+    .partial()
+    .refine((data) => Object.keys(data).length > 0, {
+        message: 'Minimal satu field harus diupdate',
+    });
+
+/**
+ * Schema pengembalian aset. Semua field opsional (kondisi boleh tidak diisi
+ * → snapshot `conditionAtLoan` tetap dipertahankan). TANPA `.partial()` dan
+ * TANPA `.refine()` — lihat catatan di atas.
+ */
+export const returnCommunityLoanSchema = z.object({
+    conditionAtReturn: z
+        .enum(['BAIK', 'PERLU_PERBAIKAN', 'RUSAK_RINGAN', 'RUSAK_BERAT'], {
+            message: 'Kondisi tidak valid',
+        })
+        .optional(),
+    returnNotes: z.string().trim().max(500, 'Catatan maksimal 500 karakter').optional(),
+});

@@ -29,12 +29,14 @@ interface AssetRow {
     custodian: AssetCustodian | null
     notes: string | null
     createdAt: string
+    activeLoanCount: number
 }
 
 interface AssetSummary {
     totalAssets: number
-    totalAcquisitionCost: number | null
-    byCategory: { category: string; count: number; totalAcquisitionCost: number | null }[]
+    totalAcquisitionCost: number
+    totalBookValue: number
+    byCategory: { category: string; count: number; totalAcquisitionCost: number | null; totalBookValue: number | null }[]
     byCondition: { condition: string; count: number }[]
     byStatus: { status: string; count: number }[]
 }
@@ -386,6 +388,16 @@ export default function CommunityAssetsPage() {
         }
     }
 
+    // Badge "Dipinjam" — aset sedang dipinjam warga (spec §6.2).
+    const onLoanBadge = (count: number) => {
+        if (count <= 0) return null
+        return (
+            <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                {t('community.assets.onLoan')}
+            </span>
+        )
+    }
+
     // Stat cards dari summary (spec §6.1).
     const statActive = summary?.byStatus.find((s) => s.status === 'AKTIF')?.count ?? 0
     const statNeedRepair =
@@ -501,52 +513,70 @@ export default function CommunityAssetsPage() {
                         {summaryOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                     {summaryOpen && (
-                        <div className="grid grid-cols-1 gap-6 border-t border-gray-200 p-4 dark:border-gray-700 md:grid-cols-2">
-                            <div>
-                                <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                    {t('community.assets.summary.byCategory')}
-                                </h3>
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
-                                            <th className="py-1.5">{t('community.assets.table.category')}</th>
-                                            <th className="py-1.5 text-right">{t('community.assets.summary.count')}</th>
-                                            <th className="py-1.5 text-right">{t('community.assets.summary.totalCost')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {summaryByCategory.map((row) => (
-                                            <tr key={row.category}>
-                                                <td className="py-1.5 text-gray-700 dark:text-gray-300">{categoryLabel(row.category)}</td>
-                                                <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">{row.count}</td>
-                                                <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">
-                                                    {formatCurrencyIDR(row.totalAcquisitionCost ?? 0)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                        <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+                            {/* Nilai buku (estimasi informatif — bukan laporan akuntansi, spec §6.2) */}
+                            <div className="mb-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-900/30">
+                                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    {t('community.assets.summary.bookValue')}
+                                </p>
+                                <p className="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    {formatCurrencyIDR(summary.totalBookValue ?? 0)}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {t('community.assets.summary.bookValueCaption')}
+                                </p>
                             </div>
-                            <div>
-                                <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                    {t('community.assets.summary.byCondition')}
-                                </h3>
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
-                                            <th className="py-1.5">{t('community.assets.table.condition')}</th>
-                                            <th className="py-1.5 text-right">{t('community.assets.summary.count')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {summaryByCondition.map((row) => (
-                                            <tr key={row.condition}>
-                                                <td className="py-1.5 text-gray-700 dark:text-gray-300">{conditionLabel(row.condition)}</td>
-                                                <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">{row.count}</td>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div>
+                                    <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        {t('community.assets.summary.byCategory')}
+                                    </h3>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
+                                                <th className="py-1.5">{t('community.assets.table.category')}</th>
+                                                <th className="py-1.5 text-right">{t('community.assets.summary.count')}</th>
+                                                <th className="py-1.5 text-right">{t('community.assets.summary.totalCost')}</th>
+                                                <th className="py-1.5 text-right">{t('community.assets.summary.bookValue')}</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                            {summaryByCategory.map((row) => (
+                                                <tr key={row.category}>
+                                                    <td className="py-1.5 text-gray-700 dark:text-gray-300">{categoryLabel(row.category)}</td>
+                                                    <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">{row.count}</td>
+                                                    <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">
+                                                        {formatCurrencyIDR(row.totalAcquisitionCost ?? 0)}
+                                                    </td>
+                                                    <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">
+                                                        {formatCurrencyIDR(row.totalBookValue ?? 0)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div>
+                                    <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        {t('community.assets.summary.byCondition')}
+                                    </h3>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
+                                                <th className="py-1.5">{t('community.assets.table.condition')}</th>
+                                                <th className="py-1.5 text-right">{t('community.assets.summary.count')}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                            {summaryByCondition.map((row) => (
+                                                <tr key={row.condition}>
+                                                    <td className="py-1.5 text-gray-700 dark:text-gray-300">{conditionLabel(row.condition)}</td>
+                                                    <td className="py-1.5 text-right text-gray-700 dark:text-gray-300">{row.count}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -641,7 +671,10 @@ export default function CommunityAssetsPage() {
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{row.assetCode ?? '-'}</p>
                                         <p className="font-medium text-gray-900 dark:text-gray-100">{row.name}</p>
                                     </div>
-                                    {statusBadge(row.status)}
+                                    <div className="flex flex-wrap items-center gap-1">
+                                        {statusBadge(row.status)}
+                                        {onLoanBadge(row.activeLoanCount)}
+                                    </div>
                                 </div>
                                 <dl className="mt-2 grid grid-cols-2 gap-1 text-xs text-gray-600 dark:text-gray-300">
                                     <dt>{t('community.assets.table.category')}</dt>
@@ -726,7 +759,12 @@ export default function CommunityAssetsPage() {
                                             {categoryLabel(row.category)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">{conditionBadge(row.condition)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3">{statusBadge(row.status)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3">
+                                            <div className="flex flex-wrap items-center gap-1">
+                                                {statusBadge(row.status)}
+                                                {onLoanBadge(row.activeLoanCount)}
+                                            </div>
+                                        </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                                             {row.location ?? '-'}
                                         </td>
