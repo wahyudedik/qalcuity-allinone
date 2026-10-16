@@ -12,7 +12,11 @@
         "create": "Buat",
         "update": "Perbarui",
         "loading": "Memuat...",
-        "error": "Terjadi kesalahan",
+        "error": {
+            "delete": "Gagal menghapus data",
+            "load": "Gagal memuat data",
+            "save": "Gagal menyimpan data"
+        },
         "success": "Berhasil",
         "confirm": "Konfirmasi",
         "back": "Kembali",
@@ -67,7 +71,14 @@
         "tryAgain": "Coba Lagi",
         "errorOccurred": "Terjadi Kesalahan",
         "errorDefaultDescription": "Maaf, terjadi kesalahan saat memuat data. Silakan coba lagi.",
-        "comingSoon": "Segera Hadir"
+        "comingSoon": "Segera Hadir",
+        "deleting": "Menghapus...",
+        "detail": "Detail",
+        "page": "Halaman",
+        "processing": "Memproses...",
+        "retry": "Coba lagi",
+        "send": "Kirim",
+        "updatedAt": "Diperbarui"
     },
     "errors": {
         "pos": {
@@ -155,6 +166,242 @@
             "announcementNotFound": "Pengumuman tidak ditemukan.",
             "reportPeriodInvalid": "Format periode tidak valid. Gunakan format YYYY-MM.",
             "portalMemberNotFound": "Data warga Anda belum terdaftar. Hubungi bendahara RT Anda."
+        },
+        "ai": {
+            "description": "Terjadi kesalahan pada modul AI",
+            "title": "Kesalahan AI"
+        },
+        "analytics": {
+            "description": "Terjadi kesalahan pada modul analitik",
+            "title": "Kesalahan Analitik"
+        },
+        "approvals": {
+            "description": "Terjadi kesalahan pada modul persetujuan",
+            "title": "Kesalahan Persetujuan"
+        },
+        "contactDetail": {
+            "description": "Terjadi kesalahan saat memuat detail kontak",
+            "title": "Kesalahan Detail Kontak"
+        },
+        "crm": {
+            "description": "Terjadi kesalahan pada modul CRM",
+            "title": "Kesalahan CRM"
+        },
+        "crmContacts": {
+            "description": "Terjadi kesalahan pada modul kontak CRM",
+            "title": "Kesalahan Kontak CRM"
+        },
+        "crmDeals": {
+            "description": "Terjadi kesalahan pada modul deal CRM",
+            "title": "Kesalahan Deal CRM"
+        },
+        "crmLeads": {
+            "description": "Terjadi kesalahan pada modul prospek CRM",
+            "title": "Kesalahan Prospek CRM"
+        },
+        "dealDetail": {
+            "description": "Terjadi kesalahan saat memuat detail deal",
+            "title": "Kesalahan Detail Deal"
+        },
+        "departmentDetail": {
+            "description": "Terjadi kesalahan saat memuat detail departemen",
+            "title": "Kesalahan Detail Departemen"
+        },
+        "departments": {
+            "description": "Terjadi kesalahan pada modul departemen",
+            "title": "Kesalahan Departemen"
+        },
+        "employeeDetail": {
+            "description": "Terjadi kesalahan saat memuat detail karyawan",
+            "title": "Kesalahan Detail Karyawan"
+        },
+        "fieldService": {
+            "description": "Terjadi kesalahan pada modul layanan lapangan",
+            "title": "Kesalahan Layanan Lapangan"
+        },
+        "finance": {
+            "description": "Terjadi kesalahan pada modul keuangan",
+            "title": "Kesalahan Keuangan"
+        },
+        "financeAccounts": {
+            "description": "Terjadi kesalahan pada modul akun keuangan",
+            "title": "Kesalahan Akun Keuangan"
+        },
+        "financeInvoices": {
+            "description": "Terjadi kesalahan pada modul invoice",
+            "title": "Kesalahan Invoice"
+        },
+        "financeJournalEntries": {
+            "description": "Terjadi kesalahan pada modul jurnal",
+            "title": "Kesalahan Jurnal"
+        },
+        "financePayments": {
+            "description": "Terjadi kesalahan pada modul pembayaran",
+            "title": "Kesalahan Pembayaran"
+        },
+        "financePeriods": {
+            "description": "Terjadi kesalahan pada modul periode",
+            "title": "Kesalahan Periode"
+        },
+        "financePurchaseOrders": {
+            "description": "Terjadi kesalahan pada modul pesanan pembelian",
+            "title": "Kesalahan Pesanan Pembelian"
+        },
+        "financeQuotations": {
+            "description": "Terjadi kesalahan pada modul penawaran",
+            "title": "Kesalahan Penawaran"
+        },
+        "financeReconciliation": {
+            "description": "Terjadi kesalahan pada modul rekonsiliasi",
+            "title": "Kesalahan Rekonsiliasi"
+        },
+        "financeTaxRates": {
+            "description": "Terjadi kesalahan pada modul tarif pajak",
+            "title": "Kesalahan Tarif Pajak"
+        },
+        "hr": {
+            "description": "Terjadi kesalahan pada modul HR",
+            "title": "Kesalahan HR"
+        },
+        "hrPayroll": {
+            "description": "Terjadi kesalahan pada modul penggajian",
+            "title": "Kesalahan Penggajian"
+        },
+        "inventory": {
+            "description": "Terjadi kesalahan pada modul inventaris",
+            "title": "Kesalahan Inventaris"
+        },
+        "inventoryStock": {
+            "description": "Terjadi kesalahan pada modul stok",
+            "title": "Kesalahan Stok"
+        },
+        "inventoryStockOpname": {
+            "description": "Terjadi kesalahan pada modul stok opname",
+            "title": "Kesalahan Stok Opname"
+        },
+        "invoiceDetail": {
+            "description": "Terjadi kesalahan saat memuat detail invoice",
+            "title": "Kesalahan Detail Invoice"
+        },
+        "leadDetail": {
+            "description": "Terjadi kesalahan saat memuat detail prospek",
+            "title": "Kesalahan Detail Prospek"
+        },
+        "leaveDetail": {
+            "description": "Terjadi kesalahan saat memuat detail cuti",
+            "title": "Kesalahan Detail Cuti"
+        },
+        "monitoring": {
+            "description": "Terjadi kesalahan pada modul pemantauan",
+            "title": "Kesalahan Pemantauan"
+        },
+        "paymentDetail": {
+            "description": "Terjadi kesalahan saat memuat detail pembayaran",
+            "title": "Kesalahan Detail Pembayaran"
+        },
+        "payrollDetail": {
+            "description": "Terjadi kesalahan saat memuat detail penggajian",
+            "title": "Kesalahan Detail Penggajian"
+        },
+        "platform": {
+            "description": "Terjadi kesalahan pada platform",
+            "title": "Kesalahan Platform"
+        },
+        "posAnalytics": {
+            "description": "Terjadi kesalahan pada analitik POS",
+            "title": "Kesalahan Analitik POS"
+        },
+        "posLoyalty": {
+            "description": "Terjadi kesalahan pada modul loyalitas POS",
+            "title": "Kesalahan Loyalitas POS"
+        },
+        "posRefunds": {
+            "description": "Terjadi kesalahan pada modul refund POS",
+            "title": "Kesalahan Refund POS"
+        },
+        "posReports": {
+            "description": "Terjadi kesalahan pada laporan POS",
+            "title": "Kesalahan Laporan POS"
+        },
+        "posSessions": {
+            "description": "Terjadi kesalahan pada sesi POS",
+            "title": "Kesalahan Sesi POS"
+        },
+        "posTables": {
+            "description": "Terjadi kesalahan pada modul meja POS",
+            "title": "Kesalahan Meja POS"
+        },
+        "posTerminal": {
+            "description": "Terjadi kesalahan pada terminal POS",
+            "title": "Kesalahan Terminal POS"
+        },
+        "posTerminals": {
+            "description": "Terjadi kesalahan pada modul terminal POS",
+            "title": "Kesalahan Daftar Terminal POS"
+        },
+        "posTerminalsMonitor": {
+            "description": "Terjadi kesalahan pada pemantauan terminal POS",
+            "title": "Kesalahan Pemantauan Terminal POS"
+        },
+        "posTransactions": {
+            "description": "Terjadi kesalahan pada transaksi POS",
+            "title": "Kesalahan Transaksi POS"
+        },
+        "productDetail": {
+            "description": "Terjadi kesalahan saat memuat detail produk",
+            "title": "Kesalahan Detail Produk"
+        },
+        "projects": {
+            "description": "Terjadi kesalahan pada modul proyek",
+            "title": "Kesalahan Proyek"
+        },
+        "quotationDetail": {
+            "description": "Terjadi kesalahan saat memuat detail penawaran",
+            "title": "Kesalahan Detail Penawaran"
+        },
+        "recurringInvoiceDetail": {
+            "description": "Terjadi kesalahan saat memuat detail invoice berulang",
+            "title": "Kesalahan Detail Invoice Berulang"
+        },
+        "recurringInvoices": {
+            "description": "Terjadi kesalahan pada modul invoice berulang",
+            "title": "Kesalahan Invoice Berulang"
+        },
+        "reports": {
+            "description": "Terjadi kesalahan pada modul laporan",
+            "title": "Kesalahan Laporan"
+        },
+        "security": {
+            "description": "Terjadi kesalahan pada modul keamanan",
+            "title": "Kesalahan Keamanan"
+        },
+        "settings": {
+            "description": "Terjadi kesalahan pada modul pengaturan",
+            "title": "Kesalahan Pengaturan"
+        },
+        "stockOpnameDetail": {
+            "description": "Terjadi kesalahan saat memuat detail stok opname",
+            "title": "Kesalahan Detail Stok Opname"
+        },
+        "supplierDetail": {
+            "description": "Terjadi kesalahan saat memuat detail pemasok",
+            "title": "Kesalahan Detail Pemasok"
+        },
+        "support": {
+            "description": "Terjadi kesalahan pada modul dukungan",
+            "title": "Kesalahan Dukungan"
+        },
+        "tasks": {
+            "description": "Terjadi kesalahan pada modul tugas",
+            "title": "Kesalahan Tugas"
+        },
+        "tenants": {
+            "description": "Terjadi kesalahan pada modul tenant",
+            "title": "Kesalahan Tenant"
+        },
+        "timesheet": {
+            "description": "Terjadi kesalahan pada modul timesheet",
+            "title": "Kesalahan Timesheet"
         }
     },
     "nav": {
@@ -240,7 +487,9 @@
         "financialReports": "Laporan Keuangan",
         "controlEngine": "Control Engine",
         "sod": "Pengaturan SoD",
-        "community": "Komunitas"
+        "community": "Komunitas",
+        "agingReport": "Laporan Aging",
+        "taxReport": "Laporan Pajak"
     },
     "community": {
         "title": "Komunitas",
@@ -278,7 +527,13 @@
             "viewDetail": "Lihat Detail",
             "confirmDeleteTitle": "Hapus Data?",
             "confirmDeleteDesc": "Data yang dihapus tidak dapat dikembalikan.",
-            "requiredField": "Wajib diisi"
+            "requiredField": "Wajib diisi",
+            "delete": "Hapus",
+            "edit": "Ubah",
+            "next": "Berikutnya",
+            "page": "Halaman",
+            "previous": "Sebelumnya",
+            "saving": "Menyimpan..."
         },
         "overview": {
             "title": "Ringkasan Komunitas",
@@ -1173,7 +1428,12 @@
             },
             "allTasks": "Semua Task",
             "all": "Semua",
-            "overdue": "Terlambat"
+            "overdue": "Terlambat",
+            "addTask": "Tambah tugas",
+            "done": "Selesai",
+            "newTaskPlaceholder": "Tugas baru...",
+            "review": "Tinjau",
+            "start": "Mulai"
         },
         "projects": {
             "status": {
@@ -1194,7 +1454,8 @@
             "roles": {
                 "MANAGER": "Manajer",
                 "MEMBER": "Anggota",
-                "VIEWER": "Pengamat"
+                "VIEWER": "Pengamat",
+                "CONSULTANT": "Konsultan"
             },
             "progress": "Progres",
             "taskCount": "task",
@@ -1215,8 +1476,77 @@
                 "moveFailed": "Gagal memperbarui status task",
                 "addFailed": "Gagal menambahkan task",
                 "taskAdded": "Task berhasil ditambahkan"
+            },
+            "budgetTab": {
+                "remaining": "Sisa",
+                "spent": "Terpakai",
+                "title": "Anggaran",
+                "totalBudget": "Total anggaran",
+                "usagePercent": "Persentase penggunaan"
+            },
+            "detail": {
+                "board": "Papan tugas",
+                "budgetLabel": "Anggaran",
+                "endDate": "Tanggal selesai",
+                "errorGantt": "Gagal memuat Gantt",
+                "errorGeneric": "Terjadi kesalahan",
+                "noTasks": "Belum ada tugas",
+                "progressLabel": "Progres",
+                "projectInfo": "Info proyek",
+                "spent": "Terpakai",
+                "startDate": "Tanggal mulai",
+                "taskSummary": "Ringkasan tugas"
+            },
+            "error": {
+                "backToList": "Kembali ke daftar proyek"
+            },
+            "membersTab": {
+                "addMember": "Tambah anggota",
+                "employeeIdPlaceholder": "Masukkan ID karyawan",
+                "emptyDescription": "Belum ada anggota tim",
+                "emptyTitle": "Tidak ada anggota",
+                "joinedAt": "Bergabung",
+                "removeConfirm": "Apakah Anda yakin ingin menghapus anggota ini?",
+                "removeTitle": "Hapus Anggota"
+            },
+            "resourcesTab": {
+                "addAllocation": "Tambah alokasi",
+                "allocation": "Alokasi",
+                "detailAllocation": "Detail alokasi",
+                "employee": "Karyawan",
+                "emptyDescription": "Belum ada alokasi sumber daya",
+                "emptyTitle": "Tidak ada alokasi",
+                "errorGeneric": "Terjadi kesalahan",
+                "errorLoad": "Gagal memuat alokasi",
+                "period": "Periode",
+                "role": "Peran"
             }
-        }
+        },
+        "activeDeals": "Deal aktif",
+        "anomalyDetection": "Deteksi anomali",
+        "dealsWon": "Deal menang",
+        "lastScan": "Pemindaian terakhir",
+        "newLeads": "Prospek baru",
+        "outstandingInvoices": "Invoice berjalan",
+        "timesheet": {
+            "breakdown": {
+                "title": "Rincian"
+            },
+            "emptyDescription": "Belum ada entri timesheet",
+            "emptyTitle": "Tidak ada timesheet",
+            "grid": {
+                "projectTask": "Proyek/tugas",
+                "total": "Total"
+            },
+            "summary": {
+                "activeProjects": "Proyek aktif",
+                "filledDays": "Hari terisi",
+                "hoursPerDay": "Jam per hari",
+                "totalHours": "Total jam"
+            },
+            "today": "Hari ini"
+        },
+        "totalProducts": "Total produk"
     },
     "finance": {
         "invoices": {
@@ -1268,7 +1598,29 @@
             "unitPrice": "Harga Satuan",
             "lineTotal": "Total",
             "markAsPaid": "Tandai Dibayar",
-            "sendReminder": "Kirim Pengingat"
+            "sendReminder": "Kirim Pengingat",
+            "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus invoice ini?",
+            "confirmDeleteTitle": "Hapus Invoice",
+            "csv": {
+                "createdAt": "Dibuat",
+                "currency": "Mata uang",
+                "customerName": "Nama pelanggan",
+                "dueDate": "Jatuh tempo",
+                "invoiceNumber": "Nomor invoice",
+                "status": "Status",
+                "subtotal": "Subtotal",
+                "tax": "Pajak",
+                "total": "Total"
+            },
+            "emptyDescription": "Belum ada invoice yang dibuat",
+            "toast": {
+                "createSuccess": "Invoice berhasil dibuat",
+                "deleteError": "Gagal menghapus invoice",
+                "deleteFailed": "Gagal menghapus invoice",
+                "deleteSuccess": "Invoice berhasil dihapus",
+                "exportSuccess": "Invoice berhasil diekspor",
+                "noDataExport": "Tidak ada invoice untuk diekspor"
+            }
         },
         "bills": {
             "title": "Tagihan (Bills)",
@@ -1288,7 +1640,8 @@
                 "dueDate": "Jatuh Tempo",
                 "amount": "Jumlah",
                 "status": "Status",
-                "action": "Aksi"
+                "action": "Aksi",
+                "actions": "Aksi"
             },
             "filter": {
                 "allStatus": "Semua Status",
@@ -1298,9 +1651,55 @@
                 "paid": "Dibayar",
                 "cancelled": "Dibatalkan"
             },
-            "empty": "Tidak ada tagihan ditemukan",
+            "empty": {
+                "description": "Belum ada tagihan yang dibuat",
+                "title": "Tidak ada tagihan"
+            },
             "error": "Gagal memuat data tagihan",
-            "retry": "Coba Lagi"
+            "retry": "Coba Lagi",
+            "billsCount": "Jumlah tagihan",
+            "card": {
+                "amount": "Jumlah",
+                "delete": "Hapus",
+                "dueDate": "Jatuh tempo"
+            },
+            "create": {
+                "cancel": "Batal",
+                "dueDate": "Tanggal jatuh tempo",
+                "error": "Gagal membuat tagihan",
+                "errorGeneric": "Terjadi kesalahan saat membuat tagihan",
+                "invoiceNumber": "Nomor tagihan",
+                "invoiceNumberPlaceholder": "Masukkan nomor tagihan",
+                "notes": "Catatan",
+                "notesPlaceholder": "Catatan tambahan",
+                "submit": "Simpan tagihan",
+                "subtotal": "Subtotal",
+                "success": "Tagihan berhasil dibuat",
+                "tax": "Pajak",
+                "title": "Buat Tagihan",
+                "total": "Total",
+                "vendorName": "Nama vendor",
+                "vendorNamePlaceholder": "Masukkan nama vendor"
+            },
+            "createButton": "Buat tagihan",
+            "delete": {
+                "cancel": "Batal",
+                "confirm": "Hapus",
+                "error": "Gagal menghapus tagihan",
+                "errorGeneric": "Terjadi kesalahan saat menghapus tagihan",
+                "message": "Apakah Anda yakin ingin menghapus tagihan ini?",
+                "success": "Tagihan berhasil dihapus",
+                "title": "Hapus Tagihan"
+            },
+            "errorLoad": "Gagal memuat tagihan",
+            "errorLoadGeneric": "Terjadi kesalahan saat memuat tagihan",
+            "statusLabels": {
+                "approved": "Disetujui",
+                "cancelled": "Dibatalkan",
+                "draft": "Draf",
+                "paid": "Dibayar",
+                "pendingApproval": "Menunggu persetujuan"
+            }
         },
         "expenses": {
             "title": "Pengeluaran",
@@ -1319,7 +1718,8 @@
                 "date": "Tanggal",
                 "amount": "Jumlah",
                 "status": "Status",
-                "action": "Aksi"
+                "action": "Aksi",
+                "actions": "Aksi"
             },
             "filter": {
                 "allStatus": "Semua Status",
@@ -1338,9 +1738,58 @@
                 "MAINTENANCE": "Pemeliharaan",
                 "OTHER": "Lainnya"
             },
-            "empty": "Tidak ada pengeluaran ditemukan",
+            "empty": {
+                "description": "Belum ada pengeluaran yang dicatat",
+                "title": "Tidak ada pengeluaran"
+            },
             "error": "Gagal memuat data pengeluaran",
-            "retry": "Coba Lagi"
+            "retry": "Coba Lagi",
+            "card": {
+                "amount": "Jumlah",
+                "date": "Tanggal",
+                "delete": "Hapus"
+            },
+            "create": {
+                "amount": "Jumlah",
+                "cancel": "Batal",
+                "category": "Kategori",
+                "description": "Deskripsi",
+                "descriptionPlaceholder": "Deskripsi pengeluaran",
+                "error": "Gagal membuat pengeluaran",
+                "errorGeneric": "Terjadi kesalahan saat membuat pengeluaran",
+                "expenseDate": "Tanggal pengeluaran",
+                "paymentMethod": "Metode pembayaran",
+                "submit": "Simpan pengeluaran",
+                "success": "Pengeluaran berhasil dibuat",
+                "tax": "Pajak",
+                "title": "Buat Pengeluaran",
+                "total": "Total"
+            },
+            "createButton": "Buat pengeluaran",
+            "delete": {
+                "cancel": "Batal",
+                "confirm": "Hapus",
+                "error": "Gagal menghapus pengeluaran",
+                "errorGeneric": "Terjadi kesalahan saat menghapus pengeluaran",
+                "message": "Apakah Anda yakin ingin menghapus pengeluaran ini?",
+                "success": "Pengeluaran berhasil dihapus",
+                "title": "Hapus Pengeluaran"
+            },
+            "errorLoad": "Gagal memuat pengeluaran",
+            "errorLoadGeneric": "Terjadi kesalahan saat memuat pengeluaran",
+            "paymentMethods": {
+                "BANK_TRANSFER": "Transfer bank",
+                "CASH": "Tunai",
+                "CREDIT_CARD": "Kartu kredit",
+                "QRIS": "QRIS"
+            },
+            "statusLabels": {
+                "approved": "Disetujui",
+                "draft": "Draf",
+                "pendingApproval": "Menunggu persetujuan",
+                "rejected": "Ditolak"
+            },
+            "transactionsCount": "Jumlah transaksi"
         },
         "payments": {
             "title": "Pembayaran",
@@ -1559,7 +2008,8 @@
             "actions": {
                 "addChild": "Tambah Sub-akun",
                 "expandAll": "Buka Semua",
-                "collapseAll": "Tutup Semua"
+                "collapseAll": "Tutup Semua",
+                "delete": "Hapus"
             },
             "deleteConfirm": {
                 "title": "Hapus Akun?",
@@ -1618,7 +2068,20 @@
             "cancel": "Batal",
             "send": "Kirim",
             "error": "Invoice tidak ditemukan",
-            "errorLoad": "Gagal memuat data invoice"
+            "errorLoad": "Gagal memuat data invoice",
+            "cancelConfirmMessage": "Apakah Anda yakin ingin membatalkan invoice ini?",
+            "cancelConfirmTitle": "Batalkan Invoice",
+            "confirmCancel": "Ya, batalkan",
+            "deleteConfirmMessage": "Apakah Anda yakin ingin menghapus invoice ini?",
+            "deleteConfirmTitle": "Hapus Invoice",
+            "toastCancelFailed": "Gagal membatalkan invoice",
+            "toastCancelled": "Invoice berhasil dibatalkan",
+            "toastDeleteFailed": "Gagal menghapus invoice",
+            "toastDeleted": "Invoice berhasil dihapus",
+            "toastDownloadFailed": "Gagal mengunduh invoice",
+            "toastDownloaded": "Invoice berhasil diunduh",
+            "toastSendFailed": "Gagal mengirim invoice",
+            "toastSent": "Invoice berhasil dikirim"
         },
         "paymentDetail": {
             "backToPayments": "Kembali ke Pembayaran",
@@ -1639,7 +2102,17 @@
             "errorLoad": "Gagal memuat data pembayaran",
             "title": "Pembayaran",
             "paymentInfo": "Detail Pembayaran",
-            "actions": "Aksi"
+            "actions": "Aksi",
+            "emailLabel": "Email",
+            "emailPlaceholder": "Masukkan email",
+            "loadError": "Gagal memuat detail pembayaran",
+            "notFound": "Pembayaran tidak ditemukan",
+            "reference": "Referensi",
+            "sendModalTitle": "Kirim Pembayaran",
+            "toastDownloadFailed": "Gagal mengunduh",
+            "toastDownloaded": "Berhasil diunduh",
+            "toastSendFailed": "Gagal mengirim",
+            "toastSent": "Berhasil dikirim"
         },
         "purchaseOrdersDetail": {
             "backToPO": "Kembali ke Purchase Orders",
@@ -1665,7 +2138,24 @@
             "sendToSupplier": "Kirim ke Supplier",
             "cancelPO": "Batalkan PO",
             "error": "Purchase Order tidak ditemukan",
-            "errorLoad": "Gagal memuat data purchase order"
+            "errorLoad": "Gagal memuat data purchase order",
+            "cancelConfirmMessage": "Apakah Anda yakin ingin membatalkan pesanan ini?",
+            "cancelConfirmTitle": "Batalkan Pesanan",
+            "deleteConfirmMessage": "Apakah Anda yakin ingin menghapus pesanan ini?",
+            "deleteConfirmTitle": "Hapus Pesanan",
+            "downloadPDF": "Unduh PDF",
+            "receiveConfirmMessage": "Apakah Anda yakin pesanan ini sudah diterima?",
+            "receiveConfirmTitle": "Tandai Diterima",
+            "toastCancelFailed": "Gagal membatalkan pesanan",
+            "toastCancelled": "Pesanan berhasil dibatalkan",
+            "toastDeleteFailed": "Gagal menghapus pesanan",
+            "toastDeleted": "Pesanan berhasil dihapus",
+            "toastDownloadFailed": "Gagal mengunduh PDF",
+            "toastDownloaded": "PDF berhasil diunduh",
+            "toastReceiveFailed": "Gagal menandai diterima",
+            "toastReceived": "Pesanan ditandai diterima",
+            "toastSendFailed": "Gagal mengirim pesanan",
+            "toastSent": "Pesanan berhasil dikirim"
         },
         "quotationsDetail": {
             "backToQuotations": "Kembali ke Quotations",
@@ -1691,7 +2181,24 @@
             "duplicate": "Duplicate",
             "convertToInvoice": "Convert to Invoice",
             "error": "Quotation tidak ditemukan",
-            "errorLoad": "Gagal memuat data quotation"
+            "errorLoad": "Gagal memuat data quotation",
+            "convertConfirmMessage": "Apakah Anda yakin ingin mengonversi penawaran ini menjadi invoice?",
+            "convertConfirmTitle": "Konversi ke Invoice",
+            "deleteConfirmMessage": "Apakah Anda yakin ingin menghapus penawaran ini?",
+            "deleteConfirmTitle": "Hapus Penawaran",
+            "downloadPDF": "Unduh PDF",
+            "sendConfirmMessage": "Apakah Anda yakin ingin mengirim penawaran ini?",
+            "sendConfirmTitle": "Kirim Penawaran",
+            "toastConvertFailed": "Gagal mengonversi penawaran",
+            "toastConverted": "Penawaran berhasil dikonversi",
+            "toastDeleteFailed": "Gagal menghapus penawaran",
+            "toastDeleted": "Penawaran berhasil dihapus",
+            "toastDownloadFailed": "Gagal mengunduh PDF",
+            "toastDownloaded": "PDF berhasil diunduh",
+            "toastDuplicateFailed": "Gagal menduplikasi penawaran",
+            "toastDuplicated": "Penawaran berhasil diduplikasi",
+            "toastSendFailed": "Gagal mengirim penawaran",
+            "toastSent": "Penawaran berhasil dikirim"
         },
         "overview": {
             "title": "Finance Overview",
@@ -2111,7 +2618,9 @@
                 "errorOccurred": "Terjadi kesalahan",
                 "generatedAt": "Dibuat:",
                 "exportCsv": "Ekspor CSV",
-                "fetchError": "Gagal memuat buku besar"
+                "fetchError": "Gagal memuat buku besar",
+                "accountName": "Nama akun",
+                "code": "Kode"
             },
             "aging": {
                 "title": "Laporan Umur Piutang & Utang",
@@ -2212,7 +2721,8 @@
                 "decidedAt": "Waktu Keputusan",
                 "decisionComments": "Komentar Keputusan",
                 "duration": "Durasi unlock"
-            }
+            },
+            "detailTitle": "Detail Permintaan Unlock"
         },
         "invoice": {
             "status": {
@@ -2285,10 +2795,20 @@
                 "notesPlaceholder": "Catatan tentang lead ini...",
                 "cancel": "Batal",
                 "saving": "Menyimpan...",
-                "save": "Simpan Lead"
+                "save": "Simpan Lead",
+                "sourceOther": "Lainnya"
             },
             "confirmText": "Hapus",
-            "cancelText": "Batal"
+            "cancelText": "Batal",
+            "createError": "Gagal membuat prospek",
+            "deleteError": "Gagal menghapus prospek",
+            "exportCsv": "Ekspor CSV",
+            "fetchFailed": "Gagal memuat prospek",
+            "toast": {
+                "exportSuccess": "Prospek berhasil diekspor",
+                "noDataExport": "Tidak ada prospek untuk diekspor"
+            },
+            "viewDetail": "Lihat detail"
         },
         "contacts": {
             "title": "Kontak",
@@ -2362,7 +2882,11 @@
                 "save": "Simpan Kontak"
             },
             "confirmText": "Hapus",
-            "cancelText": "Batal"
+            "cancelText": "Batal",
+            "toast": {
+                "exportSuccess": "Kontak berhasil diekspor",
+                "noDataExport": "Tidak ada kontak untuk diekspor"
+            }
         },
         "deals": {
             "title": "Deal",
@@ -2425,7 +2949,14 @@
                 "save": "Simpan Deal"
             },
             "confirmText": "Hapus",
-            "cancelText": "Batal"
+            "cancelText": "Batal",
+            "createError": "Gagal membuat deal",
+            "deleteError": "Gagal menghapus deal",
+            "toast": {
+                "exportSuccess": "Deal berhasil diekspor",
+                "noDataExport": "Tidak ada deal untuk diekspor"
+            },
+            "viewDetail": "Lihat detail"
         },
         "pipeline": {
             "title": "Pipeline",
@@ -2635,7 +3166,8 @@
             "confirmText": "Hapus",
             "cancelText": "Batal",
             "convertConfirmTitle": "Konversi ke Deal",
-            "convertConfirmMessage": "Apakah Anda yakin ingin mengkonversi lead ini menjadi deal?"
+            "convertConfirmMessage": "Apakah Anda yakin ingin mengkonversi lead ini menjadi deal?",
+            "confirmMessage": "Apakah Anda yakin ingin menghapus prospek ini?"
         },
         "dealDetail": {
             "backToDeals": "Kembali ke Deals",
@@ -2687,7 +3219,8 @@
             "sendEmail": "Kirim Email",
             "confirmTitle": "Konfirmasi Hapus",
             "confirmText": "Hapus",
-            "cancelText": "Batal"
+            "cancelText": "Batal",
+            "confirmMessage": "Apakah Anda yakin ingin menghapus deal ini?"
         },
         "dealsEdit": {
             "backToDetail": "Kembali ke Detail Deal",
@@ -2709,7 +3242,20 @@
             "errorUpdate": "Gagal memperbarui deal",
             "toastUpdateSuccess": "Deal berhasil diperbarui",
             "toastUpdateFailed": "Gagal memperbarui deal",
-            "validationTitleRequired": "Judul deal wajib diisi"
+            "validationTitleRequired": "Judul deal wajib diisi",
+            "backToDeals": "Kembali ke daftar deal",
+            "form": {
+                "closeDateLabel": "Tanggal closing",
+                "notesLabel": "Catatan",
+                "notesPlaceholder": "Catatan tambahan",
+                "probabilityLabel": "Probabilitas",
+                "stageLabel": "Tahap",
+                "titleLabel": "Judul",
+                "titlePlaceholder": "Judul deal",
+                "valueLabel": "Nilai deal"
+            },
+            "toastFailed": "Gagal menyimpan deal",
+            "toastSuccess": "Deal berhasil disimpan"
         }
     },
     "inventory": {
@@ -2766,7 +3312,9 @@
                 "createSuccess": "Produk berhasil ditambahkan",
                 "saveError": "Gagal menyimpan data",
                 "saveErrorGeneric": "Gagal menyimpan data produk",
-                "importSuccess": "File \"{name}\" berhasil dipilih. Mengunggah..."
+                "importSuccess": "File \"{name}\" berhasil dipilih. Mengunggah...",
+                "exportSuccess": "Berhasil diekspor",
+                "noDataExport": "Tidak ada data untuk diekspor"
             },
             "form": {
                 "titleEdit": "Edit Produk",
@@ -2787,12 +3335,19 @@
                 "cancel": "Batal",
                 "saving": "Menyimpan...",
                 "update": "Update",
-                "save": "Simpan"
+                "save": "Simpan",
+                "buyPriceLabel": "Harga beli",
+                "descriptionLabel": "Deskripsi",
+                "descriptionPlaceholder": "Deskripsi produk",
+                "sellPriceLabel": "Harga jual"
             },
             "editButton": "Edit",
             "deleteButton": "Hapus",
             "emptyFilterHint": "Coba ubah filter atau kata kunci pencarian",
-            "emptyFirstHint": "Mulai tambahkan produk pertama Anda"
+            "emptyFirstHint": "Mulai tambahkan produk pertama Anda",
+            "exportCsv": "Ekspor CSV",
+            "skuPlaceholder": "Masukkan SKU",
+            "uploading": "Mengunggah..."
         },
         "stock": {
             "title": "Manajemen Stok",
@@ -2825,7 +3380,8 @@
             "adjustReasonPlaceholder": "Masukkan alasan penyesuaian stok...",
             "adjustSuccess": "Stok berhasil disesuaikan",
             "adjustError": "Gagal menyesuaikan stok",
-            "adjustNegative": "Stok tidak boleh negatif"
+            "adjustNegative": "Stok tidak boleh negatif",
+            "allWarehouses": "Semua gudang"
         },
         "categories": {
             "title": "Kategori Produk",
@@ -2867,7 +3423,8 @@
                 "descPlaceholder": "Deskripsi kategori (opsional)",
                 "cancel": "Batal",
                 "save": "Simpan Kategori",
-                "saveEdit": "Simpan"
+                "saveEdit": "Simpan",
+                "cancelEdit": "Batal ubah"
             }
         },
         "suppliers": {
@@ -2939,7 +3496,10 @@
             },
             "editButton": "Edit",
             "emptyFilterHint": "Coba ubah filter atau kata kunci pencarian",
-            "emptyFirstHint": "Mulai tambahkan supplier pertama Anda"
+            "emptyFirstHint": "Mulai tambahkan supplier pertama Anda",
+            "cityPlaceholder": "Masukkan kota",
+            "emailLabel": "Email",
+            "phoneLabel": "Telepon"
         },
         "warehouses": {
             "title": "Gudang",
@@ -2996,7 +3556,8 @@
                 "cancel": "Batal",
                 "saving": "Menyimpan...",
                 "update": "Update",
-                "save": "Simpan"
+                "save": "Simpan",
+                "defaultLabel": "Gudang utama"
             },
             "confirm": {
                 "deleteTitle": "Hapus Gudang",
@@ -3043,7 +3604,15 @@
                 "save": "Simpan Opname"
             },
             "itemUnit": "item",
-            "differenceUnit": "selisih"
+            "differenceUnit": "selisih",
+            "table": {
+                "date": "Tanggal",
+                "difference": "Selisih",
+                "items": "Item",
+                "opnameNumber": "Nomor opname",
+                "status": "Status",
+                "warehouse": "Gudang"
+            }
         },
         "layout": {
             "tabs": {
@@ -3069,7 +3638,8 @@
             "in": "Masuk",
             "out": "Keluar",
             "noData": "Belum ada data",
-            "reorder": "Reorder"
+            "reorder": "Reorder",
+            "recentProducts": "Produk terbaru"
         },
         "productDetail": {
             "backToProducts": "Kembali ke Produk",
@@ -3187,7 +3757,9 @@
                 "updateSuccess": "Karyawan berhasil diupdate",
                 "createSuccess": "Karyawan berhasil ditambahkan",
                 "saveError": "Gagal menyimpan data",
-                "saveErrorGeneric": "Gagal menyimpan data karyawan"
+                "saveErrorGeneric": "Gagal menyimpan data karyawan",
+                "exportSuccess": "Data karyawan berhasil diekspor",
+                "noDataExport": "Tidak ada data untuk diekspor"
             },
             "validation": {
                 "nameMinLength": "Nama harus minimal 2 karakter",
@@ -3226,6 +3798,17 @@
                 "deleteTitle": "Hapus Karyawan",
                 "deleteMessage": "Apakah Anda yakin ingin menghapus karyawan ini?",
                 "deleteConfirm": "Hapus"
+            },
+            "csv": {
+                "department": "Departemen",
+                "email": "Email",
+                "employeeId": "ID Karyawan",
+                "joinDate": "Tanggal Bergabung",
+                "name": "Nama",
+                "phone": "Telepon",
+                "position": "Jabatan",
+                "salary": "Gaji",
+                "status": "Status"
             }
         },
         "attendance": {
@@ -3447,7 +4030,9 @@
                 "processError": "Gagal memproses payroll",
                 "deleteSuccess": "Data payroll berhasil dihapus",
                 "deleteError": "Gagal menghapus: {error}",
-                "deleteErrorGeneric": "Gagal menghapus data payroll"
+                "deleteErrorGeneric": "Gagal menghapus data payroll",
+                "markPaidFailed": "Gagal menandai sebagai dibayar",
+                "markPaidSuccess": "Berhasil ditandai sebagai dibayar"
             },
             "fetchError": "Gagal memuat data payroll",
             "fetchErrorNetwork": "Gagal memuat data payroll. Periksa koneksi jaringan Anda.",
@@ -3515,7 +4100,42 @@
             "confirmProcessMessage": "Proses {count} payroll yang belum diproses?",
             "confirmProcess": "Proses",
             "confirmDeleteTitle": "Hapus Payroll",
-            "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus data payroll ini?"
+            "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus data payroll ini?",
+            "backToList": "Kembali ke daftar penggajian",
+            "bpjsCompany": "BPJS (perusahaan)",
+            "bpjsEmployee": "BPJS (karyawan)",
+            "confirm": {
+                "alreadyPaid": "Gaji sudah dibayar",
+                "markPaidMessage": "Apakah Anda yakin ingin menandai gaji ini sebagai sudah dibayar?",
+                "markPaidTitle": "Tandai Sudah Dibayar",
+                "period": "Periode"
+            },
+            "detail": {
+                "allowances": "Tunjangan",
+                "baseSalary": "Gaji pokok",
+                "bonus": "Bonus",
+                "createdAt": "Dibuat",
+                "deductions": "Potongan",
+                "department": "Departemen",
+                "employeeInfo": "Info karyawan",
+                "name": "Nama",
+                "netSalary": "Gaji bersih",
+                "nip": "NIP",
+                "notes": "Catatan",
+                "paidAt": "Dibayar pada",
+                "paymentSummary": "Ringkasan pembayaran",
+                "period": "Periode",
+                "position": "Jabatan",
+                "salaryBreakdown": "Rincian gaji"
+            },
+            "detailTitle": "Detail Penggajian",
+            "error": {
+                "loadFailed": "Gagal memuat data penggajian",
+                "notFound": "Data penggajian tidak ditemukan"
+            },
+            "markPaid": "Tandai dibayar",
+            "pph21": "PPh 21",
+            "pph21Section": "Bagian PPh 21"
         },
         "layout": {
             "tabs": {
@@ -3538,7 +4158,11 @@
             "upcomingBirthdays": "Ulang Tahun Mendatang",
             "approved": "Disetujui",
             "pending": "Menunggu",
-            "rejected": "Ditolak"
+            "rejected": "Ditolak",
+            "noLeaveRequests": "Belum ada pengajuan cuti",
+            "birthdayNotAvailable": "Data ulang tahun belum tersedia",
+            "birthdayFieldMissing": "Field dateOfBirth belum ada di data karyawan",
+            "loadError": "Gagal memuat data HR"
         },
         "employeeDetail": {
             "backToEmployees": "Kembali ke Karyawan",
@@ -3586,7 +4210,8 @@
             "netSalary": "Gaji Bersih",
             "name": "Nama",
             "updateSuccess": "Profil karyawan berhasil diperbarui",
-            "updateError": "Gagal memperbarui profil karyawan"
+            "updateError": "Gagal memperbarui profil karyawan",
+            "status": "Status"
         },
         "leave": {
             "type": {
@@ -3609,13 +4234,17 @@
                 "approveSuccess": "Cuti berhasil disetujui",
                 "approveFailed": "Gagal menyetujui cuti",
                 "rejectSuccess": "Cuti berhasil ditolak",
-                "rejectFailed": "Gagal menolak cuti"
+                "rejectFailed": "Gagal menolak cuti",
+                "deleteSuccess": "Cuti berhasil dihapus",
+                "deleteFailed": "Gagal menghapus cuti"
             },
             "confirm": {
                 "approveTitle": "Setujui Cuti",
                 "approveMessage": "Apakah Anda yakin ingin menyetujui cuti",
                 "rejectTitle": "Tolak Cuti",
-                "rejectMessage": "Apakah Anda yakin ingin menolak cuti"
+                "rejectMessage": "Apakah Anda yakin ingin menolak cuti",
+                "deleteTitle": "Hapus Cuti",
+                "deleteMessage": "Apakah Anda yakin ingin menghapus data cuti ini?"
             },
             "processing": "Memproses...",
             "detailTitle": "Detail Cuti",
@@ -3652,6 +4281,91 @@
                 "title": "Aksi",
                 "viewProfile": "Lihat Profil Karyawan",
                 "backToList": "Kembali ke Daftar Cuti"
+            }
+        },
+        "department": {
+            "actions": {
+                "backToList": "Kembali ke daftar",
+                "title": "Aksi"
+            },
+            "backToList": "Kembali ke daftar departemen",
+            "confirm": {
+                "deleteMessage": "Apakah Anda yakin ingin menghapus departemen ini?",
+                "deleteTitle": "Hapus Departemen"
+            },
+            "create": "Buat departemen",
+            "detailTitle": "Detail Departemen",
+            "employeeList": {
+                "empty": "Belum ada karyawan di departemen ini",
+                "name": "Nama",
+                "position": "Jabatan",
+                "status": "Status",
+                "title": "Daftar Karyawan"
+            },
+            "employees": "Karyawan",
+            "empty": {
+                "description": "Belum ada departemen yang dibuat",
+                "title": "Tidak ada departemen"
+            },
+            "error": {
+                "loadFailed": "Gagal memuat departemen",
+                "notFound": "Departemen tidak ditemukan"
+            },
+            "fields": {
+                "createdAt": "Dibuat",
+                "description": "Deskripsi",
+                "name": "Nama",
+                "status": "Status",
+                "updatedAt": "Diperbarui"
+            },
+            "filter": {
+                "active": "Aktif",
+                "allStatus": "Semua status",
+                "inactive": "Tidak aktif"
+            },
+            "form": {
+                "active": "Aktif",
+                "createTitle": "Buat Departemen",
+                "description": "Deskripsi",
+                "descriptionPlaceholder": "Deskripsi departemen",
+                "editTitle": "Ubah Departemen",
+                "name": "Nama departemen",
+                "namePlaceholder": "Masukkan nama departemen"
+            },
+            "searchPlaceholder": "Cari departemen...",
+            "stats": {
+                "active": "Aktif",
+                "total": "Total",
+                "totalEmployees": "Total karyawan"
+            },
+            "status": {
+                "active": "Aktif",
+                "inactive": "Tidak aktif"
+            },
+            "subtitle": "Kelola struktur departemen perusahaan",
+            "summary": {
+                "activeEmployees": "Karyawan aktif",
+                "title": "Ringkasan",
+                "totalEmployees": "Total karyawan"
+            },
+            "table": {
+                "actions": "Aksi",
+                "description": "Deskripsi",
+                "employees": "Karyawan",
+                "name": "Nama",
+                "status": "Status"
+            },
+            "title": "Departemen",
+            "toast": {
+                "createSuccess": "Departemen berhasil dibuat",
+                "deleteFailed": "Gagal menghapus departemen",
+                "deleteSuccess": "Departemen berhasil dihapus",
+                "loadFailed": "Gagal memuat data",
+                "saveFailed": "Gagal menyimpan departemen",
+                "updateSuccess": "Departemen berhasil diperbarui"
+            },
+            "validation": {
+                "nameRequired": "Nama departemen wajib diisi"
             }
         }
     },
@@ -3735,7 +4449,12 @@
             "action": "Aksi",
             "viewProofShort": "Lihat Bukti",
             "currentPlan": "Paket",
-            "maxUsers": "Max User"
+            "maxUsers": "Max User",
+            "billingCycle": "Siklus penagihan",
+            "featureAccess": "Akses fitur",
+            "periodEnd": "Akhir periode",
+            "storage": "Penyimpanan",
+            "trialEnds": "Masa trial berakhir"
         },
         "integrations": {
             "title": "Integrasi",
@@ -3794,7 +4513,9 @@
                 "marketplace": "Marketplace",
                 "payment": "Payment",
                 "logistics": "Logistik"
-            }
+            },
+            "connect": "Hubungkan",
+            "disconnect": "Putuskan"
         },
         "companyName": "Nama Perusahaan",
         "companyAddress": "Alamat Perusahaan",
@@ -4018,7 +4739,26 @@
             "moduleHr": "HR",
             "moduleInventory": "Inventory",
             "moduleBilling": "Billing",
-            "moduleAnalytics": "Analytics"
+            "moduleAnalytics": "Analytics",
+            "activatePack": "Aktifkan pack",
+            "activeModules": "Modul aktif",
+            "activePack": "Pack aktif",
+            "alreadyActive": "Sudah aktif",
+            "backToPacks": "Kembali ke daftar pack",
+            "customFieldsPreview": "Pratinjau field kustom",
+            "entitiesWithFields": "Entitas dengan field",
+            "loadingDetails": "Memuat detail...",
+            "moduleOverview": "Ikhtisar modul",
+            "moduleOverviewDesc": "Ringkasan modul yang tersedia",
+            "packActivated": "Pack berhasil diaktifkan",
+            "packModules": "Modul dalam pack",
+            "selectPack": "Pilih pack industri",
+            "selectPackDesc": "Pilih pack yang sesuai dengan industri Anda",
+            "viewDetails": "Lihat detail",
+            "widgets": "Widget",
+            "widgetsPreview": "Pratinjau widget",
+            "workflowPreview": "Pratinjau workflow",
+            "workflows": "Workflow"
         },
         "customFields": {
             "loadFailed": "Gagal memuat custom fields",
@@ -4380,7 +5120,8 @@
                 "LEAVE": "Cuti",
                 "PAYROLL": "Payroll",
                 "DEAL": "Deal"
-            }
+            },
+            "prevPage": "Halaman sebelumnya"
         },
         "disableAllOtherSessions": "Nonaktifkan Semua Sesi Lain",
         "noActiveSessions": "Tidak ada sesi aktif",
@@ -4441,7 +5182,15 @@
                 "requireLowercase": "Kata sandi harus mengandung huruf kecil",
                 "requireNumbers": "Kata sandi harus mengandung angka",
                 "requireSpecialChars": "Kata sandi harus mengandung karakter khusus"
-            }
+            },
+            "description": "Kelola kebijakan kata sandi organisasi",
+            "errorConnect": "Gagal terhubung ke server",
+            "errorLoad": "Gagal memuat kebijakan",
+            "errorSave": "Gagal menyimpan kebijakan",
+            "historyExpiry": "Kedaluwarsa riwayat",
+            "maxFailedAttemptsDesc": "Jumlah maksimal percobaan gagal sebelum akun terkunci",
+            "noExpiry": "Tanpa kedaluwarsa",
+            "save": "Simpan kebijakan"
         },
         "sessions": {
             "title": "Sesi Perangkat",
@@ -4467,7 +5216,44 @@
             "minutesAgo": "menit yang lalu",
             "hoursAgo": "jam yang lalu",
             "daysAgo": "hari yang lalu"
-        }
+        },
+        "attention": "Perhatian",
+        "attentionWarning": "Peringatan",
+        "audit": {
+            "desc": "Lihat dan kelola log audit sistem",
+            "title": "Log Audit"
+        },
+        "confirmLoadDemo": "Anda yakin ingin memuat data demo?",
+        "controlEngine": {
+            "description": "Kelola modul, workflow, dan kontrol sistem",
+            "title": "Mesin Kontrol"
+        },
+        "deleteAccountError": "Gagal menghapus akun",
+        "deleteAccountErrorGeneric": "Terjadi kesalahan saat menghapus akun",
+        "deleteAccountModalDesc": "Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus permanen.",
+        "deleteAccountModalTitle": "Hapus Akun",
+        "deleteAccountTitle": "Hapus akun saya",
+        "deleteConfirmInstruction": "Ketik HAPUS untuk mengonfirmasi",
+        "demoDataDescription": "Muat data contoh untuk mencoba fitur",
+        "demoDataTitle": "Data Demo",
+        "demoStatusSuccess": "Status demo berhasil dimuat",
+        "downloadDataError": "Gagal mengunduh data",
+        "downloadDataSuccess": "Data berhasil diunduh",
+        "downloadMyData": "Unduh data saya",
+        "downloading": "Mengunduh...",
+        "errorLoadCompany": "Gagal memuat data perusahaan",
+        "errorSaveChanges": "Gagal menyimpan perubahan",
+        "fileTooLarge": "Ukuran file terlalu besar",
+        "invalidFileFormat": "Format file tidak valid",
+        "loadDemoData": "Muat data demo",
+        "loadingDemo": "Memuat demo...",
+        "phoneFromCompany": "Telepon dari data perusahaan",
+        "photoFormatHint": "Format: JPG, PNG. Maks 2MB",
+        "photoSaveError": "Gagal menyimpan foto",
+        "photoUpdateSuccess": "Foto berhasil diperbarui",
+        "photoUploadError": "Gagal mengunggah foto",
+        "typeDeleteToConfirm": "Ketik HAPUS untuk mengonfirmasi",
+        "uploading": "Mengunggah..."
     },
     "audit": {
         "title": "Jejak Audit",
@@ -4530,7 +5316,36 @@
         "dataChanges": "Perubahan Data",
         "noChanges": "Tidak ada detail perubahan tersedia",
         "dateFrom": "Dari tanggal",
-        "dateTo": "Sampai tanggal"
+        "dateTo": "Sampai tanggal",
+        "allActions": "Semua aksi",
+        "allEntities": "Semua entitas",
+        "applyFilter": "Terapkan filter",
+        "detail": {
+            "action": "Aksi",
+            "close": "Tutup",
+            "entity": "Entitas",
+            "ipAddress": "Alamat IP",
+            "newValue": "Nilai baru",
+            "oldValue": "Nilai lama",
+            "timestamp": "Waktu",
+            "title": "Detail Log Audit",
+            "user": "Pengguna"
+        },
+        "endDate": "Tanggal akhir",
+        "filter": "Filter",
+        "loadingLog": "Memuat log audit...",
+        "reload": "Muat ulang",
+        "startDate": "Tanggal mulai",
+        "table": {
+            "action": "Aksi",
+            "actions": "Aksi",
+            "detail": "Detail",
+            "entity": "Entitas",
+            "ipAddress": "Alamat IP",
+            "timestamp": "Waktu",
+            "user": "Pengguna"
+        },
+        "totalEntries": "Total entri"
     },
     "search": {
         "placeholder": "Cari invoice, deal, kontak, produk...",
@@ -4934,9 +5749,13 @@
                 "visibilityOptions": {
                     "private": "Pribadi",
                     "team": "Tim",
-                    "organization": "Organisasi"
+                    "organization": "Organisasi",
+                    "ORGANIZATION": "Organisasi",
+                    "PRIVATE": "Pribadi",
+                    "TEAM": "Tim"
                 }
-            }
+            },
+            "createTitle": "Buat Grafik"
         },
         "dashboards": {
             "title": "Dashboard",
@@ -5288,7 +6107,8 @@
                 "selectDimensions": "Select at least one dimension or measure",
                 "saveFailed": "Failed to save report",
                 "queryFailed": "Failed to execute query. Please try again."
-            }
+            },
+            "tags": "Tag"
         },
         "kpi": {
             "title": "Manajemen KPI",
@@ -6092,7 +6912,24 @@
             "quickInvoice": "Invoice",
             "quickProfit": "Profit",
             "placeholder": "Tanyakan sesuatu..."
-        }
+        },
+        "agentsSubtitle": "Kelola dan gunakan agen AI Anda",
+        "agentsTitle": "Agen AI",
+        "allTypes": "Semua tipe",
+        "documentCount": "Jumlah dokumen",
+        "documentUploadDesc": "Unggah dokumen untuk diekstrak datanya",
+        "errorLoadingAgents": "Gagal memuat agen AI",
+        "errorQuery": "Terjadi kesalahan saat memproses permintaan",
+        "errorQueryAgent": "Gagal memproses pertanyaan",
+        "fieldsFilled": "Field terisi",
+        "priorityHigh": "Prioritas tinggi",
+        "priorityLow": "Prioritas rendah",
+        "priorityMedium": "Prioritas sedang",
+        "queryPlaceholder": "Ketik pertanyaan Anda...",
+        "queryResult": "Hasil kueri",
+        "send": "Kirim",
+        "sending": "Mengirim...",
+        "suggestions": "Saran"
     },
     "notification": {
         "title": "Notifikasi",
@@ -6275,7 +7112,36 @@
                 "syncing": "Menyinkronkan",
                 "success": "Berhasil",
                 "failed": "Gagal"
-            }
+            },
+            "change": "Kembalian",
+            "clearAll": "Kosongkan semua",
+            "emptyCart": "Keranjang kosong",
+            "emptyCartHint": "Tambahkan produk untuk memulai",
+            "exactAmount": "Uang pas",
+            "noProducts": "Tidak ada produk",
+            "openSession": "Buka sesi",
+            "openSessionTitle": "Buka Sesi Kasir",
+            "opening": "Membuka...",
+            "openingCash": "Kas awal",
+            "openingCashPlaceholder": "Masukkan kas awal",
+            "outOfStock": "Stok habis",
+            "paidAmount": "Jumlah dibayar",
+            "pay": "Bayar",
+            "paymentMethod": "Metode pembayaran",
+            "paymentTitle": "Pembayaran",
+            "processPayment": "Proses pembayaran",
+            "processing": "Memproses...",
+            "retry": "Coba lagi",
+            "roundTo": "Bulatkan ke",
+            "searchPlaceholder": "Cari produk...",
+            "selectTerminal": "Pilih terminal",
+            "sessionActive": "Sesi aktif",
+            "shortage": "Kurang",
+            "subtotal": "Subtotal",
+            "tax": "Pajak",
+            "terminal": "Terminal",
+            "totalBelanja": "Total belanja",
+            "transactionSuccess": "Transaksi berhasil"
         },
         "terminals": {
             "title": "Terminal POS",
@@ -6376,7 +7242,22 @@
             "errorClose": "Gagal menutup sesi",
             "errorLoad": "Gagal memuat data sesi",
             "errorLoadNetwork": "Gagal memuat data sesi. Periksa koneksi jaringan Anda.",
-            "retry": "Coba Lagi"
+            "retry": "Coba Lagi",
+            "cashRefunds": "Refund tunai",
+            "cashSales": "Penjualan tunai",
+            "cashSummary": "Ringkasan tunai",
+            "closingReportTitle": "Laporan Penutupan",
+            "discounts": "Diskon",
+            "expectedCash": "Tunai yang diharapkan",
+            "grossSales": "Penjualan kotor",
+            "netSales": "Penjualan bersih",
+            "paymentMethods": "Metode pembayaran",
+            "refundsAndVoids": "Refund & void",
+            "revenue": "Pendapatan",
+            "salesBreakdown": "Rincian penjualan",
+            "tax": "Pajak",
+            "topProducts": "Produk terlaris",
+            "totalTransactions": "Total transaksi"
         },
         "transactions": {
             "title": "Transaksi POS",
@@ -6418,7 +7299,11 @@
             "errorLoadNetwork": "Gagal memuat data transaksi. Periksa koneksi jaringan Anda.",
             "retry": "Coba Lagi",
             "previous": "Sebelumnya",
-            "next": "Selanjutnya"
+            "next": "Selanjutnya",
+            "print": "Cetak",
+            "receiptTitle": "Struk",
+            "voidReason": "Alasan void",
+            "voidReasonPlaceholder": "Masukkan alasan void"
         },
         "refunds": {
             "title": "Refund POS",
@@ -6687,7 +7572,11 @@
             "errorLoad": "Gagal memuat data loyalty",
             "membersLabel": "anggota",
             "membersCount": "{count} anggota ({percentage}%)",
-            "pts": "pt"
+            "pts": "pt",
+            "typeAdjust": "Penyesuaian",
+            "typeEarn": "Akumulasi",
+            "typeExpire": "Kedaluwarsa",
+            "typeRedeem": "Penukaran"
         },
         "monitor": {
             "title": "Monitor Terminal",
@@ -7107,83 +7996,58 @@
                     "noSchedule": "Tidak ada jadwal untuk tanggal ini"
                 }
             }
-        }
+        },
+        "components": {
+            "checklistForm": {
+                "additionalNotes": "Catatan tambahan",
+                "cancel": "Batal",
+                "errorSaving": "Gagal menyimpan checklist",
+                "itemRequired": "Item ini wajib diisi",
+                "notesPlaceholder": "Tambahkan catatan",
+                "photoSelected": "Foto dipilih",
+                "photoTap": "Ketuk untuk ambil foto",
+                "requiredItems": "Item wajib",
+                "saving": "Menyimpan...",
+                "signatureGiven": "Tanda tangan diberikan",
+                "signaturePending": "Menunggu tanda tangan",
+                "submitChecklist": "Kirim checklist",
+                "textInputPlaceholder": "Masukkan jawaban"
+            },
+            "jobCard": {
+                "checklists": "Checklist",
+                "minutes": "menit",
+                "technicians": "Teknisi"
+            },
+            "jobMap": {
+                "address": "Alamat",
+                "coordinates": "Koordinat",
+                "location": "Lokasi",
+                "noLocationInfo": "Tidak ada informasi lokasi",
+                "open": "Buka",
+                "openInMaps": "Buka di peta"
+            },
+            "technicianSchedule": {
+                "day": "Hari",
+                "minutes": "menit",
+                "noSchedule": "Tidak ada jadwal",
+                "title": "Jadwal Teknisi",
+                "week": "Minggu"
+            }
+        },
+        "description": {
+            "checklists": "Kelola checklist pekerjaan",
+            "jobs": "Kelola pekerjaan lapangan"
+        },
+        "modules": "Modul",
+        "stats": {
+            "completed": "Selesai",
+            "inProgress": "Berlangsung",
+            "scheduled": "Terjadwal",
+            "today": "Hari ini",
+            "total": "Total"
+        },
+        "subtitle": "Kelola pekerjaan dan kunjungan lapangan"
     },
-    "toast": {
-        "createSuccess": "Invoice berhasil dibuat",
-        "deleteSuccess": "Invoice berhasil dihapus",
-        "deleteFailed": "Gagal menghapus",
-        "deleteError": "Gagal menghapus invoice",
-        "approveSuccess": "Cuti berhasil disetujui",
-        "approveFailed": "Gagal menyetujui cuti",
-        "rejectSuccess": "Cuti berhasil ditolak",
-        "rejectFailed": "Gagal menolak cuti"
-    },
-    "emptyDescription": "Buat invoice pertama Anda untuk mulai menerima pembayaran",
-    "confirmDeleteTitle": "Konfirmasi Hapus",
-    "confirmDeleteMessage": "Apakah Anda yakin ingin menghapus invoice ini?",
-    "type": {
-        "annual": "Cuti Tahunan",
-        "sick": "Cuti Sakit",
-        "personal": "Cuti Pribadi",
-        "maternity": "Cuti Melahirkan",
-        "unpaid": "Cuti Tanpa Gaji"
-    },
-    "status": {
-        "pending": "Menunggu",
-        "approved": "Disetujui",
-        "rejected": "Ditolak"
-    },
-    "error": {
-        "loadFailed": "Gagal memuat data cuti",
-        "notFound": "Data cuti tidak ditemukan"
-    },
-    "confirm": {
-        "approveTitle": "Setujui Cuti",
-        "approveMessage": "Apakah Anda yakin ingin menyetujui cuti {{name}}?",
-        "rejectTitle": "Tolak Cuti",
-        "rejectMessage": "Apakah Anda yakin ingin menolak cuti {{name}}?"
-    },
-    "processing": "Memproses...",
-    "detailTitle": "Detail Cuti",
-    "approve": "Setujui",
-    "reject": "Tolak",
-    "backToList": "Kembali ke daftar cuti",
-    "fields": {
-        "type": "Tipe Cuti",
-        "days": "Jumlah Hari",
-        "startDate": "Tanggal Mulai",
-        "endDate": "Tanggal Selesai",
-        "reason": "Alasan",
-        "notes": "Catatan"
-    },
-    "timeline": {
-        "title": "Riwayat Status",
-        "applied": "Cuti diajukan",
-        "approvedBy": "Disetujui oleh {{name}}",
-        "rejected": "Cuti ditolak"
-    },
-    "employeeInfo": {
-        "title": "Info Karyawan",
-        "name": "Nama",
-        "nip": "NIP",
-        "position": "Posisi",
-        "department": "Departemen"
-    },
-    "summary": {
-        "title": "Ringkasan",
-        "applied": "Diajukan",
-        "approvedBy": "Disetujui Oleh"
-    },
-    "actions": {
-        "title": "Aksi",
-        "viewProfile": "Lihat Profil Karyawan",
-        "backToList": "Kembali ke Daftar Cuti"
-    },
-    "noLeaveRequests": "Belum ada pengajuan cuti",
-    "birthdayNotAvailable": "Data ulang tahun belum tersedia",
-    "birthdayFieldMissing": "Field dateOfBirth belum ada di data karyawan",
-    "loadError": "Gagal memuat data HR",
     "inbox": {
         "title": "Judul",
         "description": "Pusat aktivitas Anda — tugas, persetujuan, dan item yang perlu diperhatikan.",
@@ -7297,5 +8161,103 @@
         "noAuth": "Tidak memerlukan autentikasi",
         "rateLimit": "Batas Rate",
         "permission": "Izin"
+    },
+    "controlEngine": {
+        "approvals": {
+            "approvalSystem": "Sistem persetujuan",
+            "approvalSystemDesc": "Konfigurasi alur persetujuan transaksi",
+            "maxLevels": "Level persetujuan maksimal",
+            "maxLevelsDesc": "Jumlah maksimal level persetujuan",
+            "requireComments": "Wajibkan komentar",
+            "requireCommentsDesc": "Pewajibkan komentar saat menyetujui atau menolak",
+            "subtitle": "Kelola aturan persetujuan",
+            "title": "Persetujuan"
+        },
+        "core": "Inti",
+        "dashboard": {
+            "hideWidget": "Sembunyikan widget",
+            "showWidget": "Tampilkan widget",
+            "sizeLarge": "Besar",
+            "sizeMedium": "Sedang",
+            "sizeSmall": "Kecil",
+            "subtitle": "Konfigurasi widget dashboard",
+            "title": "Widget Dashboard"
+        },
+        "exportButton": "Ekspor konfigurasi",
+        "exportError": "Gagal mengekspor konfigurasi",
+        "exportSuccess": "Konfigurasi berhasil diekspor",
+        "fields": {
+            "subtitle": "Kelola field kustom per entitas",
+            "title": "Field Kustom"
+        },
+        "history": {
+            "empty": "Belum ada riwayat perubahan",
+            "reason": "Alasan",
+            "subtitle": "Riwayat perubahan konfigurasi",
+            "title": "Riwayat"
+        },
+        "importButton": "Impor konfigurasi",
+        "importError": "Gagal mengimpor konfigurasi",
+        "importInvalidFile": "File konfigurasi tidak valid",
+        "importSuccess": "Konfigurasi berhasil diimpor",
+        "loadError": "Gagal memuat konfigurasi",
+        "loadHistoryError": "Gagal memuat riwayat",
+        "loading": "Memuat konfigurasi...",
+        "modules": {
+            "aiFeatures": "Fitur AI",
+            "aiFeaturesDesc": "Agen AI, ekstraksi dokumen, dan deteksi anomali",
+            "analytics": "Analitik",
+            "analyticsDesc": "Dasbor, grafik, dan eksplorasi data",
+            "coreDisabled": "Modul inti tidak dapat dinonaktifkan",
+            "crm": "CRM",
+            "crmDesc": "Prospek, kontak, deal, dan pipeline",
+            "featuresInModule": "Fitur dalam modul",
+            "fieldService": "Layanan Lapangan",
+            "fieldServiceDesc": "Pekerjaan, checklist, dan jadwal teknisi",
+            "finance": "Keuangan",
+            "financeDesc": "Invoice, pembayaran, dan jurnal",
+            "hr": "HR",
+            "hrDesc": "Karyawan, absensi, cuti, dan penggajian",
+            "inventory": "Inventaris",
+            "inventoryDesc": "Produk, stok, pemasok, dan gudang",
+            "operations": "Operasi",
+            "operationsDesc": "Anggaran, gantt, timeline, dan heatmap",
+            "pos": "POS",
+            "posDesc": "Terminal, transaksi, dan loyalitas",
+            "projects": "Proyek",
+            "projectsDesc": "Tugas, papan, dan alokasi sumber daya",
+            "subtitle": "Aktifkan atau nonaktifkan modul",
+            "title": "Modul"
+        },
+        "permissions": {
+            "memberCanDelete": "Member dapat menghapus",
+            "memberCanDeleteDesc": "Izinkan role MEMBER menghapus data",
+            "subtitle": "Kelola izin per role",
+            "title": "Izin",
+            "viewerCanExport": "Viewer dapat mengekspor",
+            "viewerCanExportDesc": "Izinkan role VIEWER mengekspor data"
+        },
+        "resetAllButton": "Reset semua",
+        "resetError": "Gagal mereset konfigurasi",
+        "resetErrorCategory": "Gagal mereset kategori",
+        "resetSuccess": "Konfigurasi berhasil direset",
+        "saveError": "Gagal menyimpan konfigurasi",
+        "saveErrorCategory": "Gagal menyimpan kategori",
+        "saveSuccess": "Konfigurasi berhasil disimpan",
+        "tabs": {
+            "approvals": "Persetujuan",
+            "fields": "Field",
+            "history": "Riwayat",
+            "modules": "Modul",
+            "permissions": "Izin",
+            "widgets": "Widget",
+            "workflow": "Workflow"
+        },
+        "workflow": {
+            "autoTransition": "Transisi otomatis",
+            "resetButton": "Reset workflow",
+            "subtitle": "Konfigurasi alur kerja transaksi",
+            "title": "Workflow"
+        }
     }
 }

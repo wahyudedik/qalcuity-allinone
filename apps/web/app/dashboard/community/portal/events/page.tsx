@@ -137,7 +137,7 @@ export default function CommunityPortalEventsPage() {
             const res = await fetch(`/api/community/portal/events/${row.id}/register`, { method: 'POST' })
             const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
             if (!res.ok) {
-                addToast(apiErrorMessage(json) || t('common.error'), 'error')
+                addToast(apiErrorMessage(json) || t('common.errorOccurred'), 'error')
                 return
             }
             addToast(t('community.portal.participants.toast.registered'), 'success')
@@ -158,7 +158,7 @@ export default function CommunityPortalEventsPage() {
             const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
             if (!res.ok) {
                 // 404 sudah dibatalkan / 409 hadir atau kegiatan mulai — tampilkan pesan server.
-                addToast(apiErrorMessage(json) || t('common.error'), 'error')
+                addToast(apiErrorMessage(json) || t('common.errorOccurred'), 'error')
                 setCancelTarget(null)
                 return
             }

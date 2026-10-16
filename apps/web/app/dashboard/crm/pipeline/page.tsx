@@ -52,10 +52,10 @@ export default function PipelinePage() {
             if (data.success) {
                 setDeals(data.data)
             } else {
-                setError(t('common.error'))
+                setError(t('common.errorOccurred'))
             }
         } catch {
-            setError(t('common.error'))
+            setError(t('common.errorOccurred'))
         } finally {
             setLoading(false)
         }

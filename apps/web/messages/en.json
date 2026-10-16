@@ -12,7 +12,11 @@
         "create": "Create",
         "update": "Update",
         "loading": "Loading...",
-        "error": "An error occurred",
+        "error": {
+            "delete": "Failed to delete data",
+            "load": "Failed to load data",
+            "save": "Failed to save data"
+        },
         "success": "Success",
         "confirm": "Confirm",
         "back": "Back",
@@ -67,7 +71,14 @@
         "tryAgain": "Try Again",
         "errorOccurred": "An Error Occurred",
         "errorDefaultDescription": "Sorry, an error occurred while loading data. Please try again.",
-        "comingSoon": "Coming Soon"
+        "comingSoon": "Coming Soon",
+        "deleting": "Deleting...",
+        "detail": "Detail",
+        "page": "Page",
+        "processing": "Processing...",
+        "retry": "Retry",
+        "send": "Send",
+        "updatedAt": "Updated"
     },
     "errors": {
         "pos": {
@@ -155,6 +166,242 @@
             "announcementNotFound": "Announcement not found.",
             "reportPeriodInvalid": "Invalid period format. Use the YYYY-MM format.",
             "portalMemberNotFound": "Your resident record is not registered. Please contact your RT treasurer."
+        },
+        "ai": {
+            "description": "An error occurred in the AI module",
+            "title": "AI Error"
+        },
+        "analytics": {
+            "description": "An error occurred in the analytics module",
+            "title": "Analytics Error"
+        },
+        "approvals": {
+            "description": "An error occurred in the approvals module",
+            "title": "Approvals Error"
+        },
+        "contactDetail": {
+            "description": "An error occurred while loading contact detail",
+            "title": "Contact Detail Error"
+        },
+        "crm": {
+            "description": "An error occurred in the CRM module",
+            "title": "CRM Error"
+        },
+        "crmContacts": {
+            "description": "An error occurred in the CRM contacts module",
+            "title": "CRM Contacts Error"
+        },
+        "crmDeals": {
+            "description": "An error occurred in the CRM deals module",
+            "title": "CRM Deals Error"
+        },
+        "crmLeads": {
+            "description": "An error occurred in the CRM leads module",
+            "title": "CRM Leads Error"
+        },
+        "dealDetail": {
+            "description": "An error occurred while loading deal detail",
+            "title": "Deal Detail Error"
+        },
+        "departmentDetail": {
+            "description": "An error occurred while loading department detail",
+            "title": "Department Detail Error"
+        },
+        "departments": {
+            "description": "An error occurred in the departments module",
+            "title": "Departments Error"
+        },
+        "employeeDetail": {
+            "description": "An error occurred while loading employee detail",
+            "title": "Employee Detail Error"
+        },
+        "fieldService": {
+            "description": "An error occurred in the field service module",
+            "title": "Field Service Error"
+        },
+        "finance": {
+            "description": "An error occurred in the finance module",
+            "title": "Finance Error"
+        },
+        "financeAccounts": {
+            "description": "An error occurred in the finance accounts module",
+            "title": "Finance Accounts Error"
+        },
+        "financeInvoices": {
+            "description": "An error occurred in the invoices module",
+            "title": "Invoices Error"
+        },
+        "financeJournalEntries": {
+            "description": "An error occurred in the journal entries module",
+            "title": "Journal Entries Error"
+        },
+        "financePayments": {
+            "description": "An error occurred in the payments module",
+            "title": "Payments Error"
+        },
+        "financePeriods": {
+            "description": "An error occurred in the periods module",
+            "title": "Periods Error"
+        },
+        "financePurchaseOrders": {
+            "description": "An error occurred in the purchase orders module",
+            "title": "Purchase Orders Error"
+        },
+        "financeQuotations": {
+            "description": "An error occurred in the quotations module",
+            "title": "Quotations Error"
+        },
+        "financeReconciliation": {
+            "description": "An error occurred in the reconciliation module",
+            "title": "Reconciliation Error"
+        },
+        "financeTaxRates": {
+            "description": "An error occurred in the tax rates module",
+            "title": "Tax Rates Error"
+        },
+        "hr": {
+            "description": "An error occurred in the HR module",
+            "title": "HR Error"
+        },
+        "hrPayroll": {
+            "description": "An error occurred in the payroll module",
+            "title": "Payroll Error"
+        },
+        "inventory": {
+            "description": "An error occurred in the inventory module",
+            "title": "Inventory Error"
+        },
+        "inventoryStock": {
+            "description": "An error occurred in the stock module",
+            "title": "Stock Error"
+        },
+        "inventoryStockOpname": {
+            "description": "An error occurred in the stock opname module",
+            "title": "Stock Opname Error"
+        },
+        "invoiceDetail": {
+            "description": "An error occurred while loading invoice detail",
+            "title": "Invoice Detail Error"
+        },
+        "leadDetail": {
+            "description": "An error occurred while loading lead detail",
+            "title": "Lead Detail Error"
+        },
+        "leaveDetail": {
+            "description": "An error occurred while loading leave detail",
+            "title": "Leave Detail Error"
+        },
+        "monitoring": {
+            "description": "An error occurred in the monitoring module",
+            "title": "Monitoring Error"
+        },
+        "paymentDetail": {
+            "description": "An error occurred while loading payment detail",
+            "title": "Payment Detail Error"
+        },
+        "payrollDetail": {
+            "description": "An error occurred while loading payroll detail",
+            "title": "Payroll Detail Error"
+        },
+        "platform": {
+            "description": "An error occurred on the platform",
+            "title": "Platform Error"
+        },
+        "posAnalytics": {
+            "description": "An error occurred in POS analytics",
+            "title": "POS Analytics Error"
+        },
+        "posLoyalty": {
+            "description": "An error occurred in the POS loyalty module",
+            "title": "POS Loyalty Error"
+        },
+        "posRefunds": {
+            "description": "An error occurred in the POS refunds module",
+            "title": "POS Refunds Error"
+        },
+        "posReports": {
+            "description": "An error occurred in POS reports",
+            "title": "POS Reports Error"
+        },
+        "posSessions": {
+            "description": "An error occurred in POS sessions",
+            "title": "POS Sessions Error"
+        },
+        "posTables": {
+            "description": "An error occurred in the POS tables module",
+            "title": "POS Tables Error"
+        },
+        "posTerminal": {
+            "description": "An error occurred in the POS terminal",
+            "title": "POS Terminal Error"
+        },
+        "posTerminals": {
+            "description": "An error occurred in the POS terminals module",
+            "title": "POS Terminals Error"
+        },
+        "posTerminalsMonitor": {
+            "description": "An error occurred in the POS terminals monitor",
+            "title": "POS Terminals Monitor Error"
+        },
+        "posTransactions": {
+            "description": "An error occurred in POS transactions",
+            "title": "POS Transactions Error"
+        },
+        "productDetail": {
+            "description": "An error occurred while loading product detail",
+            "title": "Product Detail Error"
+        },
+        "projects": {
+            "description": "An error occurred in the projects module",
+            "title": "Projects Error"
+        },
+        "quotationDetail": {
+            "description": "An error occurred while loading quotation detail",
+            "title": "Quotation Detail Error"
+        },
+        "recurringInvoiceDetail": {
+            "description": "An error occurred while loading recurring invoice detail",
+            "title": "Recurring Invoice Detail Error"
+        },
+        "recurringInvoices": {
+            "description": "An error occurred in the recurring invoices module",
+            "title": "Recurring Invoices Error"
+        },
+        "reports": {
+            "description": "An error occurred in the reports module",
+            "title": "Reports Error"
+        },
+        "security": {
+            "description": "An error occurred in the security module",
+            "title": "Security Error"
+        },
+        "settings": {
+            "description": "An error occurred in the settings module",
+            "title": "Settings Error"
+        },
+        "stockOpnameDetail": {
+            "description": "An error occurred while loading stock opname detail",
+            "title": "Stock Opname Detail Error"
+        },
+        "supplierDetail": {
+            "description": "An error occurred while loading supplier detail",
+            "title": "Supplier Detail Error"
+        },
+        "support": {
+            "description": "An error occurred in the support module",
+            "title": "Support Error"
+        },
+        "tasks": {
+            "description": "An error occurred in the tasks module",
+            "title": "Tasks Error"
+        },
+        "tenants": {
+            "description": "An error occurred in the tenants module",
+            "title": "Tenants Error"
+        },
+        "timesheet": {
+            "description": "An error occurred in the timesheet module",
+            "title": "Timesheet Error"
         }
     },
     "nav": {
@@ -240,7 +487,9 @@
         "financialReports": "Financial Reports",
         "controlEngine": "Control Engine",
         "sod": "SoD Settings",
-        "community": "Community"
+        "community": "Community",
+        "agingReport": "Aging Report",
+        "taxReport": "Tax Report"
     },
     "community": {
         "title": "Community",
@@ -278,7 +527,13 @@
             "viewDetail": "View Detail",
             "confirmDeleteTitle": "Delete Data?",
             "confirmDeleteDesc": "Deleted data cannot be recovered.",
-            "requiredField": "Required"
+            "requiredField": "Required",
+            "delete": "Delete",
+            "edit": "Edit",
+            "next": "Next",
+            "page": "Page",
+            "previous": "Previous",
+            "saving": "Saving..."
         },
         "overview": {
             "title": "Community Overview",
@@ -1173,7 +1428,12 @@
             },
             "allTasks": "All Tasks",
             "all": "All",
-            "overdue": "Overdue"
+            "overdue": "Overdue",
+            "addTask": "Add task",
+            "done": "Done",
+            "newTaskPlaceholder": "New task...",
+            "review": "Review",
+            "start": "Start"
         },
         "projects": {
             "status": {
@@ -1194,7 +1454,8 @@
             "roles": {
                 "MANAGER": "Manager",
                 "MEMBER": "Member",
-                "VIEWER": "Viewer"
+                "VIEWER": "Viewer",
+                "CONSULTANT": "Consultant"
             },
             "progress": "Progress",
             "taskCount": "tasks",
@@ -1215,8 +1476,77 @@
                 "moveFailed": "Failed to update task status",
                 "addFailed": "Failed to add task",
                 "taskAdded": "Task added successfully"
+            },
+            "budgetTab": {
+                "remaining": "Remaining",
+                "spent": "Spent",
+                "title": "Budget",
+                "totalBudget": "Total budget",
+                "usagePercent": "Usage percent"
+            },
+            "detail": {
+                "board": "Task board",
+                "budgetLabel": "Budget",
+                "endDate": "End date",
+                "errorGantt": "Failed to load Gantt",
+                "errorGeneric": "An error occurred",
+                "noTasks": "No tasks yet",
+                "progressLabel": "Progress",
+                "projectInfo": "Project info",
+                "spent": "Spent",
+                "startDate": "Start date",
+                "taskSummary": "Task summary"
+            },
+            "error": {
+                "backToList": "Back to project list"
+            },
+            "membersTab": {
+                "addMember": "Add member",
+                "employeeIdPlaceholder": "Enter employee ID",
+                "emptyDescription": "No team members yet",
+                "emptyTitle": "No members",
+                "joinedAt": "Joined",
+                "removeConfirm": "Are you sure you want to remove this member?",
+                "removeTitle": "Remove Member"
+            },
+            "resourcesTab": {
+                "addAllocation": "Add allocation",
+                "allocation": "Allocation",
+                "detailAllocation": "Allocation detail",
+                "employee": "Employee",
+                "emptyDescription": "No resource allocations yet",
+                "emptyTitle": "No allocations",
+                "errorGeneric": "An error occurred",
+                "errorLoad": "Failed to load allocations",
+                "period": "Period",
+                "role": "Role"
             }
-        }
+        },
+        "activeDeals": "Active deals",
+        "anomalyDetection": "Anomaly detection",
+        "dealsWon": "Deals won",
+        "lastScan": "Last scan",
+        "newLeads": "New leads",
+        "outstandingInvoices": "Outstanding invoices",
+        "timesheet": {
+            "breakdown": {
+                "title": "Breakdown"
+            },
+            "emptyDescription": "No timesheet entries yet",
+            "emptyTitle": "No timesheets",
+            "grid": {
+                "projectTask": "Project/task",
+                "total": "Total"
+            },
+            "summary": {
+                "activeProjects": "Active projects",
+                "filledDays": "Filled days",
+                "hoursPerDay": "Hours per day",
+                "totalHours": "Total hours"
+            },
+            "today": "Today"
+        },
+        "totalProducts": "Total products"
     },
     "finance": {
         "invoices": {
@@ -1268,7 +1598,29 @@
             "unitPrice": "Unit Price",
             "lineTotal": "Total",
             "markAsPaid": "Mark as Paid",
-            "sendReminder": "Send Reminder"
+            "sendReminder": "Send Reminder",
+            "confirmDeleteMessage": "Are you sure you want to delete this invoice?",
+            "confirmDeleteTitle": "Delete Invoice",
+            "csv": {
+                "createdAt": "Created",
+                "currency": "Currency",
+                "customerName": "Customer name",
+                "dueDate": "Due date",
+                "invoiceNumber": "Invoice number",
+                "status": "Status",
+                "subtotal": "Subtotal",
+                "tax": "Tax",
+                "total": "Total"
+            },
+            "emptyDescription": "No invoices created yet",
+            "toast": {
+                "createSuccess": "Invoice created successfully",
+                "deleteError": "Failed to delete invoice",
+                "deleteFailed": "Failed to delete invoice",
+                "deleteSuccess": "Invoice deleted successfully",
+                "exportSuccess": "Invoices exported successfully",
+                "noDataExport": "No invoices to export"
+            }
         },
         "bills": {
             "title": "Bills",
@@ -1288,7 +1640,8 @@
                 "dueDate": "Due Date",
                 "amount": "Amount",
                 "status": "Status",
-                "action": "Action"
+                "action": "Action",
+                "actions": "Actions"
             },
             "filter": {
                 "allStatus": "All Status",
@@ -1298,9 +1651,55 @@
                 "paid": "Paid",
                 "cancelled": "Cancelled"
             },
-            "empty": "No bills found",
+            "empty": {
+                "description": "No bills created yet",
+                "title": "No bills"
+            },
             "error": "Failed to load bills",
-            "retry": "Retry"
+            "retry": "Retry",
+            "billsCount": "Bills count",
+            "card": {
+                "amount": "Amount",
+                "delete": "Delete",
+                "dueDate": "Due date"
+            },
+            "create": {
+                "cancel": "Cancel",
+                "dueDate": "Due date",
+                "error": "Failed to create bill",
+                "errorGeneric": "An error occurred while creating the bill",
+                "invoiceNumber": "Invoice number",
+                "invoiceNumberPlaceholder": "Enter invoice number",
+                "notes": "Notes",
+                "notesPlaceholder": "Additional notes",
+                "submit": "Save bill",
+                "subtotal": "Subtotal",
+                "success": "Bill created successfully",
+                "tax": "Tax",
+                "title": "Create Bill",
+                "total": "Total",
+                "vendorName": "Vendor name",
+                "vendorNamePlaceholder": "Enter vendor name"
+            },
+            "createButton": "Create bill",
+            "delete": {
+                "cancel": "Cancel",
+                "confirm": "Delete",
+                "error": "Failed to delete bill",
+                "errorGeneric": "An error occurred while deleting the bill",
+                "message": "Are you sure you want to delete this bill?",
+                "success": "Bill deleted successfully",
+                "title": "Delete Bill"
+            },
+            "errorLoad": "Failed to load bills",
+            "errorLoadGeneric": "An error occurred while loading bills",
+            "statusLabels": {
+                "approved": "Approved",
+                "cancelled": "Cancelled",
+                "draft": "Draft",
+                "paid": "Paid",
+                "pendingApproval": "Pending approval"
+            }
         },
         "expenses": {
             "title": "Expenses",
@@ -1319,7 +1718,8 @@
                 "date": "Date",
                 "amount": "Amount",
                 "status": "Status",
-                "action": "Action"
+                "action": "Action",
+                "actions": "Actions"
             },
             "filter": {
                 "allStatus": "All Status",
@@ -1338,9 +1738,58 @@
                 "MAINTENANCE": "Maintenance",
                 "OTHER": "Other"
             },
-            "empty": "No expenses found",
+            "empty": {
+                "description": "No expenses recorded yet",
+                "title": "No expenses"
+            },
             "error": "Failed to load expenses",
-            "retry": "Retry"
+            "retry": "Retry",
+            "card": {
+                "amount": "Amount",
+                "date": "Date",
+                "delete": "Delete"
+            },
+            "create": {
+                "amount": "Amount",
+                "cancel": "Cancel",
+                "category": "Category",
+                "description": "Description",
+                "descriptionPlaceholder": "Expense description",
+                "error": "Failed to create expense",
+                "errorGeneric": "An error occurred while creating the expense",
+                "expenseDate": "Expense date",
+                "paymentMethod": "Payment method",
+                "submit": "Save expense",
+                "success": "Expense created successfully",
+                "tax": "Tax",
+                "title": "Create Expense",
+                "total": "Total"
+            },
+            "createButton": "Create expense",
+            "delete": {
+                "cancel": "Cancel",
+                "confirm": "Delete",
+                "error": "Failed to delete expense",
+                "errorGeneric": "An error occurred while deleting the expense",
+                "message": "Are you sure you want to delete this expense?",
+                "success": "Expense deleted successfully",
+                "title": "Delete Expense"
+            },
+            "errorLoad": "Failed to load expenses",
+            "errorLoadGeneric": "An error occurred while loading expenses",
+            "paymentMethods": {
+                "BANK_TRANSFER": "Bank transfer",
+                "CASH": "Cash",
+                "CREDIT_CARD": "Credit card",
+                "QRIS": "QRIS"
+            },
+            "statusLabels": {
+                "approved": "Approved",
+                "draft": "Draft",
+                "pendingApproval": "Pending approval",
+                "rejected": "Rejected"
+            },
+            "transactionsCount": "Transactions count"
         },
         "payments": {
             "title": "Payments",
@@ -1559,7 +2008,8 @@
             "actions": {
                 "addChild": "Add Sub-account",
                 "expandAll": "Expand All",
-                "collapseAll": "Collapse All"
+                "collapseAll": "Collapse All",
+                "delete": "Delete"
             },
             "deleteConfirm": {
                 "title": "Delete Account?",
@@ -1618,7 +2068,20 @@
             "cancel": "Cancel",
             "send": "Send",
             "error": "Invoice not found",
-            "errorLoad": "Failed to load invoice data"
+            "errorLoad": "Failed to load invoice data",
+            "cancelConfirmMessage": "Are you sure you want to cancel this invoice?",
+            "cancelConfirmTitle": "Cancel Invoice",
+            "confirmCancel": "Yes, cancel",
+            "deleteConfirmMessage": "Are you sure you want to delete this invoice?",
+            "deleteConfirmTitle": "Delete Invoice",
+            "toastCancelFailed": "Failed to cancel invoice",
+            "toastCancelled": "Invoice cancelled successfully",
+            "toastDeleteFailed": "Failed to delete invoice",
+            "toastDeleted": "Invoice deleted successfully",
+            "toastDownloadFailed": "Failed to download invoice",
+            "toastDownloaded": "Invoice downloaded successfully",
+            "toastSendFailed": "Failed to send invoice",
+            "toastSent": "Invoice sent successfully"
         },
         "paymentDetail": {
             "backToPayments": "Back to Payments",
@@ -1639,7 +2102,17 @@
             "errorLoad": "Failed to load payment data",
             "title": "Payment",
             "paymentInfo": "Payment Details",
-            "actions": "Actions"
+            "actions": "Actions",
+            "emailLabel": "Email",
+            "emailPlaceholder": "Enter email",
+            "loadError": "Failed to load payment detail",
+            "notFound": "Payment not found",
+            "reference": "Reference",
+            "sendModalTitle": "Send Payment",
+            "toastDownloadFailed": "Failed to download",
+            "toastDownloaded": "Downloaded successfully",
+            "toastSendFailed": "Failed to send",
+            "toastSent": "Sent successfully"
         },
         "purchaseOrdersDetail": {
             "backToPO": "Back to Purchase Orders",
@@ -1665,7 +2138,24 @@
             "sendToSupplier": "Send to Supplier",
             "cancelPO": "Cancel PO",
             "error": "Purchase Order not found",
-            "errorLoad": "Failed to load purchase order data"
+            "errorLoad": "Failed to load purchase order data",
+            "cancelConfirmMessage": "Are you sure you want to cancel this order?",
+            "cancelConfirmTitle": "Cancel Order",
+            "deleteConfirmMessage": "Are you sure you want to delete this order?",
+            "deleteConfirmTitle": "Delete Order",
+            "downloadPDF": "Download PDF",
+            "receiveConfirmMessage": "Are you sure this order has been received?",
+            "receiveConfirmTitle": "Mark as Received",
+            "toastCancelFailed": "Failed to cancel order",
+            "toastCancelled": "Order cancelled successfully",
+            "toastDeleteFailed": "Failed to delete order",
+            "toastDeleted": "Order deleted successfully",
+            "toastDownloadFailed": "Failed to download PDF",
+            "toastDownloaded": "PDF downloaded successfully",
+            "toastReceiveFailed": "Failed to mark as received",
+            "toastReceived": "Order marked as received",
+            "toastSendFailed": "Failed to send order",
+            "toastSent": "Order sent successfully"
         },
         "quotationsDetail": {
             "backToQuotations": "Back to Quotations",
@@ -1691,7 +2181,24 @@
             "duplicate": "Duplicate",
             "convertToInvoice": "Convert to Invoice",
             "error": "Quotation not found",
-            "errorLoad": "Failed to load quotation data"
+            "errorLoad": "Failed to load quotation data",
+            "convertConfirmMessage": "Are you sure you want to convert this quotation to an invoice?",
+            "convertConfirmTitle": "Convert to Invoice",
+            "deleteConfirmMessage": "Are you sure you want to delete this quotation?",
+            "deleteConfirmTitle": "Delete Quotation",
+            "downloadPDF": "Download PDF",
+            "sendConfirmMessage": "Are you sure you want to send this quotation?",
+            "sendConfirmTitle": "Send Quotation",
+            "toastConvertFailed": "Failed to convert quotation",
+            "toastConverted": "Quotation converted successfully",
+            "toastDeleteFailed": "Failed to delete quotation",
+            "toastDeleted": "Quotation deleted successfully",
+            "toastDownloadFailed": "Failed to download PDF",
+            "toastDownloaded": "PDF downloaded successfully",
+            "toastDuplicateFailed": "Failed to duplicate quotation",
+            "toastDuplicated": "Quotation duplicated successfully",
+            "toastSendFailed": "Failed to send quotation",
+            "toastSent": "Quotation sent successfully"
         },
         "overview": {
             "title": "Finance Overview",
@@ -2111,7 +2618,9 @@
                 "errorOccurred": "An error occurred",
                 "generatedAt": "Generated:",
                 "exportCsv": "Export CSV",
-                "fetchError": "Failed to load general ledger"
+                "fetchError": "Failed to load general ledger",
+                "accountName": "Account name",
+                "code": "Code"
             },
             "aging": {
                 "title": "Aging Report — Receivables & Payables",
@@ -2212,7 +2721,8 @@
                 "decidedAt": "Decided at",
                 "decisionComments": "Decision comments",
                 "duration": "Unlock duration"
-            }
+            },
+            "detailTitle": "Unlock Request Detail"
         },
         "invoice": {
             "status": {
@@ -2285,10 +2795,20 @@
                 "notesPlaceholder": "Notes about this lead...",
                 "cancel": "Cancel",
                 "saving": "Saving...",
-                "save": "Save Lead"
+                "save": "Save Lead",
+                "sourceOther": "Other"
             },
             "confirmText": "Delete",
-            "cancelText": "Cancel"
+            "cancelText": "Cancel",
+            "createError": "Failed to create lead",
+            "deleteError": "Failed to delete lead",
+            "exportCsv": "Export CSV",
+            "fetchFailed": "Failed to load leads",
+            "toast": {
+                "exportSuccess": "Leads exported successfully",
+                "noDataExport": "No leads to export"
+            },
+            "viewDetail": "View detail"
         },
         "contacts": {
             "title": "Contacts",
@@ -2362,7 +2882,11 @@
                 "save": "Save Contact"
             },
             "confirmText": "Delete",
-            "cancelText": "Cancel"
+            "cancelText": "Cancel",
+            "toast": {
+                "exportSuccess": "Contacts exported successfully",
+                "noDataExport": "No contacts to export"
+            }
         },
         "deals": {
             "title": "Deals",
@@ -2425,7 +2949,14 @@
                 "save": "Save Deal"
             },
             "confirmText": "Delete",
-            "cancelText": "Cancel"
+            "cancelText": "Cancel",
+            "createError": "Failed to create deal",
+            "deleteError": "Failed to delete deal",
+            "toast": {
+                "exportSuccess": "Deals exported successfully",
+                "noDataExport": "No deals to export"
+            },
+            "viewDetail": "View detail"
         },
         "pipeline": {
             "title": "Pipeline",
@@ -2635,7 +3166,8 @@
             "confirmText": "Delete",
             "cancelText": "Cancel",
             "convertConfirmTitle": "Convert to Deal",
-            "convertConfirmMessage": "Are you sure you want to convert this lead to a deal?"
+            "convertConfirmMessage": "Are you sure you want to convert this lead to a deal?",
+            "confirmMessage": "Are you sure you want to delete this lead?"
         },
         "dealDetail": {
             "backToDeals": "Back to Deals",
@@ -2687,7 +3219,8 @@
             "sendEmail": "Send Email",
             "confirmTitle": "Confirm Delete",
             "confirmText": "Delete",
-            "cancelText": "Cancel"
+            "cancelText": "Cancel",
+            "confirmMessage": "Are you sure you want to delete this deal?"
         },
         "dealsEdit": {
             "backToDetail": "Back to Deal Details",
@@ -2709,7 +3242,20 @@
             "errorUpdate": "Failed to update deal",
             "toastUpdateSuccess": "Deal updated successfully",
             "toastUpdateFailed": "Failed to update deal",
-            "validationTitleRequired": "Deal title is required"
+            "validationTitleRequired": "Deal title is required",
+            "backToDeals": "Back to deals",
+            "form": {
+                "closeDateLabel": "Close date",
+                "notesLabel": "Notes",
+                "notesPlaceholder": "Additional notes",
+                "probabilityLabel": "Probability",
+                "stageLabel": "Stage",
+                "titleLabel": "Title",
+                "titlePlaceholder": "Deal title",
+                "valueLabel": "Deal value"
+            },
+            "toastFailed": "Failed to save deal",
+            "toastSuccess": "Deal saved successfully"
         }
     },
     "inventory": {
@@ -2766,7 +3312,9 @@
                 "createSuccess": "Product created successfully",
                 "saveError": "Failed to save data",
                 "saveErrorGeneric": "Failed to save product data",
-                "importSuccess": "File \"{name}\" selected. Uploading..."
+                "importSuccess": "File \"{name}\" selected. Uploading...",
+                "exportSuccess": "Exported successfully",
+                "noDataExport": "No data to export"
             },
             "form": {
                 "titleEdit": "Edit Product",
@@ -2787,12 +3335,19 @@
                 "cancel": "Cancel",
                 "saving": "Saving...",
                 "update": "Update",
-                "save": "Save"
+                "save": "Save",
+                "buyPriceLabel": "Buy price",
+                "descriptionLabel": "Description",
+                "descriptionPlaceholder": "Product description",
+                "sellPriceLabel": "Sell price"
             },
             "editButton": "Edit",
             "deleteButton": "Delete",
             "emptyFilterHint": "Try changing filters or search keywords",
-            "emptyFirstHint": "Start by adding your first product"
+            "emptyFirstHint": "Start by adding your first product",
+            "exportCsv": "Export CSV",
+            "skuPlaceholder": "Enter SKU",
+            "uploading": "Uploading..."
         },
         "stock": {
             "title": "Stock Management",
@@ -2825,7 +3380,8 @@
             "adjustReasonPlaceholder": "Enter reason for stock adjustment...",
             "adjustSuccess": "Stock adjusted successfully",
             "adjustError": "Failed to adjust stock",
-            "adjustNegative": "Stock cannot be negative"
+            "adjustNegative": "Stock cannot be negative",
+            "allWarehouses": "All warehouses"
         },
         "categories": {
             "title": "Product Categories",
@@ -2867,7 +3423,8 @@
                 "descPlaceholder": "Category description (optional)",
                 "cancel": "Cancel",
                 "save": "Save Category",
-                "saveEdit": "Save"
+                "saveEdit": "Save",
+                "cancelEdit": "Cancel edit"
             }
         },
         "suppliers": {
@@ -2939,7 +3496,10 @@
             },
             "editButton": "Edit",
             "emptyFilterHint": "Try changing filters or search keywords",
-            "emptyFirstHint": "Start by adding your first supplier"
+            "emptyFirstHint": "Start by adding your first supplier",
+            "cityPlaceholder": "Enter city",
+            "emailLabel": "Email",
+            "phoneLabel": "Phone"
         },
         "warehouses": {
             "title": "Warehouses",
@@ -2996,7 +3556,8 @@
                 "cancel": "Cancel",
                 "saving": "Saving...",
                 "update": "Update",
-                "save": "Save"
+                "save": "Save",
+                "defaultLabel": "Default warehouse"
             },
             "confirm": {
                 "deleteTitle": "Delete Warehouse",
@@ -3043,7 +3604,15 @@
                 "save": "Save Opname"
             },
             "itemUnit": "items",
-            "differenceUnit": "diff"
+            "differenceUnit": "diff",
+            "table": {
+                "date": "Date",
+                "difference": "Difference",
+                "items": "Items",
+                "opnameNumber": "Opname number",
+                "status": "Status",
+                "warehouse": "Warehouse"
+            }
         },
         "layout": {
             "tabs": {
@@ -3069,7 +3638,8 @@
             "in": "In",
             "out": "Out",
             "noData": "No data yet",
-            "reorder": "Reorder"
+            "reorder": "Reorder",
+            "recentProducts": "Recent products"
         },
         "productDetail": {
             "backToProducts": "Back to Products",
@@ -3187,7 +3757,9 @@
                 "updateSuccess": "Employee updated successfully",
                 "createSuccess": "Employee added successfully",
                 "saveError": "Failed to save data",
-                "saveErrorGeneric": "Failed to save employee data"
+                "saveErrorGeneric": "Failed to save employee data",
+                "exportSuccess": "Employee data exported successfully",
+                "noDataExport": "No data to export"
             },
             "validation": {
                 "nameMinLength": "Name must be at least 2 characters",
@@ -3226,6 +3798,17 @@
                 "deleteTitle": "Delete Employee",
                 "deleteMessage": "Are you sure you want to delete this employee?",
                 "deleteConfirm": "Delete"
+            },
+            "csv": {
+                "department": "Department",
+                "email": "Email",
+                "employeeId": "Employee ID",
+                "joinDate": "Join Date",
+                "name": "Name",
+                "phone": "Phone",
+                "position": "Position",
+                "salary": "Salary",
+                "status": "Status"
             }
         },
         "attendance": {
@@ -3447,7 +4030,9 @@
                 "processError": "Failed to process payroll",
                 "deleteSuccess": "Payroll data deleted successfully",
                 "deleteError": "Failed to delete: {error}",
-                "deleteErrorGeneric": "Failed to delete payroll data"
+                "deleteErrorGeneric": "Failed to delete payroll data",
+                "markPaidFailed": "Failed to mark as paid",
+                "markPaidSuccess": "Marked as paid successfully"
             },
             "fetchError": "Failed to load payroll data",
             "fetchErrorNetwork": "Failed to load payroll data. Check your network connection.",
@@ -3515,7 +4100,42 @@
             "confirmProcessMessage": "Process {count} pending payroll?",
             "confirmProcess": "Process",
             "confirmDeleteTitle": "Delete Payroll",
-            "confirmDeleteMessage": "Are you sure you want to delete this payroll data?"
+            "confirmDeleteMessage": "Are you sure you want to delete this payroll data?",
+            "backToList": "Back to payroll list",
+            "bpjsCompany": "BPJS (company)",
+            "bpjsEmployee": "BPJS (employee)",
+            "confirm": {
+                "alreadyPaid": "Salary already paid",
+                "markPaidMessage": "Are you sure you want to mark this salary as paid?",
+                "markPaidTitle": "Mark as Paid",
+                "period": "Period"
+            },
+            "detail": {
+                "allowances": "Allowances",
+                "baseSalary": "Base salary",
+                "bonus": "Bonus",
+                "createdAt": "Created",
+                "deductions": "Deductions",
+                "department": "Department",
+                "employeeInfo": "Employee info",
+                "name": "Name",
+                "netSalary": "Net salary",
+                "nip": "Employee ID",
+                "notes": "Notes",
+                "paidAt": "Paid at",
+                "paymentSummary": "Payment summary",
+                "period": "Period",
+                "position": "Position",
+                "salaryBreakdown": "Salary breakdown"
+            },
+            "detailTitle": "Payroll Detail",
+            "error": {
+                "loadFailed": "Failed to load payroll data",
+                "notFound": "Payroll record not found"
+            },
+            "markPaid": "Mark as paid",
+            "pph21": "Income tax (PPh 21)",
+            "pph21Section": "PPh 21 section"
         },
         "layout": {
             "tabs": {
@@ -3538,7 +4158,11 @@
             "upcomingBirthdays": "Upcoming Birthdays",
             "approved": "Approved",
             "pending": "Pending",
-            "rejected": "Rejected"
+            "rejected": "Rejected",
+            "noLeaveRequests": "No leave requests yet",
+            "birthdayNotAvailable": "Birthday data not available",
+            "birthdayFieldMissing": "dateOfBirth field not available in employee data",
+            "loadError": "Failed to load HR data"
         },
         "employeeDetail": {
             "backToEmployees": "Back to Employees",
@@ -3586,7 +4210,8 @@
             "netSalary": "Net Salary",
             "name": "Name",
             "updateSuccess": "Employee profile updated successfully",
-            "updateError": "Failed to update employee profile"
+            "updateError": "Failed to update employee profile",
+            "status": "Status"
         },
         "leave": {
             "type": {
@@ -3609,13 +4234,17 @@
                 "approveSuccess": "Leave approved successfully",
                 "approveFailed": "Failed to approve leave",
                 "rejectSuccess": "Leave rejected successfully",
-                "rejectFailed": "Failed to reject leave"
+                "rejectFailed": "Failed to reject leave",
+                "deleteSuccess": "Leave deleted successfully",
+                "deleteFailed": "Failed to delete leave"
             },
             "confirm": {
                 "approveTitle": "Approve Leave",
                 "approveMessage": "Are you sure you want to approve leave for",
                 "rejectTitle": "Reject Leave",
-                "rejectMessage": "Are you sure you want to reject leave for"
+                "rejectMessage": "Are you sure you want to reject leave for",
+                "deleteTitle": "Delete Leave",
+                "deleteMessage": "Are you sure you want to delete this leave data?"
             },
             "processing": "Processing...",
             "detailTitle": "Leave Detail",
@@ -3652,6 +4281,91 @@
                 "title": "Actions",
                 "viewProfile": "View Employee Profile",
                 "backToList": "Back to Leave List"
+            }
+        },
+        "department": {
+            "actions": {
+                "backToList": "Back to list",
+                "title": "Actions"
+            },
+            "backToList": "Back to department list",
+            "confirm": {
+                "deleteMessage": "Are you sure you want to delete this department?",
+                "deleteTitle": "Delete Department"
+            },
+            "create": "Create department",
+            "detailTitle": "Department Detail",
+            "employeeList": {
+                "empty": "No employees in this department yet",
+                "name": "Name",
+                "position": "Position",
+                "status": "Status",
+                "title": "Employee List"
+            },
+            "employees": "Employees",
+            "empty": {
+                "description": "No departments created yet",
+                "title": "No departments"
+            },
+            "error": {
+                "loadFailed": "Failed to load departments",
+                "notFound": "Department not found"
+            },
+            "fields": {
+                "createdAt": "Created",
+                "description": "Description",
+                "name": "Name",
+                "status": "Status",
+                "updatedAt": "Updated"
+            },
+            "filter": {
+                "active": "Active",
+                "allStatus": "All statuses",
+                "inactive": "Inactive"
+            },
+            "form": {
+                "active": "Active",
+                "createTitle": "Create Department",
+                "description": "Description",
+                "descriptionPlaceholder": "Department description",
+                "editTitle": "Edit Department",
+                "name": "Department name",
+                "namePlaceholder": "Enter department name"
+            },
+            "searchPlaceholder": "Search departments...",
+            "stats": {
+                "active": "Active",
+                "total": "Total",
+                "totalEmployees": "Total employees"
+            },
+            "status": {
+                "active": "Active",
+                "inactive": "Inactive"
+            },
+            "subtitle": "Manage company department structure",
+            "summary": {
+                "activeEmployees": "Active employees",
+                "title": "Summary",
+                "totalEmployees": "Total employees"
+            },
+            "table": {
+                "actions": "Actions",
+                "description": "Description",
+                "employees": "Employees",
+                "name": "Name",
+                "status": "Status"
+            },
+            "title": "Departments",
+            "toast": {
+                "createSuccess": "Department created successfully",
+                "deleteFailed": "Failed to delete department",
+                "deleteSuccess": "Department deleted successfully",
+                "loadFailed": "Failed to load data",
+                "saveFailed": "Failed to save department",
+                "updateSuccess": "Department updated successfully"
+            },
+            "validation": {
+                "nameRequired": "Department name is required"
             }
         }
     },
@@ -3735,7 +4449,12 @@
             "action": "Action",
             "viewProofShort": "View Proof",
             "currentPlan": "Plan",
-            "maxUsers": "Max Users"
+            "maxUsers": "Max Users",
+            "billingCycle": "Billing cycle",
+            "featureAccess": "Feature access",
+            "periodEnd": "Period end",
+            "storage": "Storage",
+            "trialEnds": "Trial ends"
         },
         "integrations": {
             "title": "Integrations",
@@ -3794,7 +4513,9 @@
                 "marketplace": "Marketplace",
                 "payment": "Payment",
                 "logistics": "Logistics"
-            }
+            },
+            "connect": "Connect",
+            "disconnect": "Disconnect"
         },
         "companyName": "Company Name",
         "companyAddress": "Company Address",
@@ -4018,7 +4739,26 @@
             "moduleHr": "HR",
             "moduleInventory": "Inventory",
             "moduleBilling": "Billing",
-            "moduleAnalytics": "Analytics"
+            "moduleAnalytics": "Analytics",
+            "activatePack": "Activate pack",
+            "activeModules": "Active modules",
+            "activePack": "Active pack",
+            "alreadyActive": "Already active",
+            "backToPacks": "Back to pack list",
+            "customFieldsPreview": "Custom fields preview",
+            "entitiesWithFields": "Entities with fields",
+            "loadingDetails": "Loading details...",
+            "moduleOverview": "Module overview",
+            "moduleOverviewDesc": "Summary of available modules",
+            "packActivated": "Pack activated successfully",
+            "packModules": "Modules in pack",
+            "selectPack": "Select industry pack",
+            "selectPackDesc": "Choose a pack that matches your industry",
+            "viewDetails": "View details",
+            "widgets": "Widgets",
+            "widgetsPreview": "Widgets preview",
+            "workflowPreview": "Workflow preview",
+            "workflows": "Workflows"
         },
         "customFields": {
             "loadFailed": "Failed to load custom fields",
@@ -4380,7 +5120,8 @@
                 "LEAVE": "Leave",
                 "PAYROLL": "Payroll",
                 "DEAL": "Deal"
-            }
+            },
+            "prevPage": "Previous page"
         },
         "disableAllOtherSessions": "Disable All Other Sessions",
         "noActiveSessions": "No active sessions",
@@ -4441,7 +5182,15 @@
                 "requireLowercase": "Password must contain lowercase letters",
                 "requireNumbers": "Password must contain numbers",
                 "requireSpecialChars": "Password must contain special characters"
-            }
+            },
+            "description": "Manage organization password policy",
+            "errorConnect": "Failed to connect to server",
+            "errorLoad": "Failed to load policy",
+            "errorSave": "Failed to save policy",
+            "historyExpiry": "History expiry",
+            "maxFailedAttemptsDesc": "Maximum failed attempts before account lockout",
+            "noExpiry": "No expiry",
+            "save": "Save policy"
         },
         "sessions": {
             "title": "Device Sessions",
@@ -4467,7 +5216,44 @@
             "minutesAgo": "minutes ago",
             "hoursAgo": "hours ago",
             "daysAgo": "days ago"
-        }
+        },
+        "attention": "Attention",
+        "attentionWarning": "Warning",
+        "audit": {
+            "desc": "View and manage system audit logs",
+            "title": "Audit Logs"
+        },
+        "confirmLoadDemo": "Are you sure you want to load demo data?",
+        "controlEngine": {
+            "description": "Manage modules, workflows, and system controls",
+            "title": "Control Engine"
+        },
+        "deleteAccountError": "Failed to delete account",
+        "deleteAccountErrorGeneric": "An error occurred while deleting the account",
+        "deleteAccountModalDesc": "This action cannot be undone. All your data will be permanently deleted.",
+        "deleteAccountModalTitle": "Delete Account",
+        "deleteAccountTitle": "Delete my account",
+        "deleteConfirmInstruction": "Type DELETE to confirm",
+        "demoDataDescription": "Load sample data to try out features",
+        "demoDataTitle": "Demo Data",
+        "demoStatusSuccess": "Demo status loaded successfully",
+        "downloadDataError": "Failed to download data",
+        "downloadDataSuccess": "Data downloaded successfully",
+        "downloadMyData": "Download my data",
+        "downloading": "Downloading...",
+        "errorLoadCompany": "Failed to load company data",
+        "errorSaveChanges": "Failed to save changes",
+        "fileTooLarge": "File is too large",
+        "invalidFileFormat": "Invalid file format",
+        "loadDemoData": "Load demo data",
+        "loadingDemo": "Loading demo...",
+        "phoneFromCompany": "Phone from company data",
+        "photoFormatHint": "Format: JPG, PNG. Max 2MB",
+        "photoSaveError": "Failed to save photo",
+        "photoUpdateSuccess": "Photo updated successfully",
+        "photoUploadError": "Failed to upload photo",
+        "typeDeleteToConfirm": "Type DELETE to confirm",
+        "uploading": "Uploading..."
     },
     "audit": {
         "title": "Audit Trail",
@@ -4530,7 +5316,36 @@
         "dataChanges": "Data Changes",
         "noChanges": "No change details available",
         "dateFrom": "From date",
-        "dateTo": "To date"
+        "dateTo": "To date",
+        "allActions": "All actions",
+        "allEntities": "All entities",
+        "applyFilter": "Apply filter",
+        "detail": {
+            "action": "Action",
+            "close": "Close",
+            "entity": "Entity",
+            "ipAddress": "IP address",
+            "newValue": "New value",
+            "oldValue": "Old value",
+            "timestamp": "Timestamp",
+            "title": "Audit Log Detail",
+            "user": "User"
+        },
+        "endDate": "End date",
+        "filter": "Filter",
+        "loadingLog": "Loading audit logs...",
+        "reload": "Reload",
+        "startDate": "Start date",
+        "table": {
+            "action": "Action",
+            "actions": "Actions",
+            "detail": "Detail",
+            "entity": "Entity",
+            "ipAddress": "IP address",
+            "timestamp": "Timestamp",
+            "user": "User"
+        },
+        "totalEntries": "Total entries"
     },
     "search": {
         "placeholder": "Search invoices, deals, contacts, products...",
@@ -4934,9 +5749,13 @@
                 "visibilityOptions": {
                     "private": "Private",
                     "team": "Team",
-                    "organization": "Organization"
+                    "organization": "Organization",
+                    "ORGANIZATION": "Organization",
+                    "PRIVATE": "Private",
+                    "TEAM": "Team"
                 }
-            }
+            },
+            "createTitle": "Create Chart"
         },
         "dashboards": {
             "title": "Dashboards",
@@ -5288,7 +6107,8 @@
                 "selectDimensions": "Select at least one dimension or measure",
                 "saveFailed": "Failed to save report",
                 "queryFailed": "Failed to execute query. Please try again."
-            }
+            },
+            "tags": "Tags"
         },
         "kpi": {
             "title": "KPI Management",
@@ -6092,7 +6912,24 @@
             "quickInvoice": "Invoice",
             "quickProfit": "Profit",
             "placeholder": "Ask something..."
-        }
+        },
+        "agentsSubtitle": "Manage and use your AI agents",
+        "agentsTitle": "AI Agents",
+        "allTypes": "All types",
+        "documentCount": "Document count",
+        "documentUploadDesc": "Upload a document to extract its data",
+        "errorLoadingAgents": "Failed to load AI agents",
+        "errorQuery": "An error occurred while processing your request",
+        "errorQueryAgent": "Failed to process the query",
+        "fieldsFilled": "Fields filled",
+        "priorityHigh": "High priority",
+        "priorityLow": "Low priority",
+        "priorityMedium": "Medium priority",
+        "queryPlaceholder": "Type your question...",
+        "queryResult": "Query result",
+        "send": "Send",
+        "sending": "Sending...",
+        "suggestions": "Suggestions"
     },
     "notification": {
         "title": "Notifications",
@@ -6275,7 +7112,36 @@
                 "syncing": "Syncing",
                 "success": "Success",
                 "failed": "Failed"
-            }
+            },
+            "change": "Change",
+            "clearAll": "Clear all",
+            "emptyCart": "Cart is empty",
+            "emptyCartHint": "Add products to get started",
+            "exactAmount": "Exact amount",
+            "noProducts": "No products",
+            "openSession": "Open session",
+            "openSessionTitle": "Open Cashier Session",
+            "opening": "Opening...",
+            "openingCash": "Opening cash",
+            "openingCashPlaceholder": "Enter opening cash",
+            "outOfStock": "Out of stock",
+            "paidAmount": "Paid amount",
+            "pay": "Pay",
+            "paymentMethod": "Payment method",
+            "paymentTitle": "Payment",
+            "processPayment": "Process payment",
+            "processing": "Processing...",
+            "retry": "Retry",
+            "roundTo": "Round to",
+            "searchPlaceholder": "Search products...",
+            "selectTerminal": "Select terminal",
+            "sessionActive": "Session active",
+            "shortage": "Shortage",
+            "subtotal": "Subtotal",
+            "tax": "Tax",
+            "terminal": "Terminal",
+            "totalBelanja": "Total",
+            "transactionSuccess": "Transaction successful"
         },
         "terminals": {
             "title": "POS Terminals",
@@ -6376,7 +7242,22 @@
             "errorClose": "Failed to close session",
             "errorLoad": "Failed to load session data",
             "errorLoadNetwork": "Failed to load session data. Check your network connection.",
-            "retry": "Try Again"
+            "retry": "Try Again",
+            "cashRefunds": "Cash refunds",
+            "cashSales": "Cash sales",
+            "cashSummary": "Cash summary",
+            "closingReportTitle": "Closing Report",
+            "discounts": "Discounts",
+            "expectedCash": "Expected cash",
+            "grossSales": "Gross sales",
+            "netSales": "Net sales",
+            "paymentMethods": "Payment methods",
+            "refundsAndVoids": "Refunds & voids",
+            "revenue": "Revenue",
+            "salesBreakdown": "Sales breakdown",
+            "tax": "Tax",
+            "topProducts": "Top products",
+            "totalTransactions": "Total transactions"
         },
         "transactions": {
             "title": "POS Transactions",
@@ -6418,7 +7299,11 @@
             "errorLoadNetwork": "Failed to load transaction data. Check your network connection.",
             "retry": "Try Again",
             "previous": "Previous",
-            "next": "Next"
+            "next": "Next",
+            "print": "Print",
+            "receiptTitle": "Receipt",
+            "voidReason": "Void reason",
+            "voidReasonPlaceholder": "Enter void reason"
         },
         "refunds": {
             "title": "POS Refunds",
@@ -6687,7 +7572,11 @@
             "errorLoad": "Failed to load loyalty data",
             "membersLabel": "members",
             "membersCount": "{count} members ({percentage}%)",
-            "pts": "pts"
+            "pts": "pts",
+            "typeAdjust": "Adjustment",
+            "typeEarn": "Earn",
+            "typeExpire": "Expire",
+            "typeRedeem": "Redeem"
         },
         "monitor": {
             "title": "Monitor Terminal",
@@ -7107,83 +7996,58 @@
                     "noSchedule": "No schedule for this date"
                 }
             }
-        }
+        },
+        "components": {
+            "checklistForm": {
+                "additionalNotes": "Additional notes",
+                "cancel": "Cancel",
+                "errorSaving": "Failed to save checklist",
+                "itemRequired": "This item is required",
+                "notesPlaceholder": "Add notes",
+                "photoSelected": "Photo selected",
+                "photoTap": "Tap to take photo",
+                "requiredItems": "Required items",
+                "saving": "Saving...",
+                "signatureGiven": "Signature given",
+                "signaturePending": "Signature pending",
+                "submitChecklist": "Submit checklist",
+                "textInputPlaceholder": "Enter answer"
+            },
+            "jobCard": {
+                "checklists": "Checklists",
+                "minutes": "min",
+                "technicians": "Technicians"
+            },
+            "jobMap": {
+                "address": "Address",
+                "coordinates": "Coordinates",
+                "location": "Location",
+                "noLocationInfo": "No location information",
+                "open": "Open",
+                "openInMaps": "Open in maps"
+            },
+            "technicianSchedule": {
+                "day": "Day",
+                "minutes": "min",
+                "noSchedule": "No schedule",
+                "title": "Technician Schedule",
+                "week": "Week"
+            }
+        },
+        "description": {
+            "checklists": "Manage job checklists",
+            "jobs": "Manage field jobs"
+        },
+        "modules": "Modules",
+        "stats": {
+            "completed": "Completed",
+            "inProgress": "In progress",
+            "scheduled": "Scheduled",
+            "today": "Today",
+            "total": "Total"
+        },
+        "subtitle": "Manage field jobs and visits"
     },
-    "toast": {
-        "createSuccess": "Invoice created successfully",
-        "deleteSuccess": "Invoice deleted successfully",
-        "deleteFailed": "Failed to delete",
-        "deleteError": "Failed to delete invoice",
-        "approveSuccess": "Leave approved successfully",
-        "approveFailed": "Failed to approve leave",
-        "rejectSuccess": "Leave rejected successfully",
-        "rejectFailed": "Failed to reject leave"
-    },
-    "emptyDescription": "Create your first invoice to start receiving payments",
-    "confirmDeleteTitle": "Confirm Deletion",
-    "confirmDeleteMessage": "Are you sure you want to delete this invoice?",
-    "type": {
-        "annual": "Annual Leave",
-        "sick": "Sick Leave",
-        "personal": "Personal Leave",
-        "maternity": "Maternity Leave",
-        "unpaid": "Unpaid Leave"
-    },
-    "status": {
-        "pending": "Pending",
-        "approved": "Approved",
-        "rejected": "Rejected"
-    },
-    "error": {
-        "loadFailed": "Failed to load leave data",
-        "notFound": "Leave data not found"
-    },
-    "confirm": {
-        "approveTitle": "Approve Leave",
-        "approveMessage": "Are you sure you want to approve leave for {{name}}?",
-        "rejectTitle": "Reject Leave",
-        "rejectMessage": "Are you sure you want to reject leave for {{name}}?"
-    },
-    "processing": "Processing...",
-    "detailTitle": "Leave Detail",
-    "approve": "Approve",
-    "reject": "Reject",
-    "backToList": "Back to leave list",
-    "fields": {
-        "type": "Leave Type",
-        "days": "Number of Days",
-        "startDate": "Start Date",
-        "endDate": "End Date",
-        "reason": "Reason",
-        "notes": "Notes"
-    },
-    "timeline": {
-        "title": "Status History",
-        "applied": "Leave requested",
-        "approvedBy": "Approved by {{name}}",
-        "rejected": "Leave rejected"
-    },
-    "employeeInfo": {
-        "title": "Employee Info",
-        "name": "Name",
-        "nip": "Employee Number",
-        "position": "Position",
-        "department": "Department"
-    },
-    "summary": {
-        "title": "Summary",
-        "applied": "Applied",
-        "approvedBy": "Approved By"
-    },
-    "actions": {
-        "title": "Actions",
-        "viewProfile": "View Employee Profile",
-        "backToList": "Back to Leave List"
-    },
-    "noLeaveRequests": "No leave requests yet",
-    "birthdayNotAvailable": "Birthday data not available",
-    "birthdayFieldMissing": "dateOfBirth field not available in employee data",
-    "loadError": "Failed to load HR data",
     "inbox": {
         "title": "Title",
         "description": "Your activity center — tasks, approvals, and items that need your attention.",
@@ -7297,5 +8161,103 @@
         "noAuth": "No authentication required",
         "rateLimit": "Rate Limit",
         "permission": "Permission"
+    },
+    "controlEngine": {
+        "approvals": {
+            "approvalSystem": "Approval system",
+            "approvalSystemDesc": "Configure transaction approval flow",
+            "maxLevels": "Max approval levels",
+            "maxLevelsDesc": "Maximum number of approval levels",
+            "requireComments": "Require comments",
+            "requireCommentsDesc": "Require a comment when approving or rejecting",
+            "subtitle": "Manage approval rules",
+            "title": "Approvals"
+        },
+        "core": "Core",
+        "dashboard": {
+            "hideWidget": "Hide widget",
+            "showWidget": "Show widget",
+            "sizeLarge": "Large",
+            "sizeMedium": "Medium",
+            "sizeSmall": "Small",
+            "subtitle": "Configure dashboard widgets",
+            "title": "Dashboard Widgets"
+        },
+        "exportButton": "Export config",
+        "exportError": "Failed to export configuration",
+        "exportSuccess": "Configuration exported successfully",
+        "fields": {
+            "subtitle": "Manage custom fields per entity",
+            "title": "Custom Fields"
+        },
+        "history": {
+            "empty": "No change history yet",
+            "reason": "Reason",
+            "subtitle": "Configuration change history",
+            "title": "History"
+        },
+        "importButton": "Import config",
+        "importError": "Failed to import configuration",
+        "importInvalidFile": "Invalid configuration file",
+        "importSuccess": "Configuration imported successfully",
+        "loadError": "Failed to load configuration",
+        "loadHistoryError": "Failed to load history",
+        "loading": "Loading configuration...",
+        "modules": {
+            "aiFeatures": "AI features",
+            "aiFeaturesDesc": "AI agents, document extraction, and anomaly detection",
+            "analytics": "Analytics",
+            "analyticsDesc": "Dashboards, charts, and data exploration",
+            "coreDisabled": "Core modules cannot be disabled",
+            "crm": "CRM",
+            "crmDesc": "Leads, contacts, deals, and pipeline",
+            "featuresInModule": "Features in module",
+            "fieldService": "Field Service",
+            "fieldServiceDesc": "Jobs, checklists, and technician schedules",
+            "finance": "Finance",
+            "financeDesc": "Invoices, payments, and journal",
+            "hr": "HR",
+            "hrDesc": "Employees, attendance, leave, and payroll",
+            "inventory": "Inventory",
+            "inventoryDesc": "Products, stock, suppliers, and warehouses",
+            "operations": "Operations",
+            "operationsDesc": "Budget, gantt, timeline, and heatmap",
+            "pos": "POS",
+            "posDesc": "Terminal, transactions, and loyalty",
+            "projects": "Projects",
+            "projectsDesc": "Tasks, boards, and resource allocation",
+            "subtitle": "Enable or disable modules",
+            "title": "Modules"
+        },
+        "permissions": {
+            "memberCanDelete": "Member can delete",
+            "memberCanDeleteDesc": "Allow MEMBER role to delete data",
+            "subtitle": "Manage permissions per role",
+            "title": "Permissions",
+            "viewerCanExport": "Viewer can export",
+            "viewerCanExportDesc": "Allow VIEWER role to export data"
+        },
+        "resetAllButton": "Reset all",
+        "resetError": "Failed to reset configuration",
+        "resetErrorCategory": "Failed to reset category",
+        "resetSuccess": "Configuration reset successfully",
+        "saveError": "Failed to save configuration",
+        "saveErrorCategory": "Failed to save category",
+        "saveSuccess": "Configuration saved successfully",
+        "tabs": {
+            "approvals": "Approvals",
+            "fields": "Fields",
+            "history": "History",
+            "modules": "Modules",
+            "permissions": "Permissions",
+            "widgets": "Widgets",
+            "workflow": "Workflow"
+        },
+        "workflow": {
+            "autoTransition": "Auto transition",
+            "resetButton": "Reset workflow",
+            "subtitle": "Configure transaction workflow",
+            "title": "Workflow"
+        }
     }
 }

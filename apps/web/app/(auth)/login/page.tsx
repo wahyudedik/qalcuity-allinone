@@ -238,7 +238,7 @@ export default function LoginPage() {
             }
         } catch (err) {
             console.error('[Login] login threw error:', err)
-            setError(t('common.error'))
+            setError(t('common.errorOccurred'))
             setIsLoading(false)
         }
     }

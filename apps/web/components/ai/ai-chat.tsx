@@ -80,7 +80,7 @@ export function AIChat() {
             };
             setMessages((prev) => [...prev, aiResponse]);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : (t('common.error') || 'Terjadi kesalahan');
+            const errorMessage = err instanceof Error ? err.message : (t('common.errorOccurred') || 'Terjadi kesalahan');
             setError(errorMessage);
             const fallbackResponse: Message = {
                 id: (Date.now() + 1).toString(),

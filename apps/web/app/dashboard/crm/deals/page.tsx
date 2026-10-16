@@ -95,10 +95,10 @@ export default function DealsPage() {
             if (data.success) {
                 setDeals(data.data)
             } else {
-                setError(t('common.error'))
+                setError(t('common.errorOccurred'))
             }
         } catch {
-            setError(t('common.error'))
+            setError(t('common.errorOccurred'))
         } finally {
             setLoading(false)
         }
@@ -211,7 +211,7 @@ export default function DealsPage() {
                 fetchDeals()
                 setToast({ message: t('crm.deals.createSuccess'), type: 'success' })
             } else {
-                setToast({ message: t('crm.deals.createFailed').replace('{error}', result.error || t('common.error')), type: 'error' })
+                setToast({ message: t('crm.deals.createFailed').replace('{error}', result.error || t('common.errorOccurred')), type: 'error' })
             }
         } catch {
             setToast({ message: t('crm.deals.createError'), type: 'error' })

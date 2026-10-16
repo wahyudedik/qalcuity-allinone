@@ -187,7 +187,7 @@ export default function RegisterPage() {
             const data = await res.json()
 
             if (!res.ok) {
-                setError(data.error || t('common.error'))
+                setError(data.error || t('common.errorOccurred'))
                 return
             }
 
@@ -231,7 +231,7 @@ export default function RegisterPage() {
                 window.location.href = '/login?email=' + encodeURIComponent(formData.email)
             }
         } catch (err) {
-            setError(t('common.error'))
+            setError(t('common.errorOccurred'))
         } finally {
             setIsLoading(false)
         }

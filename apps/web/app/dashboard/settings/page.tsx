@@ -92,10 +92,10 @@ export default function ProfileSettingsPage() {
                 setSaveMessage({ type: 'success', text: `${t('common.success')}!` })
                 await updateSession({ name: formData.name, email: formData.email })
             } else {
-                setSaveMessage({ type: 'error', text: data.error || t('common.error') })
+                setSaveMessage({ type: 'error', text: data.error || t('common.errorOccurred') })
             }
         } catch {
-            setSaveMessage({ type: 'error', text: t('common.error') })
+            setSaveMessage({ type: 'error', text: t('common.errorOccurred') })
         } finally {
             setIsSaving(false)
             setTimeout(() => setSaveMessage(null), 3000)
@@ -129,7 +129,7 @@ export default function ProfileSettingsPage() {
             } else if (data.skipped) {
                 setDemoStatus(t('settings.attentionWarning') || 'Data sudah ada.')
             } else {
-                setDemoStatus(`${t('common.error') || 'Gagal'}: ${data.error || 'Unknown error'}`)
+                setDemoStatus(`${t('common.errorOccurred') || 'Gagal'}: ${data.error || 'Unknown error'}`)
             }
         } catch {
             setDemoStatus(t('audit.networkError') || 'Terjadi kesalahan. Silakan coba lagi.')

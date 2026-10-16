@@ -321,11 +321,11 @@ export default function InboxPage() {
             const json = await res.json().catch(() => null);
 
             if (!res.ok || !json?.success) {
-                throw new Error(json?.error?.message || json?.error || t('common.error'));
+                throw new Error(json?.error?.message || json?.error || t('common.errorOccurred'));
             }
             setInboxData(json.data);
         } catch (err) {
-            setError(err instanceof Error ? err.message : t('common.error'));
+            setError(err instanceof Error ? err.message : t('common.errorOccurred'));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -404,8 +404,8 @@ export default function InboxPage() {
             <div className="p-6">
                 <EmptyState
                     icon={AlertTriangle}
-                    title={t('common.error')}
-                    description={error || t('common.error')}
+                    title={t('common.errorOccurred')}
+                    description={error || t('common.errorOccurred')}
                     actionLabel={t('common.tryAgain')}
                     onAction={() => fetchInbox()}
                 />
