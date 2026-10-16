@@ -78,9 +78,9 @@
 - [x] Categories DELETE handler — connected to API
 - [x] Suppliers CRUD
 - [x] Stock movements tracking
-- [ ] Multi-warehouse — PLANNED
+- [x] Multi-warehouse — basic CRUD implemented (halaman `/dashboard/inventory/warehouses` + API + model Prisma `Warehouse`; dikoreksi Session 80 — fitur sudah ada, status lama `PLANNED` basi)
 - [ ] Batch/lot tracking — PLANNED
-- [x] Stock opname — basic CRUD implemented (halaman `/dashboard/inventory/stock-opname` + API + migration `20260903041000_add_warehouse_stock_opname`; FEATURES.md masih tercatat `planned` — perlu audit sinkron)
+- [x] Stock opname — basic CRUD implemented (halaman `/dashboard/inventory/stock-opname` + API + migration `20260903041000_add_warehouse_stock_opname`; FEATURES.md dikoreksi ke `production_ready` — Session 80)
 - [ ] Auto-reorder suggestion — PLANNED
 
 ### Phase 5: HR Module ✅ COMPLETED

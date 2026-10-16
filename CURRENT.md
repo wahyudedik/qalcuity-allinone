@@ -33,7 +33,7 @@
 
 - 🔴 **REDEPLOY REQUIRED — MENUNGGU OPERATOR** — ikuti [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md): pre-flight (backup, migrate status drift check, **rotasi CRON_SECRET** — token lama `e2eff893…` ter-expose di chat) → `sudo bash update.sh` → verifikasi **V1–V11**. Jangan klaim production fixed sebelum V1–V11 lulus.
 - Smoke lokal = dev server :3001 (Terminal 3); hasil mewakili build code HEAD `5ae88ba` (Session 79).
-- FEATURES.md masih mencatat Stock Opname "planned — Belum ada kode" (kontradiksi vs codebase) — **perlu audit sinkron FEATURES.md** di sesi berikutnya (di luar scope sesi ini).
+- Audit sinkron FEATURES.md **diselesaikan di sesi ini** (lanjutan instruksi "ok kerjakan"): Multi-warehouse, Stock Opname (baris lama "planned — Belum ada kode" basi), POS Discounts, POS Barcode → dikoreksi ke `🚀 production_ready` berbasis bukti codebase (model Prisma `Warehouse`/`StockOpname` + migration `20260903041000_add_warehouse_stock_opname` + halaman/API + `handleBarcodeScan`/promo engine di POS terminal); Unit of Measure & POS Returns tetap `planned` (tidak ada bukti kode); Document Version 34.7 → 34.8; ROADMAP Phase 4 baris Multi-warehouse & Stock opname ikut disinkronkan.
 - Investigasi "section duplikat Known Issues" di REMAINING-WORK.md: **tidak ditemukan** (regex header = 0 hasil) — klaim fase perencanaan tidak akurat, tidak ada yang dihapus.
 - Angka Status Summary REMAINING-WORK (Master Audit 24 Sep) sebagian basi — dikoreksi minimal + ditandai "perlu audit refresh"; jangan dipakai mentah untuk prioritisasi.
 
