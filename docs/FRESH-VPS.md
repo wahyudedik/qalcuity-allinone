@@ -3,7 +3,15 @@
 > **Runbook ini untuk VPS baru (belum ada pelanggan).**
 > Filosofi: **DB fresh = kosong total** — hanya Tenant demo + SuperAdmin (platform admin) yang dibuat otomatis. Registrasi user baru selalu membuat tenant kosong; data demo hanya di-load kalau user memilihnya secara eksplisit.
 
-**Last Updated:** 15 Oktober 2026 (Session 78)
+> ⚠️ **VPS sudah jalan tapi DB-nya kotor (data test/demo/bisnis lama)?**
+> Jangan ikuti runbook ini (butuh DB kosong dari nol). Gunakan **reset bertahap** di [`docs/RESET-PRODUCTION.md`](./RESET-PRODUCTION.md):
+> - **Tier A — keep-accounts** (disarankan): hapus semua data transaksi, **pertahankan** akun user, tenant, role, langganan, konfigurasi. [`scripts/reset-production-data.sql`](../scripts/reset-production-data.sql)
+> - **Tier B — full reset**: kosongkan semuanya kecuali tabel platform master, lalu core seed ulang (`SEED_DEMO=false`).
+> - **Tier C — per-tenant**: hapus data demo 1 tenant saja via [`scripts/cleanup-demo-tenant.sql`](../scripts/cleanup-demo-tenant.sql).
+>
+> Data demo **tidak pernah dibuat otomatis** — user memuatnya sendiri via OnboardingModal / Settings (lihat [Step 6](#7-step-6-registrasi-tenant--data-demo-opt-in)).
+
+**Last Updated:** 16 Oktober 2026 (Session 84) — tambah cross-link reset existing DB
 
 ---
 
@@ -177,6 +185,7 @@ Cukup **1 entry** di aaPanel → Cron (every 5 minutes):
 | OnboardingModal tidak muncul | Tenant sudah punya data, atau sudah di-dismiss (localStorage) | Cek `GET /api/demo/status`; clear localStorage `qalcuity_onboarding_dismissed` |
 | `prisma migrate deploy` gagal | DATABASE_URL salah / PG tidak jalan | Cocokkan `.env` dengan kredensial aaPanel PG |
 | Build gagal `Cannot find module '@prisma/client'` | `prisma generate` belum jalan | `cd packages/db && npx prisma generate` |
+| DB produksi penuh data test/demo & mau dibersihkan | Butuh reset existing DB (bukan VPS baru) | [`docs/RESET-PRODUCTION.md`](./RESET-PRODUCTION.md) — Tier A keep-accounts / Tier B full / Tier C per-tenant; **selalu preview dulu** (`-v execute=false`) |
 
 ---
 
