@@ -454,6 +454,8 @@ export default function PaymentsPage() {
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Jumlah (Rp)</label>
                                 <input
                                     type="number"
+                                    min="0.01"
+                                    step="any"
                                     value={recordForm.amount}
                                     onChange={(e) => setRecordForm({ ...recordForm, amount: e.target.value })}
                                     placeholder="5000000"
@@ -517,8 +519,9 @@ export default function PaymentsPage() {
                             </button>
                             <button
                                 onClick={async () => {
-                                    if (!recordForm.amount) {
-                                        setToast({ message: 'Lengkapi jumlah pembayaran', type: 'error' })
+                                    const amountNum = Number(recordForm.amount)
+                                    if (!recordForm.amount || isNaN(amountNum) || amountNum < 0.01) {
+                                        setToast({ message: 'Jumlah pembayaran harus lebih dari 0', type: 'error' })
                                         return
                                     }
                                     setRecordLoading(true)
@@ -527,7 +530,7 @@ export default function PaymentsPage() {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
-                                                amount: Number(recordForm.amount),
+                                                amount: amountNum,
                                                 method: recordForm.method,
                                                 type: recordForm.type,
                                                 date: recordForm.date || undefined,
@@ -542,7 +545,15 @@ export default function PaymentsPage() {
                                             setShowRecordModal(false)
                                             fetchPayments()
                                         } else {
-                                            setToast({ message: data.error || 'Gagal mencatat pembayaran', type: 'error' })
+                                            // Zod errors: { message, details: { field: [msgs] } }
+                                            // API errors: { error: { code, message } }
+                                            const fieldErrors = data.details ? Object.values(data.details).flat() : []
+                                            const errMsg =
+                                                fieldErrors[0] ||
+                                                data.error?.message ||
+                                                data.message ||
+                                                'Gagal mencatat pembayaran'
+                                            setToast({ message: errMsg, type: 'error' })
                                         }
                                     } catch {
                                         setToast({ message: 'Gagal mencatat pembayaran', type: 'error' })

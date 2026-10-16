@@ -16,6 +16,8 @@
 //
 // fallbackRole digunakan jika permission engine tidak tersedia (backward compat).
 
+import { ALL_PERMISSIONS } from '@qalcuity/permissions';
+
 export const ROUTE_PERMISSIONS: Record<string, { permission: string; method?: string; fallbackRole?: string }> = {
     // ─── Finance ──────────────────────────────────────────────────────────────
     '/api/finance/accounts': { permission: 'finance:view', fallbackRole: 'ADMIN' },
@@ -544,7 +546,17 @@ function resolvePermissionByMethod(basePermission: string, method: string): stri
     // If action is 'view', upgrade based on HTTP method
     if (action === 'view') {
         const resolvedAction = METHOD_ACTION_MAP[method] || 'view';
-        return `${module}:${resolvedAction}`;
+        const upgraded = `${module}:${resolvedAction}`;
+        // Guard: only upgrade if the target permission exists in the catalog.
+        // View-only modules (platform, audit, dashboard, notification, ai) only
+        // define 'view' in MODULE_PERMISSIONS — upgrading to a non-existent
+        // permission (e.g. platform:edit) would make hasFlatPermission() fail
+        // even for SUPERADMIN under RBAC_STRICT. Keep the base permission
+        // instead so the check uses module:view which always exists.
+        if (ALL_PERMISSIONS.includes(upgraded)) {
+            return upgraded;
+        }
+        return basePermission;
     }
 
     return basePermission;
