@@ -5960,7 +5960,9 @@
         "loadingCategories": "Loading categories & products...",
         "demoLoaded": "Demo data loaded successfully!",
         "demoFailed": "Failed to load data:",
-        "error": "An error occurred. Please try again."
+        "error": "An error occurred. Please try again.",
+        "confirmDemoTitle": "Load demo data to your workspace?",
+        "confirmDemoMessage": "Demo data (products, contacts, invoices, employees, etc.) will be added to your workspace. Make sure your workspace is still empty before continuing."
     },
     "ai": {
         "welcomeMessage": "Hello! I'm the Qalcuity AI Assistant. I can help you with:\n\n• Displaying sales data\n• Creating invoices\n• Analyzing profit & loss\n• Providing business insights\n\nHow can I help you?",

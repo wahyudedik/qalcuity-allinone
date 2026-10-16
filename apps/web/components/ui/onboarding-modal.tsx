@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useTranslation } from '@/lib/i18n'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 /**
  * localStorage key — saat "Mulai dari Nol" / "Lewati" dipilih, auto-show
@@ -21,6 +22,8 @@ export default function OnboardingModal() {
     const [loadingStep, setLoadingStep] = useState('')
     // Auto-show untuk tenant kosong (fallback: ?onboard=true eksplisit dari register)
     const [autoShow, setAutoShow] = useState(false)
+    // Konfirmasi sebelum muat data demo — cegah klik tidak sengaja (RCA Session 80)
+    const [showDemoConfirm, setShowDemoConfirm] = useState(false)
 
     const role = session?.user?.role as string | undefined
     const explicitOnboard = searchParams?.get('onboard') === 'true'
@@ -170,7 +173,7 @@ export default function OnboardingModal() {
 
                         <div className="space-y-3">
                             <button
-                                onClick={handleLoadDemo}
+                                onClick={() => setShowDemoConfirm(true)}
                                 className="w-full rounded-xl border-2 border-blue-200 bg-blue-50 px-6 py-4 text-left transition hover:border-blue-300 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/20 dark:hover:border-blue-700 dark:hover:bg-blue-900/30"
                             >
                                 <div className="flex items-center gap-3">
@@ -215,6 +218,21 @@ export default function OnboardingModal() {
                     </>
                 )}
             </div>
+
+            {/* Konfirmasi sebelum muat data demo — tindakan ini menambah banyak data */}
+            <ConfirmDialog
+                isOpen={showDemoConfirm}
+                onClose={() => setShowDemoConfirm(false)}
+                onConfirm={() => {
+                    setShowDemoConfirm(false)
+                    void handleLoadDemo()
+                }}
+                title={t('onboarding.confirmDemoTitle') || 'Muat data demo ke workspace?'}
+                message={t('onboarding.confirmDemoMessage') || 'Data demo (produk, kontak, invoice, karyawan, dll.) akan ditambahkan ke workspace Anda. Pastikan workspace masih kosong sebelum melanjutkan.'}
+                confirmText={t('onboarding.loadDemo') || 'Muat Data Demo'}
+                cancelText={t('common.cancel') || 'Batal'}
+                variant="warning"
+            />
         </div>
     )
 }

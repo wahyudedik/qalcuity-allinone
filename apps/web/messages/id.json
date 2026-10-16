@@ -5960,7 +5960,9 @@
         "loadingCategories": "Memuat kategori & produk...",
         "demoLoaded": "Data demo berhasil dimuat!",
         "demoFailed": "Gagal memuat data:",
-        "error": "Terjadi kesalahan. Silakan coba lagi."
+        "error": "Terjadi kesalahan. Silakan coba lagi.",
+        "confirmDemoTitle": "Muat data demo ke workspace?",
+        "confirmDemoMessage": "Data demo (produk, kontak, invoice, karyawan, dll.) akan ditambahkan ke workspace Anda. Pastikan workspace masih kosong sebelum melanjutkan."
     },
     "ai": {
         "welcomeMessage": "Halo! Saya adalah AI Assistant Qalcuity. Saya bisa membantu Anda dengan:\n\n• Menampilkan data penjualan\n• Membuat invoice\n• Menganalisis profit & loss\n• Memberikan insight bisnis\n\nAda yang bisa saya bantu?",
