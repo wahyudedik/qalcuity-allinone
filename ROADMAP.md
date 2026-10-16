@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity Development Roadmap
 
-> **Last Updated:** 15 September 2026 (Session 44: Full i18n Migration Complete)
-> **Current Version:** v11.30.0
-> **Status:** Core Modules Production-Ready + Foundation Engines + POS ~95% + i18n Production Ready (1,847 keys, 245+ files) + Cron Jobs + Security Hardening (~100/100 health score)
+> **Last Updated:** 16 Oktober 2026 (Session 80: Production Readiness + Documentation Sync)
+> **Current Version:** v11.70.1+ (code HEAD `5ae88ba`, Session 79 — menunggu redeploy production)
+> **Status:** Core Modules Production-Ready + Foundation Engines + POS ~95% (offline mode ✅) + Community & Public Administration Fase 1–4B ✅ + i18n Production Ready (4,755 keys) + Cron Jobs (fix S79 — menunggu deploy) + Security Hardening + RBAC coverage ~94–98% (RBAC_STRICT)
 
 ---
 
@@ -80,7 +80,7 @@
 - [x] Stock movements tracking
 - [ ] Multi-warehouse — PLANNED
 - [ ] Batch/lot tracking — PLANNED
-- [ ] Stock opname — PLANNED
+- [x] Stock opname — basic CRUD implemented (halaman `/dashboard/inventory/stock-opname` + API + migration `20260903041000_add_warehouse_stock_opname`; FEATURES.md masih tercatat `planned` — perlu audit sinkron)
 - [ ] Auto-reorder suggestion — PLANNED
 
 ### Phase 5: HR Module ✅ COMPLETED
@@ -211,7 +211,8 @@
 > **Modul fundamental — Unified Control Engine dengan 14 sub-komponen: Policy Engine, Workflow, Approval, Escalation, SLA, Delegation, Notification, Locking, Audit Trail, SoD, Exception Center, Work Inbox, Period Closing, Emergency Access.**
 > Lihat [ADR-017](docs/DECISIONS.md#adr-017-unified-control-engine) s/d [ADR-023](docs/DECISIONS.md#adr-023-control-dashboard-tiers).
 >
-> **Session 44 Progress:** Tax Engine MVP ~40%, Period Closing Wizard ~50%, Approval Engine done. Core pipeline (10A) — Approval Engine + Period Closing Wizard implemented. Policy Engine + Escalation + Locking + SoD still planned. i18n migration (Sessions 38-44) completed across all modules — 1,847 keys, 245+ files, 16 modules.
+> **Session 44 Progress:** Tax Engine MVP ~40%, Period Closing Wizard ~50%, Approval Engine done. Core pipeline (10A) — Approval Engine + Period Closing Wizard implemented. i18n migration (Sessions 38-44) completed across all modules — 1,847 keys, 245+ files, 16 modules.
+> **Sessions 68–69 Progress:** Lock Policy + Unlock-as-Exception flow, SoD management UI + conflict detection, RBAC_STRICT hardening (FE-PE-09a) delivered — lihat [`CURRENT.md`](CURRENT.md). Policy Engine + Escalation masih planned.
 
 #### 10A: Core Pipeline (Foundational)
 
@@ -369,6 +370,7 @@
 - [ ] Push notifications
 - [ ] Biometric authentication
 - [x] 12 screens (Dashboard, Home, Finance, CRM, HR, Inventory)
+- [x] CRUD operations 4 entitas utama via real endpoints (Session 59)
 
 ### Phase 16: Desktop Enhancement 📋 PLANNED
 
@@ -664,6 +666,44 @@
 - [ ] Integration with monitoring tools (Grafana, Prometheus — optional)
 - [ ] Platform API documentation (OpenAPI/Swagger)
 
+### Phase 26: Community & Public Administration (RT/RW) 🚀 Fase 1–4B COMPLETED
+
+> **Modul administrasi warga RT/RW — iuran, kas dengan approval SoD, surat pengantar PDF+QR, kegiatan, aset & pinjaman, portal warga.** Industry pack `community` + feature flag `COMMUNITY_MODULE`.
+> Dokumentasi lengkap: [`docs/COMMUNITY-MODULE.md`](docs/COMMUNITY-MODULE.md). Multi-RT/RW **DEFERRED** per [ADR-025](docs/DECISIONS.md) (ACCEPTED Option A: 1 tenant = 1 komunitas).
+
+#### 26A: MVP Keuangan & Keanggotaan (Session 72) ✅ COMPLETED
+
+- [x] Members CRUD + NIK/NKK terenkripsi AES-256-GCM (`nikEnc`/`nkkEnc`)
+- [x] Dues Types & Bills periodik auto-numbering `TAG/YYYY-MM/W-XXX` (idempotent per periode)
+- [x] Payments atomik (payment + update bill + cash INCOME, `$transaction`) + receipt upload
+- [x] Cash Transactions + Approval SoD (PENDING → APPROVED/REJECTED, self-approve block, bendahara ≠ approver)
+- [x] Announcements + Monthly Reports (penerimaan, pengeluaran, saldo kas)
+- [x] Portal warga read-only (own-only tagihan, kas transparansi APPROVED, pengumuman)
+- [x] Custom roles per-tenant: KETUA / BENDAHARA / SEKRETARIS / WARGA (`isSystem=false`; RBAC_STRICT — ADMIN tidak otomatis `community:*`)
+- [x] Seed demo rt02-melati deterministik + verify script
+
+#### 26B: Surat & Kegiatan (Sessions 73–74) ✅ COMPLETED
+
+- [x] CommunityLetter surat pengantar PDF+QR — DRAFT → ISSUE → REVOKE, nomor `SRT/<PNG|DOM|SKT|KTR>/<YYYY>-XXX`, verify token 32-hex publik
+- [x] CommunityEvent kegiatan + budget/kas terhubung + peserta dengan kuota
+
+#### 26C: Aset Komunitas (Sessions 75–76) ✅ COMPLETED
+
+- [x] CommunityAsset CRUD kode `AST/<YYYY>-<seq3>` collision-safe + summary route
+- [x] CommunityAssetLoan pinjaman aset + depresiasi informatif straight-line + portal strict field
+
+#### 26D: Multi-RT/RW Tenancy ⏸️ DEFERRED (ADR-025)
+
+- [ ] Tenant = RW + `CommunityUnit` (RT) — **ditunda**; keputusan founder: Option A (status quo, 1 tenant = 1 komunitas) yang diterima
+
+#### 26E: Fase 5 — Roadmap Lanjutan 📋 PLANNED
+
+- [ ] Mode Akuntansi Opsional — jurnal double-entry untuk kas (opsional per tenant)
+- [ ] Offline Bendahara — mode offline untuk bendahara (mengikuti pola POS offline)
+- [ ] Mobile RN Bendahara — dukungan React Native
+- [ ] Auto-debit iuran
+- [ ] Integrasi regulasi/lanjutan: desa/kelurahan, WhatsApp gateway, right-to-erasure (UU PDP)
+
 ---
 
 ## Phase Overview
@@ -695,6 +735,7 @@
 | **23** | Oct-Dec '26 | Platform Control Center (Core) | Tenant mgmt + Subscription + Billing + Entitlements + Usage | 📋 `planned` |
 | **24** | Jan-Mar '27 | Platform Monitoring & Error Center | System health + Error center + Logs + Background jobs | 📋 `planned` |
 | **25** | Apr-Jun '27 | Platform Support & Impersonation | Support tickets + Impersonation + Feature flags + Security center | 📋 `planned` |
+| **26** | Oct '26 | Community & Public Administration (RT/RW) | Warga+NIK encrypted, iuran, kas+SoD, surat PDF+QR, event, aset+pinjaman, portal | 🚀 `phase 1-4b done` (Fase 5 planned, Multi-RT/RW deferred) |
 
 ### Success Criteria Per Phase
 
@@ -751,7 +792,8 @@
 |------|-----------|--------|
 | **Aug 2026** | MVP Development Complete | ✅ Done |
 | **Sep 2026** | Industry Pack Framework Ready + i18n Production Ready | ✅ Done (Session 44: 1,847 keys, 16 modules) |
-| **Oct 2026** | MVP Beta Launch | 📋 Planned |
+| **Oct 2026** | Community & Public Administration Fase 1–4B | ✅ Done (Sessions 72–76) |
+| **Oct 2026** | MVP Beta Launch | 📋 Planned — production tertinggal redeploy (checklist: [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md)) |
 | **Dec 2026** | Production Deployment | 📋 Planned |
 | **Feb 2027** | 20 Paying Customers | 📋 Planned |
 | **May 2027** | 100 Paying Customers | 📋 Planned |
@@ -786,6 +828,11 @@
 
 | Date | Change | Impact |
 |------|--------|--------|
+| 2026-10-16 | Session 80 — Production readiness: rewrite [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md) (verification matrix V1–V11, Step 6b seed_core, rotasi CRON_SECRET), smoke lokal 7/7 PASS (cron 401, favicon 200, tsc 0 errors, vitest 374/374), sinkron ROADMAP + REMAINING-WORK | Documentation + Production readiness |
+| 2026-10-15 | Sessions 77–79 — Production console-error fixes (anomalies PATCH, employees [id] contract, TypeError optional-chain guards, team RBAC UI gating, favicon.ico), fresh VPS bootstrap + onboarding demo opt-in ([`docs/FRESH-VPS.md`](docs/FRESH-VPS.md)), cron middleware `PUBLIC_API_PATHS` fix — 🔴 REDEPLOY REQUIRED | Production stability |
+| 2026-10-10→15 | Sessions 72–76 — **Community & Public Administration MVP → Fase 4B** (phase baru): warga NIK/NKK AES-256-GCM, iuran/bills/payments atomik, kas + SoD approval, pengumuman, portal warga, surat pengantar PDF+QR + verify publik, event + peserta, aset + pinjaman + depresiasi; ADR-025 (Option A) + ADR-026; 5 migrasi community | New module + Industry pack |
+| 2026-10-06→12 | Sessions 68–71 — Lock Policy + Unlock-as-Exception, SoD management UI + RBAC_STRICT hardening (FE-PE-09a), error logging platform, demo data enhancement (seed Finance 132 jurnal seimbang + HR 1350 absensi + verify scripts) | Control + Quality |
+| 2026-09-16→10-05 | Sessions 45–67 — Master audit (Grade B-), RBAC coverage 41%→94%, CI/CD GitHub Actions, Prisma Tenant PoC, mobile CRUD 4 entitas (Session 59), POS offline mode lengkap (Dexie.js IndexedDB + sync + idempotency, Session 67), inbox 6 kategori, password policy, POS products CRUD | Quality + POS + Mobile |
 | 2026-09-15 | Session 44 — Full i18n Migration Complete: 1,847 keys across 16 modules, 245+ files using useTranslation, 350+ keys added, 300+ hardcoded strings replaced, TypeScript 0 errors, all modules localized | i18n + Production Ready |
 | 2026-09-15 | Session 43 — i18n: Reports module (100+ keys), AI module (80+ keys), Notifications module (60+ keys), Settings module (50+ keys) | i18n |
 | 2026-09-15 | Session 42 — i18n: CRM module (90+ keys), HR module (80+ keys), Inventory module (70+ keys), Billing module (60+ keys) | i18n |
@@ -856,5 +903,5 @@
 
 ---
 
-**Last Updated:** September 15, 2026 (Session 44: Full i18n Migration — v11.30.0)
+**Last Updated:** 16 Oktober 2026 (Session 80: Production Readiness + Documentation Sync — v11.70.1+)
 **Maintainer:** Qalcuity Product Team

@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity — Remaining Work Documentation
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
-> Diperbarui: 6 October 2026
-> Version: 1.10 — Session 68: Lock Policy + Unlock as Exception (UCE-25, UCE-26)
+> Diperbarui: 16 Oktober 2026
+> Version: 1.11 — Session 80: Production Readiness + Documentation Sync
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -42,10 +42,19 @@
 | **POS Module** | 11 | 2 | 4 | 17 | 65% |
 | **Mobile** | 0 | 2 | 2 | 4 | 0% |
 | **Desktop** | 0 | 1 | 1 | 2 | 0% |
+| **Community & Public Admin** | Fase 1–4B | — | Fase 5 | — | ✅ done* |
 | **Platform Control Center** | 0 | 1 | 65+ | 65+ | 0% |
-| **TOTAL** | **~97** | **~22** | **~129** | **~269** | **~36%** |
+| **TOTAL** | **~97** | **~22** | **~129** | **~269** | **~36%*** |
 
 > **Catatan Foundation Engines (Session 69 — FE-PE-09a):** Item **[FE-PE-09]** (Migration from 4-Role RBAC) **tetap `[ ]`** — migrasi ~94–98% sudah dieksekusi (278 RBAC entries, 242+ API route files terintegrasi, UI 100% `usePermission()`), hardening FE-PE-09a selesai (observability logging + `RBAC_STRICT` strict mode + audit route coverage + mobile exception + legacy helper `@deprecated`). **Scope enforcement (branch/department per ADR-013) dipecah jadi item baru [FE-PE-09b]** — progress kategori **Architecture Engines** (yang mencakup 3 Foundation Engine packages) naik, tetapi item tetap terbuka sampai FE-PE-09b selesai.
+
+> **Catatan Koreksi Session 80 (16 Okt 2026)*** — Angka di tabel di atas berasal dari Master Audit 24 September 2026 dan **sebagian sudah basi**. Koreksi berbasis bukti codebase/docs:
+> - **Industry Packs `0%`** → engine `@qalcuity/industry-config` aktif dengan **11 industry packs** (konfigurasi fields/workflow/dashboard per industri — AGENT.md §5). Item IP-01..IP-09 tetap terbuka untuk **deep features per pack**.
+> - **POS Module `65%`** → offline mode + kitchen display selesai (Session 67, Phase 4C) — progres aktual lebih tinggi dari angka tabel.
+> - **Mobile `0%`** → CRUD 4 entitas utama (Contact, Invoice, Employee, Product) via real endpoints selesai (Session 59).
+> - **Community & Public Admin** → Fase 1–4B `production_ready` (Sessions 72–76, FEATURES.md §14) — baris baru ditambahkan di tabel; Fase 5 (akuntansi opsional, offline bendahara, mobile RN, auto-debit) masih PLANNED. Multi-RT/RW DEFERRED (ADR-025).
+> - Kategori lain (Finance, CRM, HR, dll.) **perlu audit refresh** di sesi berikutnya — jangan mengandalkan persentase lama untuk prioritisasi.
+> - Investigasi "section duplikat Known Issues/Known Bugs/Open Questions" (klaim fase perencanaan): **tidak ditemukan** — pencarian regex header = 0 hasil; tidak ada section yang dihapus.
 
 ---
 
@@ -62,12 +71,14 @@
   - **Impact:** 🔴 CRITICAL — All production secrets compromised
   - **Action:** Rotate NEXTAUTH_SECRET, database password, API keys (Midtrans, Xendit, etc.) immediately
   - **Complexity:** Low (manual rotation)
+  - **Status Session 80:** History purge terverifikasi ([AUDIT-P0-2] selesai) tetapi **rotasi secret BELUM bisa diverifikasi dari codebase** — butuh konfirmasi founder. **🔴 CRON_SECRET lama ter-expose** di screenshot aaPanel (chat) — wajib rotate SEBELUM/tidak lama setelah redeploy (lihat [`DEPLOY-CHECKLIST.md`](../DEPLOY-CHECKLIST.md) bagian Pre-Deployment).
 
-- [ ] **[AUDIT-P0-2]** 🔴 **Remove `.env.production` from git history**
+- [x] **[AUDIT-P0-2]** 🔴 **Remove `.env.production` from git history** — ✅ DONE (terverifikasi Session 80)
   - **File:** Git history
   - **Impact:** 🔴 CRITICAL — Secrets remain accessible via `git log` even after file deletion
-  - **Action:** Use `git filter-branch` or BFG Repo Cleaner to purge from history + force push
+  - **Action:** ~~Use `git filter-branch` or BFG Repo Cleaner to purge from history + force push~~ — Done
   - **Complexity:** Medium (requires force push coordination)
+  - **Bukti (Session 80, 16 Okt 2026):** `git log --oneline -- apps/web/.env.production` = **0 commits** di branch main (purge dari history berhasil) + hardening `.gitignore` (meng-ignore `.env*`). Menyelesaikan kontradiksi dokumen ini vs [`AGENT.md`](../AGENT.md) §8.6 (Known Security Gaps: ".env in git history — ✅ Fixed").
 
 - [x] **[AUDIT-P0-3]** 🔴 **Add RBAC entries for remaining routes (165 → ~250, ~94% coverage)** — ✅ DONE (Session 58)
   - **File:** [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts)
@@ -1889,7 +1900,7 @@
 
 ### Industry Packs
 
-> **9 Industry Packs — semua `planned` (0%).**
+> **Catatan Session 80:** Status "semua `planned` (0%)" di bawah sudah basi — engine `@qalcuity/industry-config` sudah aktif dengan **11 industry packs** (konfigurasi per industri, AGENT.md §5). Item IP-01..IP-09 tetap terbuka untuk **deep features per pack** (modul spesifik industri) — perlu audit sinkronisasi dengan codebase di sesi berikutnya.
 > Ref: [`FEATURES.md`](FEATURES.md) Section 14, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) Section 7
 
 - [ ] **[IP-01]** Retail Pack — POS, stock replenishment, barcode, dashboard
@@ -2107,8 +2118,8 @@ Parallel tracks (can run alongside):
 ---
 
 > **Document maintained by:** Qalcuity AI Team
-> **Version:** 1.6 — Remaining Work Documentation (Updated: 24 September 2026 — Master Audit findings added)
-> **Next Review:** Setelah P0 remediation items selesai
+> **Version:** 1.11 — Remaining Work Documentation (Updated: 16 Oktober 2026 — Session 80: Production Readiness + Documentation Sync)
+> **Next Review:** Setelah redeploy production Session 72–79 (lihat [`DEPLOY-CHECKLIST.md`](../DEPLOY-CHECKLIST.md)) + audit refresh angka Status Summary
 > **Related Documents:**
 > - [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) — Analytics architecture
 > - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Core architecture
