@@ -1,5 +1,6 @@
 /**
  * Session 83 — Comprehensive i18n key audit
+ * Session 85 — CI gate: exits non-zero when missing keys are found.
  *
  * Scans all t('dotted.key') usages in apps/web source files and resolves each
  * key against messages/id.json and messages/en.json.
@@ -9,6 +10,9 @@
  *   2. Keys resolving to a non-string leaf (object instead of string)
  *   3. Self-referencing entries ("key.path": "key.path")
  *   4. Root-level leaf keys that are never referenced (orphan candidates)
+ *
+ * Exit code: 0 when no missing keys, 1 when missing keys exist (CI gate).
+ * Self-referencing / orphan entries are informational only (exit 0).
  *
  * Usage: node scripts/audit-i18n-keys.js
  */
@@ -163,6 +167,11 @@ function main() {
 
     const totalIssues = missingInId.length + missingInEn.length;
     line(totalIssues === 0 ? ' RESULT: PASS — no missing keys' : ` RESULT: ${totalIssues} missing-key issue(s)`);
+
+    // CI gate: non-zero exit when any key used in code is missing from a locale.
+    if (totalIssues > 0) {
+        process.exitCode = 1;
+    }
 }
 
 main();

@@ -53,3 +53,22 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r run lint --if-present || true
+
+  i18n:
+    name: i18n Missing Keys
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # Gate: fails the job (exit code != 0) when any t('...') key is missing
+      # from messages/id.json or messages/en.json (Session 85 — regression guard
+      # after Session 83's 788-key incident).
+      - run: node scripts/audit-i18n-keys.js
+        working-directory: apps/web

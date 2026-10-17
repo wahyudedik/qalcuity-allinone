@@ -26,14 +26,31 @@ const messages: Record<Locale, Record<string, unknown>> = {
 
 // ---- Helper: get nested value ----
 
+// Dev-only dedupe: warn once per missing key to avoid flooding the console.
+const warnedMissingKeys = new Set<string>();
+
+function warnMissingKey(path: string) {
+    if (process.env.NODE_ENV !== 'development') return;
+    if (warnedMissingKeys.has(path)) return;
+    warnedMissingKeys.add(path);
+    console.warn(`[i18n] Missing translation key: "${path}"`);
+}
+
+// NOTE: Return value must stay identical to the pre-Session-85 behavior
+// (silent fallback to the raw key path) — only a dev-mode warning is added.
 function getNestedValue(obj: Record<string, unknown>, path: string): string {
     const keys = path.split('.');
     let current: unknown = obj;
     for (const key of keys) {
-        if (current === null || current === undefined) return path;
+        if (current === null || current === undefined) {
+            warnMissingKey(path);
+            return path;
+        }
         current = (current as Record<string, unknown>)[key];
     }
-    return typeof current === 'string' ? current : path;
+    if (typeof current === 'string') return current;
+    warnMissingKey(path);
+    return path;
 }
 
 // ---- Context ----
