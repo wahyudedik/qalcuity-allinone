@@ -260,7 +260,9 @@ BEGIN;
   END $$;
 
   -- B4. Temp keep-list
-  CREATE TEMP TABLE _keep ON COMMIT DROP (table_name TEXT PRIMARY KEY);
+  -- Catatan sintaks: ON COMMIT DROP adalah table option — wajib SETELAH
+  -- daftar kolom. Menaruhnya sebelum "(" = syntax error di PostgreSQL.
+  CREATE TEMP TABLE _keep (table_name TEXT PRIMARY KEY) ON COMMIT DROP;
 
   DO $$
   BEGIN
