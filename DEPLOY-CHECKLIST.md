@@ -110,6 +110,28 @@ Expected: `Database schema is up to date` / `0 pending` — semua migrasi sampai
 
 ---
 
+## 🧭 Phase 0 — Urutan Eksekusi Operator (Rotasi Secret → Redeploy → Reset DB)
+
+> **Untuk operator VPS:** jalankan langkah di bawah **berurutan**. Semua perintah sudah ada di runbook lain — section ini **hanya mengurutkan & menautkan** (tidak menduplikasi runbook). Jika VPS fresh (belum ada data produksi), lewati reset DB (Langkah 5–6) dan ikuti [`docs/FRESH-VPS.md`](docs/FRESH-VPS.md) sebagai gantinya.
+
+| # | Langkah | Perintah / Aksi (reuse dari runbook yang ada) | Runbook detail |
+|---|---------|-----------------------------------------------|----------------|
+| 1 | **Backup DB manual** — sebelum rotasi apa pun | `bash scripts/reset-db.sh backup` → file `/root/backup_qalcuity_<timestamp>.sql.gz` | [`docs/RESET-PRODUCTION.md`](docs/RESET-PRODUCTION.md) Bagian 4 (mode `backup`) |
+| 2 | **Rotasi CRON_SECRET** (token lama ter-expose — temuan Session 79) | `openssl rand -hex 32` → update `/www/wwwroot/qalcuity/apps/web/.env` → `CRON_SECRET=<baru>` | Pre-Deployment Checklist **#5** (di atas) |
+| 2a | **⚠️ Update entry cron aaPanel dengan CRON_SECRET baru — JANGAN dilewati.** aaPanel → Cron (Task Scheduler) → edit entry `*/5 * * * * .../api/cron/run` → header `Authorization: Bearer <baru>`. Jika dilewati, dispatcher balas **401** dan semua cron SILENT FAIL. | aaPanel UI (nilai `.env` dan header cron **wajib sama**) | [`docs/CRON-JOBS.md`](docs/CRON-JOBS.md); Pre-Deployment #5 langkah 3 |
+| 2b | **Rotasi NEXTAUTH_SECRET + password database** (AUDIT-P0-1 — konfirmasi founder sebelum eksekusi) | Ganti password PG via aaPanel → perbarui `DATABASE_URL` di `.env`; `openssl rand -base64 32` untuk `NEXTAUTH_SECRET` → restart app | [`docs/REMAINING-WORK.md`](docs/REMAINING-WORK.md) AUDIT-P0-1; [`docs/FRESH-VPS.md`](docs/FRESH-VPS.md) §4 (tabel nilai wajib unik) |
+| 3 | **Redeploy** (backup otomatis + pull + migrate + core-seed-check + build + restart + health check internal) | `sudo bash update.sh` | [Deployment Steps](#-deployment-steps) (di atas); [`update.sh`](update.sh) |
+| 4 | **Verifikasi V1–V11** — centang semua sebelum lanjut ke reset | Jalankan matrix di bawah | [Post-Deployment Verification Matrix](#-post-deployment-verification-matrix-v1v11) |
+| 5 | **Reset DB — preview (dry-run, read-only, WAJIB sebelum eksekusi)** | `bash scripts/reset-db.sh preview` → periksa tabel `[KEEP]`/`[WIPE]` di output | [`docs/RESET-PRODUCTION.md`](docs/RESET-PRODUCTION.md) Bagian 4 + Checklist Ringkas |
+| 6 | **Reset DB — eksekusi keep-accounts** (hanya setelah preview sesuai ekspektasi **dan** backup Langkah 1 OK) | `bash scripts/reset-db.sh keep` → verifikasi C1/C2 (superadmin ≥ 1; tabel transaksional 0 rows) | [`docs/RESET-PRODUCTION.md`](docs/RESET-PRODUCTION.md) Bagian 4 |
+| 7 | **Health check akhir** | `curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/api/health` → expectasi 200/302/307; login ulang browser production | [Rollback Instructions](#️-rollback-instructions) jika gagal |
+
+> **Catatan dependency kritis:** rotasi `CRON_SECRET` (Langkah 2) **wajib diikuti** update entry cron aaPanel (Langkah 2a) **sebelum** verifikasi V1–V2 — nilai di `.env` dan header Task Scheduler **harus identik**, jika tidak dispatcher membalas 401 dan cron tidak pernah jalan (tertelen `curl -s >> /dev/null` aaPanel).
+
+> **Opsi reset lain** (Tier B full + core seed manual, atau Tier C hapus 1 tenant demo via `cleanup`/`cleanup-run`): lihat perbandingan Tier A/B/C di [`docs/RESET-PRODUCTION.md`](docs/RESET-PRODUCTION.md). Mode `full` wajib diikuti core seed: `cd packages/db && SEED_DEMO=false npx prisma db seed` (tercantum di runbook & helper output).
+
+---
+
 ## ✅ Post-Deployment Verification Matrix (V1–V11)
 
 > Jalankan berurutan. **V1–V3 bisa tanpa login** (curl). **V4–V9 butuh login** ke browser production. **V10–V11** dari terminal VPS. Centang hanya jika expectasi terpenuhi — jangan klaim fixed sebelum semua PASS.

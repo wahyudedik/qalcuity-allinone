@@ -1,8 +1,8 @@
 # 🗺️ Qalcuity — Remaining Work Documentation
 
 > **Dokumen ini mencatat SEMUA fitur dan pekerjaan yang BELUM diimplementasi.**
-> Diperbarui: 16 Oktober 2026
-> Version: 1.11 — Session 80: Production Readiness + Documentation Sync
+> Diperbarui: 17 Oktober 2026
+> Version: 1.12 — Session 85: Audit Refresh angka status (verifikasi lokal vs codebase)
 
 **Tujuan:** Menjadi acuan utama untuk sesi implementasi berikutnya — setiap item bersifat actionable dan bisa langsung dikerjakan.
 
@@ -49,12 +49,14 @@
 > **Catatan Foundation Engines (Session 69 — FE-PE-09a):** Item **[FE-PE-09]** (Migration from 4-Role RBAC) **tetap `[ ]`** — migrasi ~94–98% sudah dieksekusi (278 RBAC entries, 242+ API route files terintegrasi, UI 100% `usePermission()`), hardening FE-PE-09a selesai (observability logging + `RBAC_STRICT` strict mode + audit route coverage + mobile exception + legacy helper `@deprecated`). **Scope enforcement (branch/department per ADR-013) dipecah jadi item baru [FE-PE-09b]** — progress kategori **Architecture Engines** (yang mencakup 3 Foundation Engine packages) naik, tetapi item tetap terbuka sampai FE-PE-09b selesai.
 
 > **Catatan Koreksi Session 80 (16 Okt 2026)*** — Angka di tabel di atas berasal dari Master Audit 24 September 2026 dan **sebagian sudah basi**. Koreksi berbasis bukti codebase/docs:
-> - **Industry Packs `0%`** → engine `@qalcuity/industry-config` aktif dengan **11 industry packs** (konfigurasi fields/workflow/dashboard per industri — AGENT.md §5). Item IP-01..IP-09 tetap terbuka untuk **deep features per pack**.
+> - **Industry Packs `0%`** → engine `@qalcuity/industry-config` aktif dengan **11 industry packs** (konfigurasi fields/workflow/dashboard per industri — AGENT.md §5). Item IP-01..IP-09 tetap terbuka untuk **deep features per pack**. *(Audit 17 Okt 2026: 11 pack terverifikasi langsung di `packages/industry-config/src/packs/`.)*
 > - **POS Module `65%`** → offline mode + kitchen display selesai (Session 67, Phase 4C) — progres aktual lebih tinggi dari angka tabel.
 > - **Mobile `0%`** → CRUD 4 entitas utama (Contact, Invoice, Employee, Product) via real endpoints selesai (Session 59).
 > - **Community & Public Admin** → Fase 1–4B `production_ready` (Sessions 72–76, FEATURES.md §14) — baris baru ditambahkan di tabel; Fase 5 (akuntansi opsional, offline bendahara, mobile RN, auto-debit) masih PLANNED. Multi-RT/RW DEFERRED (ADR-025).
 > - Kategori lain (Finance, CRM, HR, dll.) **perlu audit refresh** di sesi berikutnya — jangan mengandalkan persentase lama untuk prioritisasi.
 > - Investigasi "section duplikat Known Issues/Known Bugs/Open Questions" (klaim fase perencanaan): **tidak ditemukan** — pencarian regex header = 0 hasil; tidak ada section yang dihapus.
+
+> **Catatan Audit Refresh (17 Oktober 2026 — Session 85):** Persentase per kategori di tabel di atas **tidak diubah** — kolom Implemented/Partial/Planned = jumlah item fitur, butuh audit fitur-per-fitur (belum diverifikasi ulang). Yang sudah diverifikasi ulang terhadap codebase lokal ada di section **Audit Statistics — Audit Refresh (17 Okt 2026)** di bawah (hitungan schema, packs, RBAC entries, i18n, packages, file web). Klaim yang **tidak bisa diverifikasi dari lokal** (coverage RBAC di production, jumlah test case E2E/unit) ditandai **perlu verifikasi** — angka lama dipertahankan beserta tanggal sumbernya.
 
 ---
 
@@ -133,6 +135,26 @@
 | Unit Tests | 189 | **189** | **189** (unchanged) |
 
 > ⚠️ **Note:** Session 58 resolved 3 P0 items (RBAC, CI/CD, Prisma Tenant PoC). Session 59 resolved mobile CRUD (P0-5). Session 67 resolved POS offline mode (P0-6). Remaining: secrets rotation (P0-1, P0-2). Session 66 resolved non-P0 completeness items: SEC-07 (password policy) + UCE-21/22/23 (Work Inbox).
+
+### Audit Statistics — Audit Refresh (17 Oktober 2026, Session 85)
+
+> Hitungan ulang dari **codebase lokal** (branch main, 17 Okt 2026). Metode: regex / `Select-String` counting + menjalankan audit script i18n lokal. **Tidak ada angka yang dikarang** — klaim yang tidak bisa dihitung dari lokal ditandai *perlu verifikasi* dan angka lama dipertahankan beserta tanggal sumbernya.
+
+| Metric | Nilai sebelumnya (sumber) | Hasil audit lokal 17 Okt 2026 | Metode verifikasi |
+|--------|---------------------------|-------------------------------|-------------------|
+| Prisma Models | 107 (Session 58) | **124** | `Select-String -Pattern '^model '` pada [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma) |
+| Database Indexes | 293 (Session 58) | **364** penanda `@@index`/`@@unique` | regex `@@index\|@@unique` pada schema.prisma (sebaran penanda, bukan jumlah objek migration SQL) |
+| API Routes | ~400+ routes / 228 files (Master Audit 24 Sep 2026) | **336 file `route.ts` / 619 handler** (export GET/POST/PUT/PATCH/DELETE) | counting file + regex handler di `apps/web/app/**/route.ts` |
+| RBAC Entries | ~250 (~94%) (Session 58) / 278 (Session 69) | **320 entries** di [`apps/web/lib/route-permissions.ts`](../apps/web/lib/route-permissions.ts) (regex longgar & ketat sama) | counting lokal; **coverage % di production perlu verifikasi via VPS** |
+| Industry Packs | 0% (Master Audit) → 11 (Session 80) | **11 pack** (+ `index.ts`) di [`packages/industry-config/src/packs/`](../packages/industry-config/src/packs/) | listing direktori |
+| Shared Packages | 12 active (AGENT.md §5) | **12 direktori** di [`packages/`](../packages/) — termasuk `@qalcuity/analytics` + `@qalcuity/api` | listing direktori |
+| i18n Keys | 4755 (AGENT.md §5) | **apps/web/messages: 7597** (en = id); **packages/i18n: 2269** (en = id); audit script: 982 file diskem, 5684 literal `t()`, **0 missing key — PASS** | [`apps/web/scripts/audit-i18n-keys.js`](../apps/web/scripts/audit-i18n-keys.js) dijalankan lokal |
+| Web App Files | 727 (302 .ts + 425 .tsx) (AGENT.md §5) | **800 file TS** (337 .ts + 463 .tsx); 166 `page.tsx`, 139 `loading.tsx`, 138 `error.tsx` | counting file di `apps/web` |
+| E2E Tests | 78 (Master Audit 24 Sep 2026) | ***perlu verifikasi*** — [`apps/web/__tests__/e2e-test.ts`](../apps/web/__tests__/e2e-test.ts) = 975 baris; jumlah skenario **tidak dihitung ulang** tanpa menjalankan test | — |
+| Unit Tests | 189 (Master Audit 24 Sep 2026) | ***perlu verifikasi*** — 14 file unit test terdeteksi (10 di `apps/web/__tests__/unit/` + 4 test engine di packages); jumlah test case **tidak dihitung ulang** tanpa menjalankan test | — |
+| `update.sh` | 8 steps + 6b (DEPLOY-CHECKLIST.md) | **terverifikasi** — 8 langkah + `seed_core` (6b), health check `localhost:3000/api/health` | baca [`update.sh`](../update.sh) |
+
+> ⚠️ **Catatan pemakaian angka:** baris bertanda *perlu verifikasi* mempertahankan angka lama (sumber: Master Audit 24 Sep 2026 / Session 58) karena tidak bisa dihitung ulang dari lokal tanpa menjalankan test suite penuh. **Jangan perbarui angka ini tanpa output test run.** Angka lain di tabel ini aman dipakai untuk prioritisasi sesi berikutnya.
 
 ---
 
@@ -258,7 +280,7 @@
   - **File:** [`apps/web/lib/session.ts`](apps/web/lib/session.ts) (`requirePermissionForRoute`) + [`apps/web/lib/route-permissions.ts`](apps/web/lib/route-permissions.ts)
   - **Dependency:** FE-PE-02, FE-PE-03
   - **Complexity:** Medium (re-scoped — originally Very High)
-  - **Status note (Session 69 — FE-PE-09a ✅ selesai):** Migrasi ~94–98% sudah dieksekusi — 278 entries di `ROUTE_PERMISSIONS`, 242+ API route files import `requirePermissionForRoute`, UI 100% `usePermission()`. Audit Batch A: **semua route non-skip sudah tercakup** (exact/prefix match) — 0 entry baru diperlukan. Hardening: observability logging fallback path + strict mode `RBAC_STRICT=true` (route tanpa entry → 403; permission gagal → 403 tanpa role fallback; default unset/false = backward compatible) + mobile RBAC exception (8 files, Option 2 intentional exception) + middleware 2 gates dikomentari (Edge Runtime constraint) + legacy helpers (`requireMutateAuth`, `requireAdminAuth`, `requirePermissionOrRole`) ditandai `@deprecated`. **Scope enforcement dipecah jadi [FE-PE-09b]** — item ini tetap `[ ]` sampai FE-PE-09b selesai.
+  - **Status note (Session 69 — FE-PE-09a ✅ selesai):** Migrasi ~94–98% sudah dieksekusi — 278 entries di `ROUTE_PERMISSIONS`, 242+ API route files import `requirePermissionForRoute`, UI 100% `usePermission()`. Audit Batch A: **semua route non-skip sudah tercakup** (exact/prefix match) — 0 entry baru diperlukan. Hardening: observability logging fallback path + strict mode `RBAC_STRICT=true` (route tanpa entry → 403; permission gagal → 403 tanpa role fallback; default unset/false = backward compatible) + mobile RBAC exception (8 files, Option 2 intentional exception) + middleware 2 gates dikomentari (Edge Runtime constraint) + legacy helpers (`requireMutateAuth`, `requireAdminAuth`, `requirePermissionOrRole`) ditandai `@deprecated`. **Scope enforcement dipecah jadi [FE-PE-09b]** — item ini tetap `[ ]` sampai FE-PE-09b selesai. *(Audit refresh 17 Okt 2026: hitungan lokal terbaru = **320 entries** di `ROUTE_PERMISSIONS` (regex longgar & ketat sama); total **336 file `route.ts` / 619 handler**. Jumlah file yang import `requirePermissionForRoute` dan coverage % **perlu verifikasi via VPS** — klaim 278/242+ di atas adalah angka sumber Session 69.)*
   - **Strict mode:** Set `RBAC_STRICT=true` di env apps/web untuk mengaktifkan strict enforcement. Default (unset/false) = backward compatible (fallback role hierarchy tetap hidup).
   - **Ref:** Session 69 (FE-PE-09a); [`plans/master-audit-2026-09-24.md`](plans/master-audit-2026-09-24.md)
 
@@ -2020,6 +2042,8 @@
 
 ### New Packages to Create
 
+> **Status audit 17 Okt 2026 (Session 85):** 3 dari 4 package di bawah **sudah ada dan aktif** — hanya `@qalcuity/auth` yang belum dibuat. Direktori [`packages/`](../packages/) berisi **12 package** (termasuk `@qalcuity/analytics` dan `@qalcuity/api` yang tidak tercantum di tabel ini). Tabel dipertahankan sebagai catatan rencana awal.
+
 | Package | Path | Description | Complexity | Phase |
 |---------|------|-------------|------------|-------|
 | `@qalcuity/permissions` | `packages/permissions/` | Permission engine (`can()` function) | Very High | 9 |
@@ -2118,7 +2142,7 @@ Parallel tracks (can run alongside):
 ---
 
 > **Document maintained by:** Qalcuity AI Team
-> **Version:** 1.11 — Remaining Work Documentation (Updated: 16 Oktober 2026 — Session 80: Production Readiness + Documentation Sync)
+> **Version:** 1.12 — Remaining Work Documentation (Updated: 17 Oktober 2026 — Session 85: Audit Refresh angka status + cross-check codebase lokal)
 > **Next Review:** Setelah redeploy production Session 72–79 (lihat [`DEPLOY-CHECKLIST.md`](../DEPLOY-CHECKLIST.md)) + audit refresh angka Status Summary
 > **Related Documents:**
 > - [`docs/ANALYTICS-STUDIO.md`](docs/ANALYTICS-STUDIO.md) — Analytics architecture
