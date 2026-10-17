@@ -269,6 +269,7 @@ Setelah reset, **semua tenant = kosong (by design)**. Data demo hanya ada kalau 
 | `unrecognized configuration parameter "app.confirm_full"` | Versi skrip lama (guard sebelum set_config) | `git pull` — skrip terbaru sudah `set_config` sebelum guard |
 | Syntax error di baris awal (`# ...`) | Versi skrip lama (komentar `#` bukan sintaks psql) | `git pull` — komentar header sudah `--` semua |
 | `MASIH ADA DATA: <tabel> = N rows` di C2 | Tabel tsb tidak punya kolom `tenantId`/`userId` | Inspect manual: `"$PGBIN/psql" "$DATABASE_URL" -c 'SELECT count(*) FROM "<Tabel>";'` lalu `DELETE`/`TRUNCATE` terarah |
+| `psql: error: invalid URI query parameter: "schema"` (atau `pg_dump: error: ...`) | `DATABASE_URL` format Prisma punya suffix `?schema=public` — libpq (psql/pg_dump) menolak parameter query tak dikenal | Buang query string: `PG_URL="${DATABASE_URL%%\?*}"` lalu pakai `"$PG_URL"`. **Helper `scripts/reset-db.sh` sudah otomatis melakukan ini** |
 | `Error: You must install at least one postgresql-client-<version> package` + `No existing cluster is suitable as a default target` | Wrapper Debian `psql`/`pg_dump`; PostgreSQL dikelola aaPanel, bukan apt cluster | Pakai binari aaPanel: `PGBIN=$(find /www/server -type f -name psql 2>/dev/null | head -1 | xargs -r dirname)` lalu `"$PGBIN/psql" ...` (Bagian 4) |
 | `bash: /psql: No such file or directory` (prefix `/psql` tanpa direktori) | `PGBIN` kosong — path glob tidak cocok (mis. `postgresql/*/bin` tidak ada di instalasi ini) | Jalankan perintah deteksi `find` di Bagian 4; jika kosong, `ls /www/server/` lalu cari manual |
 | Banyak `: command not found` saat paste | Blok markdown (komentar/kode) di-paste utuh ke shell — baris terpotong/kacau (Windows CRLF/markdown render) | Paste **satu baris per perintah**; lebih aman **ketik manual** per baris |
@@ -280,12 +281,11 @@ Setelah reset, **semua tenant = kosong (by design)**. Data demo hanya ada kalau 
 ## Checklist Ringkas (copy-paste untuk VPS)
 
 ```
-[ ] set -a; source apps/web/.env; set +a
-[ ] PGBIN=$(find /www/server -type f -name psql 2>/dev/null | head -1 | xargs -r dirname) — pastikan terisi, lalu "$PGBIN/psql" --version
-[ ] Backup: "$PGBIN/pg_dump" "$DATABASE_URL" | gzip > /root/backup_qalcuity_$(date +%F_%H%M).sql.gz (atau sudo bash update.sh Step 2)
-[ ] Dry-run: "$PGBIN/psql" "$DATABASE_URL" -v execute=false -f scripts/reset-production-data.sql
+[ ] bash scripts/reset-db.sh check      — tes koneksi + jumlah Tenant/SuperAdmin
+[ ] bash scripts/reset-db.sh backup     — pg_dump gzip ke /root/ (atau sudo bash update.sh Step 2)
+[ ] bash scripts/reset-db.sh preview    — dry-run keep-accounts
 [ ] Periksa output A2 [KEEP]/[WIPE] — pastikan sesuai ekspektasi
-[ ] Eksekusi keep-accounts ATAU full (full: + reset_mode=full confirm_full=HAPUS-SEMUA)
+[ ] bash scripts/reset-db.sh keep       — eksekusi keep-accounts (full: bash scripts/reset-db.sh full)
 [ ] Mode full saja: cd packages/db && SEED_DEMO=false npx prisma db seed
 [ ] Cek C1/C2 (superadmin_left ≥ 1; transaksional 0 rows)
 [ ] Restart aaPanel Node project + curl /api/health

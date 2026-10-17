@@ -56,6 +56,14 @@ if [ -z "${DATABASE_URL:-}" ]; then
 fi
 echo "[ok] DATABASE_URL loaded (panjang=${#DATABASE_URL} karakter)"
 
+# Prisma menambahkan ?schema=public di URL — libpq (psql/pg_dump) MENOLAK
+# parameter query tak dikenal: "invalid URI query parameter: schema".
+# Buang query string sebelum dipakai konek langsung ke PostgreSQL.
+PG_URL="${DATABASE_URL%%\?*}"
+if [ "$PG_URL" != "$DATABASE_URL" ]; then
+  echo "[ok] Query string dibuang (format Prisma) → ${PG_URL:0:40}..."
+fi
+
 # --- 2. Cari binari psql/pg_dump milik aaPanel --------------------------------
 PGBIN=""
 for d in /www/server/postgresql/*/bin /www/server/postgresql/bin /www/server/pgsql/bin; do
@@ -84,45 +92,53 @@ SCRIPT_DIR="$REPO_DIR/scripts"
 
 case "$MODE" in
   check)
-    "$PGBIN/psql" "$DATABASE_URL" -c "SELECT count(*) AS tenant_count FROM \"Tenant\";"
-    "$PGBIN/psql" "$DATABASE_URL" -c "SELECT count(*) AS superadmin_count FROM \"User\" WHERE role='SUPERADMIN';"
+    "$PGBIN/psql" "$PG_URL" -c "SELECT count(*) AS tenant_count FROM \"Tenant\";"
+    "$PGBIN/psql" "$PG_URL" -c "SELECT count(*) AS superadmin_count FROM \"User\" WHERE role='SUPERADMIN';"
     ;;
 
   backup)
     OUT="/root/backup_qalcuity_$(date +%F_%H%M).sql.gz"
     echo "Backup → $OUT"
-    "$PGBIN/pg_dump" "$DATABASE_URL" | gzip > "$OUT"
-    ls -lh "$OUT"
+    # Tulis ke .tmp dulu — file final hanya dibuat jika pg_dump sukses
+    # (mencegah file backup kosong/rusak saat pg_dump gagal di tengah jalan)
+    if "$PGBIN/pg_dump" "$PG_URL" | gzip > "$OUT.tmp"; then
+      mv "$OUT.tmp" "$OUT"
+      ls -lh "$OUT"
+    else
+      rm -f "$OUT.tmp"
+      echo "ERROR: pg_dump gagal — backup TIDAK dibuat."
+      exit 1
+    fi
     ;;
 
   preview)
-    "$PGBIN/psql" "$DATABASE_URL" -v execute=false -f "$SCRIPT_DIR/reset-production-data.sql"
+    "$PGBIN/psql" "$PG_URL" -v execute=false -f "$SCRIPT_DIR/reset-production-data.sql"
     echo ""
     echo ">>> Itu baru DRY-RUN (tidak ada data dihapus). Periksa tabel [KEEP]/[WIPE] di atas."
     echo ">>> Lanjut eksekusi: bash scripts/reset-db.sh keep"
     ;;
 
   keep)
-    "$PGBIN/psql" "$DATABASE_URL" -v execute=true -f "$SCRIPT_DIR/reset-production-data.sql"
+    "$PGBIN/psql" "$PG_URL" -v execute=true -f "$SCRIPT_DIR/reset-production-data.sql"
     echo ""
     echo ">>> Selesai. Verifikasi C1/C2 di atas (superadmin_left >= 1; transaksional 0 rows)."
     ;;
 
   full)
-    "$PGBIN/psql" "$DATABASE_URL" -v execute=true -v reset_mode=full -v confirm_full=HAPUS-SEMUA -f "$SCRIPT_DIR/reset-production-data.sql"
+    "$PGBIN/psql" "$PG_URL" -v execute=true -v reset_mode=full -v confirm_full=HAPUS-SEMUA -f "$SCRIPT_DIR/reset-production-data.sql"
     echo ""
     echo ">>> Mode FULL selesai. SEGERA jalankan core seed:"
     echo ">>>   cd packages/db && SEED_DEMO=false npx prisma db seed"
     ;;
 
   cleanup)
-    "$PGBIN/psql" "$DATABASE_URL" -v execute=false -f "$SCRIPT_DIR/cleanup-demo-tenant.sql"
+    "$PGBIN/psql" "$PG_URL" -v execute=false -f "$SCRIPT_DIR/cleanup-demo-tenant.sql"
     echo ""
     echo ">>> Itu baru PREVIEW. Eksekusi: bash scripts/reset-db.sh cleanup-run"
     ;;
 
   cleanup-run)
-    "$PGBIN/psql" "$DATABASE_URL" -v execute=true -f "$SCRIPT_DIR/cleanup-demo-tenant.sql"
+    "$PGBIN/psql" "$PG_URL" -v execute=true -f "$SCRIPT_DIR/cleanup-demo-tenant.sql"
     ;;
 
   *)
