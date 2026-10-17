@@ -75,6 +75,28 @@ ssh root@<ip-vps>
 cd /www/wwwroot/qalcuity
 ```
 
+### 4.0 Helper Script (recommended — anti-paste-error)
+
+Semua langkah di bawah ini (deteksi `PGBIN`, source `.env`, backup, dry-run, eksekusi) sudah diotomatisasi di [`scripts/reset-db.sh`](../scripts/reset-db.sh). Cukup **ketik** (jangan paste blok markdown) satu perintah pendek:
+
+```bash
+bash scripts/reset-db.sh check
+```
+
+| Perintah | Fungsi |
+|----------|--------|
+| `bash scripts/reset-db.sh check` | Tes koneksi psql + tampilkan jumlah Tenant & SuperAdmin |
+| `bash scripts/reset-db.sh backup` | `pg_dump` gzip ke `/root/backup_qalcuity_<timestamp>.sql.gz` |
+| `bash scripts/reset-db.sh preview` | Dry-run keep-accounts (read-only) — **WAJIB dulu** |
+| `bash scripts/reset-db.sh keep` | Eksekusi reset keep-accounts |
+| `bash scripts/reset-db.sh full` | Eksekusi reset full (confirm_full otomatis; wajib core seed sesudahnya) |
+| `bash scripts/reset-db.sh cleanup` | Preview hapus 1 tenant demo/test |
+| `bash scripts/reset-db.sh cleanup-run` | Eksekusi hapus 1 tenant demo/test |
+
+> Script otomatis: source `apps/web/.env` (toleran CRLF), cari binari psql aaPanel via `find`, set `PGBIN`, jalankan psql/pg_dump. Tidak perlu set `$PGBIN` manual. Inilah cara paling aman untuk VPS yang terminal-nya sering merusak paste multi-baris.
+
+> ⚠️ **VPS aaPanel: JANGAN pakai `psql`/`pg_dump` polos.** PostgreSQL dikelola aaPanel di luar apt, jadi wrapper Debian error:
+
 > ⚠️ **VPS aaPanel: JANGAN pakai `psql`/`pg_dump` polos.** PostgreSQL dikelola aaPanel di luar apt, jadi wrapper Debian error:
 > `No existing cluster is suitable as a default target` + `You must install at least one postgresql-client-<version> package`.
 > **Lokasi binari aaPanel BERVARIASI per instalasi** (versi subdir ada yang tidak ada — glob `postgresql/*/bin` bisa kosong). Deteksi via `find`. Set variabel `PGBIN` sekali per sesi shell, lalu semua perintah memakai `"$PGBIN/psql"`.
