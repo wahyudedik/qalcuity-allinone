@@ -3,7 +3,7 @@
 > **Runbook untuk VPS yang SUDAH berjalan** (berbeda dengan [`FRESH-VPS.md`](./FRESH-VPS.md) yang untuk VPS baru).
 > Tujuan: mengembalikan database ke state "fresh" — **sisain yang penting saja** (akun, tenant, role, konfigurasi platform), hapus semua data bisnis/transaksional. **Data demo tidak pernah dibuat otomatis** — hanya di-load kalau user memilihnya secara eksplisit (opt-in).
 
-**Last Updated:** 16 Oktober 2026 (Session 84 + hotfix: binari `$PGBIN` untuk aaPanel — wrapper `psql` Debian gagal di VPS aaPanel)
+**Last Updated:** 17 Oktober 2026 (Session 84 + hotfix: deteksi `$PGBIN` via `find` — path binari aaPanel PostgreSQL 18 bervariasi per instalasi, glob `*/bin` bisa kosong)
 
 ---
 
@@ -77,29 +77,56 @@ cd /www/wwwroot/qalcuity
 
 > ⚠️ **VPS aaPanel: JANGAN pakai `psql`/`pg_dump` polos.** PostgreSQL dikelola aaPanel di luar apt, jadi wrapper Debian error:
 > `No existing cluster is suitable as a default target` + `You must install at least one postgresql-client-<version> package`.
-> Binari asli ada di `/www/server/postgresql/<versi>/bin/`. Set variabel `PGBIN` sekali per sesi shell, lalu semua perintah memakai `"$PGBIN/psql"`.
+> **Lokasi binari aaPanel BERVARIASI per instalasi** (versi subdir ada yang tidak ada — glob `postgresql/*/bin` bisa kosong). Deteksi via `find`. Set variabel `PGBIN` sekali per sesi shell, lalu semua perintah memakai `"$PGBIN/psql"`.
 
-1. **Siapkan `DATABASE_URL` + `PGBIN` + tes koneksi** (jalankan dalam SATU sesi shell — `$PGBIN` tidak persist ke sesi baru):
+1. **Siapkan `DATABASE_URL` + `PGBIN` + tes koneksi** — jalankan **SATU BARIS per perintah** (jangan paste blok utuh — lihat Troubleshooting `: command not found`):
 
    ```bash
    cd /www/wwwroot/qalcuity
+   ```
+
+   ```bash
    set -a; source apps/web/.env; set +a
+   ```
+
+   ```bash
    echo "$DATABASE_URL"
-   PGBIN=$(ls -d /www/server/postgresql/*/bin 2>/dev/null | head -1)
-   echo "$PGBIN"
+   ```
+
+   Deteksi `PGBIN` (otomatis coba beberapa path umum aaPanel, fallback ke `find`):
+
+   ```bash
+   PGBIN=$(find /www/server -type f -name psql 2>/dev/null | head -1 | xargs -r dirname); echo "PGBIN=$PGBIN"
+   ```
+
+   Verifikasi binari hidup:
+
+   ```bash
+   "$PGBIN/psql" --version
+   ```
+
+   Tes koneksi ke database:
+
+   ```bash
    "$PGBIN/psql" "$DATABASE_URL" -c "SELECT count(*) FROM \"Tenant\";"
    ```
 
-   > Jika `PGBIN` kosong: `find /www/server -name psql -type f 2>/dev/null` untuk melacak lokasinya, atau alternatifnya `apt install postgresql-client-16` (psql apt bisa konek via URL `postgres://`, hanya cluster-default-nya yang bermasalah).
+   > - Jika langkah deteksi masih kosong: `ls /www/server/` untuk melihat struktur direktori, lalu `find / -name psql -type f 2>/dev/null` (lebih luas).
+   > - **Jangan** fallback ke `apt install postgresql-client-16` untuk backup: psql 16 *bisa* konek ke server PG 18, tapi **pg_dump 16 TIDAK BISA dump server yang lebih baru** (pg_dump harus ≥ versi server). Backup selalu pakai `pg_dump` milik aaPanel (PG 18).
+   > - aaPanel **Adminer** (Databases → PgSQL → Adminer) hanya untuk **verifikasi SELECT** — TIDAK bisa menjalankan skrip reset (meta-command psql `\set`/`\if`/`\echo` tidak didukung).
 
 2. **Backup dulu — skrip TIDAK auto-backup** (`update.sh` Step 2 juga membuat backup sendiri ke `/www/wwwroot/qalcuity/backups/`):
 
    ```bash
    "$PGBIN/pg_dump" "$DATABASE_URL" | gzip > /root/backup_qalcuity_$(date +%F_%H%M).sql.gz
+   ```
+
+   ```bash
    ls -lh /root/backup_qalcuity_*.sql.gz
    ```
 
-   > Alternatif: `sudo bash update.sh` (sekalian deploy + backup otomatis).
+   > - Pastikan `pg_dump` ditemukan: `find /www/server -type f -name pg_dump 2>/dev/null` (biasanya sefolder dengan `psql`).
+   > - Alternatif: `sudo bash update.sh` (sekalian deploy + backup otomatis).
 
 ---
 
@@ -220,8 +247,9 @@ Setelah reset, **semua tenant = kosong (by design)**. Data demo hanya ada kalau 
 | `unrecognized configuration parameter "app.confirm_full"` | Versi skrip lama (guard sebelum set_config) | `git pull` — skrip terbaru sudah `set_config` sebelum guard |
 | Syntax error di baris awal (`# ...`) | Versi skrip lama (komentar `#` bukan sintaks psql) | `git pull` — komentar header sudah `--` semua |
 | `MASIH ADA DATA: <tabel> = N rows` di C2 | Tabel tsb tidak punya kolom `tenantId`/`userId` | Inspect manual: `"$PGBIN/psql" "$DATABASE_URL" -c 'SELECT count(*) FROM "<Tabel>";'` lalu `DELETE`/`TRUNCATE` terarah |
-| `Error: You must install at least one postgresql-client-<version> package` + `No existing cluster is suitable as a default target` | Wrapper Debian `psql`/`pg_dump`; PostgreSQL dikelola aaPanel, bukan apt cluster | Pakai binari aaPanel: `PGBIN=$(ls -d /www/server/postgresql/*/bin 2>/dev/null | head -1)` lalu `"$PGBIN/psql" ...` (Bagian 4) |
-| Banyak `: command not found` saat paste | Blok markdown (komentar/kode) di-paste utuh ke shell — baris terpotong/kacau | Paste **satu baris per perintah**; jangan paste blok markdown utuh ke terminal |
+| `Error: You must install at least one postgresql-client-<version> package` + `No existing cluster is suitable as a default target` | Wrapper Debian `psql`/`pg_dump`; PostgreSQL dikelola aaPanel, bukan apt cluster | Pakai binari aaPanel: `PGBIN=$(find /www/server -type f -name psql 2>/dev/null | head -1 | xargs -r dirname)` lalu `"$PGBIN/psql" ...` (Bagian 4) |
+| `bash: /psql: No such file or directory` (prefix `/psql` tanpa direktori) | `PGBIN` kosong — path glob tidak cocok (mis. `postgresql/*/bin` tidak ada di instalasi ini) | Jalankan perintah deteksi `find` di Bagian 4; jika kosong, `ls /www/server/` lalu cari manual |
+| Banyak `: command not found` saat paste | Blok markdown (komentar/kode) di-paste utuh ke shell — baris terpotong/kacau (Windows CRLF/markdown render) | Paste **satu baris per perintah**; lebih aman **ketik manual** per baris |
 | Reset sukses tapi app error 500 | Mode full tanpa core seed (SuperAdmin/Plans hilang) | Jalankan Bagian 7 lalu restart |
 | Mau batalkan setelah eksekusi dimulai | — | Transaksi belum COMMIT = otomatis rollback; setelah COMMIT gunakan backup restore |
 
@@ -231,7 +259,7 @@ Setelah reset, **semua tenant = kosong (by design)**. Data demo hanya ada kalau 
 
 ```
 [ ] set -a; source apps/web/.env; set +a
-[ ] PGBIN=$(ls -d /www/server/postgresql/*/bin 2>/dev/null | head -1) — pastikan terisi
+[ ] PGBIN=$(find /www/server -type f -name psql 2>/dev/null | head -1 | xargs -r dirname) — pastikan terisi, lalu "$PGBIN/psql" --version
 [ ] Backup: "$PGBIN/pg_dump" "$DATABASE_URL" | gzip > /root/backup_qalcuity_$(date +%F_%H%M).sql.gz (atau sudo bash update.sh Step 2)
 [ ] Dry-run: "$PGBIN/psql" "$DATABASE_URL" -v execute=false -f scripts/reset-production-data.sql
 [ ] Periksa output A2 [KEEP]/[WIPE] — pastikan sesuai ekspektasi
